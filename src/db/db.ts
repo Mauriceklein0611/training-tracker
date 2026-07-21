@@ -17,7 +17,7 @@ import { nowIso } from '@/utils/id';
  * Bump this together with a new `.version()` block below and record the change
  * in MIGRATIONS so the settings screen can show what the database went through.
  */
-export const SCHEMA_VERSION = 5;
+export const SCHEMA_VERSION = 6;
 
 export const MIGRATIONS: { version: number; description: string }[] = [
   { version: 1, description: 'Initiales Schema: Übungen, Pläne, Einheiten, Sätze.' },
@@ -45,6 +45,13 @@ export const MIGRATIONS: { version: number; description: string }[] = [
     description:
       'Einstellung „Bildschirm während des Trainings aktiv halten“ sowie ' +
       'optionale Angaben zum Trainingskontext für den KI-Export.',
+  },
+  {
+    version: 6,
+    description:
+      'Übungen können optional Gewichtsschritt, verfügbare Gewichte, ' +
+      'bevorzugte Progressionsmethode und Ziel-RIR hinterlegen. ' +
+      'Grundlage für die lokale Progressionsempfehlung.',
   },
 ];
 
@@ -161,6 +168,19 @@ export class TrainingDatabase extends Dexie {
             settings.keepScreenAwake = true;
           }
           settings.schemaVersion = 5;
+        });
+    });
+
+    // ---- v6 -------------------------------------------------------------
+    // Exercises gained optional progression settings. Every new field is
+    // optional and absence means "not configured", so existing rows stay valid
+    // exactly as they are — nothing is backfilled or guessed.
+    this.version(6).upgrade(async (tx) => {
+      await tx
+        .table<AppSettings>('settings')
+        .toCollection()
+        .modify((settings) => {
+          settings.schemaVersion = 6;
         });
     });
   }

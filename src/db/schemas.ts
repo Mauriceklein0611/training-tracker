@@ -46,6 +46,11 @@ export const exerciseSchema = z.object({
   weightMode: weightModeSchema,
   weightMultiplier: z.number().positive().max(10).default(1),
   defaultRestSeconds: z.number().int().min(0).max(3600).default(120),
+  // Added in schema version 6; all optional, so older backups still validate.
+  weightIncrementKg: z.number().positive().max(100).optional(),
+  availableWeightsKg: z.array(z.number().positive().max(1000)).max(80).optional(),
+  progressionMethod: z.enum(['auto', 'weight', 'reps']).optional(),
+  targetRir: z.number().min(0).max(10).optional(),
   notes: z.string().default(''),
   archived: z.boolean().default(false),
   createdAt: isoDateTime,

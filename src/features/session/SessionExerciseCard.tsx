@@ -17,7 +17,11 @@ import {
   type SessionExerciseDetail,
 } from '@/db/repositories/sessions';
 import { primeAudio } from '@/services/sound';
-import { TRACKING_TYPE_LABELS, describeSet, formatKg } from '@/utils/format';
+import { buildRecordBaseline } from '@/services/comparison';
+import { suggestProgression } from '@/services/progression';
+import { ProgressionHint } from '@/features/session/ProgressionHint';
+import { db } from '@/db/db';
+import { TRACKING_TYPE_LABELS, formatKg } from '@/utils/format';
 import { formatDate } from '@/utils/date';
 import type { TemplateExercise } from '@/types';
 
@@ -115,22 +119,47 @@ export function SessionExerciseCard({
     return {};
   }, [completedSets, lastPerformance]);
 
-  const suggestionText = useMemo(() => {
-    if (!lastPerformance) return undefined;
-    const working = lastPerformance.sets.filter((set) => set.setType !== 'warmup');
-    if (working.length === 0) return undefined;
-    const summary = working
-      .slice(0, 4)
-      .map((set) =>
-        describeSet(
-          set,
-          sessionExercise.trackingTypeSnapshot,
-          sessionExercise.weightModeSnapshot,
-        ),
-      )
-      .join(' · ');
-    return `${formatDate(lastPerformance.session.startedAt)} — ${summary}`;
-  }, [lastPerformance, sessionExercise]);
+  const previousSets = useMemo(() => lastPerformance?.sets ?? [], [lastPerformance]);
+
+  /**
+   * Best values recorded before this workout, for the "new best" badge.
+   * Built from the previous performance only — the running workout must not
+   * compete against itself.
+   */
+  const recordBaseline = useMemo(
+    () => buildRecordBaseline(previousSets, sessionExercise),
+    [previousSets, sessionExercise],
+  );
+
+  /** The exercise record, for its optional progression settings. */
+  const exercise = useLiveQuery(
+    () => db.exercises.get(sessionExercise.exerciseId),
+    [sessionExercise.exerciseId],
+  );
+
+  /**
+   * Suggestion for next time, derived from the *previous* workout.
+   * Shown once this exercise is done for today, so it reads as a takeaway
+   * rather than as instructions mid-set.
+   */
+  const progression = useMemo(() => {
+    if (previousSets.length === 0) return null;
+    return suggestProgression(previousSets, sessionExercise, {
+      targetRepMin: target?.targetRepMin,
+      targetRepMax: target?.targetRepMax,
+      targetRir: exercise?.targetRir,
+      weightIncrementKg: exercise?.weightIncrementKg,
+      availableWeightsKg: exercise?.availableWeightsKg,
+      progressionMethod: exercise?.progressionMethod,
+    });
+  }, [previousSets, sessionExercise, target, exercise]);
+
+  /** Date line above the sets, so the comparison has a reference point. */
+  const previousSessionLabel = useMemo(
+    () =>
+      lastPerformance ? `Letztes Training: ${formatDate(lastPerformance.session.startedAt)}` : null,
+    [lastPerformance],
+  );
 
   const handleAddSet = async () => {
     await addSet(sessionExercise.id, {
@@ -181,6 +210,7 @@ export function SessionExerciseCard({
             {sessionExercise.weightModeSnapshot === 'per_hand' ? (
               <span>je Hand ×{sessionExercise.weightMultiplierSnapshot}</span>
             ) : null}
+            {previousSessionLabel ? <span>{previousSessionLabel}</span> : null}
           </p>
         </div>
         <div className="flex shrink-0 gap-1">
@@ -234,7 +264,9 @@ export function SessionExerciseCard({
             key={openSet.id}
             set={openSet}
             sessionExercise={sessionExercise}
-            suggestion={completedSets.length === 0 ? suggestionText : undefined}
+            previousSets={previousSets}
+            sessionSets={sets}
+            recordBaseline={recordBaseline}
             targetDurationSeconds={target?.targetDurationSeconds}
             soundEnabled={soundEnabled}
             vibrationEnabled={vibrationEnabled}
@@ -261,6 +293,11 @@ export function SessionExerciseCard({
           </Button>
         )}
       </div>
+
+      {/* Only once the work is done for today — not while entering sets. */}
+      {progression && setGoalReached && !openSet ? (
+        <ProgressionHint suggestion={progression} />
+      ) : null}
 
       <div className="mt-3">
         {notesOpen ? (

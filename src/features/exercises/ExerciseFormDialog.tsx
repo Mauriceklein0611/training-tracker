@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/Button';
 import { NumberField, SelectField, TextAreaField, TextField } from '@/components/ui/Field';
 import { createExercise, updateExercise } from '@/db/repositories/exercises';
 import { validateExerciseForm, parseNumberInput } from '@/services/validation';
-import type { Exercise, TrackingType, WeightMode } from '@/types';
+import type { Exercise, ProgressionMethod, TrackingType, WeightMode } from '@/types';
 import {
   EQUIPMENT_SUGGESTIONS,
   MUSCLE_GROUP_SUGGESTIONS,
@@ -54,7 +54,31 @@ interface FormState {
   weightMode: WeightMode;
   weightMultiplier: string;
   defaultRestSeconds: string;
+  weightIncrementKg: string;
+  availableWeightsKg: string;
+  progressionMethod: ProgressionMethod;
+  targetRir: string;
   notes: string;
+}
+
+/** Parses an optional numeric field; out-of-range or empty yields undefined. */
+function optionalNumber(raw: string, range: { min: number; max: number }): number | undefined {
+  const parsed = parseNumberInput(raw);
+  if (parsed == null || Number.isNaN(parsed)) return undefined;
+  if (parsed < range.min || parsed > range.max) return undefined;
+  return parsed;
+}
+
+/** "10, 12.5, 15" → [10, 12.5, 15]; unusable entries are dropped. */
+function parseWeightList(raw: string): number[] | undefined {
+  const values = raw
+    .split(',')
+    .map((part) => parseNumberInput(part))
+    .filter((value): value is number => value != null && Number.isFinite(value) && value > 0)
+    .sort((a, b) => a - b);
+  // Deduplicate, so a typo cannot produce two identical rack entries.
+  const unique = [...new Set(values)];
+  return unique.length > 0 ? unique : undefined;
 }
 
 function toFormState(exercise?: Exercise, defaultRest = 120): FormState {
@@ -67,6 +91,10 @@ function toFormState(exercise?: Exercise, defaultRest = 120): FormState {
     weightMode: exercise?.weightMode ?? 'total',
     weightMultiplier: String(exercise?.weightMultiplier ?? 1),
     defaultRestSeconds: String(exercise?.defaultRestSeconds ?? defaultRest),
+    weightIncrementKg: exercise?.weightIncrementKg == null ? '' : String(exercise.weightIncrementKg),
+    availableWeightsKg: exercise?.availableWeightsKg?.join(', ') ?? '',
+    progressionMethod: exercise?.progressionMethod ?? 'auto',
+    targetRir: exercise?.targetRir == null ? '' : String(exercise.targetRir),
     notes: exercise?.notes ?? '',
   };
 }
@@ -159,6 +187,12 @@ export function ExerciseFormDialog({
       // The multiplier only has a meaning for the "per hand" convention.
       weightMultiplier: form.weightMode === 'per_hand' ? multiplier : 1,
       defaultRestSeconds: Math.round(rest),
+      // Progression settings are optional: an empty field stays undefined
+      // rather than being filled with a guessed default.
+      weightIncrementKg: optionalNumber(form.weightIncrementKg, { min: 0.1, max: 100 }),
+      availableWeightsKg: parseWeightList(form.availableWeightsKg),
+      progressionMethod: form.progressionMethod === 'auto' ? undefined : form.progressionMethod,
+      targetRir: optionalNumber(form.targetRir, { min: 0, max: 10 }),
       notes: form.notes.trim(),
     };
 
@@ -287,6 +321,54 @@ export function ExerciseFormDialog({
           error={errors.defaultRestSeconds}
           onChange={(event) => update('defaultRestSeconds', event.target.value)}
         />
+
+        {/* Optional throughout — the suggestion simply says so when unset. */}
+        <details className="rounded-xl border border-border bg-surface-2 p-3">
+          <summary className="min-h-[44px] cursor-pointer list-none py-2 text-sm font-medium text-accent">
+            Progression (optional)
+          </summary>
+          <div className="mt-3 grid gap-3">
+            <p className="text-xs leading-relaxed text-muted">
+              Diese Angaben verbessern die lokale Progressionsempfehlung. Ohne sie wird eine
+              Standardsteigerung angenommen — es wird nichts geschätzt oder automatisch geändert.
+            </p>
+
+            <NumberField
+              label="Kleinste Gewichtssteigerung (kg)"
+              decimal
+              value={form.weightIncrementKg}
+              placeholder="Standard: 2,5"
+              onChange={(event) => update('weightIncrementKg', event.target.value)}
+            />
+
+            <TextField
+              label="Verfügbare Gewichte (kg)"
+              value={form.availableWeightsKg}
+              hint="Durch Komma trennen, z. B. 10, 12.5, 15, 17.5. Dann wird nur ein tatsächlich vorhandenes Gewicht vorgeschlagen."
+              onChange={(event) => update('availableWeightsKg', event.target.value)}
+            />
+
+            <SelectField
+              label="Bevorzugte Progression"
+              value={form.progressionMethod}
+              onChange={(event) =>
+                update('progressionMethod', event.target.value as ProgressionMethod)
+              }
+            >
+              <option value="auto">Automatisch (nach Tracking-Typ)</option>
+              <option value="weight">Zuerst Gewicht steigern</option>
+              <option value="reps">Zuerst Wiederholungen steigern</option>
+            </SelectField>
+
+            <NumberField
+              label="Ziel-RIR"
+              decimal
+              value={form.targetRir}
+              hint="Verbleibende Wiederholungen im Tank. Höher heißt leichter. Leer lassen, wenn du RIR nicht nutzt."
+              onChange={(event) => update('targetRir', event.target.value)}
+            />
+          </div>
+        </details>
 
         <TextAreaField
           label="Notizen"

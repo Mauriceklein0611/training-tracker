@@ -38,6 +38,9 @@ export type SetType = 'warmup' | 'working' | 'drop' | 'failure';
 
 export type SessionStatus = 'active' | 'completed';
 
+/** How an exercise should preferably be progressed. */
+export type ProgressionMethod = 'auto' | 'weight' | 'reps';
+
 export interface Exercise {
   id: string;
   name: string;
@@ -52,6 +55,14 @@ export interface Exercise {
    */
   weightMultiplier: number;
   defaultRestSeconds: number;
+  /** Smallest sensible load step, used by the progression suggestion. */
+  weightIncrementKg?: number;
+  /** Weights that can actually be selected, e.g. the dumbbell rack. */
+  availableWeightsKg?: number[];
+  /** Preferred way to progress; "auto" lets the tracking type decide. */
+  progressionMethod?: ProgressionMethod;
+  /** Repetitions in reserve aimed for. Higher means easier. */
+  targetRir?: number;
   notes: string;
   /** Archived exercises stay available for history but are hidden from pickers. */
   archived: boolean;

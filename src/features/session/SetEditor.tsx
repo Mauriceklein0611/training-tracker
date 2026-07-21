@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Check, Trash2 } from 'lucide-react';
 import { Button, IconButton } from '@/components/ui/Button';
 import { NumberField, SelectField } from '@/components/ui/Field';
@@ -11,6 +11,11 @@ import { SET_TYPE_LABELS, describeSet, formatSignedSeconds } from '@/utils/forma
 import { cn } from '@/utils/cn';
 import { useAutosave } from '@/hooks/useAutosave';
 import { ExerciseTimer } from '@/features/session/ExerciseTimer';
+import {
+  compareSet,
+  findPreviousSetForComparison,
+  type RecordBaseline,
+} from '@/services/comparison';
 
 interface Draft {
   setType: SetType;
@@ -67,7 +72,9 @@ function draftToValues(draft: Draft): SetValues {
 export function SetEditor({
   set,
   sessionExercise,
-  suggestion,
+  previousSets,
+  sessionSets,
+  recordBaseline,
   onPersist,
   onComplete,
   onDelete,
@@ -77,8 +84,12 @@ export function SetEditor({
 }: {
   set: WorkoutSet;
   sessionExercise: SessionExercise;
-  /** Values from the previous performance, shown as a hint above the fields. */
-  suggestion?: string;
+  /** Completed sets of the previous workout for this exercise. */
+  previousSets: WorkoutSet[];
+  /** All sets of this exercise in the running workout. */
+  sessionSets: WorkoutSet[];
+  /** Best values recorded before this workout. */
+  recordBaseline: RecordBaseline;
   onPersist: (values: SetValues) => void;
   onComplete: (values: SetValues) => void;
   onDelete: () => void;
@@ -121,6 +132,26 @@ export function SetEditor({
   const errors = validateSetInput(values, trackingType, weightMode);
   const visibleErrors = touched ? errors : {};
 
+  /*
+   * Which set of the previous workout this one corresponds to: the nth set of
+   * the same type. Recomputed as the draft changes, so switching a set to
+   * "warm-up" immediately compares against warm-ups instead.
+   */
+  const ordinalWithinType = useMemo(
+    () =>
+      sessionSets.filter((entry) => entry.completedAt && entry.setType === draft.setType).length,
+    [sessionSets, draft.setType],
+  );
+
+  const comparison = useMemo(() => {
+    const match = findPreviousSetForComparison(previousSets, {
+      setType: draft.setType,
+      ordinalWithinType,
+    });
+    if (!match) return null;
+    return compareSet(draftToValues(draft), match, sessionExercise, recordBaseline);
+  }, [previousSets, draft, ordinalWithinType, sessionExercise, recordBaseline]);
+
   const update = (key: keyof Draft, value: string) => {
     setDraft((current) => ({ ...current, [key]: value }));
   };
@@ -153,10 +184,44 @@ export function SetEditor({
         </div>
       </div>
 
-      {suggestion ? (
-        <p className="mb-2 text-xs text-muted">
-          Letztes Mal: <span className="font-medium text-text">{suggestion}</span>
-        </p>
+      {/*
+       * Comparison with the same set of the previous workout. Read-only, and
+       * silent when there is nothing comparable — an empty line beats a
+       * misleading one.
+       */}
+      {comparison ? (
+        <div className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+          <span className="text-muted">
+            {comparison.matchedBy === 'same-position' ? 'Letztes Mal' : 'Zuletzt'}:
+          </span>
+          <span className="numeric font-medium">{comparison.previousSummary}</span>
+
+          {comparison.deltas.map((delta) => (
+            <span
+              key={delta.label}
+              className={cn(
+                'numeric rounded-full px-1.5 py-0.5 font-semibold',
+                delta.direction === 'better'
+                  ? 'bg-surface-3 text-success'
+                  : 'bg-surface-3 text-warning',
+              )}
+            >
+              {/* Arrow so the direction is not carried by colour alone. */}
+              <span aria-hidden="true">{delta.direction === 'better' ? '▲ ' : '▼ '}</span>
+              {delta.label}
+            </span>
+          ))}
+
+          {comparison.isRecord ? (
+            <span className="rounded-full bg-surface-3 px-1.5 py-0.5 font-semibold text-accent">
+              ★ Neuer Bestwert
+            </span>
+          ) : null}
+
+          {comparison.matchedBy === 'last-working-set' ? (
+            <span className="text-muted">(letzter Arbeitssatz)</span>
+          ) : null}
+        </div>
       ) : null}
 
       {/* Time-based exercises get a timer; the duration field stays editable. */}
