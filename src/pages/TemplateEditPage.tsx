@@ -1,25 +1,27 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { ArrowDown, ArrowUp, GripVertical, Play, Plus, Trash2 } from 'lucide-react';
+import { Play, Plus } from 'lucide-react';
 import { PageHeader } from '@/components/layout/PageHeader';
-import { Button, IconButton } from '@/components/ui/Button';
+import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/Card';
-import { NumberField, TextField } from '@/components/ui/Field';
 import {
   addExerciseToTemplate,
   getTemplateWithExercises,
-  moveTemplateExercise,
-  removeTemplateExercise,
   reorderTemplateExercises,
-  updateTemplateExercise,
 } from '@/db/repositories/templates';
 import { ActiveSessionExistsError, startSessionFromTemplate } from '@/db/repositories/sessions';
 import { ExercisePickerDialog } from '@/features/exercises/ExercisePickerDialog';
+import { TemplateExerciseRow } from '@/features/templates/TemplateExerciseRow';
+import { TemplateGroupHeader } from '@/features/templates/TemplateGroupHeader';
 import { useActiveSession } from '@/hooks/useActiveSession';
 import { useToast } from '@/hooks/useToast';
-import { parseNumberInput } from '@/services/validation';
-import { TRACKING_TYPE_LABELS } from '@/utils/format';
+import {
+  DEFAULT_GROUP_REST_MODE,
+  DEFAULT_GROUP_TYPE,
+  groupItems,
+  memberLabel,
+} from '@/services/grouping';
 
 export default function TemplateEditPage() {
   const { templateId = '' } = useParams();
@@ -60,6 +62,8 @@ export default function TemplateEditPage() {
   }
 
   const { template, exercises } = data;
+  const blocks = groupItems(exercises);
+  const indexById = new Map(exercises.map((entry, index) => [entry.id, index]));
 
   /** Drop handler for the pointer-based reordering path. */
   const handleDrop = async (targetId: string) => {
@@ -112,139 +116,45 @@ export default function TemplateEditPage() {
           }
         />
       ) : (
-        <ol className="grid gap-3">
-          {exercises.map((entry, index) => {
-            const isDuration = entry.exercise?.trackingType === 'duration';
-            return (
-              <li
+        <div className="grid gap-3">
+          {blocks.map((block) => {
+            const rows = block.members.map((entry, memberIndex) => (
+              <TemplateExerciseRow
                 key={entry.id}
-                draggable
+                entry={entry}
+                exercise={entry.exercise}
+                label={memberLabel(block, memberIndex)}
+                globalIndex={indexById.get(entry.id) ?? 0}
+                total={exercises.length}
+                grouped={block.groupId != null}
+                canGroupWithPrevious={(indexById.get(entry.id) ?? 0) > 0}
                 onDragStart={() => setDragId(entry.id)}
                 onDragOver={(event) => event.preventDefault()}
                 onDrop={() => void handleDrop(entry.id)}
                 onDragEnd={() => setDragId(null)}
-                className="rounded-2xl border border-border bg-surface p-3"
-              >
-                <div className="flex items-start gap-2">
-                  <GripVertical
-                    size={20}
-                    className="mt-1 hidden shrink-0 cursor-grab text-muted sm:block"
-                    aria-hidden="true"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium">
-                      <span className="text-muted">{index + 1}. </span>
-                      {entry.exercise?.name ?? 'Gelöschte Übung'}
-                    </p>
-                    <p className="text-xs text-muted">
-                      {entry.exercise
-                        ? TRACKING_TYPE_LABELS[entry.exercise.trackingType]
-                        : 'Diese Übung existiert nicht mehr.'}
-                    </p>
-                  </div>
-                  {/*
-                   * Buttons are the primary reordering mechanism: drag and drop
-                   * is unreliable on touch and unusable with a keyboard.
-                   */}
-                  <div className="flex shrink-0 gap-1">
-                    <IconButton
-                      label={`${entry.exercise?.name ?? 'Übung'} nach oben`}
-                      disabled={index === 0}
-                      onClick={() => void moveTemplateExercise(entry.id, -1)}
-                    >
-                      <ArrowUp size={18} aria-hidden="true" />
-                    </IconButton>
-                    <IconButton
-                      label={`${entry.exercise?.name ?? 'Übung'} nach unten`}
-                      disabled={index === exercises.length - 1}
-                      onClick={() => void moveTemplateExercise(entry.id, 1)}
-                    >
-                      <ArrowDown size={18} aria-hidden="true" />
-                    </IconButton>
-                    <IconButton
-                      label={`${entry.exercise?.name ?? 'Übung'} entfernen`}
-                      onClick={() => void removeTemplateExercise(entry.id)}
-                    >
-                      <Trash2 size={18} aria-hidden="true" />
-                    </IconButton>
-                  </div>
-                </div>
+              />
+            ));
 
-                <div className="mt-3 grid grid-cols-2 gap-2">
-                  <NumberField
-                    label="Sätze"
-                    value={String(entry.targetSets)}
-                    onChange={(event) =>
-                      void updateTemplateExercise(entry.id, {
-                        targetSets: Math.max(1, Math.round(parseNumberInput(event.target.value) ?? 1)),
-                      })
-                    }
-                  />
-                  <NumberField
-                    label="Pause (s)"
-                    value={String(entry.restSeconds)}
-                    onChange={(event) =>
-                      void updateTemplateExercise(entry.id, {
-                        restSeconds: Math.max(0, Math.round(parseNumberInput(event.target.value) ?? 0)),
-                      })
-                    }
-                  />
-                  {isDuration ? (
-                    <NumberField
-                      label="Zieldauer (s)"
-                      containerClassName="col-span-2"
-                      value={String(entry.targetDurationSeconds ?? '')}
-                      onChange={(event) =>
-                        void updateTemplateExercise(entry.id, {
-                          targetDurationSeconds:
-                            parseNumberInput(event.target.value) == null
-                              ? undefined
-                              : Math.max(0, Math.round(parseNumberInput(event.target.value) ?? 0)),
-                        })
-                      }
-                    />
-                  ) : (
-                    <>
-                      <NumberField
-                        label="Wdh. von"
-                        value={String(entry.targetRepMin ?? '')}
-                        onChange={(event) =>
-                          void updateTemplateExercise(entry.id, {
-                            targetRepMin:
-                              parseNumberInput(event.target.value) == null
-                                ? undefined
-                                : Math.max(0, Math.round(parseNumberInput(event.target.value) ?? 0)),
-                          })
-                        }
-                      />
-                      <NumberField
-                        label="Wdh. bis"
-                        value={String(entry.targetRepMax ?? '')}
-                        onChange={(event) =>
-                          void updateTemplateExercise(entry.id, {
-                            targetRepMax:
-                              parseNumberInput(event.target.value) == null
-                                ? undefined
-                                : Math.max(0, Math.round(parseNumberInput(event.target.value) ?? 0)),
-                          })
-                        }
-                      />
-                    </>
-                  )}
-                  <TextField
-                    label="Notiz"
-                    containerClassName="col-span-2"
-                    value={entry.notes}
-                    placeholder="Optional"
-                    onChange={(event) =>
-                      void updateTemplateExercise(entry.id, { notes: event.target.value })
-                    }
-                  />
-                </div>
-              </li>
+            if (block.groupId == null) return rows;
+
+            return (
+              <div
+                key={block.key}
+                className="rounded-2xl border border-accent/40 bg-surface-2/40 p-2"
+              >
+                <TemplateGroupHeader
+                  templateId={template.id}
+                  groupId={block.groupId}
+                  letter={block.letter}
+                  groupType={block.groupType ?? DEFAULT_GROUP_TYPE}
+                  groupRestMode={block.groupRestMode ?? DEFAULT_GROUP_REST_MODE}
+                  memberCount={block.members.length}
+                />
+                <div className="grid gap-2">{rows}</div>
+              </div>
             );
           })}
-        </ol>
+        </div>
       )}
 
       {exercises.length > 0 ? (

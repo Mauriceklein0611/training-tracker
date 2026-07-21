@@ -1,6 +1,11 @@
 import { db } from '@/db/db';
-import type { Exercise, TemplateExercise, WorkoutTemplate } from '@/types';
+import type { Exercise, GroupRestMode, GroupType, TemplateExercise, WorkoutTemplate } from '@/types';
 import { nowIso, uuid } from '@/utils/id';
+import {
+  DEFAULT_GROUP_REST_MODE,
+  DEFAULT_GROUP_TYPE,
+  planGroupNormalization,
+} from '@/services/grouping';
 
 export interface TemplateWithExercises {
   template: WorkoutTemplate;
@@ -115,6 +120,8 @@ export async function removeTemplateExercise(id: string): Promise<void> {
     if (!row) return;
     await db.templateExercises.delete(id);
     await renumberTemplateExercises(row.templateId);
+    // Deleting a middle member can split a group or leave a single member.
+    await persistTemplateGrouping(await orderedTemplateExercises(row.templateId));
   });
 }
 
@@ -142,6 +149,11 @@ export async function moveTemplateExercise(id: string, direction: -1 | 1): Promi
     await Promise.all(
       reordered.map((entry, position) => db.templateExercises.update(entry.id, { order: position })),
     );
+    reordered.forEach((entry, position) => {
+      entry.order = position;
+    });
+    // Moving an exercise can pull it out of or into a group's run of members.
+    await persistTemplateGrouping(reordered);
   });
 }
 
@@ -157,6 +169,7 @@ export async function reorderTemplateExercises(
       ),
     );
     await renumberTemplateExercises(templateId);
+    await persistTemplateGrouping(await orderedTemplateExercises(templateId));
   });
 }
 
@@ -171,4 +184,94 @@ async function renumberTemplateExercises(templateId: string): Promise<void> {
         : db.templateExercises.update(row.id, { order: position }),
     ),
   );
+}
+
+async function orderedTemplateExercises(templateId: string): Promise<TemplateExercise[]> {
+  const rows = await db.templateExercises.where('templateId').equals(templateId).toArray();
+  return rows.sort((a, b) => a.order - b.order);
+}
+
+/** Writes the normalized grouping for a template's rows (in-memory intent). */
+async function persistTemplateGrouping(rows: TemplateExercise[]): Promise<void> {
+  const plan = planGroupNormalization(rows, uuid);
+  await Promise.all(
+    rows.map((row) => {
+      const fields = plan.get(row.id) ?? {};
+      return db.templateExercises.put({
+        ...row,
+        groupId: fields.groupId,
+        groupType: fields.groupType,
+        groupRestMode: fields.groupRestMode,
+      });
+    }),
+  );
+}
+
+/**
+ * Re-establishes the grouping invariants after a structural change: any group
+ * left with a single member is dissolved, and split runs get distinct ids.
+ */
+export async function normalizeTemplateGroups(templateId: string): Promise<void> {
+  await db.transaction('rw', db.templateExercises, async () => {
+    await persistTemplateGrouping(await orderedTemplateExercises(templateId));
+  });
+}
+
+/**
+ * Joins a template exercise into the group of the exercise directly above it,
+ * creating a new superset if the exercise above is still standalone.
+ */
+export async function attachTemplateExerciseToPrevious(rowId: string): Promise<void> {
+  await db.transaction('rw', db.templateExercises, db.workoutTemplates, async () => {
+    const row = await db.templateExercises.get(rowId);
+    if (!row) return;
+    const rows = await orderedTemplateExercises(row.templateId);
+    const index = rows.findIndex((entry) => entry.id === rowId);
+    if (index <= 0) return;
+
+    const prev = rows[index - 1];
+    const groupId = prev.groupId ?? uuid();
+    const groupType = prev.groupType ?? row.groupType ?? DEFAULT_GROUP_TYPE;
+    const groupRestMode = prev.groupRestMode ?? row.groupRestMode ?? DEFAULT_GROUP_REST_MODE;
+
+    Object.assign(prev, { groupId, groupType, groupRestMode });
+    Object.assign(rows[index], { groupId, groupType, groupRestMode });
+
+    await persistTemplateGrouping(rows);
+    await db.workoutTemplates.update(row.templateId, { updatedAt: nowIso() });
+  });
+}
+
+/** Removes a template exercise from its group, splitting the group if needed. */
+export async function detachTemplateExercise(rowId: string): Promise<void> {
+  await db.transaction('rw', db.templateExercises, db.workoutTemplates, async () => {
+    const row = await db.templateExercises.get(rowId);
+    if (!row?.groupId) return;
+    const rows = await orderedTemplateExercises(row.templateId);
+    const target = rows.find((entry) => entry.id === rowId);
+    if (target) {
+      target.groupId = undefined;
+      target.groupType = undefined;
+      target.groupRestMode = undefined;
+    }
+    await persistTemplateGrouping(rows);
+    await db.workoutTemplates.update(row.templateId, { updatedAt: nowIso() });
+  });
+}
+
+/** Updates the type or rest mode of every exercise in a template group. */
+export async function setTemplateGroupOptions(
+  templateId: string,
+  groupId: string,
+  changes: { groupType?: GroupType; groupRestMode?: GroupRestMode },
+): Promise<void> {
+  await db.transaction('rw', db.templateExercises, db.workoutTemplates, async () => {
+    const rows = await db.templateExercises.where('templateId').equals(templateId).toArray();
+    await Promise.all(
+      rows
+        .filter((row) => row.groupId === groupId)
+        .map((row) => db.templateExercises.update(row.id, changes)),
+    );
+    await db.workoutTemplates.update(templateId, { updatedAt: nowIso() });
+  });
 }

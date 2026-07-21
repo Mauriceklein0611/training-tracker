@@ -54,6 +54,8 @@ export function SessionExerciseCard({
   index,
   total,
   target,
+  label,
+  highlightNext,
   soundEnabled,
   vibrationEnabled,
 }: {
@@ -63,6 +65,10 @@ export function SessionExerciseCard({
   total: number;
   /** Plan entry, used only for displaying the rep/duration target range. */
   target?: TemplateExercise;
+  /** Position label, e.g. "A1" inside a superset. Defaults to "N.". */
+  label?: string;
+  /** Whether this is the exercise the group expects next. */
+  highlightNext?: boolean;
   soundEnabled?: boolean;
   vibrationEnabled?: boolean;
 }) {
@@ -195,15 +201,18 @@ export function SessionExerciseCard({
   return (
     <section
       aria-labelledby={`exercise-${sessionExercise.id}`}
-      className="rounded-2xl border border-border bg-surface p-3"
+      className={`rounded-2xl border bg-surface p-3 ${
+        highlightNext ? 'border-accent ring-1 ring-accent' : 'border-border'
+      }`}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <h2 id={`exercise-${sessionExercise.id}`} className="font-semibold leading-tight">
-            <span className="text-muted">{index + 1}. </span>
+            <span className="text-muted">{label ?? `${index + 1}.`} </span>
             {sessionExercise.exerciseNameSnapshot}
           </h2>
           <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted">
+            {highlightNext ? <Badge tone="accent">Als Nächstes</Badge> : null}
             <Badge>{TRACKING_TYPE_LABELS[sessionExercise.trackingTypeSnapshot]}</Badge>
             {describeTarget(target) ? <span>Ziel: {describeTarget(target)}</span> : null}
             <span>Pause {restTarget}s</span>

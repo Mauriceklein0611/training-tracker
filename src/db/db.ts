@@ -17,7 +17,7 @@ import { nowIso } from '@/utils/id';
  * Bump this together with a new `.version()` block below and record the change
  * in MIGRATIONS so the settings screen can show what the database went through.
  */
-export const SCHEMA_VERSION = 7;
+export const SCHEMA_VERSION = 8;
 
 export const MIGRATIONS: { version: number; description: string }[] = [
   { version: 1, description: 'Initiales Schema: Übungen, Pläne, Einheiten, Sätze.' },
@@ -58,6 +58,13 @@ export const MIGRATIONS: { version: number; description: string }[] = [
     description:
       'Optionale Wochenziele (Trainingseinheiten und Arbeitssätze pro Woche, ' +
       'optional je Übung) für die Kalender- und Heatmap-Ansicht.',
+  },
+  {
+    version: 8,
+    description:
+      'Übungen in Plänen und Einheiten können optional zu Supersätzen oder ' +
+      'Zirkeln gruppiert werden (Gruppen-ID, Gruppentyp, Pausenmodus). ' +
+      'Einzelübungen bleiben unverändert.',
   },
 ];
 
@@ -200,6 +207,20 @@ export class TrainingDatabase extends Dexie {
         .toCollection()
         .modify((settings) => {
           settings.schemaVersion = 7;
+        });
+    });
+
+    // ---- v8 -------------------------------------------------------------
+    // Template and session exercises gained optional grouping fields
+    // (groupId / groupType / groupRestMode). Absence means "standalone
+    // exercise", so nothing is backfilled — existing rows stay valid exactly
+    // as they are and only the recorded schema version is advanced.
+    this.version(8).upgrade(async (tx) => {
+      await tx
+        .table<AppSettings>('settings')
+        .toCollection()
+        .modify((settings) => {
+          settings.schemaVersion = 8;
         });
     });
   }

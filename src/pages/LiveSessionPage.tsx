@@ -17,7 +17,7 @@ import { ConfirmDialog, Dialog } from '@/components/ui/Dialog';
 import { TextAreaField } from '@/components/ui/Field';
 import { ExercisePickerDialog } from '@/features/exercises/ExercisePickerDialog';
 import { RestTimerBar } from '@/features/session/RestTimerBar';
-import { SessionExerciseCard } from '@/features/session/SessionExerciseCard';
+import { LiveExerciseList } from '@/features/session/LiveExerciseList';
 import { SessionSummaryView } from '@/features/session/SessionSummaryView';
 import { useActiveRest } from '@/features/session/useActiveRest';
 import { useNow } from '@/hooks/useNow';
@@ -167,20 +167,13 @@ export default function LiveSessionPage() {
           }
         />
       ) : (
-        <div className="grid gap-3">
-          {detail.exercises.map((entry, index) => (
-            <SessionExerciseCard
-              key={entry.sessionExercise.id}
-              detail={entry}
-              sessionId={sessionId}
-              index={index}
-              total={detail.exercises.length}
-              target={templateTargets?.get(entry.sessionExercise.exerciseId)}
-              soundEnabled={settings.restSoundEnabled}
-              vibrationEnabled={settings.restVibrationEnabled}
-            />
-          ))}
-        </div>
+        <LiveExerciseList
+          detail={detail}
+          sessionId={sessionId}
+          targets={templateTargets}
+          soundEnabled={settings.restSoundEnabled}
+          vibrationEnabled={settings.restVibrationEnabled}
+        />
       )}
 
       {detail.exercises.length > 0 ? (

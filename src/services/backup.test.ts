@@ -13,6 +13,7 @@ import { upsertBodyWeightEntry } from '@/db/repositories/bodyWeight';
 import {
   addSet,
   addExerciseToSession,
+  attachSessionExerciseToPrevious,
   completeSet,
   finishSession,
   startFreeSession,
@@ -360,6 +361,50 @@ describe('weekly goals round trip', () => {
     await importBackup(result.backup, 'replace');
     const restored = await db.settings.get('app-settings');
     expect(restored?.weeklyGoals).toBeUndefined();
+  });
+});
+
+describe('superset grouping round trip', () => {
+  it('preserves group fields on template and session exercises', async () => {
+    const exercise = await createExercise({
+      name: 'Bankdrücken',
+      primaryMuscleGroup: 'Brust',
+      secondaryMuscleGroups: [],
+      equipment: '',
+      trackingType: 'weight_reps',
+      weightMode: 'total',
+      weightMultiplier: 1,
+      defaultRestSeconds: 120,
+      notes: '',
+    });
+    const session = await startFreeSession('Superset');
+    await addExerciseToSession(session.id, exercise);
+    const seB = await addExerciseToSession(session.id, exercise);
+    await attachSessionExerciseToPrevious(seB.id);
+
+    const backup = await createBackup();
+    const grouped = backup.sessionExercises.filter((entry) => entry.groupId);
+    expect(grouped).toHaveLength(2);
+    expect(grouped[0].groupId).toBe(grouped[1].groupId);
+    expect(grouped[0].groupType).toBe('superset');
+
+    await resetDatabase();
+    await importBackup(backup, 'replace');
+    const restored = (await db.sessionExercises.toArray()).filter((entry) => entry.groupId);
+    expect(restored).toHaveLength(2);
+    expect(restored[0].groupId).toBe(restored[1].groupId);
+  });
+
+  it('accepts a backup written before grouping existed', async () => {
+    await seedDatabase();
+    const raw = JSON.parse(JSON.stringify(await createBackup()));
+    for (const entry of raw.sessionExercises) {
+      delete entry.groupId;
+      delete entry.groupType;
+      delete entry.groupRestMode;
+    }
+    raw.schemaVersion = 7;
+    expect(validateBackupJson(raw).ok).toBe(true);
   });
 });
 

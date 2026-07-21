@@ -41,6 +41,29 @@ export type SessionStatus = 'active' | 'completed';
 /** How an exercise should preferably be progressed. */
 export type ProgressionMethod = 'auto' | 'weight' | 'reps';
 
+/** Kind of grouping applied to consecutive exercises. */
+export type GroupType = 'superset' | 'circuit';
+
+/** When the rest timer runs inside a group. */
+export type GroupRestMode =
+  /** Rest after every exercise, like a normal set. */
+  | 'each'
+  /** Rest only after a full round through the group. */
+  | 'round';
+
+/**
+ * Optional grouping shared by consecutive exercises that form a superset or
+ * circuit. All members of a group carry the same three fields; absence of
+ * `groupId` means the exercise stands on its own — the fully backward
+ * compatible default for every template and session written before groups
+ * existed.
+ */
+export interface ExerciseGrouping {
+  groupId?: string;
+  groupType?: GroupType;
+  groupRestMode?: GroupRestMode;
+}
+
 export interface Exercise {
   id: string;
   name: string;
@@ -78,7 +101,7 @@ export interface WorkoutTemplate {
   updatedAt: ISODateTime;
 }
 
-export interface TemplateExercise {
+export interface TemplateExercise extends ExerciseGrouping {
   id: string;
   templateId: string;
   exerciseId: string;
@@ -109,7 +132,7 @@ export interface WorkoutSession {
  * The `*Snapshot` fields freeze the exercise configuration at the time of the
  * workout, so renaming or archiving an exercise later never rewrites history.
  */
-export interface SessionExercise {
+export interface SessionExercise extends ExerciseGrouping {
   id: string;
   sessionId: string;
   exerciseId: string;

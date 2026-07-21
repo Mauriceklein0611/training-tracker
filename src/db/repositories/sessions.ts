@@ -1,6 +1,9 @@
 import { db, ensureSettings } from '@/db/db';
 import type {
   Exercise,
+  ExerciseGrouping,
+  GroupRestMode,
+  GroupType,
   SessionExercise,
   SetType,
   WorkoutSession,
@@ -9,6 +12,12 @@ import type {
 import { nowIso, uuid } from '@/utils/id';
 import { getTemplateWithExercises } from '@/db/repositories/templates';
 import { resolveRestSeconds } from '@/services/rest';
+import {
+  DEFAULT_GROUP_REST_MODE,
+  DEFAULT_GROUP_TYPE,
+  planGroupNormalization,
+  roundBoundaryReached,
+} from '@/services/grouping';
 
 export interface SessionExerciseDetail {
   sessionExercise: SessionExercise;
@@ -50,6 +59,8 @@ function buildSessionExercise(
     /** Global default from the settings. */
     globalDefaultRestSeconds?: number | null;
     targetSets?: number;
+    /** Superset/circuit grouping carried over from the plan. */
+    grouping?: ExerciseGrouping;
   } = {},
 ): SessionExercise {
   const timestamp = nowIso();
@@ -69,6 +80,9 @@ function buildSessionExercise(
       globalDefaultRestSeconds: context.globalDefaultRestSeconds,
     }),
     targetSetsSnapshot: context.targetSets,
+    groupId: context.grouping?.groupId,
+    groupType: context.grouping?.groupType,
+    groupRestMode: context.grouping?.groupRestMode,
     notes: '',
     createdAt: timestamp,
     updatedAt: timestamp,
@@ -130,6 +144,11 @@ export async function startSessionFromTemplate(templateId: string): Promise<Work
         templateRestSeconds: row.restSeconds,
         globalDefaultRestSeconds,
         targetSets: row.targetSets,
+        grouping: {
+          groupId: row.groupId,
+          groupType: row.groupType,
+          groupRestMode: row.groupRestMode,
+        },
       });
       sessionExercise.notes = row.notes;
       await db.sessionExercises.add(sessionExercise);
@@ -216,6 +235,11 @@ export async function removeSessionExercise(sessionExerciseId: string): Promise<
         db.sessionExercises.update(sibling.id, { order: position }),
       ),
     );
+    siblings.forEach((sibling, position) => {
+      sibling.order = position;
+    });
+    // Removing a middle member can split a group or leave a single member.
+    await persistSessionGrouping(siblings);
     await touchSession(entry.sessionId);
   });
 }
@@ -240,6 +264,11 @@ export async function moveSessionExercise(
         db.sessionExercises.update(sibling.id, { order: position }),
       ),
     );
+    siblings.forEach((sibling, position) => {
+      sibling.order = position;
+    });
+    // Moving an exercise can pull it out of or into a group's run of members.
+    await persistSessionGrouping(siblings);
   });
 }
 
@@ -248,6 +277,120 @@ export async function updateSessionExercise(
   changes: Partial<Pick<SessionExercise, 'notes'>>,
 ): Promise<void> {
   await db.sessionExercises.update(sessionExerciseId, { ...changes, updatedAt: nowIso() });
+}
+
+async function orderedSessionExercises(sessionId: string): Promise<SessionExercise[]> {
+  const rows = await db.sessionExercises.where('sessionId').equals(sessionId).toArray();
+  return rows.sort((a, b) => a.order - b.order);
+}
+
+/** Writes the normalized grouping for a session's exercises (in-memory intent). */
+async function persistSessionGrouping(rows: SessionExercise[]): Promise<void> {
+  const plan = planGroupNormalization(rows, uuid);
+  const timestamp = nowIso();
+  await Promise.all(
+    rows.map((row) => {
+      const fields = plan.get(row.id) ?? {};
+      return db.sessionExercises.put({
+        ...row,
+        groupId: fields.groupId,
+        groupType: fields.groupType,
+        groupRestMode: fields.groupRestMode,
+        updatedAt: timestamp,
+      });
+    }),
+  );
+}
+
+/** Repairs group invariants after a structural change in a running session. */
+export async function normalizeSessionGroups(sessionId: string): Promise<void> {
+  await db.transaction('rw', db.sessionExercises, async () => {
+    await persistSessionGrouping(await orderedSessionExercises(sessionId));
+  });
+}
+
+/** Joins a session exercise into the group of the exercise directly above it. */
+export async function attachSessionExerciseToPrevious(sessionExerciseId: string): Promise<void> {
+  await db.transaction('rw', db.sessionExercises, async () => {
+    const row = await db.sessionExercises.get(sessionExerciseId);
+    if (!row) return;
+    const rows = await orderedSessionExercises(row.sessionId);
+    const index = rows.findIndex((entry) => entry.id === sessionExerciseId);
+    if (index <= 0) return;
+
+    const prev = rows[index - 1];
+    const groupId = prev.groupId ?? uuid();
+    const groupType = prev.groupType ?? row.groupType ?? DEFAULT_GROUP_TYPE;
+    const groupRestMode = prev.groupRestMode ?? row.groupRestMode ?? DEFAULT_GROUP_REST_MODE;
+
+    Object.assign(prev, { groupId, groupType, groupRestMode });
+    Object.assign(rows[index], { groupId, groupType, groupRestMode });
+    await persistSessionGrouping(rows);
+  });
+}
+
+/** Removes a session exercise from its group, splitting the group if needed. */
+export async function detachSessionExercise(sessionExerciseId: string): Promise<void> {
+  await db.transaction('rw', db.sessionExercises, async () => {
+    const row = await db.sessionExercises.get(sessionExerciseId);
+    if (!row?.groupId) return;
+    const rows = await orderedSessionExercises(row.sessionId);
+    const target = rows.find((entry) => entry.id === sessionExerciseId);
+    if (target) {
+      target.groupId = undefined;
+      target.groupType = undefined;
+      target.groupRestMode = undefined;
+    }
+    await persistSessionGrouping(rows);
+  });
+}
+
+/** Updates the type or rest mode of every exercise in a session group. */
+export async function setSessionGroupOptions(
+  sessionId: string,
+  groupId: string,
+  changes: { groupType?: GroupType; groupRestMode?: GroupRestMode },
+): Promise<void> {
+  await db.transaction('rw', db.sessionExercises, async () => {
+    const rows = await orderedSessionExercises(sessionId);
+    const timestamp = nowIso();
+    await Promise.all(
+      rows
+        .filter((row) => row.groupId === groupId)
+        .map((row) => db.sessionExercises.update(row.id, { ...changes, updatedAt: timestamp })),
+    );
+  });
+}
+
+/**
+ * Whether completing a set closes the current round of its group. Expects to
+ * run inside the completeSet transaction.
+ *
+ * `alreadyCompleted` is true when the set being completed already counted as
+ * done (an edit rather than a first completion), so it is not counted twice.
+ */
+async function roundClosesInTransaction(
+  sessionExercise: SessionExercise,
+  alreadyCompleted: boolean,
+): Promise<boolean> {
+  const members = (await orderedSessionExercises(sessionExercise.sessionId)).filter(
+    (entry) => entry.groupId === sessionExercise.groupId,
+  );
+  const memberIds = members.map((member) => member.id);
+
+  const completedByMember = new Map<string, number>();
+  for (const member of members) {
+    let count = await db.workoutSets
+      .where('sessionExerciseId')
+      .equals(member.id)
+      .filter((set) => Boolean(set.completedAt))
+      .count();
+    // The set being completed is not marked done yet, so add it in.
+    if (member.id === sessionExercise.id && !alreadyCompleted) count += 1;
+    completedByMember.set(member.id, count);
+  }
+
+  return roundBoundaryReached(memberIds, completedByMember, sessionExercise.id);
 }
 
 export interface NewSetInput {
@@ -401,10 +544,22 @@ export async function completeSet(
       await closeOpenRestsInTransaction(sessionExercise.sessionId, completedAt);
     }
 
+    // In a group that rests per round, the rest only starts once the round is
+    // complete — completing the first exercise of a superset should not pin the
+    // user to a rest bar before they move on to the next exercise.
+    let startRest = options.startRest !== false;
+    if (
+      startRest &&
+      sessionExercise?.groupId &&
+      (sessionExercise.groupRestMode ?? DEFAULT_GROUP_REST_MODE) === 'round'
+    ) {
+      startRest = await roundClosesInTransaction(sessionExercise, Boolean(set.completedAt));
+    }
+
     await db.workoutSets.update(setId, {
       ...values,
       completedAt: timestamp,
-      restStartedAt: options.startRest === false ? undefined : timestamp,
+      restStartedAt: startRest ? timestamp : undefined,
       restEndedAt: undefined,
       restActualSeconds: undefined,
       updatedAt: timestamp,

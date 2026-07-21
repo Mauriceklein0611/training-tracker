@@ -36,6 +36,20 @@ export const weightModeSchema = z.enum([
 
 export const setTypeSchema = z.enum(['warmup', 'working', 'drop', 'failure']);
 
+export const groupTypeSchema = z.enum(['superset', 'circuit']);
+export const groupRestModeSchema = z.enum(['each', 'round']);
+
+/**
+ * Optional superset / circuit grouping. Added in schema version 8; every field
+ * is optional, so templates and sessions from older backups still validate and
+ * import as plain standalone exercises.
+ */
+const groupingFields = {
+  groupId: id.optional(),
+  groupType: groupTypeSchema.optional(),
+  groupRestMode: groupRestModeSchema.optional(),
+};
+
 export const exerciseSchema = z.object({
   id,
   name: z.string().min(1, 'Name darf nicht leer sein'),
@@ -76,6 +90,7 @@ export const templateExerciseSchema = z.object({
   targetDurationSeconds: z.number().int().min(0).max(36000).optional(),
   restSeconds: z.number().int().min(0).max(3600).default(120),
   notes: z.string().default(''),
+  ...groupingFields,
 });
 
 export const workoutSessionSchema = z.object({
@@ -104,6 +119,7 @@ export const sessionExerciseSchema = z.object({
   restSecondsSnapshot: z.number().int().min(0).max(3600).default(120),
   targetSetsSnapshot: z.number().int().min(1).max(50).optional(),
   notes: z.string().default(''),
+  ...groupingFields,
   createdAt: isoDateTime,
   updatedAt: isoDateTime,
 });

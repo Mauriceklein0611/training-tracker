@@ -14,6 +14,7 @@ import {
   ONE_RM_MIN_REPS,
 } from '@/services/metrics';
 import { restDeviationSeconds } from '@/services/rest';
+import { groupItems, memberLabel } from '@/services/grouping';
 import type { AnalysisContext, BodyWeightEntry, SetWithContext, WeeklyGoals } from '@/types';
 import { hasAnyWeeklyGoal } from '@/services/calendar';
 import { customRange, dayKey, lastDaysRange, type DateRange } from '@/utils/date';
@@ -358,6 +359,23 @@ export function buildAiExport(
         byExercise.set(context.sessionExercise.id, list);
       }
 
+      // Resolve the superset/circuit each exercise belongs to within this
+      // workout, so the reader knows the exercises were performed together.
+      const sessionExercisesInOrder = [...byExercise.values()]
+        .map((list) => list[0].sessionExercise)
+        .sort((a, b) => a.order - b.order);
+      const groupInfoById = new Map<string, Record<string, unknown>>();
+      for (const block of groupItems(sessionExercisesInOrder)) {
+        if (!block.groupId) continue;
+        block.members.forEach((member, memberIndex) => {
+          groupInfoById.set(member.id, {
+            label: memberLabel(block, memberIndex),
+            type: block.groupType,
+            restMode: block.groupRestMode,
+          });
+        });
+      }
+
       const exercises = [...byExercise.values()]
         .sort((a, b) => a[0].sessionExercise.order - b[0].sessionExercise.order)
         .map((exerciseEntries) => {
@@ -369,6 +387,9 @@ export function buildAiExport(
             trackingType: sessionExercise.trackingTypeSnapshot,
             weightMode: sessionExercise.weightModeSnapshot,
             weightMultiplier: sessionExercise.weightMultiplierSnapshot,
+            ...(groupInfoById.has(sessionExercise.id)
+              ? { supersetGroup: groupInfoById.get(sessionExercise.id) }
+              : {}),
             ...(options.includeNotes && sessionExercise.notes
               ? { note: sessionExercise.notes }
               : {}),
