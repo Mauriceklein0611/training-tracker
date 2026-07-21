@@ -1,4 +1,4 @@
-import { db } from '@/db/db';
+import { db, ensureSettings } from '@/db/db';
 import type {
   Exercise,
   SessionExercise,
@@ -8,6 +8,7 @@ import type {
 } from '@/types';
 import { nowIso, uuid } from '@/utils/id';
 import { getTemplateWithExercises } from '@/db/repositories/templates';
+import { resolveRestSeconds } from '@/services/rest';
 
 export interface SessionExerciseDetail {
   sessionExercise: SessionExercise;
@@ -43,6 +44,13 @@ function buildSessionExercise(
   sessionId: string,
   exercise: Exercise,
   order: number,
+  context: {
+    /** Rest prescribed by the plan for this exercise, if it came from one. */
+    templateRestSeconds?: number | null;
+    /** Global default from the settings. */
+    globalDefaultRestSeconds?: number | null;
+    targetSets?: number;
+  } = {},
 ): SessionExercise {
   const timestamp = nowIso();
   return {
@@ -55,10 +63,25 @@ function buildSessionExercise(
     trackingTypeSnapshot: exercise.trackingType,
     weightModeSnapshot: exercise.weightMode,
     weightMultiplierSnapshot: exercise.weightMultiplier,
+    restSecondsSnapshot: resolveRestSeconds({
+      templateRestSeconds: context.templateRestSeconds,
+      exerciseDefaultRestSeconds: exercise.defaultRestSeconds,
+      globalDefaultRestSeconds: context.globalDefaultRestSeconds,
+    }),
+    targetSetsSnapshot: context.targetSets,
     notes: '',
     createdAt: timestamp,
     updatedAt: timestamp,
   };
+}
+
+/**
+ * Global default rest from the settings.
+ * Read outside any transaction, because `ensureSettings` may write.
+ */
+async function readGlobalRestDefault(): Promise<number> {
+  const settings = await ensureSettings();
+  return settings.defaultRestSeconds;
 }
 
 /** Starts a free workout without a template. */
@@ -84,6 +107,7 @@ export async function startFreeSession(name = 'Freies Training'): Promise<Workou
 export async function startSessionFromTemplate(templateId: string): Promise<WorkoutSession> {
   const template = await getTemplateWithExercises(templateId);
   if (!template) throw new Error('Der Trainingsplan wurde nicht gefunden.');
+  const globalDefaultRestSeconds = await readGlobalRestDefault();
 
   return db.transaction('rw', db.workoutSessions, db.sessionExercises, db.workoutSets, async () => {
     await assertNoActiveSession();
@@ -102,7 +126,11 @@ export async function startSessionFromTemplate(templateId: string): Promise<Work
 
     for (const [index, row] of template.exercises.entries()) {
       if (!row.exercise) continue; // exercise was deleted — skip rather than fail
-      const sessionExercise = buildSessionExercise(session.id, row.exercise, index);
+      const sessionExercise = buildSessionExercise(session.id, row.exercise, index, {
+        templateRestSeconds: row.restSeconds,
+        globalDefaultRestSeconds,
+        targetSets: row.targetSets,
+      });
       sessionExercise.notes = row.notes;
       await db.sessionExercises.add(sessionExercise);
     }
@@ -151,13 +179,22 @@ async function assertNoActiveSession(): Promise<void> {
   if (active) throw new ActiveSessionExistsError(active.id);
 }
 
+/**
+ * Adds an exercise to a running workout (free workout, or an ad-hoc addition).
+ * There is no plan target here, so the rest falls back to the exercise's own
+ * default before the global one.
+ */
 export async function addExerciseToSession(
   sessionId: string,
   exercise: Exercise,
 ): Promise<SessionExercise> {
+  const globalDefaultRestSeconds = await readGlobalRestDefault();
+
   return db.transaction('rw', db.sessionExercises, db.workoutSessions, async () => {
     const count = await db.sessionExercises.where('sessionId').equals(sessionId).count();
-    const sessionExercise = buildSessionExercise(sessionId, exercise, count);
+    const sessionExercise = buildSessionExercise(sessionId, exercise, count, {
+      globalDefaultRestSeconds,
+    });
     await db.sessionExercises.add(sessionExercise);
     await touchSession(sessionId);
     return sessionExercise;
@@ -277,38 +314,115 @@ export async function deleteSet(setId: string): Promise<void> {
 }
 
 /**
+ * Elapsed rest in whole seconds, clamped at zero.
+ *
+ * The clamp guards against a device clock that jumped backwards; a negative
+ * rest would otherwise poison every average built on top of it.
+ */
+function elapsedRestSeconds(startedAt: string, endedAt: Date): number {
+  const started = new Date(startedAt).getTime();
+  if (Number.isNaN(started)) return 0;
+  return Math.max(0, Math.round((endedAt.getTime() - started) / 1000));
+}
+
+/**
+ * Ends every rest of a session that was started but never closed.
+ *
+ * A workout may only ever have one running rest: the live view shows the most
+ * recent one, so an older open rest would be invisible and its duration lost.
+ *
+ * Idempotent — only sets with `restStartedAt` and no `restEndedAt` are touched,
+ * so a second call changes nothing. Returns the number of rests that were
+ * closed, which makes the behaviour straightforward to assert in tests.
+ *
+ * Expects to run inside a transaction covering sessionExercises and workoutSets.
+ */
+async function closeOpenRestsInTransaction(
+  sessionId: string,
+  endedAt: Date,
+): Promise<number> {
+  const sessionExercises = await db.sessionExercises
+    .where('sessionId')
+    .equals(sessionId)
+    .toArray();
+
+  let closed = 0;
+  for (const entry of sessionExercises) {
+    const sets = await db.workoutSets.where('sessionExerciseId').equals(entry.id).toArray();
+
+    for (const set of sets) {
+      if (!set.restStartedAt || set.restEndedAt) continue;
+      await db.workoutSets.update(set.id, {
+        restEndedAt: endedAt.toISOString(),
+        restActualSeconds: elapsedRestSeconds(set.restStartedAt, endedAt),
+        updatedAt: nowIso(),
+      });
+      closed += 1;
+    }
+  }
+  return closed;
+}
+
+/** Closes all running rests of a session. Opens its own transaction. */
+export async function closeOpenRests(
+  sessionId: string,
+  endedAt: Date = new Date(),
+): Promise<number> {
+  return db.transaction('rw', db.sessionExercises, db.workoutSets, () =>
+    closeOpenRestsInTransaction(sessionId, endedAt),
+  );
+}
+
+/**
  * Marks a set as done and immediately starts its rest period.
  *
  * The rest period is anchored to an absolute timestamp so it stays correct when
  * the screen locks, the tab is backgrounded, or the app is reloaded.
+ *
+ * Any rest still running in this workout is closed first. Without that, quickly
+ * completing several sets would leave earlier rests open forever: the live view
+ * only ever shows the newest one, so the older durations would never be
+ * recorded.
  */
 export async function completeSet(
   setId: string,
   values: Partial<Pick<WorkoutSet, 'weightKg' | 'reps' | 'durationSeconds' | 'rir' | 'rpe' | 'setType'>>,
   options: { startRest?: boolean } = {},
 ): Promise<void> {
-  const timestamp = nowIso();
-  await db.workoutSets.update(setId, {
-    ...values,
-    completedAt: timestamp,
-    restStartedAt: options.startRest === false ? undefined : timestamp,
-    restEndedAt: undefined,
-    restActualSeconds: undefined,
-    updatedAt: timestamp,
+  await db.transaction('rw', db.sessionExercises, db.workoutSets, async () => {
+    const set = await db.workoutSets.get(setId);
+    if (!set) return;
+
+    const completedAt = new Date();
+    const timestamp = completedAt.toISOString();
+
+    const sessionExercise = await db.sessionExercises.get(set.sessionExerciseId);
+    if (sessionExercise) {
+      await closeOpenRestsInTransaction(sessionExercise.sessionId, completedAt);
+    }
+
+    await db.workoutSets.update(setId, {
+      ...values,
+      completedAt: timestamp,
+      restStartedAt: options.startRest === false ? undefined : timestamp,
+      restEndedAt: undefined,
+      restActualSeconds: undefined,
+      updatedAt: timestamp,
+    });
   });
 }
 
-/** Ends the current rest period and records how long it actually lasted. */
+/**
+ * Ends the current rest period and records how long it actually lasted.
+ * Idempotent: an already closed rest keeps its recorded duration.
+ */
 export async function endRest(setId: string, endedAt: Date = new Date()): Promise<void> {
   const set = await db.workoutSets.get(setId);
-  if (!set?.restStartedAt) return;
-  const actual = Math.max(
-    0,
-    Math.round((endedAt.getTime() - new Date(set.restStartedAt).getTime()) / 1000),
-  );
+  if (!set?.restStartedAt || set.restEndedAt) return;
+
   await db.workoutSets.update(setId, {
     restEndedAt: endedAt.toISOString(),
-    restActualSeconds: actual,
+    restActualSeconds: elapsedRestSeconds(set.restStartedAt, endedAt),
     updatedAt: nowIso(),
   });
 }
@@ -327,6 +441,12 @@ async function touchSession(sessionId: string): Promise<void> {
 /** Completes a session. Sets that were never finished are removed. */
 export async function finishSession(sessionId: string): Promise<void> {
   await db.transaction('rw', db.workoutSessions, db.sessionExercises, db.workoutSets, async () => {
+    // The rest after the final set is still running when the workout ends.
+    // Close it against the finish time so its duration is recorded rather than
+    // silently dropped from every statistic.
+    const finishedAt = new Date();
+    await closeOpenRestsInTransaction(sessionId, finishedAt);
+
     const sessionExercises = await db.sessionExercises
       .where('sessionId')
       .equals(sessionId)
@@ -350,7 +470,8 @@ export async function finishSession(sessionId: string): Promise<void> {
       );
     }
 
-    const timestamp = nowIso();
+    // Same instant the rests were closed against, so the numbers agree.
+    const timestamp = finishedAt.toISOString();
     await db.workoutSessions.update(sessionId, {
       status: 'completed',
       finishedAt: timestamp,

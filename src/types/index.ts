@@ -107,6 +107,17 @@ export interface SessionExercise {
   trackingTypeSnapshot: TrackingType;
   weightModeSnapshot: WeightMode;
   weightMultiplierSnapshot: number;
+  /**
+   * Rest time resolved when the exercise entered this workout (plan target →
+   * exercise default → global default). Snapshotted so editing the exercise
+   * later cannot change what a past workout prescribed.
+   */
+  restSecondsSnapshot: number;
+  /**
+   * Target number of working sets from the plan, if this workout came from one.
+   * Undefined for free workouts, where sets are simply added as needed.
+   */
+  targetSetsSnapshot?: number;
   notes: string;
   createdAt: ISODateTime;
   updatedAt: ISODateTime;

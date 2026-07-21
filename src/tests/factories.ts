@@ -70,6 +70,7 @@ export function makeSessionExercise(
     trackingTypeSnapshot: 'weight_reps' as TrackingType,
     weightModeSnapshot: 'total' as WeightMode,
     weightMultiplierSnapshot: 1,
+    restSecondsSnapshot: 120,
     notes: '',
     createdAt: NOW,
     updatedAt: NOW,

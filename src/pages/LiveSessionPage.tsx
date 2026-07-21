@@ -170,7 +170,6 @@ export default function LiveSessionPage() {
               index={index}
               total={detail.exercises.length}
               target={templateTargets?.get(entry.sessionExercise.exerciseId)}
-              defaultRestSeconds={settings.defaultRestSeconds}
             />
           ))}
         </div>

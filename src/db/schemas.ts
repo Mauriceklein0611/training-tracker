@@ -94,6 +94,10 @@ export const sessionExerciseSchema = z.object({
   trackingTypeSnapshot: trackingTypeSchema,
   weightModeSnapshot: weightModeSchema,
   weightMultiplierSnapshot: z.number().positive().max(10).default(1),
+  // Added in schema version 4. Defaulted rather than required so backups
+  // written by older versions of the app still validate and import cleanly.
+  restSecondsSnapshot: z.number().int().min(0).max(3600).default(120),
+  targetSetsSnapshot: z.number().int().min(1).max(50).optional(),
   notes: z.string().default(''),
   createdAt: isoDateTime,
   updatedAt: isoDateTime,

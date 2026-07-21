@@ -15,7 +15,7 @@ import {
 } from '@/services/metrics';
 import { restDeviationSeconds } from '@/services/rest';
 import type { BodyWeightEntry, SetWithContext } from '@/types';
-import { customRange, lastDaysRange, type DateRange } from '@/utils/date';
+import { customRange, dayKey, lastDaysRange, type DateRange } from '@/utils/date';
 
 /**
  * Export tailored for a language model.
@@ -47,15 +47,74 @@ export const DEFAULT_AI_EXPORT_OPTIONS: AiExportOptions = {
   includeWarmupSets: false,
 };
 
+export interface ExportPeriodErrors {
+  customFrom?: string;
+  customTo?: string;
+}
+
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * Validates the selected period.
+ *
+ * A custom period requires both dates. Treating a missing date as "no range"
+ * would silently widen the export to the entire history — the opposite of what
+ * someone narrowing a range expects, and a privacy problem when the file is
+ * shared afterwards.
+ */
+export function validateExportPeriod(options: AiExportOptions): ExportPeriodErrors {
+  if (options.period !== 'custom') return {};
+
+  const errors: ExportPeriodErrors = {};
+  const from = options.customFrom?.trim();
+  const to = options.customTo?.trim();
+
+  if (!from) errors.customFrom = 'Bitte ein Startdatum wählen.';
+  else if (!DATE_PATTERN.test(from)) errors.customFrom = 'Ungültiges Datum.';
+
+  if (!to) errors.customTo = 'Bitte ein Enddatum wählen.';
+  else if (!DATE_PATTERN.test(to)) errors.customTo = 'Ungültiges Datum.';
+
+  // String comparison is safe for ISO calendar days and avoids any timezone shift.
+  if (!errors.customFrom && !errors.customTo && from && to && from > to) {
+    errors.customTo = 'Das Enddatum darf nicht vor dem Startdatum liegen.';
+  }
+
+  return errors;
+}
+
+export function hasExportPeriodErrors(errors: ExportPeriodErrors): boolean {
+  return Object.keys(errors).length > 0;
+}
+
+export class InvalidExportPeriodError extends Error {
+  constructor(public readonly errors: ExportPeriodErrors) {
+    super('Der gewählte Zeitraum ist unvollständig oder ungültig.');
+    this.name = 'InvalidExportPeriodError';
+  }
+}
+
+/**
+ * Resolves the selected period into a date range.
+ *
+ * `null` means "entire history" and is only ever returned for the explicit
+ * "all" option. An invalid custom period throws instead of falling back, so an
+ * export can never quietly contain more than was asked for.
+ *
+ * Custom ranges are interpreted as local calendar days (00:00 to 23:59:59 local
+ * time), not UTC.
+ */
 export function resolveExportRange(options: AiExportOptions, now = new Date()): DateRange | null {
   switch (options.period) {
     case '30d':
       return lastDaysRange(30, now);
     case '90d':
       return lastDaysRange(90, now);
-    case 'custom':
-      if (!options.customFrom || !options.customTo) return null;
-      return customRange(options.customFrom, options.customTo);
+    case 'custom': {
+      const errors = validateExportPeriod(options);
+      if (hasExportPeriodErrors(errors)) throw new InvalidExportPeriodError(errors);
+      return customRange(options.customFrom as string, options.customTo as string);
+    }
     case 'all':
       return null;
   }
@@ -454,7 +513,7 @@ function describePeriod(options: AiExportOptions): string {
 
 /** `training-ai-export-2026-07-21.json` */
 export function aiExportFileName(date: Date = new Date()): string {
-  return `training-ai-export-${date.toISOString().slice(0, 10)}.json`;
+  return `training-ai-export-${dayKey(date)}.json`;
 }
 
 /** Ready-to-paste instruction that accompanies the export file. */

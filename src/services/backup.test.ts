@@ -248,6 +248,78 @@ describe('importBackup — merge', () => {
   });
 });
 
+describe('compatibility with older backup files', () => {
+  /** Strips fields that were introduced after the file would have been written. */
+  async function makeLegacyBackup() {
+    await seedDatabase();
+    const raw = JSON.parse(JSON.stringify(await createBackup()));
+    for (const entry of raw.sessionExercises) {
+      delete entry.restSecondsSnapshot;
+      delete entry.targetSetsSnapshot;
+    }
+    for (const entry of raw.bodyWeightEntries) {
+      delete entry.bodyFatPercent;
+      delete entry.measurements;
+    }
+    raw.schemaVersion = 2;
+    return raw;
+  }
+
+  it('accepts a backup written before the new fields existed', async () => {
+    const legacy = await makeLegacyBackup();
+    const result = validateBackupJson(legacy);
+
+    expect(result.ok).toBe(true);
+  });
+
+  it('fills the missing rest snapshot with a safe default on import', async () => {
+    const legacy = await makeLegacyBackup();
+    const result = validateBackupJson(legacy);
+    if (!result.ok) throw new Error('Backup sollte gültig sein');
+
+    await resetDatabase();
+    await importBackup(result.backup, 'replace');
+
+    const entry = await db.sessionExercises.toCollection().first();
+    expect(entry?.restSecondsSnapshot).toBe(120);
+    expect(entry?.targetSetsSnapshot).toBeUndefined();
+    // The actual sets keep the rest they were recorded with.
+    expect((await db.workoutSets.toCollection().first())?.restTargetSeconds).toBe(120);
+  });
+
+  it('loses no records when importing a legacy backup', async () => {
+    const legacy = await makeLegacyBackup();
+    const result = validateBackupJson(legacy);
+    if (!result.ok) throw new Error('Backup sollte gültig sein');
+
+    await resetDatabase();
+    await importBackup(result.backup, 'replace');
+
+    expect(await db.exercises.count()).toBe(1);
+    expect(await db.workoutSessions.count()).toBe(1);
+    expect(await db.sessionExercises.count()).toBe(1);
+    expect(await db.workoutSets.count()).toBe(1);
+    expect(await db.bodyWeightEntries.count()).toBe(1);
+  });
+
+  it('survives a round trip through the current format', async () => {
+    const legacy = await makeLegacyBackup();
+    const result = validateBackupJson(legacy);
+    if (!result.ok) throw new Error('Backup sollte gültig sein');
+
+    await resetDatabase();
+    await importBackup(result.backup, 'replace');
+    const current = await createBackup();
+
+    await resetDatabase();
+    await importBackup(current, 'replace');
+    const again = await createBackup();
+
+    expect(again.sessionExercises).toEqual(current.sessionExercises);
+    expect(again.workoutSets).toEqual(current.workoutSets);
+  });
+});
+
 describe('import failure handling', () => {
   it('leaves the database untouched when the import fails', async () => {
     await seedDatabase();

@@ -7,6 +7,7 @@ import {
   formatDurationLong,
   isWithinRange,
   lastDaysRange,
+  todayKey,
   weekKey,
   weeksInRange,
 } from '@/utils/date';
@@ -23,6 +24,30 @@ describe('day and week aggregation', () => {
     expect(weekKey('2026-07-26T12:00:00')).toBe(monday);
     // The following Monday starts a new bucket.
     expect(weekKey('2026-07-27T12:00:00')).not.toBe(monday);
+  });
+});
+
+describe('todayKey — local calendar day', () => {
+  it('returns the local day, not the UTC day', () => {
+    // 23:30 local time. In Central European Summer Time the UTC date is already
+    // the next day, so `toISOString().slice(0, 10)` would file this under the
+    // wrong day. The local key must stay on the 21st.
+    const lateEvening = new Date(2026, 6, 21, 23, 30, 0);
+    expect(todayKey(lateEvening)).toBe('2026-07-21');
+  });
+
+  it('stays on the local day just after midnight', () => {
+    const justAfterMidnight = new Date(2026, 6, 22, 0, 15, 0);
+    expect(todayKey(justAfterMidnight)).toBe('2026-07-22');
+  });
+
+  it('agrees with dayKey', () => {
+    const moment = new Date(2026, 6, 21, 18, 0, 0);
+    expect(todayKey(moment)).toBe(dayKey(moment));
+  });
+
+  it('pads month and day to two digits', () => {
+    expect(todayKey(new Date(2026, 0, 5, 12, 0, 0))).toBe('2026-01-05');
   });
 });
 

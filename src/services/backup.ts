@@ -11,6 +11,7 @@ import {
   workoutTemplateSchema,
 } from '@/db/schemas';
 import { nowIso } from '@/utils/id';
+import { dayKey } from '@/utils/date';
 
 /**
  * Full technical backup: a lossless dump of every table that can be restored
@@ -314,5 +315,5 @@ export async function importBackup(
 
 /** `training-backup-2026-07-21.json` */
 export function backupFileName(date: Date = new Date()): string {
-  return `training-backup-${date.toISOString().slice(0, 10)}.json`;
+  return `training-backup-${dayKey(date)}.json`;
 }

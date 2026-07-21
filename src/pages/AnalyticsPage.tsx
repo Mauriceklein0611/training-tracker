@@ -19,7 +19,14 @@ import {
 import { ONE_RM_MAX_REPS, ONE_RM_MIN_REPS } from '@/services/metrics';
 import { useSettings } from '@/hooks/useSettings';
 import type { AnalyticsRangeKey } from '@/types';
-import { customRange, formatDate, formatDurationLong, lastDaysRange } from '@/utils/date';
+import {
+  customRange,
+  dayKey,
+  formatDate,
+  formatDurationLong,
+  lastDaysRange,
+  todayKey,
+} from '@/utils/date';
 import {
   formatKg,
   formatNumber,
@@ -50,9 +57,9 @@ export default function AnalyticsPage() {
   const { settings } = useSettings();
   const [rangeKey, setRangeKey] = useState<AnalyticsRangeKey>(settings.defaultAnalyticsRange);
   const [customFrom, setCustomFrom] = useState(
-    () => new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10),
+    () => dayKey(new Date(Date.now() - 30 * 86400000)),
   );
-  const [customTo, setCustomTo] = useState(() => new Date().toISOString().slice(0, 10));
+  const [customTo, setCustomTo] = useState(() => todayKey());
   const [exerciseId, setExerciseId] = useState('');
   const [metric, setMetric] = useState<Metric>('volume');
 

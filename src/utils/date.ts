@@ -45,6 +45,17 @@ export function formatWeekday(value: string | Date): string {
   return format(date, 'EEEE', { locale: de });
 }
 
+/**
+ * Today as a local calendar day key ("2026-07-21").
+ *
+ * Always use this instead of `new Date().toISOString().slice(0, 10)`, which
+ * yields the *UTC* day: in Central European Summer Time everything after 22:00
+ * local time would be filed under the previous day.
+ */
+export function todayKey(now: Date = new Date()): string {
+  return dayKey(now);
+}
+
 /** Human readable heading for a day group in the history list. */
 export function formatDayHeading(value: string | Date, today: Date = new Date()): string {
   const date = typeof value === 'string' ? parseISO(value) : value;

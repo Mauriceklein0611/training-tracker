@@ -25,13 +25,16 @@ import {
   aiExportFileName,
   buildAiExport,
   DEFAULT_AI_EXPORT_OPTIONS,
+  hasExportPeriodErrors,
+  validateExportPeriod,
   type AiExportOptions,
+  type ExportPeriodErrors,
   type AiExportPeriodKey,
 } from '@/services/aiExport';
 import { bodyWeightCsv, exercisesCsv, sessionsCsv, setsCsv } from '@/services/csv';
 import { loadAnalyticsDataset } from '@/services/dataset';
 import { copyToClipboard, downloadCsv, downloadJson, readFileAsText } from '@/utils/download';
-import { formatDateTime } from '@/utils/date';
+import { formatDateTime, todayKey } from '@/utils/date';
 
 interface PendingImport {
   backup: BackupFile;
@@ -50,6 +53,8 @@ export default function DataPage() {
   const [pending, setPending] = useState<PendingImport | null>(null);
   const [replaceConfirm, setReplaceConfirm] = useState(false);
   const [aiOptions, setAiOptions] = useState<AiExportOptions>(DEFAULT_AI_EXPORT_OPTIONS);
+  // Only shown after a failed attempt, so the form does not scold while typing.
+  const [periodErrors, setPeriodErrors] = useState<ExportPeriodErrors>({});
 
   // ---- full backup ------------------------------------------------------
   const handleBackup = async () => {
@@ -129,6 +134,15 @@ export default function DataPage() {
 
   // ---- AI export --------------------------------------------------------
   const handleAiExport = async () => {
+    // Validate before touching the database: an incomplete custom period must
+    // never silently widen the export to the whole history.
+    const errors = validateExportPeriod(aiOptions);
+    setPeriodErrors(errors);
+    if (hasExportPeriodErrors(errors)) {
+      toast.show('Bitte den Zeitraum vervollständigen.', 'error');
+      return;
+    }
+
     setBusy('ai');
     try {
       const [dataset, bodyWeight] = await Promise.all([
@@ -152,7 +166,7 @@ export default function DataPage() {
   const handleCsv = async (kind: 'sessions' | 'sets' | 'exercises' | 'bodyweight') => {
     setBusy(`csv-${kind}`);
     try {
-      const today = new Date().toISOString().slice(0, 10);
+      const today = todayKey();
       if (kind === 'bodyweight') {
         downloadCsv(
           `training-koerperdaten-${today}.csv`,
@@ -276,18 +290,26 @@ export default function DataPage() {
                 <TextField
                   label="Von"
                   type="date"
+                  required
                   value={aiOptions.customFrom ?? ''}
-                  onChange={(event) =>
-                    setAiOptions((current) => ({ ...current, customFrom: event.target.value }))
-                  }
+                  error={periodErrors.customFrom}
+                  max={aiOptions.customTo || undefined}
+                  onChange={(event) => {
+                    setPeriodErrors({});
+                    setAiOptions((current) => ({ ...current, customFrom: event.target.value }));
+                  }}
                 />
                 <TextField
                   label="Bis"
                   type="date"
+                  required
                   value={aiOptions.customTo ?? ''}
-                  onChange={(event) =>
-                    setAiOptions((current) => ({ ...current, customTo: event.target.value }))
-                  }
+                  error={periodErrors.customTo}
+                  min={aiOptions.customFrom || undefined}
+                  onChange={(event) => {
+                    setPeriodErrors({});
+                    setAiOptions((current) => ({ ...current, customTo: event.target.value }));
+                  }}
                 />
               </div>
             ) : null}

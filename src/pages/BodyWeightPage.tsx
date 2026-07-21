@@ -15,7 +15,7 @@ import {
 import { useToast } from '@/hooks/useToast';
 import { parseNumberInput } from '@/services/validation';
 import type { BodyMeasurements } from '@/types';
-import { formatDate } from '@/utils/date';
+import { formatDate, todayKey } from '@/utils/date';
 import {
   BODY_MEASUREMENT_FIELDS,
   formatCm,
@@ -35,7 +35,7 @@ export default function BodyWeightPage() {
   const toast = useToast();
   const entries = useLiveQuery(() => listBodyWeightEntries(), [], []);
 
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(() => todayKey());
   const [weight, setWeight] = useState('');
   const [bodyFat, setBodyFat] = useState('');
   const [measurements, setMeasurements] = useState<MeasurementDraft>({});

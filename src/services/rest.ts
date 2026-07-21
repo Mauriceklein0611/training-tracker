@@ -8,6 +8,37 @@ import type { WorkoutSet } from '@/types';
  * makes it survive a locked screen, a backgrounded tab or a full page reload.
  */
 
+/** Last-resort rest when nothing at all has been configured. */
+export const FALLBACK_REST_SECONDS = 120;
+
+/**
+ * Resolves the rest time for an exercise that is being added to a workout.
+ *
+ * Priority, most specific first:
+ *   1. the plan's target rest for this exercise
+ *   2. the exercise's own default rest
+ *   3. the global default from the settings
+ *   4. FALLBACK_REST_SECONDS
+ *
+ * Uses `??` rather than `||` throughout, so a deliberate `0` ("no rest") is
+ * honoured instead of falling through to the next level.
+ *
+ * The result is snapshotted onto the SessionExercise, which is what keeps a
+ * finished workout stable when the exercise is edited later.
+ */
+export function resolveRestSeconds(sources: {
+  templateRestSeconds?: number | null;
+  exerciseDefaultRestSeconds?: number | null;
+  globalDefaultRestSeconds?: number | null;
+}): number {
+  return (
+    sources.templateRestSeconds ??
+    sources.exerciseDefaultRestSeconds ??
+    sources.globalDefaultRestSeconds ??
+    FALLBACK_REST_SECONDS
+  );
+}
+
 export interface RestProgress {
   /** A rest period is running (started, not yet ended). */
   running: boolean;

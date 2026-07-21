@@ -4,7 +4,10 @@ import {
   aiExportFileName,
   buildAiExport,
   DEFAULT_AI_EXPORT_OPTIONS,
+  hasExportPeriodErrors,
+  InvalidExportPeriodError,
   resolveExportRange,
+  validateExportPeriod,
 } from '@/services/aiExport';
 import type { AnalyticsDataset } from '@/services/analytics';
 import type { BodyWeightEntry } from '@/types';
@@ -103,10 +106,93 @@ describe('resolveExportRange', () => {
     expect(resolveExportRange({ ...DEFAULT_AI_EXPORT_OPTIONS, period: '90d' }, NOW)).not.toBeNull();
   });
 
-  it('ignores an incomplete custom range', () => {
-    expect(
+  it('refuses an incomplete custom range instead of exporting everything', () => {
+    // The dangerous case: a missing date must never silently widen the export.
+    expect(() =>
       resolveExportRange({ ...DEFAULT_AI_EXPORT_OPTIONS, period: 'custom' }, NOW),
-    ).toBeNull();
+    ).toThrow(InvalidExportPeriodError);
+  });
+
+  it('resolves a valid custom range as local calendar days', () => {
+    const range = resolveExportRange(
+      {
+        ...DEFAULT_AI_EXPORT_OPTIONS,
+        period: 'custom',
+        customFrom: '2026-07-01',
+        customTo: '2026-07-31',
+      },
+      NOW,
+    );
+
+    expect(range).not.toBeNull();
+    // Local midnight to local end of day, not a UTC boundary.
+    expect(range!.from.getHours()).toBe(0);
+    expect(range!.from.getDate()).toBe(1);
+    expect(range!.to.getHours()).toBe(23);
+    expect(range!.to.getDate()).toBe(31);
+  });
+});
+
+describe('validateExportPeriod', () => {
+  const custom = (customFrom?: string, customTo?: string) => ({
+    ...DEFAULT_AI_EXPORT_OPTIONS,
+    period: 'custom' as const,
+    customFrom,
+    customTo,
+  });
+
+  it('accepts a complete, ordered range', () => {
+    const errors = validateExportPeriod(custom('2026-07-01', '2026-07-31'));
+    expect(hasExportPeriodErrors(errors)).toBe(false);
+  });
+
+  it('accepts a single-day range', () => {
+    expect(
+      hasExportPeriodErrors(validateExportPeriod(custom('2026-07-15', '2026-07-15'))),
+    ).toBe(false);
+  });
+
+  it('reports a missing start date', () => {
+    const errors = validateExportPeriod(custom(undefined, '2026-07-31'));
+    expect(errors.customFrom).toContain('Startdatum');
+    expect(errors.customTo).toBeUndefined();
+  });
+
+  it('reports a missing end date', () => {
+    const errors = validateExportPeriod(custom('2026-07-01', undefined));
+    expect(errors.customTo).toContain('Enddatum');
+    expect(errors.customFrom).toBeUndefined();
+  });
+
+  it('reports both dates when neither was given', () => {
+    const errors = validateExportPeriod(custom());
+    expect(errors.customFrom).toBeTruthy();
+    expect(errors.customTo).toBeTruthy();
+  });
+
+  it('reports a reversed range', () => {
+    const errors = validateExportPeriod(custom('2026-07-31', '2026-07-01'));
+    expect(errors.customTo).toContain('vor dem Startdatum');
+  });
+
+  it('rejects a malformed date', () => {
+    expect(validateExportPeriod(custom('01.07.2026', '2026-07-31')).customFrom).toContain(
+      'Ungültig',
+    );
+  });
+
+  it('ignores empty strings the same way as missing values', () => {
+    const errors = validateExportPeriod(custom('', '   '));
+    expect(errors.customFrom).toBeTruthy();
+    expect(errors.customTo).toBeTruthy();
+  });
+
+  it('has nothing to complain about for the preset periods', () => {
+    for (const period of ['all', '30d', '90d'] as const) {
+      expect(
+        hasExportPeriodErrors(validateExportPeriod({ ...DEFAULT_AI_EXPORT_OPTIONS, period })),
+      ).toBe(false);
+    }
   });
 });
 

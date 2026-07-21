@@ -17,7 +17,7 @@ import { nowIso } from '@/utils/id';
  * Bump this together with a new `.version()` block below and record the change
  * in MIGRATIONS so the settings screen can show what the database went through.
  */
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 export const MIGRATIONS: { version: number; description: string }[] = [
   { version: 1, description: 'Initiales Schema: Übungen, Pläne, Einheiten, Sätze.' },
@@ -32,6 +32,13 @@ export const MIGRATIONS: { version: number; description: string }[] = [
     description:
       'Körperdaten erweitert: Körperfettanteil und Umfangsmaße je Eintrag. ' +
       'Das Gewicht ist dadurch optional geworden.',
+  },
+  {
+    version: 4,
+    description:
+      'Übungen in Trainingseinheiten merken sich jetzt die aufgelöste Pausenzeit ' +
+      'und das Satzziel als Snapshot, damit spätere Änderungen an einer Übung ' +
+      'vergangene Trainings nicht rückwirkend verändern.',
   },
 ];
 
@@ -97,6 +104,41 @@ export class TrainingDatabase extends Dexie {
         .toCollection()
         .modify((settings) => {
           settings.schemaVersion = 3;
+        });
+    });
+
+    // ---- v4 -------------------------------------------------------------
+    // SessionExercise gained restSecondsSnapshot / targetSetsSnapshot.
+    //
+    // Existing rows predate the snapshot, so the value is reconstructed from
+    // the exercise's current default (falling back to the global default).
+    // This is safe for history: sets already carry their own
+    // `restTargetSeconds`, and the snapshot only seeds *new* sets. The target
+    // set count stays undefined — it cannot be recovered and its absence
+    // simply means "no set goal", which is the pre-v4 behaviour.
+    this.version(4).upgrade(async (tx) => {
+      const settings = await tx.table<AppSettings>('settings').get('app-settings');
+      const globalDefault = settings?.defaultRestSeconds ?? 120;
+
+      const exercises = await tx.table<Exercise>('exercises').toArray();
+      const defaultsById = new Map(
+        exercises.map((exercise) => [exercise.id, exercise.defaultRestSeconds]),
+      );
+
+      await tx
+        .table<SessionExercise>('sessionExercises')
+        .toCollection()
+        .modify((entry) => {
+          if (typeof entry.restSecondsSnapshot !== 'number') {
+            entry.restSecondsSnapshot = defaultsById.get(entry.exerciseId) ?? globalDefault;
+          }
+        });
+
+      await tx
+        .table<AppSettings>('settings')
+        .toCollection()
+        .modify((current) => {
+          current.schemaVersion = 4;
         });
     });
   }

@@ -35,7 +35,7 @@ async function createVersion1Database(): Promise<Dexie> {
 
 describe('schema migrations', () => {
   it('documents every version that exists', () => {
-    expect(MIGRATIONS.map((migration) => migration.version)).toEqual([1, 2, 3]);
+    expect(MIGRATIONS.map((migration) => migration.version)).toEqual([1, 2, 3, 4]);
     expect(MIGRATIONS[MIGRATIONS.length - 1].version).toBe(SCHEMA_VERSION);
   });
 
@@ -153,6 +153,89 @@ describe('schema migrations', () => {
     await upgraded.open();
 
     expect((await upgraded.settings.get('app-settings'))?.schemaVersion).toBe(SCHEMA_VERSION);
+    upgraded.close();
+  });
+
+  it('backfills the rest snapshot from the exercise default in version 4', async () => {
+    const legacy = await createVersion1Database();
+    await legacy.table('exercises').add({
+      id: 'ex-1',
+      name: 'Bankdrücken',
+      primaryMuscleGroup: 'Brust',
+      secondaryMuscleGroups: [],
+      equipment: 'Langhantel',
+      trackingType: 'weight_reps',
+      weightMode: 'total',
+      weightMultiplier: 1,
+      defaultRestSeconds: 95,
+      notes: '',
+      archived: false,
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    });
+    // A session exercise written before the snapshot existed.
+    await legacy.table('sessionExercises').add({
+      id: 'se-1',
+      sessionId: 's-1',
+      exerciseId: 'ex-1',
+      order: 0,
+      exerciseNameSnapshot: 'Bankdrücken',
+      trackingTypeSnapshot: 'weight_reps',
+      weightModeSnapshot: 'total',
+      weightMultiplierSnapshot: 1,
+      notes: '',
+      createdAt: '2026-01-01T10:00:00.000Z',
+      updatedAt: '2026-01-01T10:00:00.000Z',
+    });
+    legacy.close();
+
+    const upgraded = new TrainingDatabase(NAME);
+    await upgraded.open();
+    const entry = await upgraded.sessionExercises.get('se-1');
+
+    expect(entry?.restSecondsSnapshot).toBe(95);
+    // Cannot be reconstructed, and its absence means "no set goal" as before.
+    expect(entry?.targetSetsSnapshot).toBeUndefined();
+    // Nothing else was touched.
+    expect(entry?.exerciseNameSnapshot).toBe('Bankdrücken');
+    expect(await upgraded.sessionExercises.count()).toBe(1);
+    upgraded.close();
+  });
+
+  it('falls back to the global default when the exercise is gone', async () => {
+    const legacy = await createVersion1Database();
+    await legacy.table('settings').add({
+      id: 'app-settings',
+      unit: 'kg',
+      defaultRestSeconds: 175,
+      defaultAnalyticsRange: '30d',
+      darkMode: 'dark',
+      restSoundEnabled: true,
+      restVibrationEnabled: true,
+      backupReminderDays: 14,
+      schemaVersion: 1,
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    });
+    await legacy.table('sessionExercises').add({
+      id: 'se-orphan',
+      sessionId: 's-1',
+      exerciseId: 'deleted-exercise',
+      order: 0,
+      exerciseNameSnapshot: 'Gelöschte Übung',
+      trackingTypeSnapshot: 'weight_reps',
+      weightModeSnapshot: 'total',
+      weightMultiplierSnapshot: 1,
+      notes: '',
+      createdAt: '2026-01-01T10:00:00.000Z',
+      updatedAt: '2026-01-01T10:00:00.000Z',
+    });
+    legacy.close();
+
+    const upgraded = new TrainingDatabase(NAME);
+    await upgraded.open();
+
+    expect((await upgraded.sessionExercises.get('se-orphan'))?.restSecondsSnapshot).toBe(175);
     upgraded.close();
   });
 

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, Check, Plus, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/Card';
 import { Button, IconButton } from '@/components/ui/Button';
 import { TextAreaField } from '@/components/ui/Field';
@@ -50,14 +50,13 @@ export function SessionExerciseCard({
   index,
   total,
   target,
-  defaultRestSeconds,
 }: {
   detail: SessionExerciseDetail;
   sessionId: string;
   index: number;
   total: number;
+  /** Plan entry, used only for displaying the rep/duration target range. */
   target?: TemplateExercise;
-  defaultRestSeconds: number;
 }) {
   const { sessionExercise, sets } = detail;
   const [notesOpen, setNotesOpen] = useState(Boolean(sessionExercise.notes));
@@ -71,7 +70,25 @@ export function SessionExerciseCard({
   const completedSets = useMemo(() => sets.filter((set) => set.completedAt), [sets]);
   const openSet = useMemo(() => sets.find((set) => !set.completedAt), [sets]);
 
-  const restTarget = target?.restSeconds ?? defaultRestSeconds;
+  /*
+   * The rest was resolved when the exercise entered this workout (plan target →
+   * exercise default → global default) and stored on the record. Reading the
+   * snapshot rather than re-resolving here is what stops a later edit of the
+   * exercise from changing a workout that is already under way.
+   */
+  const restTarget = sessionExercise.restSecondsSnapshot;
+
+  /*
+   * Set goal. Only working sets count towards it — warm-ups are preparation,
+   * not part of the prescription. Everything is derived from the stored sets,
+   * so the state is correct after a reload or a restored session.
+   */
+  const targetSets = sessionExercise.targetSetsSnapshot;
+  const completedWorkingSets = useMemo(
+    () => sets.filter((set) => set.completedAt && set.setType !== 'warmup').length,
+    [sets],
+  );
+  const setGoalReached = targetSets != null && completedWorkingSets >= targetSets;
 
   /** Prefill the next set from the previous one in this session, else from history. */
   const suggestionValues = useMemo(() => {
@@ -123,7 +140,16 @@ export function SessionExerciseCard({
     // Unlock audio from within the tap so the rest tone can play later on iOS.
     primeAudio();
     await completeSet(setId, values);
-    // Immediately queue the next set with the same values as a suggestion.
+
+    // Would this set reach the goal? Warm-ups do not count towards it.
+    const workingAfter = completedWorkingSets + (values.setType === 'warmup' ? 0 : 1);
+    const reachedGoal = targetSets != null && workingAfter >= targetSets;
+
+    // Queue the next set only while the goal is still open. Once it is met the
+    // user decides explicitly whether to add an extra set, instead of the app
+    // silently suggesting more work than the plan calls for.
+    if (reachedGoal) return;
+
     await addSet(sessionExercise.id, {
       setType: values.setType === 'warmup' ? 'warmup' : 'working',
       restTargetSeconds: restTarget,
@@ -209,6 +235,18 @@ export function SessionExerciseCard({
             onComplete={(values) => void handleComplete(openSet.id, values)}
             onDelete={() => void deleteSet(openSet.id)}
           />
+        ) : setGoalReached ? (
+          // Goal met: state it calmly and let the user opt into more work.
+          <div className="grid gap-2">
+            <p className="flex items-center justify-center gap-2 rounded-xl bg-surface-2 py-2 text-sm font-medium text-success">
+              <Check size={16} aria-hidden="true" />
+              Satzziel erreicht ({completedWorkingSets} von {targetSets})
+            </p>
+            <Button variant="secondary" fullWidth onClick={() => void handleAddSet()}>
+              <Plus size={18} aria-hidden="true" />
+              Extrasatz hinzufügen
+            </Button>
+          </div>
         ) : (
           <Button variant="secondary" fullWidth onClick={() => void handleAddSet()}>
             <Plus size={18} aria-hidden="true" />
