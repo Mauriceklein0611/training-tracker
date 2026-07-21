@@ -17,7 +17,7 @@ import { nowIso } from '@/utils/id';
  * Bump this together with a new `.version()` block below and record the change
  * in MIGRATIONS so the settings screen can show what the database went through.
  */
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 
 export const MIGRATIONS: { version: number; description: string }[] = [
   { version: 1, description: 'Initiales Schema: Übungen, Pläne, Einheiten, Sätze.' },
@@ -39,6 +39,12 @@ export const MIGRATIONS: { version: number; description: string }[] = [
       'Übungen in Trainingseinheiten merken sich jetzt die aufgelöste Pausenzeit ' +
       'und das Satzziel als Snapshot, damit spätere Änderungen an einer Übung ' +
       'vergangene Trainings nicht rückwirkend verändern.',
+  },
+  {
+    version: 5,
+    description:
+      'Einstellung „Bildschirm während des Trainings aktiv halten“ sowie ' +
+      'optionale Angaben zum Trainingskontext für den KI-Export.',
   },
 ];
 
@@ -141,6 +147,22 @@ export class TrainingDatabase extends Dexie {
           current.schemaVersion = 4;
         });
     });
+
+    // ---- v5 -------------------------------------------------------------
+    // Settings gained keepScreenAwake and the optional analysis context.
+    // Only the settings row is touched; no training data is involved.
+    this.version(5).upgrade(async (tx) => {
+      await tx
+        .table<AppSettings>('settings')
+        .toCollection()
+        .modify((settings) => {
+          if (typeof settings.keepScreenAwake !== 'boolean') {
+            // Sensible default for phone use in a gym.
+            settings.keepScreenAwake = true;
+          }
+          settings.schemaVersion = 5;
+        });
+    });
   }
 }
 
@@ -154,6 +176,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   darkMode: 'dark',
   restSoundEnabled: true,
   restVibrationEnabled: true,
+  keepScreenAwake: true,
   backupReminderDays: 14,
   schemaVersion: SCHEMA_VERSION,
   createdAt: '',

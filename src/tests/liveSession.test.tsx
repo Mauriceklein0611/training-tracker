@@ -183,6 +183,13 @@ describe('live workout view', () => {
     await user.type(await screen.findByLabelText(/^Wiederholungen$/), '10');
     await user.click(screen.getByRole('button', { name: /Satz abschließen/ }));
 
+    // Wait for the completion to reach the database and propagate back through
+    // the live query — the discard dialog wording depends on the set count.
+    await waitFor(async () => {
+      const detail = await getSessionDetail(session.id);
+      expect(detail?.exercises[0].sets.filter((set) => set.completedAt)).toHaveLength(1);
+    });
+
     await user.click(await screen.findByRole('button', { name: /Training verwerfen/ }));
 
     const dialog = await screen.findByRole('dialog');

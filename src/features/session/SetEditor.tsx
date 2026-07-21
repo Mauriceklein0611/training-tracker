@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Check, Trash2 } from 'lucide-react';
 import { Button, IconButton } from '@/components/ui/Button';
 import { NumberField, SelectField } from '@/components/ui/Field';
@@ -9,6 +9,8 @@ import { requiredFieldsFor, weightFieldLabel } from '@/services/metrics';
 import { restDeviationSeconds } from '@/services/rest';
 import { SET_TYPE_LABELS, describeSet, formatSignedSeconds } from '@/utils/format';
 import { cn } from '@/utils/cn';
+import { useAutosave } from '@/hooks/useAutosave';
+import { ExerciseTimer } from '@/features/session/ExerciseTimer';
 
 interface Draft {
   setType: SetType;
@@ -57,9 +59,10 @@ function draftToValues(draft: Draft): SetValues {
 /**
  * Entry row for the set currently being performed.
  *
- * Values are kept in local state while typing and written to IndexedDB on blur
- * and on completion, so nothing is lost if the app is closed mid-set — but the
- * database is not hit on every keystroke either.
+ * Values live in local state while typing and are persisted by a debounced
+ * autosave (plus immediately on blur, on completion, and whenever the app is
+ * about to be hidden). Half-entered numbers therefore survive switching apps or
+ * locking the phone, without hitting IndexedDB on every keystroke.
  */
 export function SetEditor({
   set,
@@ -68,6 +71,9 @@ export function SetEditor({
   onPersist,
   onComplete,
   onDelete,
+  targetDurationSeconds,
+  soundEnabled = true,
+  vibrationEnabled = true,
 }: {
   set: WorkoutSet;
   sessionExercise: SessionExercise;
@@ -76,6 +82,10 @@ export function SetEditor({
   onPersist: (values: SetValues) => void;
   onComplete: (values: SetValues) => void;
   onDelete: () => void;
+  /** Plan target duration, prefilled as the countdown. */
+  targetDurationSeconds?: number;
+  soundEnabled?: boolean;
+  vibrationEnabled?: boolean;
 }) {
   /*
    * The draft is seeded from the record once and then belongs to the user.
@@ -86,6 +96,20 @@ export function SetEditor({
    */
   const [draft, setDraft] = useState<Draft>(() => toDraft(set));
   const [touched, setTouched] = useState(false);
+
+  /*
+   * Once the set is completed the draft must never be written again: a pending
+   * autosave firing afterwards would overwrite the finished set with older
+   * values. The ref flips synchronously inside the completion handler, before
+   * any re-render can schedule another write.
+   */
+  const completedRef = useRef(false);
+
+  const autosave = useAutosave(
+    draft,
+    (current) => onPersist(draftToValues(current)),
+    { delayMs: 400, enabled: !completedRef.current },
+  );
 
   const trackingType = sessionExercise.trackingTypeSnapshot;
   const weightMode = sessionExercise.weightModeSnapshot;
@@ -101,11 +125,20 @@ export function SetEditor({
     setDraft((current) => ({ ...current, [key]: value }));
   };
 
-  const persist = () => onPersist(draftToValues(draft));
+  /** Blur still writes straight away — no reason to wait for the debounce. */
+  const persist = () => {
+    if (completedRef.current) return;
+    autosave.flush();
+  };
 
   const handleComplete = () => {
     setTouched(true);
     if (hasErrors(errors)) return;
+
+    // Drop any pending autosave and block further ones, so the completion
+    // write is the last thing that touches this set.
+    completedRef.current = true;
+    autosave.disable();
     onComplete(draftToValues(draft));
   };
 
@@ -126,15 +159,37 @@ export function SetEditor({
         </p>
       ) : null}
 
+      {/* Time-based exercises get a timer; the duration field stays editable. */}
+      {trackingType === 'duration' ? (
+        <div className="mb-3">
+          <ExerciseTimer
+            setId={set.id}
+            targetSeconds={targetDurationSeconds}
+            soundEnabled={soundEnabled}
+            vibrationEnabled={vibrationEnabled}
+            onApply={(seconds, { complete }) => {
+              const next = { ...draft, duration: String(seconds) };
+              setDraft(next);
+              if (complete) {
+                completedRef.current = true;
+                autosave.disable();
+                onComplete(draftToValues(next));
+              }
+            }}
+          />
+        </div>
+      ) : null}
+
       <div className="grid grid-cols-2 gap-2">
         <SelectField
           label="Satzart"
           containerClassName="col-span-2"
           value={draft.setType}
           onChange={(event) => {
+            // Autosave picks this up; calling onPersist here would write a
+            // draft captured before setDraft applied.
             const setType = event.target.value as SetType;
             setDraft((current) => ({ ...current, setType }));
-            onPersist({ ...draftToValues(draft), setType });
           }}
         >
           {(Object.keys(SET_TYPE_LABELS) as SetType[]).map((type) => (

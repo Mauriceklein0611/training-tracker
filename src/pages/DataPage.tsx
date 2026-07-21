@@ -1,10 +1,16 @@
 import { useRef, useState } from 'react';
-import { ClipboardCopy, Download, FileJson, Upload } from 'lucide-react';
+import { ClipboardCopy, Download, FileJson, Share2, Upload } from 'lucide-react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { ConfirmDialog, Dialog } from '@/components/ui/Dialog';
-import { CheckboxField, SelectField, TextField } from '@/components/ui/Field';
+import {
+  CheckboxField,
+  NumberField,
+  SelectField,
+  TextAreaField,
+  TextField,
+} from '@/components/ui/Field';
 import { db } from '@/db/db';
 import { markBackupCreated } from '@/db/repositories/settings';
 import { listBodyWeightEntries } from '@/db/repositories/bodyWeight';
@@ -24,6 +30,7 @@ import {
   AI_ANALYSIS_PROMPT,
   aiExportFileName,
   buildAiExport,
+  buildContextBlock,
   DEFAULT_AI_EXPORT_OPTIONS,
   hasExportPeriodErrors,
   validateExportPeriod,
@@ -32,6 +39,9 @@ import {
   type AiExportPeriodKey,
 } from '@/services/aiExport';
 import { bodyWeightCsv, exercisesCsv, sessionsCsv, setsCsv } from '@/services/csv';
+import { shareJsonExport } from '@/services/share';
+import { parseNumberInput } from '@/services/validation';
+import type { AnalysisContext, TrainingPhase } from '@/types';
 import { loadAnalyticsDataset } from '@/services/dataset';
 import { copyToClipboard, downloadCsv, downloadJson, readFileAsText } from '@/utils/download';
 import { formatDateTime, todayKey } from '@/utils/date';
@@ -45,7 +55,7 @@ interface PendingImport {
 
 export default function DataPage() {
   const toast = useToast();
-  const { settings } = useSettings();
+  const { settings, update } = useSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [busy, setBusy] = useState<string | null>(null);
@@ -55,6 +65,17 @@ export default function DataPage() {
   const [aiOptions, setAiOptions] = useState<AiExportOptions>(DEFAULT_AI_EXPORT_OPTIONS);
   // Only shown after a failed attempt, so the form does not scold while typing.
   const [periodErrors, setPeriodErrors] = useState<ExportPeriodErrors>({});
+
+  /** Merges one context field into the settings; empty strings are dropped. */
+  const updateContext = async (changes: Partial<AnalysisContext>) => {
+    const merged: AnalysisContext = { ...settings.analysisContext, ...changes };
+    for (const [key, value] of Object.entries(merged)) {
+      if (value === '' || value == null) delete merged[key as keyof AnalysisContext];
+    }
+    await update({
+      analysisContext: Object.keys(merged).length > 0 ? merged : undefined,
+    });
+  };
 
   // ---- full backup ------------------------------------------------------
   const handleBackup = async () => {
@@ -132,6 +153,68 @@ export default function DataPage() {
     }
   };
 
+  /** What the file will contain, listed before anything leaves the device. */
+  const exportContents = [
+    aiOptions.period === 'all'
+      ? 'gesamte Trainingshistorie'
+      : aiOptions.period === 'custom'
+        ? `Zeitraum ${aiOptions.customFrom || '?'} bis ${aiOptions.customTo || '?'}`
+        : `letzte ${aiOptions.period === '30d' ? 30 : 90} Tage`,
+    'Übungen, Sätze, Gewichte, Wiederholungen, Pausen',
+    aiOptions.includeWarmupSets ? 'inklusive Aufwärmsätze' : 'ohne Aufwärmsätze',
+    aiOptions.includeNotes ? 'inklusive Notizen' : 'ohne Notizen',
+    aiOptions.includeBodyWeight ? 'inklusive Körperdaten' : 'ohne Körperdaten',
+    buildContextBlock(settings.analysisContext)
+      ? 'deine Angaben zum Trainingskontext'
+      : 'keine Kontextangaben hinterlegt',
+  ];
+
+  const buildExportFile = async () => {
+    const [dataset, bodyWeight] = await Promise.all([
+      loadAnalyticsDataset(),
+      aiOptions.includeBodyWeight ? listBodyWeightEntries() : Promise.resolve([]),
+    ]);
+    return buildAiExport(dataset, bodyWeight, {
+      ...aiOptions,
+      context: settings.analysisContext,
+    });
+  };
+
+  /**
+   * Hands the export to the operating system's share sheet.
+   *
+   * Called straight from the tap, because iOS rejects `navigator.share` outside
+   * a user gesture. Which apps the sheet offers is the OS's decision — the app
+   * makes no promise about that.
+   */
+  const handleShareForAi = async () => {
+    const errors = validateExportPeriod(aiOptions);
+    setPeriodErrors(errors);
+    if (hasExportPeriodErrors(errors)) {
+      toast.show('Bitte den Zeitraum vervollständigen.', 'error');
+      return;
+    }
+
+    setBusy('share');
+    try {
+      const file = await buildExportFile();
+      const result = await shareJsonExport({
+        fileName: aiExportFileName(),
+        data: file,
+        title: 'Trainingsdaten zur Analyse',
+        textPrefix: AI_ANALYSIS_PROMPT,
+      });
+      toast.show(result.message, result.outcome === 'failed' ? 'error' : 'success');
+    } catch (error) {
+      toast.show(
+        error instanceof Error ? `Teilen fehlgeschlagen: ${error.message}` : 'Teilen fehlgeschlagen.',
+        'error',
+      );
+    } finally {
+      setBusy(null);
+    }
+  };
+
   // ---- AI export --------------------------------------------------------
   const handleAiExport = async () => {
     // Validate before touching the database: an incomplete custom period must
@@ -145,12 +228,7 @@ export default function DataPage() {
 
     setBusy('ai');
     try {
-      const [dataset, bodyWeight] = await Promise.all([
-        loadAnalyticsDataset(),
-        aiOptions.includeBodyWeight ? listBodyWeightEntries() : Promise.resolve([]),
-      ]);
-      const file = buildAiExport(dataset, bodyWeight, aiOptions);
-      downloadJson(aiExportFileName(), file);
+      downloadJson(aiExportFileName(), await buildExportFile());
       toast.show('KI-Export erstellt.', 'success');
     } catch (error) {
       toast.show(
@@ -339,15 +417,39 @@ export default function DataPage() {
               }
             />
 
+            {/* Stated plainly before anything can leave the device. */}
+            <div className="rounded-xl bg-surface-2 p-3">
+              <p className="text-xs font-semibold">Die Datei enthält:</p>
+              <ul className="mt-1 list-disc pl-4 text-xs leading-relaxed text-muted">
+                {exportContents.map((entry) => (
+                  <li key={entry}>{entry}</li>
+                ))}
+              </ul>
+              <p className="mt-2 text-xs leading-relaxed text-muted">
+                Die Datei wird lokal erzeugt. Beim Teilen entscheidet dein Gerät, welche Apps
+                angeboten werden — die App überträgt selbst nichts.
+              </p>
+            </div>
+
             <Button
               variant="primary"
               size="lg"
               fullWidth
               disabled={busy !== null}
+              onClick={() => void handleShareForAi()}
+            >
+              <Share2 size={20} aria-hidden="true" />
+              {busy === 'share' ? 'Wird vorbereitet …' : 'Mit KI analysieren'}
+            </Button>
+
+            <Button
+              variant="secondary"
+              fullWidth
+              disabled={busy !== null}
               onClick={() => void handleAiExport()}
             >
-              <FileJson size={20} aria-hidden="true" />
-              {busy === 'ai' ? 'Wird erstellt …' : 'Daten für KI exportieren'}
+              <FileJson size={18} aria-hidden="true" />
+              {busy === 'ai' ? 'Wird erstellt …' : 'Nur als Datei speichern'}
             </Button>
 
             <Button
@@ -374,6 +476,81 @@ export default function DataPage() {
               <p className="mt-2 text-xs leading-relaxed text-muted">{AI_ANALYSIS_PROMPT}</p>
             </details>
           </div>
+        </Card>
+
+        <Card>
+          <CardHeader
+            title="Angaben zum Trainingskontext"
+            subtitle="Vollständig freiwillig. Diese Angaben werden nur in den KI-Export übernommen und beeinflussen keine Berechnung in der App."
+            as="h2"
+          />
+          <details>
+            <summary className="min-h-[44px] cursor-pointer list-none py-2 text-sm font-medium text-accent">
+              {buildContextBlock(settings.analysisContext)
+                ? 'Angaben bearbeiten'
+                : 'Angaben hinzufügen'}
+            </summary>
+            <div className="mt-3 grid gap-3">
+              <TextField
+                label="Trainingsziel"
+                value={settings.analysisContext?.goal ?? ''}
+                placeholder="z. B. Kraftaufbau im Oberkörper"
+                onChange={(event) => void updateContext({ goal: event.target.value })}
+              />
+              <NumberField
+                label="Gewünschte Trainingstage pro Woche"
+                value={String(settings.analysisContext?.trainingDaysPerWeekTarget ?? '')}
+                placeholder="z. B. 4"
+                onChange={(event) => {
+                  const parsed = parseNumberInput(event.target.value);
+                  void updateContext({
+                    trainingDaysPerWeekTarget:
+                      parsed == null || Number.isNaN(parsed)
+                        ? undefined
+                        : Math.min(14, Math.max(1, Math.round(parsed))),
+                  });
+                }}
+              />
+              <TextAreaField
+                label="Verfügbares Equipment"
+                rows={2}
+                value={settings.analysisContext?.equipment ?? ''}
+                placeholder="z. B. Langhantel, Kurzhanteln bis 30 kg, Klimmzugstange"
+                onChange={(event) => void updateContext({ equipment: event.target.value })}
+              />
+              <SelectField
+                label="Aktuelle Phase"
+                value={settings.analysisContext?.phase ?? ''}
+                onChange={(event) =>
+                  void updateContext({
+                    phase: (event.target.value || undefined) as TrainingPhase | undefined,
+                  })
+                }
+              >
+                <option value="">Keine Angabe</option>
+                <option value="bulk">Aufbau</option>
+                <option value="maintenance">Erhaltung</option>
+                <option value="cut">Diät</option>
+              </SelectField>
+              <TextAreaField
+                label="Einschränkungen oder Hinweise"
+                rows={2}
+                value={settings.analysisContext?.limitations ?? ''}
+                placeholder="z. B. linke Schulter empfindlich beim Überkopfdrücken"
+                onChange={(event) => void updateContext({ limitations: event.target.value })}
+              />
+              <TextAreaField
+                label="Gewünschter Analyseschwerpunkt"
+                rows={2}
+                value={settings.analysisContext?.focus ?? ''}
+                placeholder="z. B. Warum stagniert mein Bankdrücken?"
+                onChange={(event) => void updateContext({ focus: event.target.value })}
+              />
+              <p className="text-xs leading-relaxed text-muted">
+                Leere Felder erscheinen nicht in der Exportdatei.
+              </p>
+            </div>
+          </details>
         </Card>
 
         <Card>

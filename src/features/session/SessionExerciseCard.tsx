@@ -50,6 +50,8 @@ export function SessionExerciseCard({
   index,
   total,
   target,
+  soundEnabled,
+  vibrationEnabled,
 }: {
   detail: SessionExerciseDetail;
   sessionId: string;
@@ -57,6 +59,8 @@ export function SessionExerciseCard({
   total: number;
   /** Plan entry, used only for displaying the rep/duration target range. */
   target?: TemplateExercise;
+  soundEnabled?: boolean;
+  vibrationEnabled?: boolean;
 }) {
   const { sessionExercise, sets } = detail;
   const [notesOpen, setNotesOpen] = useState(Boolean(sessionExercise.notes));
@@ -231,6 +235,9 @@ export function SessionExerciseCard({
             set={openSet}
             sessionExercise={sessionExercise}
             suggestion={completedSets.length === 0 ? suggestionText : undefined}
+            targetDurationSeconds={target?.targetDurationSeconds}
+            soundEnabled={soundEnabled}
+            vibrationEnabled={vibrationEnabled}
             onPersist={(values) => void updateSet(openSet.id, values)}
             onComplete={(values) => void handleComplete(openSet.id, values)}
             onDelete={() => void deleteSet(openSet.id)}

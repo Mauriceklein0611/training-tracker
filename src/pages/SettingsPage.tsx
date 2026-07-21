@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/Button';
 import { useSettings } from '@/hooks/useSettings';
 import { parseNumberInput } from '@/services/validation';
 import { isIos, isStandalone } from '@/services/pwa';
+import { isWakeLockSupported } from '@/hooks/useWakeLock';
 import { playRestFinishedSound, primeAudio, vibrate } from '@/services/sound';
 import type { AnalyticsRangeKey, AppSettings } from '@/types';
 import { formatDateTime } from '@/utils/date';
@@ -68,6 +69,20 @@ export default function SettingsPage() {
               Signal testen
             </Button>
           </div>
+        </Card>
+
+        <Card>
+          <CardHeader title="Bildschirm" as="h2" />
+          <CheckboxField
+            label="Bildschirm während des Trainings aktiv halten"
+            hint={
+              isWakeLockSupported()
+                ? 'Verhindert, dass sich das Display zwischen den Sätzen ausschaltet.'
+                : 'Dieser Browser unterstützt die Funktion nicht — die Einstellung bleibt dann wirkungslos. Die App funktioniert normal weiter.'
+            }
+            checked={settings.keepScreenAwake}
+            onChange={(checked) => void update({ keepScreenAwake: checked })}
+          />
         </Card>
 
         <Card>

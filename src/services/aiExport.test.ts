@@ -10,7 +10,7 @@ import {
   validateExportPeriod,
 } from '@/services/aiExport';
 import type { AnalyticsDataset } from '@/services/analytics';
-import type { BodyWeightEntry } from '@/types';
+import type { AnalysisContext, BodyWeightEntry } from '@/types';
 import { makeExercise, makeSession, makeSessionExercise, makeSet } from '@/tests/factories';
 
 const NOW = new Date('2026-07-21T12:00:00.000Z');
@@ -361,6 +361,52 @@ describe('buildAiExport', () => {
     const file = buildAiExport(buildDataset(), [], DEFAULT_AI_EXPORT_OPTIONS, NOW);
     const roundTripped = JSON.parse(JSON.stringify(file));
     expect(roundTripped.generatedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+  });
+});
+
+describe('analysis context', () => {
+  const withContext = (context: AnalysisContext | undefined) =>
+    buildAiExport(buildDataset(), [], { ...DEFAULT_AI_EXPORT_OPTIONS, context }, NOW);
+
+  it('omits the block entirely when nothing was filled in', () => {
+    expect(withContext(undefined).context).toBeUndefined();
+    expect(withContext({}).context).toBeUndefined();
+    // Whitespace is not information either.
+    expect(withContext({ goal: '   ' }).context).toBeUndefined();
+  });
+
+  it('includes only the fields that were filled in', () => {
+    const file = withContext({ goal: 'Kraftaufbau', equipment: 'Langhantel' });
+
+    expect(file.context?.goal).toBe('Kraftaufbau');
+    expect(file.context?.availableEquipment).toBe('Langhantel');
+    expect(file.context?.limitations).toBeUndefined();
+    expect(file.context?.requestedFocus).toBeUndefined();
+  });
+
+  it('explains the phase in plain language', () => {
+    const file = withContext({ phase: 'cut' });
+
+    expect(file.context?.phase).toBe('cut');
+    expect(String(file.context?.phaseDescription)).toContain('Diät');
+  });
+
+  it('marks the block as self-reported, not measured', () => {
+    const file = withContext({ goal: 'Kraftaufbau' });
+    expect(String(file.context?.note)).toContain('Selbstauskunft');
+    expect(String(file.context?.note)).toContain('keine Berechnung');
+  });
+
+  it('trims surrounding whitespace', () => {
+    expect(withContext({ goal: '  Kraftaufbau  ' }).context?.goal).toBe('Kraftaufbau');
+  });
+
+  it('does not let the context influence any computed figure', () => {
+    const without = buildAiExport(buildDataset(), [], DEFAULT_AI_EXPORT_OPTIONS, NOW);
+    const with_ = withContext({ goal: 'Kraftaufbau', trainingDaysPerWeekTarget: 5 });
+
+    expect(with_.summary).toEqual(without.summary);
+    expect(with_.workouts).toEqual(without.workouts);
   });
 });
 

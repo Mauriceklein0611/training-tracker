@@ -161,6 +161,18 @@ export const appSettingsSchema = z.object({
   darkMode: z.enum(['dark', 'light', 'system']).default('dark'),
   restSoundEnabled: z.boolean().default(true),
   restVibrationEnabled: z.boolean().default(true),
+  // Added in schema version 5; defaulted so older backups still validate.
+  keepScreenAwake: z.boolean().default(true),
+  analysisContext: z
+    .object({
+      goal: z.string().max(300).optional(),
+      trainingDaysPerWeekTarget: z.number().int().min(1).max(14).optional(),
+      equipment: z.string().max(500).optional(),
+      phase: z.enum(['bulk', 'maintenance', 'cut']).optional(),
+      limitations: z.string().max(1000).optional(),
+      focus: z.string().max(500).optional(),
+    })
+    .optional(),
   backupReminderDays: z.number().int().min(0).max(365).default(14),
   lastBackupAt: isoDateTime.optional(),
   schemaVersion: z.number().int().min(1).default(1),

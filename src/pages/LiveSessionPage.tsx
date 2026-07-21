@@ -21,6 +21,7 @@ import { SessionExerciseCard } from '@/features/session/SessionExerciseCard';
 import { SessionSummaryView } from '@/features/session/SessionSummaryView';
 import { useActiveRest } from '@/features/session/useActiveRest';
 import { useNow } from '@/hooks/useNow';
+import { useWakeLock } from '@/hooks/useWakeLock';
 import { useSettings } from '@/hooks/useSettings';
 import { useToast } from '@/hooks/useToast';
 import { loadAnalyticsDataset } from '@/services/dataset';
@@ -61,6 +62,11 @@ export default function LiveSessionPage() {
   });
 
   const isActive = detail?.session.status === 'active';
+
+  // Progressive enhancement: keep the display on while training, released
+  // automatically when the workout ends or the setting is switched off.
+  useWakeLock(isActive && settings.keepScreenAwake);
+
   const now = useNow(1000, isActive);
   const elapsedSeconds = detail
     ? Math.max(0, (now.getTime() - new Date(detail.session.startedAt).getTime()) / 1000)
@@ -170,6 +176,8 @@ export default function LiveSessionPage() {
               index={index}
               total={detail.exercises.length}
               target={templateTargets?.get(entry.sessionExercise.exerciseId)}
+              soundEnabled={settings.restSoundEnabled}
+              vibrationEnabled={settings.restVibrationEnabled}
             />
           ))}
         </div>

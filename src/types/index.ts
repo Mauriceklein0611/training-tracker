@@ -188,6 +188,24 @@ export interface BodyWeightEntry {
 
 export type AnalyticsRangeKey = '7d' | '30d' | '90d' | 'all' | 'custom';
 
+export type TrainingPhase = 'bulk' | 'maintenance' | 'cut';
+
+/**
+ * Optional background the user can supply for an external AI analysis.
+ *
+ * Purely descriptive: nothing here influences any calculation in the app, it is
+ * only passed through to the AI export so a model has context it could not
+ * infer from the numbers alone. Every field is optional.
+ */
+export interface AnalysisContext {
+  goal?: string;
+  trainingDaysPerWeekTarget?: number;
+  equipment?: string;
+  phase?: TrainingPhase;
+  limitations?: string;
+  focus?: string;
+}
+
 export interface AppSettings {
   /** Singleton row. */
   id: 'app-settings';
@@ -197,6 +215,10 @@ export interface AppSettings {
   darkMode: 'dark' | 'light' | 'system';
   restSoundEnabled: boolean;
   restVibrationEnabled: boolean;
+  /** Keep the display on while a workout is running, where supported. */
+  keepScreenAwake: boolean;
+  /** Optional context for the AI export; never used for calculations. */
+  analysisContext?: AnalysisContext;
   /** Days after which a backup reminder is shown; 0 disables the reminder. */
   backupReminderDays: number;
   lastBackupAt?: ISODateTime;

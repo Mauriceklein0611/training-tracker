@@ -14,7 +14,7 @@ import {
   ONE_RM_MIN_REPS,
 } from '@/services/metrics';
 import { restDeviationSeconds } from '@/services/rest';
-import type { BodyWeightEntry, SetWithContext } from '@/types';
+import type { AnalysisContext, BodyWeightEntry, SetWithContext } from '@/types';
 import { customRange, dayKey, lastDaysRange, type DateRange } from '@/utils/date';
 
 /**
@@ -31,8 +31,46 @@ export const AI_EXPORT_VERSION = 1;
 
 export type AiExportPeriodKey = 'all' | '30d' | '90d' | 'custom';
 
+const PHASE_LABELS: Record<string, string> = {
+  bulk: 'Aufbauphase (Kalorienüberschuss)',
+  maintenance: 'Erhaltungsphase',
+  cut: 'Diätphase (Kaloriendefizit)',
+};
+
+/**
+ * Turns the stored context into a self-explaining block, dropping every field
+ * the user left empty so the file never suggests information that is not there.
+ */
+export function buildContextBlock(
+  context: AnalysisContext | undefined,
+): Record<string, unknown> | undefined {
+  if (!context) return undefined;
+
+  const block: Record<string, unknown> = {};
+  if (context.goal?.trim()) block.goal = context.goal.trim();
+  if (context.trainingDaysPerWeekTarget != null) {
+    block.targetTrainingDaysPerWeek = context.trainingDaysPerWeekTarget;
+  }
+  if (context.equipment?.trim()) block.availableEquipment = context.equipment.trim();
+  if (context.phase) {
+    block.phase = context.phase;
+    block.phaseDescription = PHASE_LABELS[context.phase] ?? context.phase;
+  }
+  if (context.limitations?.trim()) block.limitations = context.limitations.trim();
+  if (context.focus?.trim()) block.requestedFocus = context.focus.trim();
+
+  if (Object.keys(block).length === 0) return undefined;
+
+  block.note =
+    'Diese Angaben stammen aus der Selbstauskunft des Nutzers und sind keine ' +
+    'Messwerte. Sie beeinflussen keine Berechnung in den exportierten Daten.';
+  return block;
+}
+
 export interface AiExportOptions {
   period: AiExportPeriodKey;
+  /** Optional self-reported background; omitted from the file when empty. */
+  context?: AnalysisContext;
   customFrom?: string;
   customTo?: string;
   includeNotes: boolean;
@@ -171,6 +209,12 @@ export interface AiExportFile {
     weightModes: Record<string, string>;
     setTypes: Record<string, string>;
   };
+  /**
+   * Optional background supplied by the user (goal, equipment, phase …).
+   * Absent when nothing was filled in. Never used for any calculation — it is
+   * context for the reader, not data.
+   */
+  context?: Record<string, unknown>;
   summary: Record<string, unknown>;
   muscleGroups: unknown[];
   weeklyTotals: unknown[];
@@ -405,6 +449,8 @@ export function buildAiExport(
       weightModes: WEIGHT_MODE_EXPLANATIONS,
       setTypes: SET_TYPE_EXPLANATIONS,
     },
+    // Omitted entirely when the user filled in nothing.
+    ...(buildContextBlock(options.context) ? { context: buildContextBlock(options.context) } : {}),
     summary: {
       workouts: analytics.sessionCount,
       trainingDays: analytics.trainingDays,
