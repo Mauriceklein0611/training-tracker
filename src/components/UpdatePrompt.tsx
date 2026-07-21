@@ -22,7 +22,7 @@ export function UpdatePrompt() {
   return (
     <div
       role="status"
-      className="fixed inset-x-3 top-3 z-50 rounded-2xl border border-accent/50 bg-surface p-3 shadow-lg safe-top"
+      className="toast-safe-top fixed inset-x-3 z-50 rounded-2xl border border-accent/50 bg-surface p-3 shadow-lg"
     >
       <div className="flex items-start gap-3">
         <RefreshCw size={20} className="mt-0.5 shrink-0 text-accent" aria-hidden="true" />

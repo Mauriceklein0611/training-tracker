@@ -16,7 +16,9 @@ export function AppLayout() {
   const isLiveSession = location.pathname.startsWith('/training/');
 
   return (
-    <div className="min-h-dvh bg-bg">
+    // The horizontal inset shifts the whole column, so the header's edge-to-edge
+    // bleed (-mx-4 / px-4) keeps lining up with the content.
+    <div className="inset-x-safe min-h-dvh bg-bg">
       <UpdatePrompt />
       <main
         id="main"

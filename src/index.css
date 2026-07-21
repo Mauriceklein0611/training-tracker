@@ -151,12 +151,35 @@
     font-feature-settings: 'tnum';
   }
 
+  /*
+   * Safe-area handling for the installed app.
+   *
+   * The PWA runs with `viewport-fit=cover` and a translucent status bar, so the
+   * layout extends underneath the Dynamic Island / notch and the home
+   * indicator. Without these reservations the first line of a header is hidden
+   * behind the camera bar on an iPhone 14 Pro and newer.
+   *
+   * Each rule sets its spacing in ONE declaration that already contains the
+   * normal padding. Combining a `safe-*` class with a Tailwind padding utility
+   * does NOT work: utilities live in a later cascade layer and silently replace
+   * the entire declaration, dropping the inset with it.
+   */
+  .header-safe {
+    padding-top: calc(env(safe-area-inset-top, 0px) + 0.75rem);
+  }
+
+  .toast-safe-top {
+    top: calc(env(safe-area-inset-top, 0px) + 0.75rem);
+  }
+
   .safe-bottom {
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 
-  .safe-top {
-    padding-top: env(safe-area-inset-top, 0px);
+  /* Landscape: the notch eats into one side, so keep content clear of it. */
+  .inset-x-safe {
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
   }
 }
 

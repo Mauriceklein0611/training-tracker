@@ -19,7 +19,7 @@ export function PageHeader({
   const navigate = useNavigate();
 
   return (
-    <header className="sticky top-0 z-30 -mx-4 mb-4 border-b border-border bg-bg/95 px-4 pb-3 pt-3 backdrop-blur safe-top">
+    <header className="header-safe sticky top-0 z-30 -mx-4 mb-4 border-b border-border bg-bg/95 px-4 pb-3 backdrop-blur">
       <div className="flex items-center gap-2">
         {backTo ? (
           <IconButton
