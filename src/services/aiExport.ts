@@ -15,7 +15,14 @@ import {
 } from '@/services/metrics';
 import { restDeviationSeconds } from '@/services/rest';
 import { groupItems, memberLabel } from '@/services/grouping';
-import type { AnalysisContext, BodyWeightEntry, SetWithContext, WeeklyGoals } from '@/types';
+import type {
+  AnalysisContext,
+  BodyWeightEntry,
+  PostWorkoutCheckIn,
+  PreWorkoutCheckIn,
+  SetWithContext,
+  WeeklyGoals,
+} from '@/types';
 import { hasAnyWeeklyGoal } from '@/services/calendar';
 import { customRange, dayKey, lastDaysRange, type DateRange } from '@/utils/date';
 
@@ -269,6 +276,26 @@ function round(value: number | null | undefined, digits = 2): number | null {
   return Number(value.toFixed(digits));
 }
 
+/**
+ * Pre/post check-in for the export. Free-text fields are dropped when notes are
+ * excluded; the subjective ratings are plain numbers and always kept. Returns
+ * undefined when nothing is left so an empty check-in never appears.
+ */
+function checkInForExport(
+  checkIn: PreWorkoutCheckIn | PostWorkoutCheckIn | undefined,
+  includeNotes: boolean,
+): Record<string, unknown> | undefined {
+  if (!checkIn) return undefined;
+  const block: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(checkIn)) {
+    if (value == null) continue;
+    const isText = key === 'note' || key === 'painNote';
+    if (isText && (!includeNotes || String(value).trim() === '')) continue;
+    block[key] = value;
+  }
+  return Object.keys(block).length > 0 ? block : undefined;
+}
+
 /** Marks the sets that established a best value inside the exported window. */
 function markRecordSets(contexts: SetWithContext[]): Map<string, string[]> {
   const best = new Map<
@@ -422,6 +449,9 @@ export function buildAiExport(
           )
         : null;
 
+      const checkInBefore = checkInForExport(session.preCheckIn, options.includeNotes);
+      const checkInAfter = checkInForExport(session.postCheckIn, options.includeNotes);
+
       return {
         date: session.startedAt.slice(0, 10),
         startedAt: session.startedAt,
@@ -429,6 +459,8 @@ export function buildAiExport(
         durationMinutes,
         name: session.name,
         ...(options.includeNotes && session.notes ? { note: session.notes } : {}),
+        ...(checkInBefore ? { checkInBefore } : {}),
+        ...(checkInAfter ? { checkInAfter } : {}),
         exercises,
       };
     })
@@ -473,6 +505,19 @@ export function buildAiExport(
     'volumeKg ist nur bei Übungen vom Typ weight_reps gesetzt. Bei allen anderen ' +
       'Typen ist ein kg-Volumen fachlich nicht sinnvoll und daher null.',
   ];
+  const withCheckIn = contexts.length > 0
+    ? [...new Set(contexts.map((context) => context.session.id))]
+        .map((sessionId) => dataset.sessions.find((session) => session.id === sessionId))
+        .filter((session) => session?.preCheckIn || session?.postCheckIn).length
+    : 0;
+  if (withCheckIn > 0) {
+    notes.push(
+      'checkInBefore/checkInAfter enthalten subjektive Selbsteinschätzungen auf ' +
+        'Skalen (z. B. Energie, Schlaf, Motivation, wahrgenommene Qualität). Sie sind ' +
+        'keine Messwerte und kein Recovery-Score. Sie erlauben höchstens die Beschreibung ' +
+        'von Korrelationen, niemals eine Kausalaussage.',
+    );
+  }
   if (!options.includeWarmupSets) notes.push('Aufwärmsätze wurden bewusst nicht exportiert.');
   if (!options.includeNotes) notes.push('Notizen wurden bewusst nicht exportiert.');
   if (!options.includeBodyWeight) {

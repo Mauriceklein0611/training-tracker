@@ -114,6 +114,40 @@ export interface TemplateExercise extends ExerciseGrouping {
   notes: string;
 }
 
+/**
+ * Optional, subjective self-report captured before a workout.
+ *
+ * Every field is optional so the whole thing can be skipped in a second. These
+ * are self-ratings, never medical data, and nothing here is turned into a
+ * fabricated "recovery score".
+ */
+export interface PreWorkoutCheckIn {
+  /** Energy level, 1 (low) – 5 (high). */
+  energy?: number;
+  /** Sleep quality, 1 – 5. */
+  sleepQuality?: number;
+  /** Motivation, 1 – 5. */
+  motivation?: number;
+  /** Muscle soreness, 0 (none) – 5 (strong). */
+  soreness?: number;
+  /** Free text about pain or a limitation. */
+  painNote?: string;
+  /** Free note. */
+  note?: string;
+}
+
+/** Optional, subjective self-report captured after a workout. */
+export interface PostWorkoutCheckIn {
+  /** Perceived training quality, 1 – 5. */
+  quality?: number;
+  /** Perceived difficulty, 1 – 5. */
+  difficulty?: number;
+  /** Satisfaction with the session, 1 – 5. */
+  satisfaction?: number;
+  /** Free note. */
+  note?: string;
+}
+
 export interface WorkoutSession {
   id: string;
   templateId?: string;
@@ -122,6 +156,10 @@ export interface WorkoutSession {
   startedAt: ISODateTime;
   finishedAt?: ISODateTime;
   notes: string;
+  /** Optional pre-workout self-report; absent when skipped. */
+  preCheckIn?: PreWorkoutCheckIn;
+  /** Optional post-workout self-report; absent when skipped. */
+  postCheckIn?: PostWorkoutCheckIn;
   createdAt: ISODateTime;
   updatedAt: ISODateTime;
 }

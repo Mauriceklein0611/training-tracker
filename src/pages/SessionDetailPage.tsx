@@ -16,6 +16,7 @@ import {
   updateSession,
 } from '@/db/repositories/sessions';
 import { CompletedSetRow } from '@/features/session/SetEditor';
+import { PostCheckInCard, PreCheckInCard } from '@/features/checkin/CheckInCards';
 import { SessionSummaryView } from '@/features/session/SessionSummaryView';
 import { SetEditDialog } from '@/features/history/SetEditDialog';
 import { loadAnalyticsDataset } from '@/services/dataset';
@@ -118,6 +119,11 @@ export default function SessionDetailPage() {
           }}
         />
       </section>
+
+      <div className="mb-4 grid gap-3">
+        <PreCheckInCard sessionId={sessionId} value={detail.session.preCheckIn} />
+        <PostCheckInCard sessionId={sessionId} value={detail.session.postCheckIn} />
+      </div>
 
       <h2 className="mb-2 text-base font-semibold">Übungen und Sätze</h2>
       {detail.exercises.length === 0 ? (

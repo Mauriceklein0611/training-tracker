@@ -18,6 +18,7 @@ import { TextAreaField } from '@/components/ui/Field';
 import { ExercisePickerDialog } from '@/features/exercises/ExercisePickerDialog';
 import { RestTimerBar } from '@/features/session/RestTimerBar';
 import { LiveExerciseList } from '@/features/session/LiveExerciseList';
+import { PostCheckInCard, PreCheckInCard } from '@/features/checkin/CheckInCards';
 import { SessionSummaryView } from '@/features/session/SessionSummaryView';
 import { useActiveRest } from '@/features/session/useActiveRest';
 import { useNow } from '@/hooks/useNow';
@@ -155,6 +156,10 @@ export default function LiveSessionPage() {
         <RestTimerBar rest={rest} onEndRest={() => void endRest(rest.set.id)} />
       ) : null}
 
+      <div className="mb-3">
+        <PreCheckInCard sessionId={sessionId} value={detail.session.preCheckIn} />
+      </div>
+
       {detail.exercises.length === 0 ? (
         <EmptyState
           title="Noch keine Übungen"
@@ -198,6 +203,10 @@ export default function LiveSessionPage() {
             if (notes != null) void updateSession(sessionId, { notes });
           }}
         />
+      </div>
+
+      <div className="mt-4">
+        <PostCheckInCard sessionId={sessionId} value={detail.session.postCheckIn} />
       </div>
 
       <Button

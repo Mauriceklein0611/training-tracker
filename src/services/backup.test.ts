@@ -16,6 +16,8 @@ import {
   attachSessionExerciseToPrevious,
   completeSet,
   finishSession,
+  setPostCheckIn,
+  setPreCheckIn,
   startFreeSession,
 } from '@/db/repositories/sessions';
 import { updateSettings } from '@/db/repositories/settings';
@@ -361,6 +363,37 @@ describe('weekly goals round trip', () => {
     await importBackup(result.backup, 'replace');
     const restored = await db.settings.get('app-settings');
     expect(restored?.weeklyGoals).toBeUndefined();
+  });
+});
+
+describe('check-in round trip', () => {
+  it('preserves pre and post check-in through backup and restore', async () => {
+    const session = await startFreeSession('Check-in');
+    await setPreCheckIn(session.id, { energy: 4, sleepQuality: 3, painNote: 'Knie' });
+    await setPostCheckIn(session.id, { quality: 5, satisfaction: 4 });
+    await finishSession(session.id);
+
+    const backup = await createBackup();
+    const stored = backup.workoutSessions.find((entry) => entry.id === session.id);
+    expect(stored?.preCheckIn?.energy).toBe(4);
+    expect(stored?.postCheckIn?.quality).toBe(5);
+
+    await resetDatabase();
+    await importBackup(backup, 'replace');
+    const restored = await db.workoutSessions.get(session.id);
+    expect(restored?.preCheckIn?.painNote).toBe('Knie');
+    expect(restored?.postCheckIn?.satisfaction).toBe(4);
+  });
+
+  it('accepts a backup written before check-in existed', async () => {
+    await seedDatabase();
+    const raw = JSON.parse(JSON.stringify(await createBackup()));
+    for (const entry of raw.workoutSessions) {
+      delete entry.preCheckIn;
+      delete entry.postCheckIn;
+    }
+    raw.schemaVersion = 8;
+    expect(validateBackupJson(raw).ok).toBe(true);
   });
 });
 

@@ -17,7 +17,7 @@ import { nowIso } from '@/utils/id';
  * Bump this together with a new `.version()` block below and record the change
  * in MIGRATIONS so the settings screen can show what the database went through.
  */
-export const SCHEMA_VERSION = 8;
+export const SCHEMA_VERSION = 9;
 
 export const MIGRATIONS: { version: number; description: string }[] = [
   { version: 1, description: 'Initiales Schema: Übungen, Pläne, Einheiten, Sätze.' },
@@ -65,6 +65,13 @@ export const MIGRATIONS: { version: number; description: string }[] = [
       'Übungen in Plänen und Einheiten können optional zu Supersätzen oder ' +
       'Zirkeln gruppiert werden (Gruppen-ID, Gruppentyp, Pausenmodus). ' +
       'Einzelübungen bleiben unverändert.',
+  },
+  {
+    version: 9,
+    description:
+      'Optionaler Check-in vor und nach dem Training (Energie, Schlaf, ' +
+      'Motivation, Muskelkater, wahrgenommene Qualität usw.). Rein subjektiv ' +
+      'und freiwillig; ohne diese Angaben bleibt alles unverändert.',
   },
 ];
 
@@ -221,6 +228,19 @@ export class TrainingDatabase extends Dexie {
         .toCollection()
         .modify((settings) => {
           settings.schemaVersion = 8;
+        });
+    });
+
+    // ---- v9 -------------------------------------------------------------
+    // Sessions gained optional preCheckIn / postCheckIn. Both are optional and
+    // absent means "not filled in", so existing sessions stay valid untouched —
+    // only the recorded schema version is advanced.
+    this.version(9).upgrade(async (tx) => {
+      await tx
+        .table<AppSettings>('settings')
+        .toCollection()
+        .modify((settings) => {
+          settings.schemaVersion = 9;
         });
     });
   }

@@ -208,6 +208,37 @@ describe('buildAiExport', () => {
     expect(file.conventions.oneRepMax).toContain('Epley');
   });
 
+  it('includes subjective check-ins, redacting free text without notes', () => {
+    const dataset = buildDataset();
+    const recent = dataset.sessions.find((session) => session.id === 's-recent');
+    if (recent) {
+      recent.preCheckIn = { energy: 4, sleepQuality: 3, painNote: 'Knie zwickt' };
+      recent.postCheckIn = { quality: 5, satisfaction: 4 };
+    }
+
+    const withNotes = buildAiExport(dataset, [], DEFAULT_AI_EXPORT_OPTIONS, NOW);
+    const workout = (withNotes.workouts as { checkInBefore?: Record<string, unknown> }[]).find(
+      (entry) => entry.checkInBefore,
+    );
+    expect(workout?.checkInBefore?.energy).toBe(4);
+    expect(workout?.checkInBefore?.painNote).toBe('Knie zwickt');
+    // Data-quality note must flag them as subjective and non-causal.
+    expect(withNotes.dataQuality.notes.join(' ')).toContain('Kausalaussage');
+
+    // Free text is dropped when notes are excluded, ratings stay.
+    const redacted = buildAiExport(
+      dataset,
+      [],
+      { ...DEFAULT_AI_EXPORT_OPTIONS, includeNotes: false },
+      NOW,
+    );
+    const redactedWorkout = (
+      redacted.workouts as { checkInBefore?: Record<string, unknown> }[]
+    ).find((entry) => entry.checkInBefore);
+    expect(redactedWorkout?.checkInBefore?.energy).toBe(4);
+    expect(redactedWorkout?.checkInBefore?.painNote).toBeUndefined();
+  });
+
   it('omits the goals block when no weekly goal is set', () => {
     const file = buildAiExport(buildDataset(), [], DEFAULT_AI_EXPORT_OPTIONS, NOW);
     expect(file.goals).toBeUndefined();

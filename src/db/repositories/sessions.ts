@@ -589,6 +589,25 @@ export async function updateSession(
   await db.workoutSessions.update(sessionId, { ...changes, updatedAt: nowIso() });
 }
 
+/**
+ * Stores the optional pre-workout check-in. Passing `undefined` clears it, so a
+ * user can remove a check-in entirely.
+ */
+export async function setPreCheckIn(
+  sessionId: string,
+  checkIn: WorkoutSession['preCheckIn'],
+): Promise<void> {
+  await db.workoutSessions.update(sessionId, { preCheckIn: checkIn, updatedAt: nowIso() });
+}
+
+/** Stores the optional post-workout check-in. */
+export async function setPostCheckIn(
+  sessionId: string,
+  checkIn: WorkoutSession['postCheckIn'],
+): Promise<void> {
+  await db.workoutSessions.update(sessionId, { postCheckIn: checkIn, updatedAt: nowIso() });
+}
+
 async function touchSession(sessionId: string): Promise<void> {
   await db.workoutSessions.update(sessionId, { updatedAt: nowIso() });
 }

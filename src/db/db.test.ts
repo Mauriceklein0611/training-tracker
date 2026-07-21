@@ -35,7 +35,9 @@ async function createVersion1Database(): Promise<Dexie> {
 
 describe('schema migrations', () => {
   it('documents every version that exists', () => {
-    expect(MIGRATIONS.map((migration) => migration.version)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+    expect(MIGRATIONS.map((migration) => migration.version)).toEqual([
+      1, 2, 3, 4, 5, 6, 7, 8, 9,
+    ]);
     expect(MIGRATIONS[MIGRATIONS.length - 1].version).toBe(SCHEMA_VERSION);
   });
 

@@ -93,6 +93,24 @@ export const templateExerciseSchema = z.object({
   ...groupingFields,
 });
 
+const rating1to5 = z.number().int().min(1).max(5).optional();
+
+export const preCheckInSchema = z.object({
+  energy: rating1to5,
+  sleepQuality: rating1to5,
+  motivation: rating1to5,
+  soreness: z.number().int().min(0).max(5).optional(),
+  painNote: z.string().max(1000).optional(),
+  note: z.string().max(2000).optional(),
+});
+
+export const postCheckInSchema = z.object({
+  quality: rating1to5,
+  difficulty: rating1to5,
+  satisfaction: rating1to5,
+  note: z.string().max(2000).optional(),
+});
+
 export const workoutSessionSchema = z.object({
   id,
   templateId: id.optional(),
@@ -101,6 +119,9 @@ export const workoutSessionSchema = z.object({
   startedAt: isoDateTime,
   finishedAt: isoDateTime.optional(),
   notes: z.string().default(''),
+  // Added in schema version 9; optional so older backups still validate.
+  preCheckIn: preCheckInSchema.optional(),
+  postCheckIn: postCheckInSchema.optional(),
   createdAt: isoDateTime,
   updatedAt: isoDateTime,
 });
