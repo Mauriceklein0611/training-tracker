@@ -1,12 +1,16 @@
 import {
+  addDays,
   differenceInCalendarDays,
   differenceInCalendarWeeks,
   endOfDay,
+  endOfWeek,
   format,
   parseISO,
   startOfDay,
+  startOfMonth,
   startOfWeek,
   subDays,
+  subWeeks,
 } from 'date-fns';
 import { de } from 'date-fns/locale';
 
@@ -112,6 +116,69 @@ export function currentWeeklyStreak(dates: string[], now: Date = new Date()): nu
     cursor = subDays(cursor, 7);
   }
   return streak;
+}
+
+/** Monday (local) of the week the value belongs to, as a Date. */
+export function startOfWeekDate(value: string | Date = new Date()): Date {
+  const date = typeof value === 'string' ? parseISO(value) : value;
+  return startOfWeek(date, WEEK_OPTIONS);
+}
+
+/** Sunday (local, end of day) of the week the value belongs to, as a Date. */
+export function endOfWeekDate(value: string | Date = new Date()): Date {
+  const date = typeof value === 'string' ? parseISO(value) : value;
+  return endOfWeek(date, WEEK_OPTIONS);
+}
+
+/**
+ * Week keys (Monday) for the last `count` calendar weeks, oldest first and
+ * ending with the current week. Used for weekly goal and heatmap timelines.
+ */
+export function recentWeekStarts(count: number, now: Date = new Date()): string[] {
+  const thisWeek = startOfWeek(now, WEEK_OPTIONS);
+  const keys: string[] = [];
+  for (let i = count - 1; i >= 0; i -= 1) {
+    keys.push(format(subWeeks(thisWeek, i), 'yyyy-MM-dd'));
+  }
+  return keys;
+}
+
+/** Short week label like "22.06." for the Monday of a week key. */
+export function formatWeekLabel(weekStartKey: string): string {
+  return format(parseISO(weekStartKey), 'dd.MM.', { locale: de });
+}
+
+/** Human range label like "22.–28.06." for a week. */
+export function formatWeekRange(weekStartKey: string): string {
+  const start = parseISO(weekStartKey);
+  const end = endOfWeek(start, WEEK_OPTIONS);
+  return `${format(start, 'dd.', { locale: de })}–${format(end, 'dd.MM.', { locale: de })}`;
+}
+
+/**
+ * The calendar grid for a month: every day from the Monday on or before the
+ * first of the month to the Sunday on or after the last, as day keys grouped
+ * into weeks of seven.
+ */
+export function monthGridDays(anchor: Date): Date[][] {
+  const first = startOfMonth(anchor);
+  const gridStart = startOfWeek(first, WEEK_OPTIONS);
+  const weeks: Date[][] = [];
+  // Six rows always cover any month; trailing weeks fully in the next month are
+  // dropped so the grid never shows an empty extra row.
+  for (let week = 0; week < 6; week += 1) {
+    const row: Date[] = [];
+    for (let day = 0; day < 7; day += 1) {
+      row.push(addDays(gridStart, week * 7 + day));
+    }
+    if (row.every((date) => date.getMonth() !== first.getMonth() && date > first)) break;
+    weeks.push(row);
+  }
+  return weeks;
+}
+
+export function formatMonthTitle(anchor: Date): string {
+  return format(anchor, 'MMMM yyyy', { locale: de });
 }
 
 /** Formats a duration in seconds as "1:05:03" or "5:03". */

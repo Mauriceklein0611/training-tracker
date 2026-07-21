@@ -1,14 +1,18 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { History } from 'lucide-react';
+import { History, X } from 'lucide-react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { EmptyState } from '@/components/ui/Card';
 import { SelectField, TextField } from '@/components/ui/Field';
+import { CalendarHeatmap } from '@/features/history/CalendarHeatmap';
+import { WeeklyGoalsCard } from '@/features/history/WeeklyGoalsCard';
+import { useSettings } from '@/hooks/useSettings';
 import { loadAnalyticsDataset } from '@/services/dataset';
-import { buildSetContexts } from '@/services/analytics';
+import { buildSetContexts, type AnalyticsDataset } from '@/services/analytics';
+import { buildDayActivity, hasAnyWeeklyGoal } from '@/services/calendar';
 import { aggregateVolume } from '@/services/metrics';
-import { dayKey, formatDayHeading, formatDurationLong, formatTime } from '@/utils/date';
+import { dayKey, formatDate, formatDayHeading, formatDurationLong, formatTime } from '@/utils/date';
 import { formatNumber, formatVolume } from '@/utils/format';
 
 interface HistoryRow {
@@ -23,15 +27,27 @@ interface HistoryRow {
   notes: string;
 }
 
+interface HistoryData {
+  rows: HistoryRow[];
+  dataset: AnalyticsDataset;
+}
+
+const EMPTY_DATA: HistoryData = {
+  rows: [],
+  dataset: { sessions: [], sessionExercises: [], sets: [], exercises: [] },
+};
+
 export default function HistoryPage() {
+  const { settings } = useSettings();
   const [search, setSearch] = useState('');
   const [period, setPeriod] = useState('all');
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
 
-  const rows = useLiveQuery(async (): Promise<HistoryRow[]> => {
+  const data = useLiveQuery(async (): Promise<HistoryData> => {
     const dataset = await loadAnalyticsDataset();
     const contexts = buildSetContexts(dataset);
 
-    return dataset.sessions
+    const rows = dataset.sessions
       .filter((session) => session.status === 'completed')
       .sort((a, b) => b.startedAt.localeCompare(a.startedAt))
       .map((session) => {
@@ -56,16 +72,21 @@ export default function HistoryPage() {
           notes: session.notes,
         };
       });
-  }, [], []);
+
+    return { rows, dataset };
+  }, [], EMPTY_DATA);
+
+  const { rows, dataset } = data;
+
+  const activity = useMemo(() => buildDayActivity(dataset), [dataset]);
+  const showGoals = hasAnyWeeklyGoal(settings.weeklyGoals);
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
-    const cutoff =
-      period === 'all'
-        ? null
-        : Date.now() - Number(period) * 24 * 3600 * 1000;
+    const cutoff = period === 'all' ? null : Date.now() - Number(period) * 24 * 3600 * 1000;
 
     return rows.filter((row) => {
+      if (selectedDay && row.day !== selectedDay) return false;
       if (cutoff != null && new Date(row.startedAt).getTime() < cutoff) return false;
       if (!term) return true;
       return [row.name, row.notes, ...row.exerciseNames]
@@ -73,7 +94,7 @@ export default function HistoryPage() {
         .toLowerCase()
         .includes(term);
     });
-  }, [rows, search, period]);
+  }, [rows, search, period, selectedDay]);
 
   // Group by calendar day so the list reads like a diary.
   const groups = useMemo(() => {
@@ -89,6 +110,19 @@ export default function HistoryPage() {
   return (
     <>
       <PageHeader title="Verlauf" subtitle={`${rows.length} abgeschlossene Einheiten`} />
+
+      {rows.length > 0 ? (
+        <div className="mb-4 grid gap-4">
+          <CalendarHeatmap
+            activity={activity}
+            selectedDay={selectedDay}
+            onSelectDay={setSelectedDay}
+          />
+          {showGoals ? (
+            <WeeklyGoalsCard dataset={dataset} goals={settings.weeklyGoals ?? {}} />
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="mb-4 grid gap-3">
         <TextField
@@ -110,6 +144,18 @@ export default function HistoryPage() {
         </SelectField>
       </div>
 
+      {selectedDay ? (
+        <button
+          type="button"
+          onClick={() => setSelectedDay(null)}
+          className="mb-3 inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-accent/40 bg-surface-2 px-3 text-sm font-medium text-accent"
+        >
+          <span>Ausgewählter Tag: {formatDate(selectedDay)}</span>
+          <X size={16} aria-hidden="true" />
+          <span className="sr-only">Auswahl aufheben</span>
+        </button>
+      ) : null}
+
       {groups.length === 0 ? (
         <EmptyState
           icon={<History size={28} aria-hidden="true" />}
@@ -117,7 +163,9 @@ export default function HistoryPage() {
           description={
             rows.length === 0
               ? 'Sobald du eine Trainingseinheit beendest, erscheint sie hier — mit allen Sätzen, Pausen und Notizen. Du kannst Einheiten später korrigieren oder als Vorlage für ein neues Training verwenden.'
-              : 'Passe Suche oder Zeitraum an.'
+              : selectedDay
+                ? 'An diesem Tag gibt es keine Einheit, die zu Suche und Zeitraum passt.'
+                : 'Passe Suche oder Zeitraum an.'
           }
         />
       ) : (

@@ -2,6 +2,7 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { CheckboxField, NumberField, SelectField } from '@/components/ui/Field';
 import { Button } from '@/components/ui/Button';
+import { WeeklyGoalsEditor } from '@/features/settings/WeeklyGoalsEditor';
 import { useSettings } from '@/hooks/useSettings';
 import { parseNumberInput } from '@/services/validation';
 import { isIos, isStandalone } from '@/services/pwa';
@@ -115,6 +116,18 @@ export default function SettingsPage() {
             <option value="90d">90 Tage</option>
             <option value="all">Gesamter Zeitraum</option>
           </SelectField>
+        </Card>
+
+        <Card>
+          <CardHeader
+            title="Wochenziele"
+            subtitle="Erscheinen im Verlauf über dem Kalender."
+            as="h2"
+          />
+          <WeeklyGoalsEditor
+            goals={settings.weeklyGoals}
+            onChange={(weeklyGoals) => void update({ weeklyGoals })}
+          />
         </Card>
 
         <Card>

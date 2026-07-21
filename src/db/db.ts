@@ -17,7 +17,7 @@ import { nowIso } from '@/utils/id';
  * Bump this together with a new `.version()` block below and record the change
  * in MIGRATIONS so the settings screen can show what the database went through.
  */
-export const SCHEMA_VERSION = 6;
+export const SCHEMA_VERSION = 7;
 
 export const MIGRATIONS: { version: number; description: string }[] = [
   { version: 1, description: 'Initiales Schema: Übungen, Pläne, Einheiten, Sätze.' },
@@ -52,6 +52,12 @@ export const MIGRATIONS: { version: number; description: string }[] = [
       'Übungen können optional Gewichtsschritt, verfügbare Gewichte, ' +
       'bevorzugte Progressionsmethode und Ziel-RIR hinterlegen. ' +
       'Grundlage für die lokale Progressionsempfehlung.',
+  },
+  {
+    version: 7,
+    description:
+      'Optionale Wochenziele (Trainingseinheiten und Arbeitssätze pro Woche, ' +
+      'optional je Übung) für die Kalender- und Heatmap-Ansicht.',
   },
 ];
 
@@ -181,6 +187,19 @@ export class TrainingDatabase extends Dexie {
         .toCollection()
         .modify((settings) => {
           settings.schemaVersion = 6;
+        });
+    });
+
+    // ---- v7 -------------------------------------------------------------
+    // Settings gained optional weeklyGoals. The field is optional and its
+    // absence means "no goals set", so existing rows stay valid untouched —
+    // only the recorded schema version is advanced.
+    this.version(7).upgrade(async (tx) => {
+      await tx
+        .table<AppSettings>('settings')
+        .toCollection()
+        .modify((settings) => {
+          settings.schemaVersion = 7;
         });
     });
   }

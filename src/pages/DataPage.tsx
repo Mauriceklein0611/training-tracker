@@ -177,6 +177,7 @@ export default function DataPage() {
     return buildAiExport(dataset, bodyWeight, {
       ...aiOptions,
       context: settings.analysisContext,
+      weeklyGoals: settings.weeklyGoals,
     });
   };
 

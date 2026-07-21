@@ -17,6 +17,7 @@ import {
   finishSession,
   startFreeSession,
 } from '@/db/repositories/sessions';
+import { updateSettings } from '@/db/repositories/settings';
 import { resetDatabase } from '@/tests/dbTestUtils';
 
 /** Seeds a small but complete database: one exercise, one finished session. */
@@ -317,6 +318,48 @@ describe('compatibility with older backup files', () => {
 
     expect(again.sessionExercises).toEqual(current.sessionExercises);
     expect(again.workoutSets).toEqual(current.workoutSets);
+  });
+});
+
+describe('weekly goals round trip', () => {
+  it('preserves weekly goals through backup and restore', async () => {
+    await seedDatabase();
+    await updateSettings({
+      weeklyGoals: {
+        sessionsPerWeek: 4,
+        workingSetsPerWeek: 60,
+        exerciseGoals: [
+          { exerciseId: 'squat', exerciseNameSnapshot: 'Kniebeuge', sessionsPerWeek: 2 },
+        ],
+      },
+    });
+
+    const backup = await createBackup();
+    expect(backup.settings?.weeklyGoals?.sessionsPerWeek).toBe(4);
+
+    await resetDatabase();
+    await importBackup(backup, 'replace');
+
+    const restored = await db.settings.get('app-settings');
+    expect(restored?.weeklyGoals?.sessionsPerWeek).toBe(4);
+    expect(restored?.weeklyGoals?.workingSetsPerWeek).toBe(60);
+    expect(restored?.weeklyGoals?.exerciseGoals?.[0]?.exerciseNameSnapshot).toBe('Kniebeuge');
+  });
+
+  it('accepts a backup written before weekly goals existed', async () => {
+    await seedDatabase();
+    const raw = JSON.parse(JSON.stringify(await createBackup()));
+    delete raw.settings.weeklyGoals;
+    raw.schemaVersion = 6;
+
+    const result = validateBackupJson(raw);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    await resetDatabase();
+    await importBackup(result.backup, 'replace');
+    const restored = await db.settings.get('app-settings');
+    expect(restored?.weeklyGoals).toBeUndefined();
   });
 });
 

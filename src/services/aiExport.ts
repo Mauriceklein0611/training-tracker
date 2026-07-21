@@ -14,7 +14,8 @@ import {
   ONE_RM_MIN_REPS,
 } from '@/services/metrics';
 import { restDeviationSeconds } from '@/services/rest';
-import type { AnalysisContext, BodyWeightEntry, SetWithContext } from '@/types';
+import type { AnalysisContext, BodyWeightEntry, SetWithContext, WeeklyGoals } from '@/types';
+import { hasAnyWeeklyGoal } from '@/services/calendar';
 import { customRange, dayKey, lastDaysRange, type DateRange } from '@/utils/date';
 
 /**
@@ -71,11 +72,42 @@ export interface AiExportOptions {
   period: AiExportPeriodKey;
   /** Optional self-reported background; omitted from the file when empty. */
   context?: AnalysisContext;
+  /** Optional weekly goals; omitted from the file when none are set. */
+  weeklyGoals?: WeeklyGoals;
   customFrom?: string;
   customTo?: string;
   includeNotes: boolean;
   includeBodyWeight: boolean;
   includeWarmupSets: boolean;
+}
+
+/**
+ * Turns weekly goals into a self-describing block, omitted entirely when no
+ * goal is set. Marked clearly as user-chosen targets so a model never mistakes
+ * them for measured data or an achievement.
+ */
+export function buildGoalsBlock(
+  goals: WeeklyGoals | undefined,
+): Record<string, unknown> | undefined {
+  if (!hasAnyWeeklyGoal(goals)) return undefined;
+
+  const block: Record<string, unknown> = {
+    note: 'Vom Nutzer selbst gesetzte Wochenziele. Es sind Vorgaben, keine Messwerte.',
+  };
+  if (goals?.sessionsPerWeek != null) block.sessionsPerWeek = goals.sessionsPerWeek;
+  if (goals?.workingSetsPerWeek != null) block.workingSetsPerWeek = goals.workingSetsPerWeek;
+
+  const exerciseGoals = (goals?.exerciseGoals ?? []).filter(
+    (goal) => goal.sessionsPerWeek != null || goal.workingSetsPerWeek != null,
+  );
+  if (exerciseGoals.length > 0) {
+    block.exercises = exerciseGoals.map((goal) => ({
+      exercise: goal.exerciseNameSnapshot,
+      ...(goal.sessionsPerWeek != null ? { sessionsPerWeek: goal.sessionsPerWeek } : {}),
+      ...(goal.workingSetsPerWeek != null ? { workingSetsPerWeek: goal.workingSetsPerWeek } : {}),
+    }));
+  }
+  return block;
 }
 
 export const DEFAULT_AI_EXPORT_OPTIONS: AiExportOptions = {
@@ -215,6 +247,11 @@ export interface AiExportFile {
    * context for the reader, not data.
    */
   context?: Record<string, unknown>;
+  /**
+   * Optional weekly goals the user set. Targets, not measurements — absent when
+   * no goal is configured.
+   */
+  goals?: Record<string, unknown>;
   summary: Record<string, unknown>;
   muscleGroups: unknown[];
   weeklyTotals: unknown[];
@@ -451,6 +488,7 @@ export function buildAiExport(
     },
     // Omitted entirely when the user filled in nothing.
     ...(buildContextBlock(options.context) ? { context: buildContextBlock(options.context) } : {}),
+    ...(buildGoalsBlock(options.weeklyGoals) ? { goals: buildGoalsBlock(options.weeklyGoals) } : {}),
     summary: {
       workouts: analytics.sessionCount,
       trainingDays: analytics.trainingDays,

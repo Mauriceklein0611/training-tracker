@@ -217,6 +217,37 @@ export interface AnalysisContext {
   focus?: string;
 }
 
+/**
+ * Optional weekly target for a single exercise.
+ *
+ * The name is snapshotted so the goal stays readable even after the exercise is
+ * renamed or archived; the id is what the aggregation actually matches on.
+ */
+export interface ExerciseWeeklyGoal {
+  exerciseId: string;
+  exerciseNameSnapshot: string;
+  /** Distinct training days that include this exercise. */
+  sessionsPerWeek?: number;
+  /** Working sets of this exercise. */
+  workingSetsPerWeek?: number;
+}
+
+/**
+ * Optional, encouraging weekly targets.
+ *
+ * Every field is optional: leaving all of them empty simply means "no goals
+ * set", which is the default. Goals are never used to alter training data and
+ * are only ever shown as gentle progress, never as a deficit or a penalty.
+ */
+export interface WeeklyGoals {
+  /** Training sessions (distinct training days) per calendar week. */
+  sessionsPerWeek?: number;
+  /** Total working sets per calendar week. */
+  workingSetsPerWeek?: number;
+  /** Per-exercise weekly targets. */
+  exerciseGoals?: ExerciseWeeklyGoal[];
+}
+
 export interface AppSettings {
   /** Singleton row. */
   id: 'app-settings';
@@ -230,6 +261,8 @@ export interface AppSettings {
   keepScreenAwake: boolean;
   /** Optional context for the AI export; never used for calculations. */
   analysisContext?: AnalysisContext;
+  /** Optional weekly training goals; absent means no goals are set. */
+  weeklyGoals?: WeeklyGoals;
   /** Days after which a backup reminder is shown; 0 disables the reminder. */
   backupReminderDays: number;
   lastBackupAt?: ISODateTime;

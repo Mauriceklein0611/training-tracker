@@ -208,6 +208,32 @@ describe('buildAiExport', () => {
     expect(file.conventions.oneRepMax).toContain('Epley');
   });
 
+  it('omits the goals block when no weekly goal is set', () => {
+    const file = buildAiExport(buildDataset(), [], DEFAULT_AI_EXPORT_OPTIONS, NOW);
+    expect(file.goals).toBeUndefined();
+  });
+
+  it('includes weekly goals as clearly-labelled targets when set', () => {
+    const file = buildAiExport(
+      buildDataset(),
+      [],
+      {
+        ...DEFAULT_AI_EXPORT_OPTIONS,
+        weeklyGoals: {
+          sessionsPerWeek: 4,
+          exerciseGoals: [
+            { exerciseId: 'e1', exerciseNameSnapshot: 'Kniebeuge', workingSetsPerWeek: 9 },
+          ],
+        },
+      },
+      NOW,
+    );
+
+    expect(file.goals?.sessionsPerWeek).toBe(4);
+    expect(String(file.goals?.note)).toContain('keine Messwerte');
+    expect(JSON.stringify(file.goals)).toContain('Kniebeuge');
+  });
+
   it('contains no internal database identifiers', () => {
     const file = buildAiExport(buildDataset(), [], DEFAULT_AI_EXPORT_OPTIONS, NOW);
     const serialised = JSON.stringify(file);

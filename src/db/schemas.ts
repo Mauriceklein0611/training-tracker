@@ -178,6 +178,24 @@ export const appSettingsSchema = z.object({
       focus: z.string().max(500).optional(),
     })
     .optional(),
+  // Added in schema version 7; optional so older backups still validate.
+  weeklyGoals: z
+    .object({
+      sessionsPerWeek: z.number().int().min(1).max(14).optional(),
+      workingSetsPerWeek: z.number().int().min(1).max(500).optional(),
+      exerciseGoals: z
+        .array(
+          z.object({
+            exerciseId: id,
+            exerciseNameSnapshot: z.string().min(1),
+            sessionsPerWeek: z.number().int().min(1).max(14).optional(),
+            workingSetsPerWeek: z.number().int().min(1).max(200).optional(),
+          }),
+        )
+        .max(50)
+        .optional(),
+    })
+    .optional(),
   backupReminderDays: z.number().int().min(0).max(365).default(14),
   lastBackupAt: isoDateTime.optional(),
   schemaVersion: z.number().int().min(1).default(1),
