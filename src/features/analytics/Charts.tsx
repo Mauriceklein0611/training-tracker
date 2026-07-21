@@ -213,6 +213,66 @@ export function SimpleLineChart({
   );
 }
 
+export interface TrendPoint {
+  label: string;
+  value: number | null;
+  /** Optional moving average of the same measure, on the same axis. */
+  trend?: number | null;
+}
+
+/**
+ * A raw measurement line with an optional moving-average overlay.
+ *
+ * The overlay is a smoothing of the *same* measure on the *same* Y-axis — not a
+ * second series and never a second axis — so it stays within the one-measure
+ * rule. The raw values keep the solid line with dots; the trend is a lighter,
+ * dashed line the eye can tell apart without relying on colour.
+ */
+export function TrendLineChart({
+  data,
+  formatValue,
+  showTrend,
+}: {
+  data: TrendPoint[];
+  formatValue: (value: number) => string;
+  showTrend: boolean;
+}) {
+  return (
+    <ResponsiveContainer width="100%" height={210}>
+      <LineChart data={data} margin={{ top: 8, right: 10, bottom: 0, left: -18 }}>
+        <CartesianGrid stroke={GRID_COLOR} vertical={false} />
+        <XAxis dataKey="label" {...AXIS_PROPS} interval="preserveStartEnd" minTickGap={16} />
+        <YAxis {...AXIS_PROPS} width={52} tickFormatter={formatValue} domain={['auto', 'auto']} />
+        <Tooltip content={<ChartTooltip formatter={(value) => formatValue(value)} />} />
+        {showTrend ? (
+          <Line
+            type="monotone"
+            dataKey="trend"
+            stroke={SERIES_COLOR}
+            strokeWidth={2}
+            strokeOpacity={0.45}
+            strokeDasharray="5 4"
+            connectNulls
+            dot={false}
+            activeDot={false}
+            isAnimationActive={false}
+          />
+        ) : null}
+        <Line
+          type="monotone"
+          dataKey="value"
+          stroke={SERIES_COLOR}
+          strokeWidth={2}
+          connectNulls={false}
+          dot={{ r: 3, fill: SERIES_COLOR, strokeWidth: 0 }}
+          activeDot={{ r: 6 }}
+          isAnimationActive={false}
+        />
+      </LineChart>
+    </ResponsiveContainer>
+  );
+}
+
 /** Plain data table shown underneath a chart. */
 export function DataTable({
   columns,

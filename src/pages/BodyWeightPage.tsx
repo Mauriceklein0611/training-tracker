@@ -12,6 +12,7 @@ import {
   listBodyWeightEntries,
   upsertBodyWeightEntry,
 } from '@/db/repositories/bodyWeight';
+import { BodyMetricChart } from '@/features/body/BodyMetricChart';
 import { useToast } from '@/hooks/useToast';
 import { parseNumberInput } from '@/services/validation';
 import type { BodyMeasurements } from '@/types';
@@ -248,6 +249,10 @@ export default function BodyWeightPage() {
                   : `${trends.chest.change > 0 ? '+' : ''}${formatCm(trends.chest.change)} seit Beginn`
               }
             />
+          </div>
+
+          <div className="mb-4">
+            <BodyMetricChart entries={entries} />
           </div>
 
           <ul className="grid gap-2">
