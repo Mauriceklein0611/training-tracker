@@ -399,8 +399,11 @@ standalone mode.
 
 ### Included configuration
 
-- [`public/_redirects`](public/_redirects) — SPA fallback so client-side routes
-  resolve; real files still win.
+- **SPA routing needs no configuration.** Cloudflare Pages already serves
+  `index.html` for any path that does not match a file, so a direct hit on
+  `/analyse` or `/verlauf/<id>` resolves. A Netlify-style
+  `/* /index.html 200` rule is *not* wanted here — Pages rejects it as an
+  infinite loop and ignores it.
 - [`public/_headers`](public/_headers) — a strict CSP locked to `'self'`
   (`connect-src 'self'` blocks outgoing requests), `nosniff`, `no-referrer`,
   `frame-ancestors 'none'`, plus cache rules: hashed assets immutable, while
