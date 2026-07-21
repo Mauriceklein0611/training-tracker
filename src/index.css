@@ -1,0 +1,176 @@
+@import 'tailwindcss';
+
+/*
+ * Design tokens.
+ *
+ * The app is a dark "gym mode" by default: high contrast, calm surfaces, one
+ * bright accent reserved for the primary action and the numbers that matter.
+ * A light theme is available for daylight use; both are driven by these
+ * variables so components never hard-code a colour.
+ */
+:root {
+  --bg: #0b0f14;
+  --surface: #131a22;
+  --surface-2: #1b2530;
+  --surface-3: #24313f;
+  --border: #2b3947;
+  --text: #f1f5f9;
+  --muted: #94a3b8;
+  --accent: #22d3ee;
+  --accent-strong: #06b6d4;
+  --accent-contrast: #04222a;
+  --danger: #f87171;
+  --danger-contrast: #300f0f;
+  --success: #4ade80;
+  --warning: #fbbf24;
+  color-scheme: dark;
+}
+
+:root.light {
+  --bg: #f6f8fa;
+  --surface: #ffffff;
+  --surface-2: #eef2f6;
+  --surface-3: #e2e8f0;
+  --border: #cbd5e1;
+  --text: #0f172a;
+  --muted: #52627a;
+  --accent: #0e7490;
+  --accent-strong: #155e75;
+  --accent-contrast: #ecfeff;
+  --danger: #b91c1c;
+  --danger-contrast: #fef2f2;
+  --success: #15803d;
+  --warning: #b45309;
+  color-scheme: light;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-border: var(--border);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-contrast: var(--accent-contrast);
+  --color-danger: var(--danger);
+  --color-danger-contrast: var(--danger-contrast);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+
+  /* System font stack only — no font is ever loaded from the network. */
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+    'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
+  --font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+}
+
+@layer base {
+  html {
+    background-color: var(--bg);
+    /* Prevent iOS from enlarging text in landscape. */
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    margin: 0;
+    background-color: var(--bg);
+    color: var(--text);
+    font-family: var(--font-sans);
+    /* Avoid rubber-band scrolling behind the fixed bottom navigation. */
+    overscroll-behavior-y: none;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Visible focus for every interactive element — never removed. */
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+    color: inherit;
+  }
+
+  /* iOS zooms in when a focused input is smaller than 16px. */
+  input,
+  select,
+  textarea {
+    font-size: max(16px, 1rem);
+  }
+
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+
+  /* Respect the operating system's reduced-motion preference. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer components {
+  /* Minimum touch target required across the app. */
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Screen-reader-only text (labels for icon buttons, chart descriptions). */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+  }
+
+  /* Tabular figures keep counters from jittering while they tick. */
+  .numeric {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum';
+  }
+
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .safe-top {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+}
+
+/* The pulsing ring on an expired rest timer; disabled by reduced motion above. */
+@keyframes rest-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+.rest-expired {
+  animation: rest-pulse 1.6s ease-in-out infinite;
+}

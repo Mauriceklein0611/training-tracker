@@ -1,0 +1,262 @@
+import { useCallback } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { AlertTriangle, ClipboardList, Play, Plus, Zap } from 'lucide-react';
+import { db } from '@/db/db';
+import { listTemplates } from '@/db/repositories/templates';
+import {
+  ActiveSessionExistsError,
+  startFreeSession,
+  startSessionFromTemplate,
+} from '@/db/repositories/sessions';
+import { useActiveSession } from '@/hooks/useActiveSession';
+import { useSettings } from '@/hooks/useSettings';
+import { useToast } from '@/hooks/useToast';
+import { Button } from '@/components/ui/Button';
+import { Card, CardHeader, EmptyState, Stat } from '@/components/ui/Card';
+import { PageHeader } from '@/components/layout/PageHeader';
+import { loadAnalyticsDataset } from '@/services/dataset';
+import { computeAnalytics } from '@/services/analytics';
+import { isBackupOverdue } from '@/services/storage';
+import { lastDaysRange, formatDateTime, formatDurationLong, weekKey } from '@/utils/date';
+import { formatNumber, formatVolume } from '@/utils/format';
+
+/**
+ * Start screen.
+ *
+ * Optimised for the one thing that happens at the gym: starting or resuming a
+ * workout. Statistics stay short — the analytics screen is one tap away.
+ */
+export default function HomePage() {
+  const navigate = useNavigate();
+  const toast = useToast();
+  const activeSession = useActiveSession();
+  const { settings } = useSettings();
+
+  const templates = useLiveQuery(() => listTemplates(), [], []);
+
+  const overview = useLiveQuery(async () => {
+    const dataset = await loadAnalyticsDataset();
+    const analytics = computeAnalytics(dataset, lastDaysRange(30));
+    const completed = dataset.sessions
+      .filter((session) => session.status === 'completed')
+      .sort((a, b) => b.startedAt.localeCompare(a.startedAt));
+
+    const currentWeek = weekKey(new Date());
+    return {
+      analytics,
+      lastSession: completed[0],
+      totalSessions: completed.length,
+      sessionsThisWeek: completed.filter(
+        (session) => weekKey(session.startedAt) === currentWeek,
+      ).length,
+    };
+  }, []);
+
+  const startTemplate = useCallback(
+    async (templateId: string) => {
+      try {
+        const session = await startSessionFromTemplate(templateId);
+        navigate(`/training/${session.id}`);
+      } catch (error) {
+        if (error instanceof ActiveSessionExistsError) {
+          toast.show('Es läuft bereits eine Trainingseinheit.', 'error');
+          navigate(`/training/${error.activeSessionId}`);
+          return;
+        }
+        toast.show(error instanceof Error ? error.message : 'Start fehlgeschlagen.', 'error');
+      }
+    },
+    [navigate, toast],
+  );
+
+  const startFree = useCallback(async () => {
+    try {
+      const session = await startFreeSession();
+      navigate(`/training/${session.id}`);
+    } catch (error) {
+      if (error instanceof ActiveSessionExistsError) {
+        navigate(`/training/${error.activeSessionId}`);
+        return;
+      }
+      toast.show(error instanceof Error ? error.message : 'Start fehlgeschlagen.', 'error');
+    }
+  }, [navigate, toast]);
+
+  const exerciseCount = useLiveQuery(() => db.exercises.count(), [], 0);
+  const backupOverdue = isBackupOverdue(settings.lastBackupAt, settings.backupReminderDays);
+  const hasHistory = (overview?.totalSessions ?? 0) > 0;
+
+  return (
+    <>
+      <PageHeader title="Training" subtitle="Alle Daten bleiben auf diesem Gerät" />
+
+      {/* Resuming an interrupted workout is always the first thing offered. */}
+      {activeSession ? (
+        <Card className="mb-4 border-accent/60 bg-surface">
+          <CardHeader
+            title="Laufende Trainingseinheit"
+            subtitle={`${activeSession.name} · gestartet ${formatDateTime(activeSession.startedAt)}`}
+          />
+          <Button
+            variant="primary"
+            size="lg"
+            fullWidth
+            onClick={() => navigate(`/training/${activeSession.id}`)}
+          >
+            <Play size={20} aria-hidden="true" />
+            Training fortsetzen
+          </Button>
+        </Card>
+      ) : null}
+
+      {backupOverdue && hasHistory ? (
+        <Link
+          to="/mehr/daten"
+          className="mb-4 flex items-start gap-3 rounded-2xl border border-warning/50 bg-surface p-4"
+        >
+          <AlertTriangle size={20} className="mt-0.5 shrink-0 text-warning" aria-hidden="true" />
+          <div>
+            <p className="text-sm font-semibold text-warning">Sicherung überfällig</p>
+            <p className="mt-0.5 text-xs leading-relaxed text-muted">
+              {settings.lastBackupAt
+                ? `Letzte Sicherung: ${formatDateTime(settings.lastBackupAt)}.`
+                : 'Es wurde noch nie eine Sicherung erstellt.'}{' '}
+              Jetzt Backup erstellen →
+            </p>
+          </div>
+        </Link>
+      ) : null}
+
+      {!activeSession ? (
+        <section className="mb-6" aria-labelledby="start-heading">
+          <h2 id="start-heading" className="sr-only">
+            Training starten
+          </h2>
+          <div className="grid gap-2">
+            <Button variant="primary" size="lg" fullWidth onClick={startFree}>
+              <Zap size={20} aria-hidden="true" />
+              Freies Training starten
+            </Button>
+            {exerciseCount === 0 ? (
+              <p className="text-xs leading-relaxed text-muted">
+                Du hast noch keine Übungen angelegt. Du kannst sie auch direkt während des
+                Trainings erstellen.
+              </p>
+            ) : null}
+          </div>
+        </section>
+      ) : null}
+
+      <section className="mb-6" aria-labelledby="templates-heading">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 id="templates-heading" className="text-base font-semibold">
+            Trainingspläne
+          </h2>
+          <Link to="/plaene" className="text-sm font-medium text-accent">
+            Alle ansehen
+          </Link>
+        </div>
+
+        {templates.length === 0 ? (
+          <EmptyState
+            icon={<ClipboardList size={28} aria-hidden="true" />}
+            title="Noch keine Trainingspläne"
+            description="Lege einen Plan an, um wiederkehrende Trainings mit festen Übungen, Ziel-Sätzen und Pausenzeiten zu starten. Für spontane Einheiten reicht das freie Training."
+            action={
+              <Button variant="secondary" onClick={() => navigate('/plaene')}>
+                <Plus size={18} aria-hidden="true" />
+                Plan erstellen
+              </Button>
+            }
+          />
+        ) : (
+          <ul className="grid gap-2">
+            {templates.slice(0, 5).map((template) => (
+              <li key={template.id}>
+                <div className="flex items-center gap-2 rounded-2xl border border-border bg-surface p-3">
+                  <Link to={`/plaene/${template.id}`} className="min-w-0 flex-1">
+                    <p className="truncate font-medium">{template.name}</p>
+                    {template.description ? (
+                      <p className="truncate text-sm text-muted">{template.description}</p>
+                    ) : null}
+                  </Link>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    disabled={Boolean(activeSession)}
+                    onClick={() => void startTemplate(template.id)}
+                  >
+                    <Play size={16} aria-hidden="true" />
+                    Starten
+                  </Button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section aria-labelledby="overview-heading">
+        <h2 id="overview-heading" className="mb-3 text-base font-semibold">
+          Überblick
+        </h2>
+
+        {!hasHistory ? (
+          <EmptyState
+            title="Noch keine Trainingsdaten"
+            description="Sobald du deine erste Einheit abgeschlossen hast, erscheinen hier deine Wochenübersicht und die wichtigsten Kennzahlen. Alle Auswertungen entstehen ausschließlich aus deinen lokalen Daten."
+          />
+        ) : (
+          <>
+            <div className="grid grid-cols-2 gap-2">
+              <Stat
+                label="Diese Woche"
+                value={formatNumber(overview?.sessionsThisWeek)}
+                hint="Trainingseinheiten"
+                tone="accent"
+              />
+              <Stat
+                label="Serie"
+                value={formatNumber(overview?.analytics.streakWeeks)}
+                hint="Wochen in Folge"
+              />
+              <Stat
+                label="30 Tage"
+                value={formatNumber(overview?.analytics.sessionCount)}
+                hint="Einheiten"
+              />
+              <Stat
+                label="Volumen 30 T."
+                value={formatVolume(overview?.analytics.volume.volumeKg)}
+                hint="gewichtete Übungen"
+              />
+            </div>
+
+            {overview?.lastSession ? (
+              <Link
+                to={`/verlauf/${overview.lastSession.id}`}
+                className="mt-2 block rounded-2xl border border-border bg-surface p-4"
+              >
+                <p className="text-xs font-medium uppercase tracking-wide text-muted">
+                  Letzte Einheit
+                </p>
+                <p className="mt-1 font-medium">{overview.lastSession.name}</p>
+                <p className="text-sm text-muted">
+                  {formatDateTime(overview.lastSession.startedAt)}
+                  {overview.lastSession.finishedAt
+                    ? ` · ${formatDurationLong(
+                        (new Date(overview.lastSession.finishedAt).getTime() -
+                          new Date(overview.lastSession.startedAt).getTime()) /
+                          1000,
+                      )}`
+                    : ''}
+                </p>
+              </Link>
+            ) : null}
+          </>
+        )}
+      </section>
+    </>
+  );
+}
