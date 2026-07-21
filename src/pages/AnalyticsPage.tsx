@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { GitCompareArrows } from 'lucide-react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card, CardHeader, EmptyState, Stat } from '@/components/ui/Card';
 import { Segmented, SelectField, TextField } from '@/components/ui/Field';
@@ -151,6 +153,14 @@ export default function AnalyticsPage() {
   return (
     <>
       <PageHeader title="Analyse" subtitle="Berechnet ausschließlich aus deinen lokalen Daten" />
+
+      <Link
+        to="/analyse/vergleich"
+        className="mb-3 flex min-h-[48px] items-center gap-2 rounded-2xl border border-border bg-surface px-4 text-sm font-medium active:bg-surface-2"
+      >
+        <GitCompareArrows size={18} className="text-accent" aria-hidden="true" />
+        Trainingsblöcke vergleichen
+      </Link>
 
       <Segmented
         label="Zeitraum"

@@ -15,6 +15,7 @@ const TemplateEditPage = lazy(() => import('@/pages/TemplateEditPage'));
 const HistoryPage = lazy(() => import('@/pages/HistoryPage'));
 const SessionDetailPage = lazy(() => import('@/pages/SessionDetailPage'));
 const AnalyticsPage = lazy(() => import('@/pages/AnalyticsPage'));
+const BlockComparePage = lazy(() => import('@/pages/BlockComparePage'));
 const MorePage = lazy(() => import('@/pages/MorePage'));
 const ExercisesPage = lazy(() => import('@/pages/ExercisesPage'));
 const BodyWeightPage = lazy(() => import('@/pages/BodyWeightPage'));
@@ -46,6 +47,7 @@ export default function App() {
           <Route path="/verlauf" element={<HistoryPage />} />
           <Route path="/verlauf/:sessionId" element={<SessionDetailPage />} />
           <Route path="/analyse" element={<AnalyticsPage />} />
+          <Route path="/analyse/vergleich" element={<BlockComparePage />} />
           <Route path="/mehr" element={<MorePage />} />
           <Route path="/mehr/uebungen" element={<ExercisesPage />} />
           <Route path="/mehr/koerpergewicht" element={<BodyWeightPage />} />
