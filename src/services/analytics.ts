@@ -91,6 +91,8 @@ export interface ExerciseSeriesPoint {
   topSetReps: number | null;
   estimatedOneRepMax: number | null;
   totalReps: number;
+  /** Highest single-set repetitions in the session, regardless of load. */
+  bestReps: number | null;
   maxDurationSeconds: number | null;
   workingSets: number;
 }
@@ -314,6 +316,7 @@ export function computeExerciseSeries(
     let topSetReps: number | null = null;
     let bestOneRm: number | null = null;
     let totalReps = 0;
+    let bestReps: number | null = null;
     let maxDurationSeconds: number | null = null;
 
     for (const { set, sessionExercise } of entries) {
@@ -330,6 +333,7 @@ export function computeExerciseSeries(
       const oneRm = estimatedOneRepMax(set, sessionExercise);
       if (oneRm != null && (bestOneRm == null || oneRm > bestOneRm)) bestOneRm = oneRm;
       totalReps += set.reps ?? 0;
+      if (set.reps != null && (bestReps == null || set.reps > bestReps)) bestReps = set.reps;
       if (
         set.durationSeconds != null &&
         (maxDurationSeconds == null || set.durationSeconds > maxDurationSeconds)
@@ -346,6 +350,7 @@ export function computeExerciseSeries(
       topSetReps,
       estimatedOneRepMax: bestOneRm,
       totalReps,
+      bestReps,
       maxDurationSeconds,
       workingSets: entries.length,
     });

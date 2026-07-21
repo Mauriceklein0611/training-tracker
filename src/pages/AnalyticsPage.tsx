@@ -16,6 +16,8 @@ import {
   computeExerciseSeries,
   listTrackedExercises,
 } from '@/services/analytics';
+import { analyzePlateau } from '@/services/plateau';
+import { PlateauHint } from '@/features/analytics/PlateauHint';
 import { ONE_RM_MAX_REPS, ONE_RM_MIN_REPS } from '@/services/metrics';
 import { useSettings } from '@/hooks/useSettings';
 import type { AnalyticsRangeKey } from '@/types';
@@ -80,10 +82,18 @@ export default function AnalyticsPage() {
 
   const data = useLiveQuery(async () => {
     const dataset = await loadAnalyticsDataset();
+    const exercises = listTrackedExercises(dataset);
+    const selected = exercises.find((entry) => entry.id === exerciseId);
     return {
       analytics: computeAnalytics(dataset, range),
-      exercises: listTrackedExercises(dataset),
+      exercises,
       series: exerciseId ? computeExerciseSeries(dataset, exerciseId, range) : [],
+      // The plateau hint looks at the full history, so "recent" really means the
+      // latest sessions rather than only those inside the selected range.
+      plateau:
+        exerciseId && selected
+          ? analyzePlateau(computeExerciseSeries(dataset, exerciseId, null), selected.trackingType)
+          : null,
     };
   }, [range, exerciseId]);
 
@@ -337,6 +347,7 @@ export default function AnalyticsPage() {
                 >
                   <SimpleLineChart data={seriesPoints} formatValue={metricFormatter} />
                 </ChartFrame>
+                {data?.plateau ? <PlateauHint analysis={data.plateau} /> : null}
               </div>
             ) : null}
           </Card>
