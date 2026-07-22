@@ -1,12 +1,13 @@
 import { useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { AlertTriangle, ClipboardList, Play, Plus, Zap } from 'lucide-react';
+import { AlertTriangle, ClipboardList, Play, Plus, RotateCcw, Zap } from 'lucide-react';
 import { db } from '@/db/db';
 import { listTemplates } from '@/db/repositories/templates';
 import {
   ActiveSessionExistsError,
   startFreeSession,
+  startSessionFromPreviousSession,
   startSessionFromTemplate,
 } from '@/db/repositories/sessions';
 import { useActiveSession } from '@/hooks/useActiveSession';
@@ -83,9 +84,28 @@ export default function HomePage() {
     }
   }, [navigate, toast]);
 
+  const repeatLast = useCallback(async () => {
+    const lastId = overview?.lastSession?.id;
+    if (!lastId) return;
+    try {
+      const session = await startSessionFromPreviousSession(lastId);
+      navigate(`/training/${session.id}`);
+    } catch (error) {
+      if (error instanceof ActiveSessionExistsError) {
+        navigate(`/training/${error.activeSessionId}`);
+        return;
+      }
+      toast.show(error instanceof Error ? error.message : 'Start fehlgeschlagen.', 'error');
+    }
+  }, [navigate, toast, overview?.lastSession?.id]);
+
   const exerciseCount = useLiveQuery(() => db.exercises.count(), [], 0);
   const backupOverdue = isBackupOverdue(settings.lastBackupAt, settings.backupReminderDays);
   const hasHistory = (overview?.totalSessions ?? 0) > 0;
+  const lastTemplateId = overview?.lastSession?.templateId;
+  const lastTemplate = lastTemplateId
+    ? templates.find((template) => template.id === lastTemplateId)
+    : undefined;
 
   return (
     <>
@@ -138,6 +158,23 @@ export default function HomePage() {
               <Zap size={20} aria-hidden="true" />
               Freies Training starten
             </Button>
+            {/* Quick actions: repeat the last workout or restart its plan. */}
+            {overview?.lastSession ? (
+              <Button variant="secondary" fullWidth onClick={() => void repeatLast()}>
+                <RotateCcw size={18} aria-hidden="true" />
+                Letztes Training wiederholen
+              </Button>
+            ) : null}
+            {lastTemplate ? (
+              <Button
+                variant="secondary"
+                fullWidth
+                onClick={() => void startTemplate(lastTemplate.id)}
+              >
+                <Play size={18} aria-hidden="true" />
+                „{lastTemplate.name}" erneut starten
+              </Button>
+            ) : null}
             {exerciseCount === 0 ? (
               <p className="text-xs leading-relaxed text-muted">
                 Du hast noch keine Übungen angelegt. Du kannst sie auch direkt während des
