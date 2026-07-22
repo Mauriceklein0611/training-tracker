@@ -1,4 +1,5 @@
 import { db, ensureSettings } from '@/db/db';
+import { clearTransientAppState } from '@/services/appState';
 
 /**
  * Destructive maintenance actions.
@@ -27,6 +28,8 @@ export async function deleteTrainingHistory(): Promise<void> {
       ]);
     },
   );
+  // A running exercise timer belongs to a session that no longer exists.
+  clearTransientAppState('timers');
 }
 
 /** Every table that holds user data — the full reset clears all of them. */
@@ -58,6 +61,8 @@ export async function resetAllData(): Promise<void> {
       await Promise.all(ALL_DATA_TABLES.map((name) => db.table(name).clear()));
     },
   );
+  // Drop transient state kept outside the database (timer, theme) too.
+  clearTransientAppState('all');
   // Recreate the settings singleton with fresh defaults.
   await ensureSettings();
 }

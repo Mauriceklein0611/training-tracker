@@ -83,20 +83,22 @@ export function SessionExerciseCard({
    * at two plan positions keeps its own targets. Only sessions started before
    * the snapshots existed fall back to the plan lookup passed in as `target`.
    */
-  const snapshotHasTargets =
-    sessionExercise.targetSetsSnapshot != null ||
-    sessionExercise.targetRepMinSnapshot != null ||
-    sessionExercise.targetRepMaxSnapshot != null ||
-    sessionExercise.targetDurationSecondsSnapshot != null;
-  const effectiveTarget: ExerciseTarget | undefined = snapshotHasTargets
-    ? {
-        targetSets: sessionExercise.targetSetsSnapshot,
-        targetRepMin: sessionExercise.targetRepMinSnapshot,
-        targetRepMax: sessionExercise.targetRepMaxSnapshot,
-        targetDurationSeconds: sessionExercise.targetDurationSecondsSnapshot,
-        restSeconds: sessionExercise.restSecondsSnapshot,
-      }
-    : target;
+  const effectiveTarget: ExerciseTarget | undefined = useMemo(() => {
+    const snapshotHasTargets =
+      sessionExercise.targetSetsSnapshot != null ||
+      sessionExercise.targetRepMinSnapshot != null ||
+      sessionExercise.targetRepMaxSnapshot != null ||
+      sessionExercise.targetDurationSecondsSnapshot != null;
+    return snapshotHasTargets
+      ? {
+          targetSets: sessionExercise.targetSetsSnapshot,
+          targetRepMin: sessionExercise.targetRepMinSnapshot,
+          targetRepMax: sessionExercise.targetRepMaxSnapshot,
+          targetDurationSeconds: sessionExercise.targetDurationSecondsSnapshot,
+          restSeconds: sessionExercise.restSecondsSnapshot,
+        }
+      : target;
+  }, [sessionExercise, target]);
 
   const [notesOpen, setNotesOpen] = useState(Boolean(sessionExercise.notes));
   const [notes, setNotes] = useState(sessionExercise.notes);

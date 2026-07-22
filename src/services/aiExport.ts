@@ -350,6 +350,16 @@ export interface AiExportFile {
   exportId: string;
   /** Fingerprint of the exported plans, to detect drift before applying changes. */
   sourceFingerprint: string;
+  /**
+   * The canonical provenance object a response must copy back verbatim. Mirrors
+   * exportId / sourceFingerprint at the top level, which stay for compatibility.
+   */
+  sourceExport: { exportId: string; fingerprint: string };
+  /**
+   * The full analysis instruction, embedded so the file is self-describing even
+   * when it is shared without any accompanying message.
+   */
+  analysisRequest: string;
   generatedAt: string;
   application: string;
   language: string;
@@ -657,6 +667,8 @@ export function buildAiExport(
     exportVersion: AI_EXPORT_VERSION,
     exportId,
     sourceFingerprint,
+    sourceExport: { exportId, fingerprint: sourceFingerprint },
+    analysisRequest: AI_ANALYSIS_PROMPT,
     generatedAt: now.toISOString(),
     application: 'training-tracker',
     language: 'de',

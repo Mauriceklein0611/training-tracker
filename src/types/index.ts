@@ -230,8 +230,11 @@ export interface AiProposal {
   proposalId: string;
   operation: AiProposalOperation;
   target: { templateId: string; templateExerciseId?: string };
-  /** Values the AI believed were current, used to detect stale proposals. */
-  expected?: Record<string, number | string>;
+  /**
+   * Values the AI believed were current, used to detect stale proposals. A null
+   * means the field was not set in the plan at export time.
+   */
+  expected?: Record<string, number | string | null>;
   changes: Record<string, number | string>;
   reason: string;
 }

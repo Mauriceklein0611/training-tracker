@@ -79,11 +79,18 @@ export async function shareJsonExport(options: {
   const json = JSON.stringify(data, null, 2);
   const nav = shareNavigator();
 
-  // 1. Share as a real file.
+  // 1. Share as a real file — together with the instruction text where the
+  //    platform accepts files and text in the same share, so the accompanying
+  //    prompt is not lost when only the file is transferred.
   if (canShareJsonFile() && nav?.share) {
     try {
       const file = new File([json], fileName, { type: 'application/json' });
-      await nav.share({ files: [file], title });
+      const withText = { files: [file], title, text: textPrefix };
+      const shareData =
+        textPrefix && (typeof nav.canShare !== 'function' || nav.canShare(withText))
+          ? withText
+          : { files: [file], title };
+      await nav.share(shareData);
       return {
         outcome: 'shared-file',
         copiedToClipboard: false,

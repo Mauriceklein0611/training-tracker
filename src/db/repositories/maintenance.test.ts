@@ -91,3 +91,30 @@ describe('resetAllData', () => {
     expect(settings?.voiceAnnouncementsEnabled).toBe(false);
   });
 });
+
+describe('transient state is cleared, not the whole localStorage', () => {
+  it('deleting history drops a running timer but keeps the theme', async () => {
+    localStorage.setItem('training-tracker.exercise-timer', '{"running":true}');
+    localStorage.setItem('training-tracker.theme', 'dark');
+    localStorage.setItem('unrelated-app.key', 'keep-me');
+
+    await deleteTrainingHistory();
+
+    expect(localStorage.getItem('training-tracker.exercise-timer')).toBeNull();
+    expect(localStorage.getItem('training-tracker.theme')).toBe('dark');
+    expect(localStorage.getItem('unrelated-app.key')).toBe('keep-me');
+  });
+
+  it('a full reset removes all training-tracker.* keys but nothing else', async () => {
+    localStorage.setItem('training-tracker.exercise-timer', '{"running":true}');
+    localStorage.setItem('training-tracker.theme', 'light');
+    localStorage.setItem('unrelated-app.key', 'keep-me');
+
+    await resetAllData();
+
+    expect(localStorage.getItem('training-tracker.exercise-timer')).toBeNull();
+    expect(localStorage.getItem('training-tracker.theme')).toBeNull();
+    // A blanket clear would have removed this too — it must survive.
+    expect(localStorage.getItem('unrelated-app.key')).toBe('keep-me');
+  });
+});

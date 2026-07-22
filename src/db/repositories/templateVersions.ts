@@ -59,6 +59,31 @@ async function nextVersionNumber(templateId: string): Promise<number> {
   return existing.reduce((max, version) => Math.max(max, version.versionNumber), 0) + 1;
 }
 
+/**
+ * Freezes the current live plan as a new version using the *ambient* Dexie
+ * transaction — it opens none of its own, so it can be composed into a larger
+ * atomic operation (e.g. the AI import). The caller's transaction must cover
+ * workoutTemplates, templateExercises, exercises and templateVersions.
+ */
+export async function createTemplateVersionWithinTransaction(
+  templateId: string,
+  options: { label?: string; source?: TemplateVersionSource; note?: string } = {},
+): Promise<TemplateVersion> {
+  const snapshot = await snapshotTemplate(templateId);
+  const version: TemplateVersion = {
+    id: uuid(),
+    templateId,
+    versionNumber: await nextVersionNumber(templateId),
+    label: options.label?.trim() || snapshot.name,
+    source: options.source ?? 'manual',
+    note: options.note?.trim() || undefined,
+    snapshot,
+    createdAt: nowIso(),
+  };
+  await db.templateVersions.add(version);
+  return version;
+}
+
 /** Freezes the current live plan as a new version. */
 export async function createTemplateVersion(
   templateId: string,
@@ -70,21 +95,7 @@ export async function createTemplateVersion(
     db.templateExercises,
     db.exercises,
     db.templateVersions,
-    async () => {
-      const snapshot = await snapshotTemplate(templateId);
-      const version: TemplateVersion = {
-        id: uuid(),
-        templateId,
-        versionNumber: await nextVersionNumber(templateId),
-        label: options.label?.trim() || snapshot.name,
-        source: options.source ?? 'manual',
-        note: options.note?.trim() || undefined,
-        snapshot,
-        createdAt: nowIso(),
-      };
-      await db.templateVersions.add(version);
-      return version;
-    },
+    () => createTemplateVersionWithinTransaction(templateId, options),
   );
 }
 

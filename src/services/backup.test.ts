@@ -23,6 +23,7 @@ import {
   startFreeSession,
 } from '@/db/repositories/sessions';
 import { updateSettings } from '@/db/repositories/settings';
+import { recordAiExport } from '@/db/repositories/aiAnalyses';
 import { resetDatabase } from '@/tests/dbTestUtils';
 
 /** Seeds a small but complete database: one exercise, one finished session. */
@@ -365,6 +366,45 @@ describe('weekly goals round trip', () => {
     await importBackup(result.backup, 'replace');
     const restored = await db.settings.get('app-settings');
     expect(restored?.weeklyGoals).toBeUndefined();
+  });
+});
+
+describe('AI export records round trip', () => {
+  it('includes aiExports and clears them on a replace import', async () => {
+    await recordAiExport('exp-1', 'fp-1');
+    const backup = await createBackup();
+    expect(backup.aiExports).toHaveLength(1);
+    expect(backup.aiExports[0].id).toBe('exp-1');
+
+    // Replace with a backup that has no export records → the table is cleared.
+    await recordAiExport('exp-2', 'fp-2');
+    const withTwo = await createBackup();
+    expect(withTwo.aiExports).toHaveLength(2);
+
+    await importBackup(backup, 'replace'); // backup only has exp-1
+    expect(await db.aiExports.toArray()).toHaveLength(1);
+    expect((await db.aiExports.get('exp-1'))?.fingerprint).toBe('fp-1');
+  });
+
+  it('accepts a backup written before aiExports were included', async () => {
+    await seedDatabase();
+    const raw = JSON.parse(JSON.stringify(await createBackup()));
+    delete raw.aiExports;
+    raw.schemaVersion = 14;
+    const result = validateBackupJson(raw);
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.backup.aiExports).toEqual([]);
+  });
+});
+
+describe('rejecting a newer database version', () => {
+  it('refuses a backup from a newer schema version instead of dropping fields', async () => {
+    await seedDatabase();
+    const raw = JSON.parse(JSON.stringify(await createBackup()));
+    raw.schemaVersion = SCHEMA_VERSION + 1;
+    const result = validateBackupJson(raw);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.errors[0]).toContain('neueren Datenbankversion');
   });
 });
 

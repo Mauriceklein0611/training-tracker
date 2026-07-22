@@ -1,5 +1,4 @@
 import { useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { ClipboardCopy, Download, FileJson, Share2, Upload } from 'lucide-react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/Button';
@@ -61,7 +60,6 @@ interface PendingImport {
 
 export default function DataPage() {
   const toast = useToast();
-  const navigate = useNavigate();
   const { settings, update } = useSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -154,13 +152,11 @@ export default function DataPage() {
     setBusy('reset');
     try {
       await resetAllData();
-      setResetOpen(false);
-      setResetInput('');
-      toast.show('App zurückgesetzt. Alle lokalen Daten wurden gelöscht.', 'success');
-      navigate('/', { replace: true });
+      // Only after the database reset succeeded: a controlled full reload, so no
+      // stale React state (open session, cached queries) survives the wipe.
+      window.location.assign('/');
     } catch {
       toast.show('Zurücksetzen fehlgeschlagen.', 'error');
-    } finally {
       setBusy(null);
     }
   };

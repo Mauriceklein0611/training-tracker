@@ -82,6 +82,12 @@ export const workoutTemplateSchema = z.object({
   updatedAt: isoDateTime,
 });
 
+export const aiExportRecordSchema = z.object({
+  id,
+  fingerprint: z.string().default(''),
+  createdAt: isoDateTime,
+});
+
 export const equipmentProfileSchema = z.object({
   id,
   name: z.string().min(1, 'Name darf nicht leer sein'),
@@ -244,7 +250,7 @@ export const storedAiProposalSchema = z.object({
   proposalId: z.string().min(1),
   operation: z.enum(['update_template_exercise_target', 'update_template_note']),
   target: z.object({ templateId: id, templateExerciseId: id.optional() }),
-  expected: z.record(z.union([z.number(), z.string()])).optional(),
+  expected: z.record(z.union([z.number(), z.string(), z.null()])).optional(),
   changes: z.record(z.union([z.number(), z.string()])),
   reason: z.string().default(''),
   status: z.enum(['pending', 'applied', 'skipped', 'conflict', 'invalid']),

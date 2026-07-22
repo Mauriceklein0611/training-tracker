@@ -239,6 +239,17 @@ describe('buildAiExport', () => {
     expect(redactedWorkout?.checkInBefore?.painNote).toBeUndefined();
   });
 
+  it('is self-describing: carries sourceExport, analysisRequest and the contract', () => {
+    const file = buildAiExport(buildDataset(), [], { ...DEFAULT_AI_EXPORT_OPTIONS, exportId: 'exp-1' }, NOW);
+    // sourceExport mirrors the top-level provenance fields consistently.
+    expect(file.sourceExport.exportId).toBe('exp-1');
+    expect(file.sourceExport.exportId).toBe(file.exportId);
+    expect(file.sourceExport.fingerprint).toBe(file.sourceFingerprint);
+    // The instruction travels with the file even without any accompanying text.
+    expect(file.analysisRequest).toContain('training-ai-response');
+    expect(file.responseContract.format).toBe('training-ai-response');
+  });
+
   it('omits the goals block when no weekly goal is set', () => {
     const file = buildAiExport(buildDataset(), [], DEFAULT_AI_EXPORT_OPTIONS, NOW);
     expect(file.goals).toBeUndefined();

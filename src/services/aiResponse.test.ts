@@ -114,8 +114,9 @@ describe('validateAiResponse — proposal status', () => {
   });
 
   it('rejects a rep range where min would exceed max', () => {
+    // expected must cover the changed fields; current te1 is 8–12.
     const result = validateFirst([
-      { ...targetProposal, expected: {}, changes: { repMin: 15, repMax: 10 } },
+      { ...targetProposal, expected: { repMin: 8, repMax: 12 }, changes: { repMin: 15, repMax: 10 } },
     ]);
     expect(result.proposals[0].status).toBe('invalid');
   });
@@ -131,13 +132,73 @@ describe('validateAiResponse — file-level checks', () => {
     expect(second.duplicate).toBe(true);
   });
 
-  it('warns about an unknown export', () => {
+  it('locks the proposals and shows feedback for an unknown export', () => {
     const result = validateAiResponse(
       (parseAiResponse(responseText([targetProposal], { exportId: 'other', fingerprint: 'x' })) as { data: AiResponse }).data,
       baseContext(),
     );
     expect(result.exportKnown).toBe(false);
-    expect(result.warnings.some((w) => w.includes('unbekannten Export'))).toBe(true);
+    expect(result.provenance).toBe('unknown');
+    // Proposals are not applicable, but feedback is still available.
+    expect(result.proposalsApplicable).toBe(false);
+    expect(result.proposals[0].status).toBe('invalid');
+    expect(result.feedback.summary).toBe('ok');
+  });
+
+  it('locks the proposals when the fingerprint does not match the stored export', () => {
+    const result = validateAiResponse(
+      (parseAiResponse(responseText([targetProposal], { exportId: 'exp-1', fingerprint: 'wrong' })) as { data: AiResponse }).data,
+      baseContext(),
+    );
+    expect(result.provenance).toBe('fingerprint-mismatch');
+    expect(result.proposalsApplicable).toBe(false);
+    expect(result.proposals[0].status).toBe('invalid');
+  });
+
+  it('locks the proposals when there is no export reference at all', () => {
+    const noReference = JSON.stringify({
+      format: 'training-ai-response',
+      schemaVersion: 1,
+      feedback: { summary: 'ok' },
+      proposals: [targetProposal],
+    });
+    const result = validateAiResponse(
+      (parseAiResponse(noReference) as { data: AiResponse }).data,
+      baseContext(),
+    );
+    expect(result.provenance).toBe('missing');
+    expect(result.proposalsApplicable).toBe(false);
+  });
+
+  it('rejects a response whose schemaVersion is not exactly supported', () => {
+    const bad = JSON.stringify({
+      format: 'training-ai-response',
+      schemaVersion: 2,
+      feedback: { summary: 'x' },
+      proposals: [],
+    });
+    expect(parseAiResponse(bad).ok).toBe(false);
+  });
+
+  it('rejects unknown top-level fields instead of dropping them', () => {
+    const bad = JSON.stringify({
+      format: 'training-ai-response',
+      schemaVersion: 1,
+      feedback: { summary: 'x' },
+      proposals: [],
+      somethingExtra: true,
+    });
+    expect(parseAiResponse(bad).ok).toBe(false);
+  });
+
+  it('rejects duplicate proposal ids', () => {
+    const result = parseAiResponse(responseText([targetProposal, { ...targetProposal }]));
+    expect(result.ok).toBe(false);
+  });
+
+  it('rejects a change whose previous value is missing from expected', () => {
+    const result = parseAiResponse(responseText([{ ...targetProposal, expected: {}, changes: { sets: 4 } }]));
+    expect(result.ok).toBe(false);
   });
 
   it('warns when the plan changed since the export', () => {

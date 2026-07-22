@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { db, SCHEMA_VERSION, type TrainingDatabase } from '@/db/db';
 import {
   aiAnalysisSchema,
+  aiExportRecordSchema,
   appSettingsSchema,
   bodyWeightEntrySchema,
   equipmentProfileSchema,
@@ -43,6 +44,9 @@ export const backupFileSchema = z.object({
   aiAnalyses: z.array(aiAnalysisSchema).default([]),
   // Added in schema version 13.
   equipmentProfiles: z.array(equipmentProfileSchema).default([]),
+  // Added in schema version 11 (store) / covered here since v15; defaulted so
+  // older backups without it still validate and import as an empty list.
+  aiExports: z.array(aiExportRecordSchema).default([]),
 });
 
 export type BackupFile = z.infer<typeof backupFileSchema>;
@@ -58,6 +62,7 @@ export interface BackupCounts {
   bodyWeightEntries: number;
   aiAnalyses: number;
   equipmentProfiles: number;
+  aiExports: number;
 }
 
 export function countBackupRecords(backup: BackupFile): BackupCounts {
@@ -72,6 +77,7 @@ export function countBackupRecords(backup: BackupFile): BackupCounts {
     bodyWeightEntries: backup.bodyWeightEntries.length,
     aiAnalyses: backup.aiAnalyses.length,
     equipmentProfiles: backup.equipmentProfiles.length,
+    aiExports: backup.aiExports.length,
   };
 }
 
@@ -86,6 +92,7 @@ export const BACKUP_COUNT_LABELS: Record<keyof BackupCounts, string> = {
   bodyWeightEntries: 'Körpergewichtseinträge',
   aiAnalyses: 'KI-Analysen',
   equipmentProfiles: 'Equipment-Profile',
+  aiExports: 'KI-Export-Vermerke',
 };
 
 /** Reads the whole database into a backup object. */
@@ -102,6 +109,7 @@ export async function createBackup(database: TrainingDatabase = db): Promise<Bac
     templateVersions,
     aiAnalyses,
     equipmentProfiles,
+    aiExports,
   ] = await Promise.all([
     database.settings.get('app-settings'),
     database.exercises.toArray(),
@@ -114,6 +122,7 @@ export async function createBackup(database: TrainingDatabase = db): Promise<Bac
     database.templateVersions.toArray(),
     database.aiAnalyses.toArray(),
     database.equipmentProfiles.toArray(),
+    database.aiExports.toArray(),
   ]);
 
   return backupFileSchema.parse({
@@ -132,6 +141,7 @@ export async function createBackup(database: TrainingDatabase = db): Promise<Bac
     bodyWeightEntries,
     aiAnalyses,
     equipmentProfiles,
+    aiExports,
   });
 }
 
@@ -169,13 +179,20 @@ export function validateBackupJson(raw: unknown): BackupValidationResult {
     };
   }
 
-  const warnings: string[] = [];
+  // A backup from a newer, unsupported database version is rejected outright
+  // rather than imported with unknown fields silently stripped away.
   if (backup.schemaVersion > SCHEMA_VERSION) {
-    warnings.push(
-      `Die Datei stammt aus einer neueren Datenbankversion (${backup.schemaVersion}). ` +
-        'Unbekannte Felder werden beim Import ignoriert.',
-    );
+    return {
+      ok: false,
+      errors: [
+        `Diese Datei stammt aus einer neueren Datenbankversion (${backup.schemaVersion}) ` +
+          `als diese App unterstützt (${SCHEMA_VERSION}). Bitte aktualisiere zuerst die App, ` +
+          'damit keine unbekannten Daten verloren gehen.',
+      ],
+    };
   }
+
+  const warnings: string[] = [];
 
   // Referential integrity: dangling children would silently disappear from the UI.
   const sessionIds = new Set(backup.workoutSessions.map((session) => session.id));
@@ -241,6 +258,7 @@ function emptyCounts(): BackupCounts {
     bodyWeightEntries: 0,
     aiAnalyses: 0,
     equipmentProfiles: 0,
+    aiExports: 0,
   };
 }
 
@@ -255,6 +273,7 @@ const TABLE_KEYS = [
   'bodyWeightEntries',
   'aiAnalyses',
   'equipmentProfiles',
+  'aiExports',
 ] as const;
 
 /**
@@ -289,6 +308,7 @@ export async function importBackup(
       database.bodyWeightEntries,
       database.aiAnalyses,
       database.equipmentProfiles,
+      database.aiExports,
       database.settings,
     ],
     async () => {
