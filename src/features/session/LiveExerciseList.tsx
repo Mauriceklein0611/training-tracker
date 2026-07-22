@@ -15,6 +15,7 @@ import {
   groupItems,
   memberLabel,
 } from '@/services/grouping';
+import { isWorkingSet } from '@/services/metrics';
 import type { GroupRestMode, GroupType, TemplateExercise } from '@/types';
 
 /**
@@ -50,11 +51,12 @@ export function LiveExerciseList({
         const plannedByMember = new Map<string, number>();
         for (const member of block.members) {
           const entry = detailById.get(member.id);
-          const sets = entry?.sets ?? [];
-          completedByMember.set(member.id, sets.filter((set) => set.completedAt).length);
+          // Only working sets make up a round — warm-ups never advance it.
+          const workingSets = (entry?.sets ?? []).filter((set) => isWorkingSet(set));
+          completedByMember.set(member.id, workingSets.filter((set) => set.completedAt).length);
           plannedByMember.set(
             member.id,
-            Math.max(sets.length, entry?.sessionExercise.targetSetsSnapshot ?? 0),
+            Math.max(workingSets.length, entry?.sessionExercise.targetSetsSnapshot ?? 0),
           );
         }
         const progress =

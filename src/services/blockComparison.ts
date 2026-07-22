@@ -6,7 +6,7 @@ import {
 } from '@/services/analytics';
 import { isCompleted, isWorkingSet } from '@/services/metrics';
 import type { BodyWeightEntry } from '@/types';
-import { dayKey, weeksInRange, type DateRange } from '@/utils/date';
+import { dayKey, rateWeeks, weeksInRange, type DateRange } from '@/utils/date';
 
 /**
  * Comparison of two freely chosen training blocks.
@@ -57,7 +57,10 @@ export function computeBlockMetrics(
   now: Date = new Date(),
 ): BlockMetrics {
   const analytics = computeAnalytics(dataset, range, { now });
+  // `weeks` (calendar) is shown for the block; per-week rates divide by the
+  // day span / 7 so different block lengths compare fairly (28 days → 4).
   const weeks = weeksInRange(range);
+  const perWeekDivisor = rateWeeks(range);
 
   const contexts = filterContextsByRange(buildSetContexts(dataset), range).filter(
     (context) => isCompleted(context.set) && isWorkingSet(context.set),
@@ -104,10 +107,10 @@ export function computeBlockMetrics(
     avgRestDeviationSeconds: analytics.restStatistics.averageDeviationSeconds,
     avgBodyWeightKg,
     avgBodyFatPercent,
-    sessionsPerWeek: analytics.sessionCount / weeks,
-    workingSetsPerWeek: analytics.workingSetCount / weeks,
-    volumePerWeekKg: analytics.volume.volumeKg / weeks,
-    durationPerWeekSeconds: analytics.totalDurationSeconds / weeks,
+    sessionsPerWeek: analytics.sessionCount / perWeekDivisor,
+    workingSetsPerWeek: analytics.workingSetCount / perWeekDivisor,
+    volumePerWeekKg: analytics.volume.volumeKg / perWeekDivisor,
+    durationPerWeekSeconds: analytics.totalDurationSeconds / perWeekDivisor,
   };
 }
 

@@ -98,6 +98,17 @@ export function daysInRange(range: DateRange): number {
 }
 
 /**
+ * Divisor for per-week *rates*: the inclusive number of days in the range
+ * divided by seven. Unlike {@link weeksInRange} this does not depend on how many
+ * calendar weeks the range happens to touch, so any exact 28-day window always
+ * yields 4. Calendar-week grouping (heatmap, weekly goals, streaks) keeps using
+ * {@link weeksInRange} / {@link weekKey}.
+ */
+export function rateWeeks(range: DateRange): number {
+  return daysInRange(range) / 7;
+}
+
+/**
  * Longest run of consecutive weeks that contain at least one workout, counted
  * backwards from the current week — the app's definition of a training streak.
  */

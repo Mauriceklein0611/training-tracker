@@ -12,6 +12,7 @@ import type {
 import { nowIso, uuid } from '@/utils/id';
 import { getTemplateWithExercises } from '@/db/repositories/templates';
 import { resolveRestSeconds } from '@/services/rest';
+import { isWorkingSet, WORKING_SET_TYPES } from '@/services/metrics';
 import {
   DEFAULT_GROUP_REST_MODE,
   DEFAULT_GROUP_TYPE,
@@ -393,16 +394,14 @@ export async function setSessionGroupOptions(
 }
 
 /**
- * Whether completing a set closes the current round of its group. Expects to
- * run inside the completeSet transaction.
+ * Whether completing a *working* set closes the current round of its group.
+ * Expects to run inside the completeSet transaction and is only called for a
+ * working set that is being completed now.
  *
- * `alreadyCompleted` is true when the set being completed already counted as
- * done (an edit rather than a first completion), so it is not counted twice.
+ * Only completed working sets count towards a round — warm-ups never advance it,
+ * so a warm-up can neither close a round nor trigger a group rest.
  */
-async function roundClosesInTransaction(
-  sessionExercise: SessionExercise,
-  alreadyCompleted: boolean,
-): Promise<boolean> {
+async function roundClosesInTransaction(sessionExercise: SessionExercise): Promise<boolean> {
   const members = (await orderedSessionExercises(sessionExercise.sessionId)).filter(
     (entry) => entry.groupId === sessionExercise.groupId,
   );
@@ -410,13 +409,10 @@ async function roundClosesInTransaction(
 
   const completedByMember = new Map<string, number>();
   for (const member of members) {
-    let count = await db.workoutSets
-      .where('sessionExerciseId')
-      .equals(member.id)
-      .filter((set) => Boolean(set.completedAt))
-      .count();
-    // The set being completed is not marked done yet, so add it in.
-    if (member.id === sessionExercise.id && !alreadyCompleted) count += 1;
+    const sets = await db.workoutSets.where('sessionExerciseId').equals(member.id).toArray();
+    let count = sets.filter((set) => set.completedAt && isWorkingSet(set)).length;
+    // The working set being completed is not marked done in the DB yet.
+    if (member.id === sessionExercise.id) count += 1;
     completedByMember.set(member.id, count);
   }
 
@@ -433,7 +429,13 @@ export interface NewSetInput {
   restTargetSeconds: number;
 }
 
-/** Appends an empty (not yet completed) set to an exercise. */
+/**
+ * Appends an empty (not yet completed) set to an exercise.
+ *
+ * An exercise may only ever have one open set at a time: if an uncompleted set
+ * already exists it is returned unchanged, so rapid taps on "add set" (or a
+ * completion racing with an add) can never leave two open drafts behind.
+ */
 export async function addSet(
   sessionExerciseId: string,
   input: NewSetInput,
@@ -442,12 +444,15 @@ export async function addSet(
     const existing = await db.workoutSets
       .where('sessionExerciseId')
       .equals(sessionExerciseId)
-      .count();
+      .toArray();
+    const open = existing.find((set) => !set.completedAt);
+    if (open) return open;
+
     const timestamp = nowIso();
     const set: WorkoutSet = {
       id: uuid(),
       sessionExerciseId,
-      position: existing,
+      position: existing.length,
       setType: input.setType ?? 'working',
       weightKg: input.weightKg,
       reps: input.reps,
@@ -513,7 +518,13 @@ function elapsedRestSeconds(startedAt: string, endedAt: Date): number {
 async function closeOpenRestsInTransaction(
   sessionId: string,
   endedAt: Date,
+  options: { recordActual?: boolean } = {},
 ): Promise<number> {
+  // When `recordActual` is false the rest is ended but no actual duration is
+  // stored, so it stays out of the rest statistics. This is used for the rest
+  // still running when a workout is finished: it is not a real between-set rest,
+  // because no further set follows it.
+  const { recordActual = true } = options;
   const sessionExercises = await db.sessionExercises
     .where('sessionId')
     .equals(sessionId)
@@ -527,7 +538,9 @@ async function closeOpenRestsInTransaction(
       if (!set.restStartedAt || set.restEndedAt) continue;
       await db.workoutSets.update(set.id, {
         restEndedAt: endedAt.toISOString(),
-        restActualSeconds: elapsedRestSeconds(set.restStartedAt, endedAt),
+        ...(recordActual
+          ? { restActualSeconds: elapsedRestSeconds(set.restStartedAt, endedAt) }
+          : {}),
         updatedAt: nowIso(),
       });
       closed += 1;
@@ -561,10 +574,15 @@ export async function completeSet(
   setId: string,
   values: Partial<Pick<WorkoutSet, 'weightKg' | 'reps' | 'durationSeconds' | 'rir' | 'rpe' | 'setType'>>,
   options: { startRest?: boolean } = {},
-): Promise<void> {
-  await db.transaction('rw', db.sessionExercises, db.workoutSets, async () => {
+): Promise<{ newlyCompleted: boolean }> {
+  return db.transaction('rw', db.sessionExercises, db.workoutSets, async () => {
     const set = await db.workoutSets.get(setId);
-    if (!set) return;
+    if (!set) return { newlyCompleted: false };
+
+    // Idempotent: a set that is already completed is never re-completed, so a
+    // double tap can neither move its completedAt nor restart its rest. Callers
+    // use the return value to decide whether to queue the next set.
+    if (set.completedAt) return { newlyCompleted: false };
 
     const completedAt = new Date();
     const timestamp = completedAt.toISOString();
@@ -576,14 +594,16 @@ export async function completeSet(
 
     // In a group that rests per round, the rest only starts once the round is
     // complete — completing the first exercise of a superset should not pin the
-    // user to a rest bar before they move on to the next exercise.
+    // user to a rest bar before moving on. Warm-ups never trigger a group rest.
+    const effectiveSetType = values.setType ?? set.setType;
+    const isWorking = WORKING_SET_TYPES.includes(effectiveSetType);
     let startRest = options.startRest !== false;
     if (
       startRest &&
       sessionExercise?.groupId &&
       (sessionExercise.groupRestMode ?? DEFAULT_GROUP_REST_MODE) === 'round'
     ) {
-      startRest = await roundClosesInTransaction(sessionExercise, Boolean(set.completedAt));
+      startRest = isWorking ? await roundClosesInTransaction(sessionExercise) : false;
     }
 
     await db.workoutSets.update(setId, {
@@ -594,6 +614,7 @@ export async function completeSet(
       restActualSeconds: undefined,
       updatedAt: timestamp,
     });
+    return { newlyCompleted: true };
   });
 }
 
@@ -645,11 +666,12 @@ async function touchSession(sessionId: string): Promise<void> {
 /** Completes a session. Sets that were never finished are removed. */
 export async function finishSession(sessionId: string): Promise<void> {
   await db.transaction('rw', db.workoutSessions, db.sessionExercises, db.workoutSets, async () => {
-    // The rest after the final set is still running when the workout ends.
-    // Close it against the finish time so its duration is recorded rather than
-    // silently dropped from every statistic.
+    // The rest still running when the workout ends is not a real between-set
+    // rest — no further set follows it. End it, but do not record its duration,
+    // so it never counts as a met or missed rest in the statistics. Rests
+    // already closed between two sets keep their recorded duration.
     const finishedAt = new Date();
-    await closeOpenRestsInTransaction(sessionId, finishedAt);
+    await closeOpenRestsInTransaction(sessionId, finishedAt, { recordActual: false });
 
     const sessionExercises = await db.sessionExercises
       .where('sessionId')
@@ -759,6 +781,29 @@ export interface LastPerformance {
   session: WorkoutSession;
   sessionExercise: SessionExercise;
   sets: WorkoutSet[];
+}
+
+/**
+ * Every completed set of an exercise across the full history, excluding one
+ * session (the running workout). Used to build a true "personal best" baseline
+ * that spans all past workouts, not just the previous one.
+ */
+export async function getExerciseHistorySets(
+  exerciseId: string,
+  excludeSessionId?: string,
+): Promise<WorkoutSet[]> {
+  const entries = await db.sessionExercises.where('exerciseId').equals(exerciseId).toArray();
+  const result: WorkoutSet[] = [];
+  for (const entry of entries) {
+    if (entry.sessionId === excludeSessionId) continue;
+    const session = await db.workoutSessions.get(entry.sessionId);
+    if (!session || session.status !== 'completed') continue;
+    const sets = await db.workoutSets.where('sessionExerciseId').equals(entry.id).toArray();
+    for (const set of sets) {
+      if (set.completedAt) result.push(set);
+    }
+  }
+  return result;
 }
 
 /**

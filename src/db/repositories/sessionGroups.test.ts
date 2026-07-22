@@ -91,6 +91,25 @@ describe('round-based rest', () => {
     expect((await db.workoutSets.get(a1.id))?.restStartedAt).toBeTruthy();
   });
 
+  it('warm-up sets neither advance a round nor trigger a group rest', async () => {
+    const { seAId, seBId } = await buildSuperset(); // round-rest superset
+
+    // A warm-up on A: no rest, and it must not count as a round.
+    const a0 = await addSet(seAId, { restTargetSeconds: 120, setType: 'warmup' });
+    await completeSet(a0.id, { weightKg: 20, reps: 10 });
+    expect((await db.workoutSets.get(a0.id))?.restStartedAt).toBeUndefined();
+
+    // A working set on A: round still open (B has not done its working set).
+    const a1 = await addSet(seAId, { restTargetSeconds: 120 });
+    await completeSet(a1.id, { weightKg: 60, reps: 8 });
+    expect((await db.workoutSets.get(a1.id))?.restStartedAt).toBeUndefined();
+
+    // A working set on B: closes the round → rest starts.
+    const b1 = await addSet(seBId, { restTargetSeconds: 120 });
+    await completeSet(b1.id, { weightKg: 40, reps: 8 });
+    expect((await db.workoutSets.get(b1.id))?.restStartedAt).toBeTruthy();
+  });
+
   it('keeps single exercises resting normally after every set', async () => {
     const session = await startFreeSession('Single');
     const exercise = await makeExerciseRow('Kniebeuge');

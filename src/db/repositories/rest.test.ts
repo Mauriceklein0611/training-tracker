@@ -119,8 +119,8 @@ describe('at most one open rest per workout', () => {
   });
 });
 
-describe('finishing a workout closes the running rest', () => {
-  it('records the final rest instead of dropping it', async () => {
+describe('finishing a workout ends the running rest without counting it', () => {
+  it('ends the final rest but does not record its duration', async () => {
     const { session, sessionExercise } = await seed();
     const set = await addSet(sessionExercise.id, { restTargetSeconds: 120 });
     await completeSet(set.id, { weightKg: 80, reps: 8 });
@@ -132,7 +132,9 @@ describe('finishing a workout closes the running rest', () => {
     const sets = await allSets();
     expect(openRests(sets)).toHaveLength(0);
     expect(sets[0].restEndedAt).toBeTruthy();
-    expect(sets[0].restActualSeconds).toBeGreaterThanOrEqual(0);
+    // The rest after the last set is not a real between-set rest — its duration
+    // is deliberately not recorded, so it never distorts the rest statistics.
+    expect(sets[0].restActualSeconds).toBeUndefined();
   });
 
   it('closes the rest against the workout finish time', async () => {
@@ -147,15 +149,33 @@ describe('finishing a workout closes the running rest', () => {
     expect(stored?.restEndedAt).toBe(finished?.finishedAt);
   });
 
-  it('makes the final rest count towards the statistics', async () => {
+  it('keeps the final rest out of the rest statistics', async () => {
     const { session, sessionExercise } = await seed();
     const set = await addSet(sessionExercise.id, { restTargetSeconds: 120 });
     await completeSet(set.id, { weightKg: 80, reps: 8 });
     await finishSession(session.id);
 
     const stats = computeRestStatistics(await allSets());
-    // Before the fix this rest stayed open and was filtered out entirely.
+    // A trailing rest with no recorded actual duration must not be evaluated.
+    expect(stats.evaluatedSets).toBe(0);
+  });
+
+  it('keeps a real between-set rest counted while dropping the trailing one', async () => {
+    const { session, sessionExercise } = await seed();
+    const first = await addSet(sessionExercise.id, { restTargetSeconds: 120 });
+    await completeSet(first.id, { weightKg: 80, reps: 8 });
+    // A second set closes the first rest (a real between-set rest) and opens a
+    // new trailing rest.
+    const second = await addSet(sessionExercise.id, { restTargetSeconds: 120 });
+    await completeSet(second.id, { weightKg: 80, reps: 6 });
+
+    await finishSession(session.id);
+
+    const stats = computeRestStatistics(await allSets());
+    // Only the first, real between-set rest is evaluated; the trailing one is not.
     expect(stats.evaluatedSets).toBe(1);
+    expect((await db.workoutSets.get(first.id))?.restActualSeconds).toBeGreaterThanOrEqual(0);
+    expect((await db.workoutSets.get(second.id))?.restActualSeconds).toBeUndefined();
   });
 });
 

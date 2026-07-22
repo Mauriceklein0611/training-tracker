@@ -54,6 +54,13 @@ describe('analyzePlateau — trend', () => {
     expect(plateauMessages(result)).toEqual([]);
   });
 
+  it('never calls an early peak with a clear current drop progress', () => {
+    // A single early high followed by a drop is a regression, not progress.
+    const result = analyzePlateau(oneRmSeries([100, 100, 110, 90]), 'weight_reps');
+    expect(result.status).not.toBe('progress');
+    expect(result.status).toBe('regress');
+  });
+
   it('reports a gentle decline as a regression', () => {
     const result = analyzePlateau(oneRmSeries([100, 99, 97, 95, 93]), 'weight_reps');
     expect(result.status).toBe('regress');

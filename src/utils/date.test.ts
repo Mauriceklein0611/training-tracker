@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import {
   currentWeeklyStreak,
+  customRange,
   dayKey,
   daysInRange,
   formatDuration,
   formatDurationLong,
   isWithinRange,
   lastDaysRange,
+  rateWeeks,
   todayKey,
   weekKey,
   weeksInRange,
@@ -69,6 +71,14 @@ describe('ranges', () => {
   it('counts the calendar weeks a range spans', () => {
     expect(weeksInRange(lastDaysRange(7, now))).toBeGreaterThanOrEqual(1);
     expect(weeksInRange(lastDaysRange(30, now))).toBeGreaterThanOrEqual(4);
+  });
+
+  it('rateWeeks divides the inclusive day span by seven', () => {
+    // Any exact 28-day window always divides by 4, regardless of weekday.
+    expect(rateWeeks(lastDaysRange(28, now))).toBe(4);
+    expect(rateWeeks(lastDaysRange(28, new Date('2026-07-19T12:00:00')))).toBe(4);
+    // 14 inclusive days → 2.
+    expect(rateWeeks(customRange('2026-07-06', '2026-07-19'))).toBe(2);
   });
 });
 

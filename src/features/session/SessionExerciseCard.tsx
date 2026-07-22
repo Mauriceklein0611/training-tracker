@@ -9,6 +9,7 @@ import {
   addSet,
   completeSet,
   deleteSet,
+  getExerciseHistorySets,
   getLastPerformance,
   moveSessionExercise,
   removeSessionExercise,
@@ -18,6 +19,7 @@ import {
   type SessionExerciseDetail,
 } from '@/db/repositories/sessions';
 import { primeAudio } from '@/services/sound';
+import { isWorkingSet } from '@/services/metrics';
 import { buildRecordBaseline } from '@/services/comparison';
 import { suggestProgression } from '@/services/progression';
 import { ProgressionHint } from '@/features/session/ProgressionHint';
@@ -129,13 +131,20 @@ export function SessionExerciseCard({
   const previousSets = useMemo(() => lastPerformance?.sets ?? [], [lastPerformance]);
 
   /**
-   * Best values recorded before this workout, for the "new best" badge.
-   * Built from the previous performance only — the running workout must not
-   * compete against itself.
+   * Every completed set of this exercise before the running workout. This is the
+   * real "personal best" baseline — an older record correctly counts, and the
+   * current workout never competes against itself (the current session is
+   * excluded).
    */
+  const historySets = useLiveQuery(
+    () => getExerciseHistorySets(sessionExercise.exerciseId, sessionId),
+    [sessionExercise.exerciseId, sessionId],
+    [],
+  );
+
   const recordBaseline = useMemo(
-    () => buildRecordBaseline(previousSets, sessionExercise),
-    [previousSets, sessionExercise],
+    () => buildRecordBaseline(historySets, sessionExercise),
+    [historySets, sessionExercise],
   );
 
   /** The exercise record, for its optional progression settings and cues. */
@@ -153,13 +162,14 @@ export function SessionExerciseCard({
   }, [exercise?.alternativeExerciseIds]);
 
   /**
-   * Suggestion for next time, derived from the *previous* workout.
-   * Shown once this exercise is done for today, so it reads as a takeaway
-   * rather than as instructions mid-set.
+   * Suggestion for next time, derived from the working sets *just completed in
+   * this workout* (warm-ups excluded). Shown once the exercise is done for
+   * today, so it reads as a takeaway rather than as instructions mid-set.
    */
   const progression = useMemo(() => {
-    if (previousSets.length === 0) return null;
-    return suggestProgression(previousSets, sessionExercise, {
+    const currentWorkingSets = sets.filter((set) => set.completedAt && isWorkingSet(set));
+    if (currentWorkingSets.length === 0) return null;
+    return suggestProgression(currentWorkingSets, sessionExercise, {
       targetRepMin: target?.targetRepMin,
       targetRepMax: target?.targetRepMax,
       targetRir: exercise?.targetRir,
@@ -167,7 +177,7 @@ export function SessionExerciseCard({
       availableWeightsKg: exercise?.availableWeightsKg,
       progressionMethod: exercise?.progressionMethod,
     });
-  }, [previousSets, sessionExercise, target, exercise]);
+  }, [sets, sessionExercise, target, exercise]);
 
   /** Date line above the sets, so the comparison has a reference point. */
   const previousSessionLabel = useMemo(
@@ -176,18 +186,29 @@ export function SessionExerciseCard({
     [lastPerformance],
   );
 
+  const [isAdding, setIsAdding] = useState(false);
+
   const handleAddSet = async () => {
-    await addSet(sessionExercise.id, {
-      setType: 'working',
-      restTargetSeconds: restTarget,
-      ...suggestionValues,
-    });
+    if (isAdding) return;
+    setIsAdding(true);
+    try {
+      await addSet(sessionExercise.id, {
+        setType: 'working',
+        restTargetSeconds: restTarget,
+        ...suggestionValues,
+      });
+    } finally {
+      setIsAdding(false);
+    }
   };
 
   const handleComplete = async (setId: string, values: SetValues) => {
     // Unlock audio from within the tap so the rest tone can play later on iOS.
     primeAudio();
-    await completeSet(setId, values);
+    const { newlyCompleted } = await completeSet(setId, values);
+    // A double / racing tap that did not actually complete the set must not
+    // queue another set — otherwise two "next" drafts would appear.
+    if (!newlyCompleted) return;
 
     // Would this set reach the goal? Warm-ups do not count towards it.
     const workingAfter = completedWorkingSets + (values.setType === 'warmup' ? 0 : 1);
@@ -324,7 +345,7 @@ export function SessionExerciseCard({
             soundEnabled={soundEnabled}
             vibrationEnabled={vibrationEnabled}
             onPersist={(values) => void updateSet(openSet.id, values)}
-            onComplete={(values) => void handleComplete(openSet.id, values)}
+            onComplete={(values) => handleComplete(openSet.id, values)}
             onDelete={() => void deleteSet(openSet.id)}
           />
         ) : setGoalReached ? (
@@ -334,13 +355,23 @@ export function SessionExerciseCard({
               <Check size={16} aria-hidden="true" />
               Satzziel erreicht ({completedWorkingSets} von {targetSets})
             </p>
-            <Button variant="secondary" fullWidth onClick={() => void handleAddSet()}>
+            <Button
+              variant="secondary"
+              fullWidth
+              disabled={isAdding}
+              onClick={() => void handleAddSet()}
+            >
               <Plus size={18} aria-hidden="true" />
               Extrasatz hinzufügen
             </Button>
           </div>
         ) : (
-          <Button variant="secondary" fullWidth onClick={() => void handleAddSet()}>
+          <Button
+            variant="secondary"
+            fullWidth
+            disabled={isAdding}
+            onClick={() => void handleAddSet()}
+          >
             <Plus size={18} aria-hidden="true" />
             {completedSets.length === 0 ? 'Ersten Satz erfassen' : 'Weiteren Satz erfassen'}
           </Button>

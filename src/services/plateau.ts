@@ -156,11 +156,13 @@ export function analyzePlateau(
     return { ...base, status: 'inconsistent' };
   }
 
-  const gain = baseline > 0 ? (best - baseline) / baseline : 0;
+  // Classification follows the *current* trend (latest vs. the window start),
+  // not the best value in the window. A single early peak followed by a clear
+  // drop is therefore never reported as progress — it is a regression.
   const latestChange = baseline > 0 ? (latest - baseline) / baseline : 0;
 
   let status: PlateauStatus;
-  if (gain > PLATEAU_TOLERANCE) status = 'progress';
+  if (latestChange > PLATEAU_TOLERANCE) status = 'progress';
   else if (latestChange < -REGRESS_TOLERANCE) status = 'regress';
   else status = 'plateau';
 

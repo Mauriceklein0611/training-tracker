@@ -91,7 +91,7 @@ export function SetEditor({
   /** Best values recorded before this workout. */
   recordBaseline: RecordBaseline;
   onPersist: (values: SetValues) => void;
-  onComplete: (values: SetValues) => void;
+  onComplete: (values: SetValues) => void | Promise<void>;
   onDelete: () => void;
   /** Plan target duration, prefilled as the countdown. */
   targetDurationSeconds?: number;
@@ -107,6 +107,7 @@ export function SetEditor({
    */
   const [draft, setDraft] = useState<Draft>(() => toDraft(set));
   const [touched, setTouched] = useState(false);
+  const [isCompleting, setIsCompleting] = useState(false);
 
   /*
    * Once the set is completed the draft must never be written again: a pending
@@ -115,6 +116,12 @@ export function SetEditor({
    * any re-render can schedule another write.
    */
   const completedRef = useRef(false);
+  /*
+   * Guards against a double / rapid tap on "complete": it flips synchronously,
+   * before the first asynchronous completion has a chance to finish, so a second
+   * tap in the same tick is ignored.
+   */
+  const completingRef = useRef(false);
 
   const autosave = useAutosave(
     draft,
@@ -162,15 +169,33 @@ export function SetEditor({
     autosave.flush();
   };
 
+  /**
+   * Completes the set exactly once, awaiting the async write. A double tap is
+   * blocked synchronously; on failure the guards are released so the user can
+   * try again.
+   */
+  const runComplete = async (values: SetValues) => {
+    if (completingRef.current || completedRef.current) return;
+    completingRef.current = true;
+    setIsCompleting(true);
+    try {
+      await onComplete(values);
+      // Success: block any further autosave, so a pending write can never
+      // overwrite the finished set.
+      completedRef.current = true;
+      autosave.disable();
+    } catch {
+      // Allow another attempt; the draft is untouched.
+    } finally {
+      completingRef.current = false;
+      setIsCompleting(false);
+    }
+  };
+
   const handleComplete = () => {
     setTouched(true);
     if (hasErrors(errors)) return;
-
-    // Drop any pending autosave and block further ones, so the completion
-    // write is the last thing that touches this set.
-    completedRef.current = true;
-    autosave.disable();
-    onComplete(draftToValues(draft));
+    void runComplete(draftToValues(draft));
   };
 
   return (
@@ -235,11 +260,7 @@ export function SetEditor({
             onApply={(seconds, { complete }) => {
               const next = { ...draft, duration: String(seconds) };
               setDraft(next);
-              if (complete) {
-                completedRef.current = true;
-                autosave.disable();
-                onComplete(draftToValues(next));
-              }
+              if (complete) void runComplete(draftToValues(next));
             }}
           />
         </div>
@@ -313,9 +334,16 @@ export function SetEditor({
         />
       </div>
 
-      <Button variant="primary" size="lg" fullWidth className="mt-3" onClick={handleComplete}>
+      <Button
+        variant="primary"
+        size="lg"
+        fullWidth
+        className="mt-3"
+        disabled={isCompleting}
+        onClick={handleComplete}
+      >
         <Check size={20} aria-hidden="true" />
-        Satz abschließen · Pause starten
+        {isCompleting ? 'Wird gespeichert …' : 'Satz abschließen · Pause starten'}
       </Button>
     </div>
   );

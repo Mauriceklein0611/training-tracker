@@ -22,6 +22,7 @@ import {
   currentWeeklyStreak,
   dayKey,
   isWithinRange,
+  rateWeeks,
   weekKey,
   weeksInRange,
   type DateRange,
@@ -164,7 +165,10 @@ export function computeAnalytics(
   const totalDurationSeconds = durations.reduce((sum, value) => sum + value, 0);
 
   const trainingDayKeys = new Set(sessionsInRange.map((session) => dayKey(session.startedAt)));
-  const weeks = range ? weeksInRange(range) : weeksSpanned(sessionsInRange);
+  // Calendar weeks drive "share of weeks trained" (consistency); per-week rates
+  // use the actual day span / 7 so a 28-day window always divides by 4.
+  const calendarWeeks = range ? weeksInRange(range) : weeksSpanned(sessionsInRange);
+  const perWeekDivisor = range ? rateWeeks(range) : weeksSpanned(sessionsInRange);
 
   const volume = aggregateVolume(
     countedContexts.map(({ set, sessionExercise }) => ({ set, sessionExercise })),
@@ -177,7 +181,7 @@ export function computeAnalytics(
     range,
     sessionCount: sessionsInRange.length,
     trainingDays: trainingDayKeys.size,
-    trainingDaysPerWeek: weeks > 0 ? trainingDayKeys.size / weeks : 0,
+    trainingDaysPerWeek: perWeekDivisor > 0 ? trainingDayKeys.size / perWeekDivisor : 0,
     totalDurationSeconds,
     averageDurationSeconds: durations.length > 0 ? totalDurationSeconds / durations.length : null,
     workingSetCount: volume.setCount,
@@ -195,7 +199,7 @@ export function computeAnalytics(
         .map((session) => session.startedAt),
       now,
     ),
-    consistency: weeks > 0 ? countTrainingWeeks(sessionsInRange) / weeks : 0,
+    consistency: calendarWeeks > 0 ? countTrainingWeeks(sessionsInRange) / calendarWeeks : 0,
     setsWithoutVolume: volume.setsWithoutVolume,
   };
 }
