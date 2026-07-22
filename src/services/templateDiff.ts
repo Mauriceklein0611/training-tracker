@@ -1,4 +1,9 @@
-import type { GroupRestMode, GroupType, TemplateExerciseSnapshot, TemplateVersionSnapshot } from '@/types';
+import type {
+  GroupRestMode,
+  GroupType,
+  TemplateExerciseSnapshot,
+  TemplateVersionSnapshot,
+} from '@/types';
 import { GROUP_REST_MODE_LABELS, GROUP_TYPE_LABELS } from '@/services/grouping';
 
 /**
@@ -50,7 +55,8 @@ function repRange(exercise: TemplateExerciseSnapshot): string {
 function groupLabel(exercise: TemplateExerciseSnapshot): string {
   if (!exercise.groupId) return 'keine';
   const type = GROUP_TYPE_LABELS[(exercise.groupType ?? 'superset') as GroupType];
-  const rest = GROUP_REST_MODE_LABELS[(exercise.groupRestMode ?? 'round') as GroupRestMode];
+  const rest =
+    GROUP_REST_MODE_LABELS[(exercise.groupRestMode ?? 'round') as GroupRestMode];
   return `${type} (${rest})`;
 }
 
@@ -64,7 +70,11 @@ function fieldChanges(
   };
   push('Sätze', num(before.targetSets), num(after.targetSets));
   push('Wiederholungen', repRange(before), repRange(after));
-  push('Zieldauer (s)', num(before.targetDurationSeconds), num(after.targetDurationSeconds));
+  push(
+    'Zieldauer (s)',
+    num(before.targetDurationSeconds),
+    num(after.targetDurationSeconds),
+  );
   push('Pause (s)', num(before.restSeconds), num(after.restSeconds));
   push('Notiz', before.notes || '–', after.notes || '–');
   push('Gruppe', groupLabel(before), groupLabel(after));
@@ -139,7 +149,8 @@ export function diffTemplateSnapshots(
   // Present in the order they appear in the target plan, added/removed last.
   entries.sort((a, b) => (a.toOrder ?? 999) - (b.toOrder ?? 999));
 
-  const nameChange = before.name !== after.name ? { before: before.name, after: after.name } : null;
+  const nameChange =
+    before.name !== after.name ? { before: before.name, after: after.name } : null;
   const descriptionChanged = before.description !== after.description;
   const hasChanges =
     nameChange != null ||

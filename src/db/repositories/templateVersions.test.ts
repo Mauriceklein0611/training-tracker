@@ -70,7 +70,9 @@ describe('createTemplateVersion', () => {
     const version = await createTemplateVersion(templateId);
     await updateTemplateExercise(benchRowId, { targetSets: 5 });
 
-    const stored = (await listTemplateVersions(templateId)).find((v) => v.id === version.id);
+    const stored = (await listTemplateVersions(templateId)).find(
+      (v) => v.id === version.id,
+    );
     expect(stored?.snapshot.exercises[0].targetSets).toBe(3); // frozen at 3
   });
 });

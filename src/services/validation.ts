@@ -29,7 +29,8 @@ export function validateSetInput(
   if (values.weightKg != null) {
     if (Number.isNaN(values.weightKg)) errors.weightKg = 'Bitte eine Zahl eingeben.';
     else if (values.weightKg < 0) errors.weightKg = 'Gewicht darf nicht negativ sein.';
-    else if (values.weightKg > 1000) errors.weightKg = 'Gewicht wirkt unrealistisch hoch.';
+    else if (values.weightKg > 1000)
+      errors.weightKg = 'Gewicht wirkt unrealistisch hoch.';
   } else if (required.weight && weightMode !== 'none') {
     errors.weightKg = 'Gewicht fehlt.';
   }
@@ -39,25 +40,31 @@ export function validateSetInput(
     else if (!Number.isInteger(values.reps))
       errors.reps = 'Wiederholungen müssen ganzzahlig sein.';
     else if (values.reps < 0) errors.reps = 'Wiederholungen dürfen nicht negativ sein.';
-    else if (values.reps > 10000) errors.reps = 'Wiederholungen wirken unrealistisch hoch.';
+    else if (values.reps > 10000)
+      errors.reps = 'Wiederholungen wirken unrealistisch hoch.';
   } else if (required.reps) {
     errors.reps = 'Wiederholungen fehlen.';
   }
 
   if (values.durationSeconds != null) {
-    if (Number.isNaN(values.durationSeconds)) errors.durationSeconds = 'Bitte eine Zahl eingeben.';
-    else if (values.durationSeconds < 0) errors.durationSeconds = 'Dauer darf nicht negativ sein.';
-    else if (values.durationSeconds > 86400) errors.durationSeconds = 'Dauer wirkt unrealistisch.';
+    if (Number.isNaN(values.durationSeconds))
+      errors.durationSeconds = 'Bitte eine Zahl eingeben.';
+    else if (values.durationSeconds < 0)
+      errors.durationSeconds = 'Dauer darf nicht negativ sein.';
+    else if (values.durationSeconds > 86400)
+      errors.durationSeconds = 'Dauer wirkt unrealistisch.';
   } else if (required.duration) {
     errors.durationSeconds = 'Dauer fehlt.';
   }
 
   if (values.rir != null && !Number.isNaN(values.rir)) {
-    if (values.rir < 0 || values.rir > 10) errors.rir = 'RIR muss zwischen 0 und 10 liegen.';
+    if (values.rir < 0 || values.rir > 10)
+      errors.rir = 'RIR muss zwischen 0 und 10 liegen.';
   }
 
   if (values.rpe != null && !Number.isNaN(values.rpe)) {
-    if (values.rpe < 1 || values.rpe > 10) errors.rpe = 'RPE muss zwischen 1 und 10 liegen.';
+    if (values.rpe < 1 || values.rpe > 10)
+      errors.rpe = 'RPE muss zwischen 1 und 10 liegen.';
   }
 
   return errors;
@@ -82,7 +89,9 @@ export function validateExerciseForm(
 
   if (!name) errors.name = 'Bitte gib einen Namen ein.';
   else if (name.length > 80) errors.name = 'Der Name ist zu lang (max. 80 Zeichen).';
-  else if (existingNames.some((existing) => existing.toLowerCase() === name.toLowerCase())) {
+  else if (
+    existingNames.some((existing) => existing.toLowerCase() === name.toLowerCase())
+  ) {
     errors.name = 'Eine Übung mit diesem Namen existiert bereits.';
   }
 

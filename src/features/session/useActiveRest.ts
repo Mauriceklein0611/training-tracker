@@ -54,7 +54,8 @@ export function useActiveRest(
 
     if (options.soundEnabled) playRestFinishedSound();
     if (options.vibrationEnabled) vibrate();
-    if (options.voiceEnabled) speak(`Pause beendet. Weiter mit ${candidate.exerciseName}.`);
+    if (options.voiceEnabled)
+      speak(`Pause beendet. Weiter mit ${candidate.exerciseName}.`);
   }, [
     candidate,
     progress.targetReached,

@@ -109,7 +109,9 @@ async function readGlobalRestDefault(): Promise<number> {
 }
 
 /** Starts a free workout without a template. */
-export async function startFreeSession(name = 'Freies Training'): Promise<WorkoutSession> {
+export async function startFreeSession(
+  name = 'Freies Training',
+): Promise<WorkoutSession> {
   return db.transaction('rw', db.workoutSessions, async () => {
     await assertNoActiveSession();
     const timestamp = nowIso();
@@ -128,47 +130,55 @@ export async function startFreeSession(name = 'Freies Training'): Promise<Workou
 }
 
 /** Starts a workout pre-filled with the template's exercises and target rest times. */
-export async function startSessionFromTemplate(templateId: string): Promise<WorkoutSession> {
+export async function startSessionFromTemplate(
+  templateId: string,
+): Promise<WorkoutSession> {
   const template = await getTemplateWithExercises(templateId);
   if (!template) throw new Error('Der Trainingsplan wurde nicht gefunden.');
   const globalDefaultRestSeconds = await readGlobalRestDefault();
 
-  return db.transaction('rw', db.workoutSessions, db.sessionExercises, db.workoutSets, async () => {
-    await assertNoActiveSession();
-    const timestamp = nowIso();
-    const session: WorkoutSession = {
-      id: uuid(),
-      templateId,
-      name: template.template.name,
-      status: 'active',
-      startedAt: timestamp,
-      notes: '',
-      createdAt: timestamp,
-      updatedAt: timestamp,
-    };
-    await db.workoutSessions.add(session);
+  return db.transaction(
+    'rw',
+    db.workoutSessions,
+    db.sessionExercises,
+    db.workoutSets,
+    async () => {
+      await assertNoActiveSession();
+      const timestamp = nowIso();
+      const session: WorkoutSession = {
+        id: uuid(),
+        templateId,
+        name: template.template.name,
+        status: 'active',
+        startedAt: timestamp,
+        notes: '',
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      };
+      await db.workoutSessions.add(session);
 
-    for (const [index, row] of template.exercises.entries()) {
-      if (!row.exercise) continue; // exercise was deleted — skip rather than fail
-      const sessionExercise = buildSessionExercise(session.id, row.exercise, index, {
-        templateRestSeconds: row.restSeconds,
-        globalDefaultRestSeconds,
-        targetSets: row.targetSets,
-        templateExerciseId: row.id,
-        targetRepMin: row.targetRepMin,
-        targetRepMax: row.targetRepMax,
-        targetDurationSeconds: row.targetDurationSeconds,
-        grouping: {
-          groupId: row.groupId,
-          groupType: row.groupType,
-          groupRestMode: row.groupRestMode,
-        },
-      });
-      sessionExercise.notes = row.notes;
-      await db.sessionExercises.add(sessionExercise);
-    }
-    return session;
-  });
+      for (const [index, row] of template.exercises.entries()) {
+        if (!row.exercise) continue; // exercise was deleted — skip rather than fail
+        const sessionExercise = buildSessionExercise(session.id, row.exercise, index, {
+          templateRestSeconds: row.restSeconds,
+          globalDefaultRestSeconds,
+          targetSets: row.targetSets,
+          templateExerciseId: row.id,
+          targetRepMin: row.targetRepMin,
+          targetRepMax: row.targetRepMax,
+          targetDurationSeconds: row.targetDurationSeconds,
+          grouping: {
+            groupId: row.groupId,
+            groupType: row.groupType,
+            groupRestMode: row.groupRestMode,
+          },
+        });
+        sessionExercise.notes = row.notes;
+        await db.sessionExercises.add(sessionExercise);
+      }
+      return session;
+    },
+  );
 }
 
 /** Starts a new workout that mirrors the exercise list of an earlier session. */
@@ -236,26 +246,35 @@ export async function addExerciseToSession(
 
 /** Removes an exercise from a session, including all of its sets. */
 export async function removeSessionExercise(sessionExerciseId: string): Promise<void> {
-  await db.transaction('rw', db.sessionExercises, db.workoutSets, db.workoutSessions, async () => {
-    const entry = await db.sessionExercises.get(sessionExerciseId);
-    if (!entry) return;
-    await db.workoutSets.where('sessionExerciseId').equals(sessionExerciseId).delete();
-    await db.sessionExercises.delete(sessionExerciseId);
+  await db.transaction(
+    'rw',
+    db.sessionExercises,
+    db.workoutSets,
+    db.workoutSessions,
+    async () => {
+      const entry = await db.sessionExercises.get(sessionExerciseId);
+      if (!entry) return;
+      await db.workoutSets.where('sessionExerciseId').equals(sessionExerciseId).delete();
+      await db.sessionExercises.delete(sessionExerciseId);
 
-    const siblings = await db.sessionExercises.where('sessionId').equals(entry.sessionId).toArray();
-    siblings.sort((a, b) => a.order - b.order);
-    await Promise.all(
-      siblings.map((sibling, position) =>
-        db.sessionExercises.update(sibling.id, { order: position }),
-      ),
-    );
-    siblings.forEach((sibling, position) => {
-      sibling.order = position;
-    });
-    // Removing a middle member can split a group or leave a single member.
-    await persistSessionGrouping(siblings);
-    await touchSession(entry.sessionId);
-  });
+      const siblings = await db.sessionExercises
+        .where('sessionId')
+        .equals(entry.sessionId)
+        .toArray();
+      siblings.sort((a, b) => a.order - b.order);
+      await Promise.all(
+        siblings.map((sibling, position) =>
+          db.sessionExercises.update(sibling.id, { order: position }),
+        ),
+      );
+      siblings.forEach((sibling, position) => {
+        sibling.order = position;
+      });
+      // Removing a middle member can split a group or leave a single member.
+      await persistSessionGrouping(siblings);
+      await touchSession(entry.sessionId);
+    },
+  );
 }
 
 export async function moveSessionExercise(
@@ -265,7 +284,10 @@ export async function moveSessionExercise(
   await db.transaction('rw', db.sessionExercises, async () => {
     const entry = await db.sessionExercises.get(sessionExerciseId);
     if (!entry) return;
-    const siblings = await db.sessionExercises.where('sessionId').equals(entry.sessionId).toArray();
+    const siblings = await db.sessionExercises
+      .where('sessionId')
+      .equals(entry.sessionId)
+      .toArray();
     siblings.sort((a, b) => a.order - b.order);
 
     const index = siblings.findIndex((sibling) => sibling.id === sessionExerciseId);
@@ -290,7 +312,10 @@ export async function updateSessionExercise(
   sessionExerciseId: string,
   changes: Partial<Pick<SessionExercise, 'notes'>>,
 ): Promise<void> {
-  await db.sessionExercises.update(sessionExerciseId, { ...changes, updatedAt: nowIso() });
+  await db.sessionExercises.update(sessionExerciseId, {
+    ...changes,
+    updatedAt: nowIso(),
+  });
 }
 
 /**
@@ -354,7 +379,9 @@ export async function normalizeSessionGroups(sessionId: string): Promise<void> {
 }
 
 /** Joins a session exercise into the group of the exercise directly above it. */
-export async function attachSessionExerciseToPrevious(sessionExerciseId: string): Promise<void> {
+export async function attachSessionExerciseToPrevious(
+  sessionExerciseId: string,
+): Promise<void> {
   await db.transaction('rw', db.sessionExercises, async () => {
     const row = await db.sessionExercises.get(sessionExerciseId);
     if (!row) return;
@@ -365,7 +392,8 @@ export async function attachSessionExerciseToPrevious(sessionExerciseId: string)
     const prev = rows[index - 1];
     const groupId = prev.groupId ?? uuid();
     const groupType = prev.groupType ?? row.groupType ?? DEFAULT_GROUP_TYPE;
-    const groupRestMode = prev.groupRestMode ?? row.groupRestMode ?? DEFAULT_GROUP_REST_MODE;
+    const groupRestMode =
+      prev.groupRestMode ?? row.groupRestMode ?? DEFAULT_GROUP_REST_MODE;
 
     Object.assign(prev, { groupId, groupType, groupRestMode });
     Object.assign(rows[index], { groupId, groupType, groupRestMode });
@@ -401,7 +429,9 @@ export async function setSessionGroupOptions(
     await Promise.all(
       rows
         .filter((row) => row.groupId === groupId)
-        .map((row) => db.sessionExercises.update(row.id, { ...changes, updatedAt: timestamp })),
+        .map((row) =>
+          db.sessionExercises.update(row.id, { ...changes, updatedAt: timestamp }),
+        ),
     );
   });
 }
@@ -414,7 +444,9 @@ export async function setSessionGroupOptions(
  * Only completed working sets count towards a round — warm-ups never advance it,
  * so a warm-up can neither close a round nor trigger a group rest.
  */
-async function roundClosesInTransaction(sessionExercise: SessionExercise): Promise<boolean> {
+async function roundClosesInTransaction(
+  sessionExercise: SessionExercise,
+): Promise<boolean> {
   const members = (await orderedSessionExercises(sessionExercise.sessionId)).filter(
     (entry) => entry.groupId === sessionExercise.groupId,
   );
@@ -422,7 +454,10 @@ async function roundClosesInTransaction(sessionExercise: SessionExercise): Promi
 
   const completedByMember = new Map<string, number>();
   for (const member of members) {
-    const sets = await db.workoutSets.where('sessionExerciseId').equals(member.id).toArray();
+    const sets = await db.workoutSets
+      .where('sessionExerciseId')
+      .equals(member.id)
+      .toArray();
     let count = sets.filter((set) => set.completedAt && isWorkingSet(set)).length;
     // The working set being completed is not marked done in the DB yet.
     if (member.id === sessionExercise.id) count += 1;
@@ -499,7 +534,9 @@ export async function deleteSet(setId: string): Promise<void> {
       .toArray();
     siblings.sort((a, b) => a.position - b.position);
     await Promise.all(
-      siblings.map((sibling, position) => db.workoutSets.update(sibling.id, { position })),
+      siblings.map((sibling, position) =>
+        db.workoutSets.update(sibling.id, { position }),
+      ),
     );
   });
 }
@@ -545,7 +582,10 @@ async function closeOpenRestsInTransaction(
 
   let closed = 0;
   for (const entry of sessionExercises) {
-    const sets = await db.workoutSets.where('sessionExerciseId').equals(entry.id).toArray();
+    const sets = await db.workoutSets
+      .where('sessionExerciseId')
+      .equals(entry.id)
+      .toArray();
 
     for (const set of sets) {
       if (!set.restStartedAt || set.restEndedAt) continue;
@@ -585,7 +625,9 @@ export async function closeOpenRests(
  */
 export async function completeSet(
   setId: string,
-  values: Partial<Pick<WorkoutSet, 'weightKg' | 'reps' | 'durationSeconds' | 'rir' | 'rpe' | 'setType'>>,
+  values: Partial<
+    Pick<WorkoutSet, 'weightKg' | 'reps' | 'durationSeconds' | 'rir' | 'rpe' | 'setType'>
+  >,
   options: { startRest?: boolean } = {},
 ): Promise<{ newlyCompleted: boolean }> {
   return db.transaction('rw', db.sessionExercises, db.workoutSets, async () => {
@@ -661,7 +703,10 @@ export async function setPreCheckIn(
   sessionId: string,
   checkIn: WorkoutSession['preCheckIn'],
 ): Promise<void> {
-  await db.workoutSessions.update(sessionId, { preCheckIn: checkIn, updatedAt: nowIso() });
+  await db.workoutSessions.update(sessionId, {
+    preCheckIn: checkIn,
+    updatedAt: nowIso(),
+  });
 }
 
 /** Stores the optional post-workout check-in. */
@@ -669,7 +714,10 @@ export async function setPostCheckIn(
   sessionId: string,
   checkIn: WorkoutSession['postCheckIn'],
 ): Promise<void> {
-  await db.workoutSessions.update(sessionId, { postCheckIn: checkIn, updatedAt: nowIso() });
+  await db.workoutSessions.update(sessionId, {
+    postCheckIn: checkIn,
+    updatedAt: nowIso(),
+  });
 }
 
 async function touchSession(sessionId: string): Promise<void> {
@@ -678,67 +726,87 @@ async function touchSession(sessionId: string): Promise<void> {
 
 /** Completes a session. Sets that were never finished are removed. */
 export async function finishSession(sessionId: string): Promise<void> {
-  await db.transaction('rw', db.workoutSessions, db.sessionExercises, db.workoutSets, async () => {
-    // The rest still running when the workout ends is not a real between-set
-    // rest — no further set follows it. End it, but do not record its duration,
-    // so it never counts as a met or missed rest in the statistics. Rests
-    // already closed between two sets keep their recorded duration.
-    const finishedAt = new Date();
-    await closeOpenRestsInTransaction(sessionId, finishedAt, { recordActual: false });
+  await db.transaction(
+    'rw',
+    db.workoutSessions,
+    db.sessionExercises,
+    db.workoutSets,
+    async () => {
+      // The rest still running when the workout ends is not a real between-set
+      // rest — no further set follows it. End it, but do not record its duration,
+      // so it never counts as a met or missed rest in the statistics. Rests
+      // already closed between two sets keep their recorded duration.
+      const finishedAt = new Date();
+      await closeOpenRestsInTransaction(sessionId, finishedAt, { recordActual: false });
 
-    const sessionExercises = await db.sessionExercises
-      .where('sessionId')
-      .equals(sessionId)
-      .toArray();
+      const sessionExercises = await db.sessionExercises
+        .where('sessionId')
+        .equals(sessionId)
+        .toArray();
 
-    for (const entry of sessionExercises) {
-      const sets = await db.workoutSets.where('sessionExerciseId').equals(entry.id).toArray();
-      // Drop planned-but-never-performed sets so they cannot skew any statistic.
-      const empty = sets.filter((set) => !set.completedAt);
-      await db.workoutSets.bulkDelete(empty.map((set) => set.id));
+      for (const entry of sessionExercises) {
+        const sets = await db.workoutSets
+          .where('sessionExerciseId')
+          .equals(entry.id)
+          .toArray();
+        // Drop planned-but-never-performed sets so they cannot skew any statistic.
+        const empty = sets.filter((set) => !set.completedAt);
+        await db.workoutSets.bulkDelete(empty.map((set) => set.id));
 
-      const remaining = sets
-        .filter((set) => set.completedAt)
-        .sort((a, b) => a.position - b.position);
-      await Promise.all(
-        remaining.map((set, position) =>
-          set.position === position
-            ? Promise.resolve(0)
-            : db.workoutSets.update(set.id, { position }),
-        ),
-      );
-    }
+        const remaining = sets
+          .filter((set) => set.completedAt)
+          .sort((a, b) => a.position - b.position);
+        await Promise.all(
+          remaining.map((set, position) =>
+            set.position === position
+              ? Promise.resolve(0)
+              : db.workoutSets.update(set.id, { position }),
+          ),
+        );
+      }
 
-    // Same instant the rests were closed against, so the numbers agree.
-    const timestamp = finishedAt.toISOString();
-    await db.workoutSessions.update(sessionId, {
-      status: 'completed',
-      finishedAt: timestamp,
-      updatedAt: timestamp,
-    });
-  });
+      // Same instant the rests were closed against, so the numbers agree.
+      const timestamp = finishedAt.toISOString();
+      await db.workoutSessions.update(sessionId, {
+        status: 'completed',
+        finishedAt: timestamp,
+        updatedAt: timestamp,
+      });
+    },
+  );
 }
 
 /** Deletes a session and everything below it. Used for "discard workout". */
 export async function deleteSession(sessionId: string): Promise<void> {
-  await db.transaction('rw', db.workoutSessions, db.sessionExercises, db.workoutSets, async () => {
-    const sessionExercises = await db.sessionExercises
-      .where('sessionId')
-      .equals(sessionId)
-      .toArray();
-    for (const entry of sessionExercises) {
-      await db.workoutSets.where('sessionExerciseId').equals(entry.id).delete();
-    }
-    await db.sessionExercises.where('sessionId').equals(sessionId).delete();
-    await db.workoutSessions.delete(sessionId);
-  });
+  await db.transaction(
+    'rw',
+    db.workoutSessions,
+    db.sessionExercises,
+    db.workoutSets,
+    async () => {
+      const sessionExercises = await db.sessionExercises
+        .where('sessionId')
+        .equals(sessionId)
+        .toArray();
+      for (const entry of sessionExercises) {
+        await db.workoutSets.where('sessionExerciseId').equals(entry.id).delete();
+      }
+      await db.sessionExercises.where('sessionId').equals(sessionId).delete();
+      await db.workoutSessions.delete(sessionId);
+    },
+  );
 }
 
-export async function getSessionDetail(sessionId: string): Promise<SessionDetail | undefined> {
+export async function getSessionDetail(
+  sessionId: string,
+): Promise<SessionDetail | undefined> {
   const session = await db.workoutSessions.get(sessionId);
   if (!session) return undefined;
 
-  const sessionExercises = await db.sessionExercises.where('sessionId').equals(sessionId).toArray();
+  const sessionExercises = await db.sessionExercises
+    .where('sessionId')
+    .equals(sessionId)
+    .toArray();
   sessionExercises.sort((a, b) => a.order - b.order);
 
   const exercises = await Promise.all(
@@ -764,30 +832,40 @@ export async function duplicateSession(sessionId: string): Promise<WorkoutSessio
   const source = await getSessionDetail(sessionId);
   if (!source) throw new Error('Die Trainingseinheit wurde nicht gefunden.');
 
-  return db.transaction('rw', db.workoutSessions, db.sessionExercises, db.workoutSets, async () => {
-    const timestamp = nowIso();
-    const copy: WorkoutSession = {
-      ...source.session,
-      id: uuid(),
-      name: `${source.session.name} (Kopie)`,
-      createdAt: timestamp,
-      updatedAt: timestamp,
-    };
-    await db.workoutSessions.add(copy);
+  return db.transaction(
+    'rw',
+    db.workoutSessions,
+    db.sessionExercises,
+    db.workoutSets,
+    async () => {
+      const timestamp = nowIso();
+      const copy: WorkoutSession = {
+        ...source.session,
+        id: uuid(),
+        name: `${source.session.name} (Kopie)`,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      };
+      await db.workoutSessions.add(copy);
 
-    for (const entry of source.exercises) {
-      const newExerciseId = uuid();
-      await db.sessionExercises.add({
-        ...entry.sessionExercise,
-        id: newExerciseId,
-        sessionId: copy.id,
-      });
-      await db.workoutSets.bulkAdd(
-        entry.sets.map((set) => ({ ...set, id: uuid(), sessionExerciseId: newExerciseId })),
-      );
-    }
-    return copy;
-  });
+      for (const entry of source.exercises) {
+        const newExerciseId = uuid();
+        await db.sessionExercises.add({
+          ...entry.sessionExercise,
+          id: newExerciseId,
+          sessionId: copy.id,
+        });
+        await db.workoutSets.bulkAdd(
+          entry.sets.map((set) => ({
+            ...set,
+            id: uuid(),
+            sessionExerciseId: newExerciseId,
+          })),
+        );
+      }
+      return copy;
+    },
+  );
 }
 
 export interface LastPerformance {
@@ -806,13 +884,19 @@ export async function getExerciseHistorySets(
   exerciseId: string,
   excludeSessionId?: string,
 ): Promise<{ set: WorkoutSet; context: SessionExercise }[]> {
-  const entries = await db.sessionExercises.where('exerciseId').equals(exerciseId).toArray();
+  const entries = await db.sessionExercises
+    .where('exerciseId')
+    .equals(exerciseId)
+    .toArray();
   const result: { set: WorkoutSet; context: SessionExercise }[] = [];
   for (const entry of entries) {
     if (entry.sessionId === excludeSessionId) continue;
     const session = await db.workoutSessions.get(entry.sessionId);
     if (!session || session.status !== 'completed') continue;
-    const sets = await db.workoutSets.where('sessionExerciseId').equals(entry.id).toArray();
+    const sets = await db.workoutSets
+      .where('sessionExerciseId')
+      .equals(entry.id)
+      .toArray();
     for (const set of sets) {
       if (set.completedAt) result.push({ set, context: entry });
     }
@@ -829,7 +913,10 @@ export async function getLastPerformance(
   exerciseId: string,
   excludeSessionId?: string,
 ): Promise<LastPerformance | undefined> {
-  const entries = await db.sessionExercises.where('exerciseId').equals(exerciseId).toArray();
+  const entries = await db.sessionExercises
+    .where('exerciseId')
+    .equals(exerciseId)
+    .toArray();
   const candidates: LastPerformance[] = [];
 
   for (const sessionExercise of entries) {

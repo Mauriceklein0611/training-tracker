@@ -1,6 +1,14 @@
 import { useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { AlertTriangle, Check, ClipboardPaste, Sparkles, Trash2, Upload, X } from 'lucide-react';
+import {
+  AlertTriangle,
+  Check,
+  ClipboardPaste,
+  Sparkles,
+  Trash2,
+  Upload,
+  X,
+} from 'lucide-react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { Badge, Card, CardHeader, EmptyState } from '@/components/ui/Card';
@@ -22,7 +30,10 @@ const STATUS_LABEL: Record<AiProposalStatus, string> = {
   invalid: 'ungültig',
 };
 
-const STATUS_TONE: Record<AiProposalStatus, 'accent' | 'success' | 'default' | 'warning' | 'danger'> = {
+const STATUS_TONE: Record<
+  AiProposalStatus,
+  'accent' | 'success' | 'default' | 'warning' | 'danger'
+> = {
   pending: 'accent',
   applied: 'success',
   skipped: 'default',
@@ -115,11 +126,15 @@ function FeedbackView({ feedback }: { feedback: ValidatedAiImport['feedback'] })
   return (
     <div className="grid gap-3">
       {feedback.headline ? <p className="font-semibold">{feedback.headline}</p> : null}
-      {feedback.summary ? <p className="text-sm leading-relaxed">{feedback.summary}</p> : null}
+      {feedback.summary ? (
+        <p className="text-sm leading-relaxed">{feedback.summary}</p>
+      ) : null}
 
       {feedback.strengths.length > 0 ? (
         <div>
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">Stärken</h3>
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">
+            Stärken
+          </h3>
           <ul className="mt-1 grid list-disc gap-1 pl-5 text-sm">
             {feedback.strengths.map((item, index) => (
               <li key={index}>{item}</li>
@@ -130,7 +145,9 @@ function FeedbackView({ feedback }: { feedback: ValidatedAiImport['feedback'] })
 
       {feedback.observations.length > 0 ? (
         <div>
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">Beobachtungen</h3>
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">
+            Beobachtungen
+          </h3>
           <ul className="mt-1 grid gap-2 text-sm">
             {feedback.observations.map((item, index) => (
               <li key={index}>
@@ -144,7 +161,9 @@ function FeedbackView({ feedback }: { feedback: ValidatedAiImport['feedback'] })
 
       {feedback.recommendations.length > 0 ? (
         <div>
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">Empfehlungen</h3>
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">
+            Empfehlungen
+          </h3>
           <ul className="mt-1 grid list-disc gap-1 pl-5 text-sm">
             {feedback.recommendations.map((item, index) => (
               <li key={index}>{item}</li>
@@ -224,7 +243,8 @@ export default function AiAnalysesPage() {
     }
   };
 
-  const pendingCount = review?.proposals.filter((p) => p.status === 'pending').length ?? 0;
+  const pendingCount =
+    review?.proposals.filter((p) => p.status === 'pending').length ?? 0;
 
   return (
     <>
@@ -255,7 +275,11 @@ export default function AiAnalysesPage() {
               key={warning}
               className="mb-2 flex items-start gap-2 rounded-xl bg-surface-2 p-2 text-sm text-muted"
             >
-              <AlertTriangle size={16} className="mt-0.5 shrink-0 text-warning" aria-hidden="true" />
+              <AlertTriangle
+                size={16}
+                className="mt-0.5 shrink-0 text-warning"
+                aria-hidden="true"
+              />
               {warning}
             </p>
           ))}
@@ -268,8 +292,9 @@ export default function AiAnalysesPage() {
                 Planvorschläge ({review.proposals.length})
               </h3>
               <p className="mb-2 text-xs leading-relaxed text-muted">
-                Nur ausgewählte, gültige Vorschläge werden übernommen. Dabei wird der aktuelle Plan
-                automatisch als neue Version gesichert, sodass du jederzeit zurück kannst.
+                Nur ausgewählte, gültige Vorschläge werden übernommen. Dabei wird der
+                aktuelle Plan automatisch als neue Version gesichert, sodass du jederzeit
+                zurück kannst.
               </p>
               <div className="grid gap-2">
                 {review.proposals.map((proposal) => (
@@ -281,7 +306,8 @@ export default function AiAnalysesPage() {
                     onToggle={() =>
                       setSelected((current) => {
                         const next = new Set(current);
-                        if (next.has(proposal.proposalId)) next.delete(proposal.proposalId);
+                        if (next.has(proposal.proposalId))
+                          next.delete(proposal.proposalId);
                         else next.add(proposal.proposalId);
                         return next;
                       })
@@ -291,7 +317,9 @@ export default function AiAnalysesPage() {
               </div>
             </div>
           ) : (
-            <p className="mt-4 text-sm text-muted">Diese Analyse enthält keine Planvorschläge.</p>
+            <p className="mt-4 text-sm text-muted">
+              Diese Analyse enthält keine Planvorschläge.
+            </p>
           )}
 
           <div className="mt-4 grid gap-2">
@@ -329,7 +357,11 @@ export default function AiAnalysesPage() {
               placeholder='{ "format": "training-ai-response", … }'
               onChange={(event) => setPaste(event.target.value)}
             />
-            <Button variant="secondary" disabled={!paste.trim()} onClick={() => void handlePaste()}>
+            <Button
+              variant="secondary"
+              disabled={!paste.trim()}
+              onClick={() => void handlePaste()}
+            >
               <ClipboardPaste size={18} aria-hidden="true" />
               Eingefügtes JSON prüfen
             </Button>
@@ -347,10 +379,15 @@ export default function AiAnalysesPage() {
       ) : (
         <ul className="grid gap-2">
           {analyses.map((analysis) => {
-            const applied = analysis.proposals.filter((p) => p.status === 'applied').length;
+            const applied = analysis.proposals.filter(
+              (p) => p.status === 'applied',
+            ).length;
             const open = expanded === analysis.id;
             return (
-              <li key={analysis.id} className="rounded-2xl border border-border bg-surface p-3">
+              <li
+                key={analysis.id}
+                className="rounded-2xl border border-border bg-surface p-3"
+              >
                 <div className="flex items-start justify-between gap-2">
                   <button
                     type="button"
@@ -362,7 +399,8 @@ export default function AiAnalysesPage() {
                       {analysis.headline || analysis.summary || 'KI-Analyse'}
                     </p>
                     <p className="mt-0.5 text-xs text-muted">
-                      {formatDateTime(analysis.importedAt)} · {analysis.proposals.length} Vorschläge
+                      {formatDateTime(analysis.importedAt)} · {analysis.proposals.length}{' '}
+                      Vorschläge
                       {applied > 0 ? ` · ${applied} übernommen` : ''}
                     </p>
                   </button>

@@ -42,11 +42,7 @@ describe('groupItems', () => {
   });
 
   it('does not merge a group split by a standalone exercise', () => {
-    const blocks = groupItems([
-      item('a', 0, 'g1'),
-      item('b', 1),
-      item('c', 2, 'g1'),
-    ]);
+    const blocks = groupItems([item('a', 0, 'g1'), item('b', 1), item('c', 2, 'g1')]);
     // Same id but not consecutive: two separate blocks, each with one member.
     expect(blocks).toHaveLength(3);
   });
@@ -76,7 +72,11 @@ describe('planGroupNormalization', () => {
 
   it('keeps a valid two-member group and fills defaults', () => {
     const plan = planGroupNormalization([item('a', 0, 'g1'), item('b', 1, 'g1')], newId);
-    expect(plan.get('a')).toEqual({ groupId: 'g1', groupType: 'superset', groupRestMode: 'round' });
+    expect(plan.get('a')).toEqual({
+      groupId: 'g1',
+      groupType: 'superset',
+      groupRestMode: 'round',
+    });
     expect(plan.get('b')?.groupId).toBe('g1');
   });
 
@@ -160,9 +160,27 @@ describe('roundBoundaryReached', () => {
 
   it('is false until the last member of the round catches up', () => {
     // After A1 completes its first set: A=1, B=0.
-    expect(roundBoundaryReached(group, new Map([['a', 1], ['b', 0]]), 'a')).toBe(false);
+    expect(
+      roundBoundaryReached(
+        group,
+        new Map([
+          ['a', 1],
+          ['b', 0],
+        ]),
+        'a',
+      ),
+    ).toBe(false);
     // After B1 completes its first set: A=1, B=1 → round closed.
-    expect(roundBoundaryReached(group, new Map([['a', 1], ['b', 1]]), 'b')).toBe(true);
+    expect(
+      roundBoundaryReached(
+        group,
+        new Map([
+          ['a', 1],
+          ['b', 1],
+        ]),
+        'b',
+      ),
+    ).toBe(true);
   });
 
   it('always rests for a single-member group', () => {

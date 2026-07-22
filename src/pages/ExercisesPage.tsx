@@ -38,12 +38,18 @@ export default function ExercisesPage() {
     () => filterExercises(exercises, { search, muscleGroup, equipment, showArchived }),
     [exercises, search, muscleGroup, equipment, showArchived],
   );
-  const existingNames = useMemo(() => exercises.map((exercise) => exercise.name), [exercises]);
+  const existingNames = useMemo(
+    () => exercises.map((exercise) => exercise.name),
+    [exercises],
+  );
   const archivedCount = exercises.filter((exercise) => exercise.archived).length;
 
   const handleArchive = async (exercise: Exercise) => {
     await setExerciseArchived(exercise.id, !exercise.archived);
-    toast.show(exercise.archived ? 'Übung wiederhergestellt.' : 'Übung archiviert.', 'success');
+    toast.show(
+      exercise.archived ? 'Übung wiederhergestellt.' : 'Übung archiviert.',
+      'success',
+    );
   };
 
   /**
@@ -67,7 +73,10 @@ export default function ExercisesPage() {
       await deleteExercise(deleteTarget.id);
       toast.show('Übung gelöscht.', 'success');
     } catch (error) {
-      toast.show(error instanceof Error ? error.message : 'Löschen fehlgeschlagen.', 'error');
+      toast.show(
+        error instanceof Error ? error.message : 'Löschen fehlgeschlagen.',
+        'error',
+      );
     } finally {
       setDeleteTarget(null);
     }

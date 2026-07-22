@@ -49,7 +49,9 @@ export function Stat({
 }) {
   return (
     <div className="rounded-2xl border border-border bg-surface p-3">
-      <div className="text-xs font-medium uppercase tracking-wide text-muted">{label}</div>
+      <div className="text-xs font-medium uppercase tracking-wide text-muted">
+        {label}
+      </div>
       <div
         className={cn(
           'numeric mt-1 text-2xl font-bold leading-none',
@@ -105,7 +107,9 @@ export function EmptyState({
     <div className="rounded-2xl border border-dashed border-border bg-surface/50 p-6 text-center">
       {icon ? <div className="mb-3 flex justify-center text-muted">{icon}</div> : null}
       <h3 className="text-base font-semibold">{title}</h3>
-      <p className="mx-auto mt-2 max-w-prose text-sm leading-relaxed text-muted">{description}</p>
+      <p className="mx-auto mt-2 max-w-prose text-sm leading-relaxed text-muted">
+        {description}
+      </p>
       {action ? <div className="mt-4 flex justify-center">{action}</div> : null}
     </div>
   );

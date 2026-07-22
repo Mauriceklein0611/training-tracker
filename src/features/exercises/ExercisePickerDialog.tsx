@@ -46,7 +46,10 @@ export function ExercisePickerDialog({
     return bySearch.filter((exercise) => isExerciseAvailable(exercise, activeProfile));
   }, [exercises, search, activeProfile, onlyAvailable]);
 
-  const existingNames = useMemo(() => exercises.map((exercise) => exercise.name), [exercises]);
+  const existingNames = useMemo(
+    () => exercises.map((exercise) => exercise.name),
+    [exercises],
+  );
 
   return (
     <>

@@ -40,7 +40,9 @@ export function LiveExerciseList({
 }) {
   const entries = detail.exercises;
   const detailById = new Map(entries.map((entry) => [entry.sessionExercise.id, entry]));
-  const indexById = new Map(entries.map((entry, index) => [entry.sessionExercise.id, index]));
+  const indexById = new Map(
+    entries.map((entry, index) => [entry.sessionExercise.id, index]),
+  );
   const blocks = groupItems(entries.map((entry) => entry.sessionExercise));
 
   return (
@@ -53,7 +55,10 @@ export function LiveExerciseList({
           const entry = detailById.get(member.id);
           // Only working sets make up a round — warm-ups never advance it.
           const workingSets = (entry?.sets ?? []).filter((set) => isWorkingSet(set));
-          completedByMember.set(member.id, workingSets.filter((set) => set.completedAt).length);
+          completedByMember.set(
+            member.id,
+            workingSets.filter((set) => set.completedAt).length,
+          );
           plannedByMember.set(
             member.id,
             Math.max(workingSets.length, entry?.sessionExercise.targetSetsSnapshot ?? 0),
@@ -120,7 +125,9 @@ export function LiveExerciseList({
                 <span className="inline-flex h-7 min-w-7 items-center justify-center rounded-lg bg-accent px-2 text-sm font-bold text-accent-contrast">
                   {block.letter}
                 </span>
-                <span className="text-sm font-semibold">{GROUP_TYPE_LABELS[groupType]}</span>
+                <span className="text-sm font-semibold">
+                  {GROUP_TYPE_LABELS[groupType]}
+                </span>
               </div>
               {progress ? (
                 <span className="numeric text-sm text-muted">

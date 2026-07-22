@@ -1,5 +1,11 @@
 import { db } from '@/db/db';
-import type { Exercise, GroupRestMode, GroupType, TemplateExercise, WorkoutTemplate } from '@/types';
+import type {
+  Exercise,
+  GroupRestMode,
+  GroupType,
+  TemplateExercise,
+  WorkoutTemplate,
+} from '@/types';
 import { nowIso, uuid } from '@/utils/id';
 import {
   DEFAULT_GROUP_REST_MODE,
@@ -23,11 +29,17 @@ export async function getTemplateWithExercises(
   const template = await db.workoutTemplates.get(templateId);
   if (!template) return undefined;
 
-  const rows = await db.templateExercises.where('templateId').equals(templateId).toArray();
+  const rows = await db.templateExercises
+    .where('templateId')
+    .equals(templateId)
+    .toArray();
   rows.sort((a, b) => a.order - b.order);
 
   const exercises = await Promise.all(
-    rows.map(async (row) => ({ ...row, exercise: await db.exercises.get(row.exerciseId) })),
+    rows.map(async (row) => ({
+      ...row,
+      exercise: await db.exercises.get(row.exerciseId),
+    })),
   );
   return { template, exercises };
 }
@@ -37,12 +49,16 @@ export async function listTemplatesWithExercises(): Promise<TemplateWithExercise
   const templates = await listTemplates();
   return Promise.all(
     templates.map(
-      async (template) => (await getTemplateWithExercises(template.id)) as TemplateWithExercises,
+      async (template) =>
+        (await getTemplateWithExercises(template.id)) as TemplateWithExercises,
     ),
   );
 }
 
-export async function createTemplate(name: string, description = ''): Promise<WorkoutTemplate> {
+export async function createTemplate(
+  name: string,
+  description = '',
+): Promise<WorkoutTemplate> {
   const timestamp = nowIso();
   const template: WorkoutTemplate = {
     id: uuid(),
@@ -92,7 +108,10 @@ export async function duplicateTemplate(templateId: string): Promise<WorkoutTemp
     };
     await db.workoutTemplates.add(copy);
 
-    const rows = await db.templateExercises.where('templateId').equals(templateId).toArray();
+    const rows = await db.templateExercises
+      .where('templateId')
+      .equals(templateId)
+      .toArray();
     await db.templateExercises.bulkAdd(
       rows.map((row) => ({ ...row, id: uuid(), templateId: copy.id })),
     );
@@ -105,7 +124,10 @@ export async function addExerciseToTemplate(
   exercise: Exercise,
 ): Promise<TemplateExercise> {
   return db.transaction('rw', db.templateExercises, db.workoutTemplates, async () => {
-    const existing = await db.templateExercises.where('templateId').equals(templateId).count();
+    const existing = await db.templateExercises
+      .where('templateId')
+      .equals(templateId)
+      .count();
     const row: TemplateExercise = {
       id: uuid(),
       templateId,
@@ -162,9 +184,14 @@ export async function moveTemplateExercise(id: string, direction: -1 | 1): Promi
     if (index < 0 || targetIndex < 0 || targetIndex >= siblings.length) return;
 
     const reordered = [...siblings];
-    [reordered[index], reordered[targetIndex]] = [reordered[targetIndex], reordered[index]];
+    [reordered[index], reordered[targetIndex]] = [
+      reordered[targetIndex],
+      reordered[index],
+    ];
     await Promise.all(
-      reordered.map((entry, position) => db.templateExercises.update(entry.id, { order: position })),
+      reordered.map((entry, position) =>
+        db.templateExercises.update(entry.id, { order: position }),
+      ),
     );
     reordered.forEach((entry, position) => {
       entry.order = position;
@@ -192,7 +219,10 @@ export async function reorderTemplateExercises(
 
 /** Removes gaps in the order column so indexes stay 0..n-1. */
 async function renumberTemplateExercises(templateId: string): Promise<void> {
-  const rows = await db.templateExercises.where('templateId').equals(templateId).toArray();
+  const rows = await db.templateExercises
+    .where('templateId')
+    .equals(templateId)
+    .toArray();
   rows.sort((a, b) => a.order - b.order);
   await Promise.all(
     rows.map((row, position) =>
@@ -204,7 +234,10 @@ async function renumberTemplateExercises(templateId: string): Promise<void> {
 }
 
 async function orderedTemplateExercises(templateId: string): Promise<TemplateExercise[]> {
-  const rows = await db.templateExercises.where('templateId').equals(templateId).toArray();
+  const rows = await db.templateExercises
+    .where('templateId')
+    .equals(templateId)
+    .toArray();
   return rows.sort((a, b) => a.order - b.order);
 }
 
@@ -249,7 +282,8 @@ export async function attachTemplateExerciseToPrevious(rowId: string): Promise<v
     const prev = rows[index - 1];
     const groupId = prev.groupId ?? uuid();
     const groupType = prev.groupType ?? row.groupType ?? DEFAULT_GROUP_TYPE;
-    const groupRestMode = prev.groupRestMode ?? row.groupRestMode ?? DEFAULT_GROUP_REST_MODE;
+    const groupRestMode =
+      prev.groupRestMode ?? row.groupRestMode ?? DEFAULT_GROUP_REST_MODE;
 
     Object.assign(prev, { groupId, groupType, groupRestMode });
     Object.assign(rows[index], { groupId, groupType, groupRestMode });
@@ -283,7 +317,10 @@ export async function setTemplateGroupOptions(
   changes: { groupType?: GroupType; groupRestMode?: GroupRestMode },
 ): Promise<void> {
   await db.transaction('rw', db.templateExercises, db.workoutTemplates, async () => {
-    const rows = await db.templateExercises.where('templateId').equals(templateId).toArray();
+    const rows = await db.templateExercises
+      .where('templateId')
+      .equals(templateId)
+      .toArray();
     await Promise.all(
       rows
         .filter((row) => row.groupId === groupId)

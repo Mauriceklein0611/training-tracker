@@ -134,7 +134,9 @@ export default function LiveSessionPage() {
       <header className="header-safe sticky top-0 z-30 -mx-4 mb-3 border-b border-border bg-bg/95 px-4 pb-2 backdrop-blur">
         <div className="flex items-center gap-2">
           <div className="min-w-0 flex-1">
-            <h1 className="truncate text-lg font-bold leading-tight">{detail.session.name}</h1>
+            <h1 className="truncate text-lg font-bold leading-tight">
+              {detail.session.name}
+            </h1>
             <p className="numeric text-sm text-muted">
               {formatDuration(elapsedSeconds)} · {completedSetCount} Sätze
             </p>

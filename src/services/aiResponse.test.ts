@@ -15,7 +15,16 @@ function baseContext(overrides: Partial<PlanContext> = {}): PlanContext {
           name: 'Push',
           description: 'Oberkörper',
           exercises: new Map([
-            ['te1', { name: 'Bankdrücken', targetSets: 3, targetRepMin: 8, targetRepMax: 12, restSeconds: 120 }],
+            [
+              'te1',
+              {
+                name: 'Bankdrücken',
+                targetSets: 3,
+                targetRepMin: 8,
+                targetRepMax: 12,
+                restSeconds: 120,
+              },
+            ],
           ]),
         },
       ],
@@ -27,7 +36,10 @@ function baseContext(overrides: Partial<PlanContext> = {}): PlanContext {
   };
 }
 
-function responseText(proposals: unknown[], sourceExport: unknown = { exportId: 'exp-1', fingerprint: 'fp' }) {
+function responseText(
+  proposals: unknown[],
+  sourceExport: unknown = { exportId: 'exp-1', fingerprint: 'fp' },
+) {
   return JSON.stringify({
     format: 'training-ai-response',
     schemaVersion: 1,
@@ -52,7 +64,9 @@ describe('parseAiResponse', () => {
   });
 
   it('rejects a wrong format marker', () => {
-    const result = parseAiResponse(JSON.stringify({ format: 'something-else', schemaVersion: 1, feedback: {} }));
+    const result = parseAiResponse(
+      JSON.stringify({ format: 'something-else', schemaVersion: 1, feedback: {} }),
+    );
     expect(result.ok).toBe(false);
   });
 
@@ -64,7 +78,9 @@ describe('parseAiResponse', () => {
   });
 
   it('rejects out-of-range values', () => {
-    const result = parseAiResponse(responseText([{ ...targetProposal, changes: { sets: 999 } }]));
+    const result = parseAiResponse(
+      responseText([{ ...targetProposal, changes: { sets: 999 } }]),
+    );
     expect(result.ok).toBe(false);
   });
 
@@ -116,7 +132,11 @@ describe('validateAiResponse — proposal status', () => {
   it('rejects a rep range where min would exceed max', () => {
     // expected must cover the changed fields; current te1 is 8–12.
     const result = validateFirst([
-      { ...targetProposal, expected: { repMin: 8, repMax: 12 }, changes: { repMin: 15, repMax: 10 } },
+      {
+        ...targetProposal,
+        expected: { repMin: 8, repMax: 12 },
+        changes: { repMin: 15, repMax: 10 },
+      },
     ]);
     expect(result.proposals[0].status).toBe('invalid');
   });
@@ -127,14 +147,20 @@ describe('validateAiResponse — file-level checks', () => {
     const parsed = parseAiResponse(responseText([targetProposal]));
     if (!parsed.ok) throw new Error('parse');
     const first = validateAiResponse(parsed.data, baseContext());
-    const context = baseContext({ seenImportFingerprints: new Set([first.importFingerprint]) });
+    const context = baseContext({
+      seenImportFingerprints: new Set([first.importFingerprint]),
+    });
     const second = validateAiResponse(parsed.data, context);
     expect(second.duplicate).toBe(true);
   });
 
   it('locks the proposals and shows feedback for an unknown export', () => {
     const result = validateAiResponse(
-      (parseAiResponse(responseText([targetProposal], { exportId: 'other', fingerprint: 'x' })) as { data: AiResponse }).data,
+      (
+        parseAiResponse(
+          responseText([targetProposal], { exportId: 'other', fingerprint: 'x' }),
+        ) as { data: AiResponse }
+      ).data,
       baseContext(),
     );
     expect(result.exportKnown).toBe(false);
@@ -147,7 +173,11 @@ describe('validateAiResponse — file-level checks', () => {
 
   it('locks the proposals when the fingerprint does not match the stored export', () => {
     const result = validateAiResponse(
-      (parseAiResponse(responseText([targetProposal], { exportId: 'exp-1', fingerprint: 'wrong' })) as { data: AiResponse }).data,
+      (
+        parseAiResponse(
+          responseText([targetProposal], { exportId: 'exp-1', fingerprint: 'wrong' }),
+        ) as { data: AiResponse }
+      ).data,
       baseContext(),
     );
     expect(result.provenance).toBe('fingerprint-mismatch');
@@ -197,7 +227,9 @@ describe('validateAiResponse — file-level checks', () => {
   });
 
   it('rejects a change whose previous value is missing from expected', () => {
-    const result = parseAiResponse(responseText([{ ...targetProposal, expected: {}, changes: { sets: 4 } }]));
+    const result = parseAiResponse(
+      responseText([{ ...targetProposal, expected: {}, changes: { sets: 4 } }]),
+    );
     expect(result.ok).toBe(false);
   });
 

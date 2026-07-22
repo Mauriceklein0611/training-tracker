@@ -25,7 +25,8 @@ export const REGRESS_TOLERANCE = 0.05;
 export const MAX_RELATIVE_SPREAD = 0.4;
 
 export type PlateauMetric = 'oneRepMax' | 'topSetLoad' | 'reps' | 'duration';
-export type PlateauStatus = 'plateau' | 'progress' | 'regress' | 'insufficient' | 'inconsistent';
+export type PlateauStatus =
+  'plateau' | 'progress' | 'regress' | 'insufficient' | 'inconsistent';
 
 export const PLATEAU_METRIC_LABELS: Record<PlateauMetric, string> = {
   oneRepMax: 'die geschätzte Leistung (1RM-Schätzwert)',
@@ -72,7 +73,9 @@ function metricValue(point: ExerciseSeriesPoint, metric: PlateauMetric): number 
 function samplesFor(points: ExerciseSeriesPoint[], metric: PlateauMetric): Sample[] {
   return points
     .map((point) => ({ date: point.date, value: metricValue(point, metric) }))
-    .filter((sample): sample is Sample => sample.value != null && Number.isFinite(sample.value));
+    .filter(
+      (sample): sample is Sample => sample.value != null && Number.isFinite(sample.value),
+    );
 }
 
 /**
@@ -148,7 +151,8 @@ export function analyzePlateau(
     baseline,
     latest,
     best,
-    changePercent: baseline > 0 ? Math.round(((best - baseline) / baseline) * 1000) / 10 : null,
+    changePercent:
+      baseline > 0 ? Math.round(((best - baseline) / baseline) * 1000) / 10 : null,
   };
 
   // Too noisy to make any claim about a trend.

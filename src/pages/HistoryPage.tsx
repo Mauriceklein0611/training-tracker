@@ -12,7 +12,13 @@ import { loadAnalyticsDataset } from '@/services/dataset';
 import { buildSetContexts, type AnalyticsDataset } from '@/services/analytics';
 import { buildDayActivity, hasAnyWeeklyGoal } from '@/services/calendar';
 import { aggregateVolume } from '@/services/metrics';
-import { dayKey, formatDate, formatDayHeading, formatDurationLong, formatTime } from '@/utils/date';
+import {
+  dayKey,
+  formatDate,
+  formatDayHeading,
+  formatDurationLong,
+  formatTime,
+} from '@/utils/date';
 import { formatNumber, formatVolume } from '@/utils/format';
 
 interface HistoryRow {
@@ -43,38 +49,45 @@ export default function HistoryPage() {
   const [period, setPeriod] = useState('all');
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
 
-  const data = useLiveQuery(async (): Promise<HistoryData> => {
-    const dataset = await loadAnalyticsDataset();
-    const contexts = buildSetContexts(dataset);
+  const data = useLiveQuery(
+    async (): Promise<HistoryData> => {
+      const dataset = await loadAnalyticsDataset();
+      const contexts = buildSetContexts(dataset);
 
-    const rows = dataset.sessions
-      .filter((session) => session.status === 'completed')
-      .sort((a, b) => b.startedAt.localeCompare(a.startedAt))
-      .map((session) => {
-        const own = contexts.filter((context) => context.session.id === session.id);
-        const totals = aggregateVolume(
-          own.map(({ set, sessionExercise }) => ({ set, sessionExercise })),
-        );
-        return {
-          id: session.id,
-          name: session.name,
-          startedAt: session.startedAt,
-          day: dayKey(session.startedAt),
-          durationSeconds: session.finishedAt
-            ? (new Date(session.finishedAt).getTime() - new Date(session.startedAt).getTime()) /
-              1000
-            : null,
-          workingSets: totals.setCount,
-          volumeKg: totals.volumeKg,
-          exerciseNames: [
-            ...new Set(own.map((context) => context.sessionExercise.exerciseNameSnapshot)),
-          ],
-          notes: session.notes,
-        };
-      });
+      const rows = dataset.sessions
+        .filter((session) => session.status === 'completed')
+        .sort((a, b) => b.startedAt.localeCompare(a.startedAt))
+        .map((session) => {
+          const own = contexts.filter((context) => context.session.id === session.id);
+          const totals = aggregateVolume(
+            own.map(({ set, sessionExercise }) => ({ set, sessionExercise })),
+          );
+          return {
+            id: session.id,
+            name: session.name,
+            startedAt: session.startedAt,
+            day: dayKey(session.startedAt),
+            durationSeconds: session.finishedAt
+              ? (new Date(session.finishedAt).getTime() -
+                  new Date(session.startedAt).getTime()) /
+                1000
+              : null,
+            workingSets: totals.setCount,
+            volumeKg: totals.volumeKg,
+            exerciseNames: [
+              ...new Set(
+                own.map((context) => context.sessionExercise.exerciseNameSnapshot),
+              ),
+            ],
+            notes: session.notes,
+          };
+        });
 
-    return { rows, dataset };
-  }, [], EMPTY_DATA);
+      return { rows, dataset };
+    },
+    [],
+    EMPTY_DATA,
+  );
 
   const { rows, dataset } = data;
 
@@ -83,7 +96,8 @@ export default function HistoryPage() {
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
-    const cutoff = period === 'all' ? null : Date.now() - Number(period) * 24 * 3600 * 1000;
+    const cutoff =
+      period === 'all' ? null : Date.now() - Number(period) * 24 * 3600 * 1000;
 
     return rows.filter((row) => {
       if (selectedDay && row.day !== selectedDay) return false;
@@ -159,7 +173,9 @@ export default function HistoryPage() {
       {groups.length === 0 ? (
         <EmptyState
           icon={<History size={28} aria-hidden="true" />}
-          title={rows.length === 0 ? 'Noch keine abgeschlossenen Trainings' : 'Keine Treffer'}
+          title={
+            rows.length === 0 ? 'Noch keine abgeschlossenen Trainings' : 'Keine Treffer'
+          }
           description={
             rows.length === 0
               ? 'Sobald du eine Trainingseinheit beendest, erscheint sie hier — mit allen Sätzen, Pausen und Notizen. Du kannst Einheiten später korrigieren oder als Vorlage für ein neues Training verwenden.'

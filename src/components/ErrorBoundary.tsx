@@ -44,8 +44,8 @@ export class ErrorBoundary extends Component<Props, State> {
             {this.props.fallbackTitle ?? 'Es ist ein unerwarteter Fehler aufgetreten'}
           </h1>
           <p className="mt-2 text-sm leading-relaxed text-muted">
-            Deine Trainingsdaten sind davon nicht betroffen — sie liegen weiterhin lokal auf
-            diesem Gerät. Du kannst die Ansicht neu laden und normal weiterarbeiten.
+            Deine Trainingsdaten sind davon nicht betroffen — sie liegen weiterhin lokal
+            auf diesem Gerät. Du kannst die Ansicht neu laden und normal weiterarbeiten.
           </p>
           <pre className="mt-3 max-h-40 overflow-auto rounded-xl bg-surface-2 p-3 text-xs text-muted">
             {error.message}

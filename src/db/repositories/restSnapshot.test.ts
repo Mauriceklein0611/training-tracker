@@ -66,7 +66,10 @@ describe('resolveRestSeconds', () => {
       resolveRestSeconds({ templateRestSeconds: 0, exerciseDefaultRestSeconds: 90 }),
     ).toBe(0);
     expect(
-      resolveRestSeconds({ exerciseDefaultRestSeconds: 0, globalDefaultRestSeconds: 120 }),
+      resolveRestSeconds({
+        exerciseDefaultRestSeconds: 0,
+        globalDefaultRestSeconds: 120,
+      }),
     ).toBe(0);
   });
 
@@ -84,7 +87,11 @@ describe('resolveRestSeconds', () => {
 describe('rest snapshot when an exercise joins a workout', () => {
   it('uses the exercise default in a free workout', async () => {
     await updateSettings({ defaultRestSeconds: 120 });
-    const exercise = await createExercise({ ...BASE, name: 'Bankdrücken', defaultRestSeconds: 45 });
+    const exercise = await createExercise({
+      ...BASE,
+      name: 'Bankdrücken',
+      defaultRestSeconds: 45,
+    });
 
     const session = await startFreeSession();
     const sessionExercise = await addExerciseToSession(session.id, exercise);
@@ -96,7 +103,11 @@ describe('rest snapshot when an exercise joins a workout', () => {
   it('uses the global default when the exercise has none of its own', async () => {
     await updateSettings({ defaultRestSeconds: 150 });
     // 0 would be a deliberate choice, so use a fresh exercise with the global value.
-    const exercise = await createExercise({ ...BASE, name: 'Rudern', defaultRestSeconds: 150 });
+    const exercise = await createExercise({
+      ...BASE,
+      name: 'Rudern',
+      defaultRestSeconds: 150,
+    });
 
     const session = await startFreeSession();
     const sessionExercise = await addExerciseToSession(session.id, exercise);
@@ -105,7 +116,11 @@ describe('rest snapshot when an exercise joins a workout', () => {
   });
 
   it('prefers the plan target over the exercise default', async () => {
-    const exercise = await createExercise({ ...BASE, name: 'Bankdrücken', defaultRestSeconds: 45 });
+    const exercise = await createExercise({
+      ...BASE,
+      name: 'Bankdrücken',
+      defaultRestSeconds: 45,
+    });
     const template = await createTemplate('Push');
     const row = await addExerciseToTemplate(template.id, exercise);
     await updateTemplateExercise(row.id, { restSeconds: 210, targetSets: 4 });
@@ -118,7 +133,11 @@ describe('rest snapshot when an exercise joins a workout', () => {
   });
 
   it('leaves the set goal undefined for a free workout', async () => {
-    const exercise = await createExercise({ ...BASE, name: 'Bankdrücken', defaultRestSeconds: 60 });
+    const exercise = await createExercise({
+      ...BASE,
+      name: 'Bankdrücken',
+      defaultRestSeconds: 60,
+    });
     const session = await startFreeSession();
     const sessionExercise = await addExerciseToSession(session.id, exercise);
 
@@ -126,7 +145,11 @@ describe('rest snapshot when an exercise joins a workout', () => {
   });
 
   it('does not change a running workout when the exercise is edited later', async () => {
-    const exercise = await createExercise({ ...BASE, name: 'Bankdrücken', defaultRestSeconds: 45 });
+    const exercise = await createExercise({
+      ...BASE,
+      name: 'Bankdrücken',
+      defaultRestSeconds: 45,
+    });
     const session = await startFreeSession();
     await addExerciseToSession(session.id, exercise);
 
@@ -139,7 +162,11 @@ describe('rest snapshot when an exercise joins a workout', () => {
   });
 
   it('keeps recorded sets untouched when the exercise default changes', async () => {
-    const exercise = await createExercise({ ...BASE, name: 'Bankdrücken', defaultRestSeconds: 45 });
+    const exercise = await createExercise({
+      ...BASE,
+      name: 'Bankdrücken',
+      defaultRestSeconds: 45,
+    });
     const session = await startFreeSession();
     const sessionExercise = await addExerciseToSession(session.id, exercise);
 
@@ -154,10 +181,13 @@ describe('rest snapshot when an exercise joins a workout', () => {
   });
 
   it('carries the snapshot into a workout repeated from an earlier one', async () => {
-    const exercise = await createExercise({ ...BASE, name: 'Bankdrücken', defaultRestSeconds: 75 });
+    const exercise = await createExercise({
+      ...BASE,
+      name: 'Bankdrücken',
+      defaultRestSeconds: 75,
+    });
     const session = await startFreeSession();
     await addExerciseToSession(session.id, exercise);
-
 
     const detail = await getSessionDetail(session.id);
     expect(detail?.exercises[0].sessionExercise.restSecondsSnapshot).toBe(75);

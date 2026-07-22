@@ -48,8 +48,8 @@ export function ExerciseTimer({
   const [state, setState] = useState<ExerciseTimerState>(
     () => loadTimerState(setId) ?? createTimerState(setId, targetSeconds ?? null),
   );
-  const [countdownInput, setCountdownInput] = useState(
-    () => String(state.countdownSeconds ?? targetSeconds ?? ''),
+  const [countdownInput, setCountdownInput] = useState(() =>
+    String(state.countdownSeconds ?? targetSeconds ?? ''),
   );
   const [notified, setNotified] = useState(false);
 
@@ -59,13 +59,10 @@ export function ExerciseTimer({
   const remaining = remainingSeconds(state, now.getTime());
   const finished = isCountdownFinished(state, now.getTime());
 
-  const apply = useCallback(
-    (next: ExerciseTimerState) => {
-      setState(next);
-      saveTimerState(next);
-    },
-    [],
-  );
+  const apply = useCallback((next: ExerciseTimerState) => {
+    setState(next);
+    saveTimerState(next);
+  }, []);
 
   // Persist across reloads, but only while there is something to restore.
   useEffect(() => {
@@ -105,10 +102,16 @@ export function ExerciseTimer({
     >
       <div className="flex items-baseline justify-between gap-2">
         <span className="text-xs font-medium uppercase tracking-wide text-muted">
-          {remaining != null ? (finished ? 'Zielzeit erreicht' : 'Countdown') : 'Stoppuhr'}
+          {remaining != null
+            ? finished
+              ? 'Zielzeit erreicht'
+              : 'Countdown'
+            : 'Stoppuhr'}
         </span>
         {remaining != null ? (
-          <span className="numeric text-xs text-muted">Gemessen {formatDuration(seconds)}</span>
+          <span className="numeric text-xs text-muted">
+            Gemessen {formatDuration(seconds)}
+          </span>
         ) : null}
       </div>
 

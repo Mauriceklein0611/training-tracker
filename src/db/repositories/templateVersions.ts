@@ -7,7 +7,12 @@ import type {
   TemplateVersionSource,
 } from '@/types';
 import { nowIso, uuid } from '@/utils/id';
-import { deloadSets, DELOAD_INTENSITY_LABELS, DELOAD_PERCENT, type DeloadIntensity } from '@/services/deload';
+import {
+  deloadSets,
+  DELOAD_INTENSITY_LABELS,
+  DELOAD_PERCENT,
+  type DeloadIntensity,
+} from '@/services/deload';
 
 /**
  * Plan versioning.
@@ -21,13 +26,15 @@ import { deloadSets, DELOAD_INTENSITY_LABELS, DELOAD_PERCENT, type DeloadIntensi
  */
 
 /** Reads the current live plan into an immutable snapshot. */
-export async function snapshotTemplate(templateId: string): Promise<TemplateVersionSnapshot> {
+export async function snapshotTemplate(
+  templateId: string,
+): Promise<TemplateVersionSnapshot> {
   const template = await db.workoutTemplates.get(templateId);
   if (!template) throw new Error('Der Trainingsplan wurde nicht gefunden.');
 
-  const rows = (await db.templateExercises.where('templateId').equals(templateId).toArray()).sort(
-    (a, b) => a.order - b.order,
-  );
+  const rows = (
+    await db.templateExercises.where('templateId').equals(templateId).toArray()
+  ).sort((a, b) => a.order - b.order);
   const exerciseIds = [...new Set(rows.map((row) => row.exerciseId))];
   const names = new Map(
     (await db.exercises.bulkGet(exerciseIds)).map((exercise, index) => [
@@ -55,7 +62,10 @@ export async function snapshotTemplate(templateId: string): Promise<TemplateVers
 }
 
 async function nextVersionNumber(templateId: string): Promise<number> {
-  const existing = await db.templateVersions.where('templateId').equals(templateId).toArray();
+  const existing = await db.templateVersions
+    .where('templateId')
+    .equals(templateId)
+    .toArray();
   return existing.reduce((max, version) => Math.max(max, version.versionNumber), 0) + 1;
 }
 
@@ -99,12 +109,19 @@ export async function createTemplateVersion(
   );
 }
 
-export async function listTemplateVersions(templateId: string): Promise<TemplateVersion[]> {
-  const versions = await db.templateVersions.where('templateId').equals(templateId).toArray();
+export async function listTemplateVersions(
+  templateId: string,
+): Promise<TemplateVersion[]> {
+  const versions = await db.templateVersions
+    .where('templateId')
+    .equals(templateId)
+    .toArray();
   return versions.sort((a, b) => b.versionNumber - a.versionNumber);
 }
 
-export async function getTemplateVersion(id: string): Promise<TemplateVersion | undefined> {
+export async function getTemplateVersion(
+  id: string,
+): Promise<TemplateVersion | undefined> {
   return db.templateVersions.get(id);
 }
 
@@ -167,7 +184,9 @@ export async function activateTemplateVersion(versionId: string): Promise<void> 
 
       // Replace the live plan's exercises with the version's snapshot.
       await db.templateExercises.where('templateId').equals(version.templateId).delete();
-      await db.templateExercises.bulkAdd(rowsFromSnapshot(version.templateId, version.snapshot));
+      await db.templateExercises.bulkAdd(
+        rowsFromSnapshot(version.templateId, version.snapshot),
+      );
       await db.workoutTemplates.update(version.templateId, {
         name: version.snapshot.name,
         description: version.snapshot.description,
@@ -192,10 +211,15 @@ export async function activateDeload(
     label: `Vor Deload (${DELOAD_INTENSITY_LABELS[intensity]})`,
   });
   await db.transaction('rw', db.templateExercises, db.workoutTemplates, async () => {
-    const rows = await db.templateExercises.where('templateId').equals(templateId).toArray();
+    const rows = await db.templateExercises
+      .where('templateId')
+      .equals(templateId)
+      .toArray();
     await Promise.all(
       rows.map((row) =>
-        db.templateExercises.update(row.id, { targetSets: deloadSets(row.targetSets, percent) }),
+        db.templateExercises.update(row.id, {
+          targetSets: deloadSets(row.targetSets, percent),
+        }),
       ),
     );
     await db.workoutTemplates.update(templateId, { updatedAt: nowIso() });

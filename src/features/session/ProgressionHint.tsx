@@ -31,7 +31,9 @@ export function ProgressionHint({ suggestion }: { suggestion: ProgressionSuggest
       <p className="mt-1 text-sm font-medium">{suggestion.headline}</p>
 
       {values.length > 0 ? (
-        <p className="numeric mt-0.5 text-sm text-accent">Vorschlag: {values.join(' × ')}</p>
+        <p className="numeric mt-0.5 text-sm text-accent">
+          Vorschlag: {values.join(' × ')}
+        </p>
       ) : null}
 
       <p className="mt-1.5 text-xs leading-relaxed text-muted">{suggestion.reason}</p>

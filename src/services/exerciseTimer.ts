@@ -49,7 +49,10 @@ export function elapsedMs(state: ExerciseTimerState, now: number = Date.now()): 
   return Math.max(0, state.accumulatedMs + running);
 }
 
-export function elapsedSeconds(state: ExerciseTimerState, now: number = Date.now()): number {
+export function elapsedSeconds(
+  state: ExerciseTimerState,
+  now: number = Date.now(),
+): number {
   return Math.round(elapsedMs(state, now) / 1000);
 }
 
@@ -120,7 +123,8 @@ function isTimerState(value: unknown): value is ExerciseTimerState {
     (candidate.runningSince === null || typeof candidate.runningSince === 'number') &&
     typeof candidate.accumulatedMs === 'number' &&
     candidate.accumulatedMs >= 0 &&
-    (candidate.countdownSeconds === null || typeof candidate.countdownSeconds === 'number') &&
+    (candidate.countdownSeconds === null ||
+      typeof candidate.countdownSeconds === 'number') &&
     typeof candidate.updatedAt === 'number'
   );
 }

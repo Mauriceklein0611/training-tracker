@@ -73,7 +73,10 @@ export function buildDayActivity(dataset: AnalyticsDataset): Map<string, DayActi
     if (session.status !== 'completed') continue;
     const activity = ensure(dayKey(session.startedAt));
     activity.sessionCount += 1;
-    activity.durationSeconds += sessionDurationSeconds(session.startedAt, session.finishedAt);
+    activity.durationSeconds += sessionDurationSeconds(
+      session.startedAt,
+      session.finishedAt,
+    );
     activity.sessionIds.push(session.id);
   }
 
@@ -163,7 +166,9 @@ export function buildCalendarCells(
         isToday: day === todayText,
         isFuture: day > todayText,
         activity: dayActivity,
-        level: dayActivity ? intensityLevel(metricValue(dayActivity, metric), maxValue) : 0,
+        level: dayActivity
+          ? intensityLevel(metricValue(dayActivity, metric), maxValue)
+          : 0,
       };
     }),
   );

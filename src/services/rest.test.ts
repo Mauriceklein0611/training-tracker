@@ -72,25 +72,38 @@ describe('computeRestProgress', () => {
   });
 
   it('ignores an unparsable timestamp instead of throwing', () => {
-    const progress = computeRestProgress({ restStartedAt: 'kaputt', restTargetSeconds: 60 });
+    const progress = computeRestProgress({
+      restStartedAt: 'kaputt',
+      restTargetSeconds: 60,
+    });
     expect(progress.running).toBe(false);
   });
 });
 
 describe('rest evaluation', () => {
   it('computes the deviation from the target rest', () => {
-    expect(restDeviationSeconds(makeSet({ restTargetSeconds: 120, restActualSeconds: 135 }))).toBe(15);
-    expect(restDeviationSeconds(makeSet({ restTargetSeconds: 120, restActualSeconds: 90 }))).toBe(-30);
+    expect(
+      restDeviationSeconds(makeSet({ restTargetSeconds: 120, restActualSeconds: 135 })),
+    ).toBe(15);
+    expect(
+      restDeviationSeconds(makeSet({ restTargetSeconds: 120, restActualSeconds: 90 })),
+    ).toBe(-30);
   });
 
   it('has no opinion when there is no target or no measurement', () => {
-    expect(restDeviationSeconds(makeSet({ restTargetSeconds: 0, restActualSeconds: 60 }))).toBeNull();
+    expect(
+      restDeviationSeconds(makeSet({ restTargetSeconds: 0, restActualSeconds: 60 })),
+    ).toBeNull();
     expect(restDeviationSeconds(makeSet({ restTargetSeconds: 120 }))).toBeNull();
   });
 
   it('reports whether the planned rest was reached', () => {
-    expect(restTargetMet(makeSet({ restTargetSeconds: 120, restActualSeconds: 120 }))).toBe(true);
-    expect(restTargetMet(makeSet({ restTargetSeconds: 120, restActualSeconds: 119 }))).toBe(false);
+    expect(
+      restTargetMet(makeSet({ restTargetSeconds: 120, restActualSeconds: 120 })),
+    ).toBe(true);
+    expect(
+      restTargetMet(makeSet({ restTargetSeconds: 120, restActualSeconds: 119 })),
+    ).toBe(false);
   });
 
   it('aggregates averages and the share of rests that reached the target', () => {

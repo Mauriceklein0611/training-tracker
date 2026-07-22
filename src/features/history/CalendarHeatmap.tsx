@@ -63,7 +63,8 @@ export function CalendarHeatmap({
   const [metric, setMetric] = useState<IntensityMetric>('sets');
 
   const cells = useMemo(
-    () => buildCalendarCells(monthGridDays(anchor), activity, metric, anchor.getMonth(), now),
+    () =>
+      buildCalendarCells(monthGridDays(anchor), activity, metric, anchor.getMonth(), now),
     [anchor, activity, metric, now],
   );
 
@@ -104,7 +105,10 @@ export function CalendarHeatmap({
 
       <div className="grid grid-cols-7 gap-1" aria-hidden="true">
         {WEEKDAY_LABELS.map((label) => (
-          <div key={label} className="pb-1 text-center text-[11px] font-medium text-muted">
+          <div
+            key={label}
+            className="pb-1 text-center text-[11px] font-medium text-muted"
+          >
             {label}
           </div>
         ))}
@@ -120,7 +124,9 @@ export function CalendarHeatmap({
 
           const baseClass =
             'flex min-h-[44px] items-center justify-center rounded-lg text-sm tabular-nums transition-colors';
-          const style = { backgroundColor: hasTraining ? levelBackground(cell.level) : undefined };
+          const style = {
+            backgroundColor: hasTraining ? levelBackground(cell.level) : undefined,
+          };
 
           if (!hasTraining) {
             return (

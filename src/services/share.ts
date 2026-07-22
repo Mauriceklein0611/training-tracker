@@ -15,11 +15,7 @@ import { copyToClipboard, downloadJson } from '@/utils/download';
  */
 
 export type ShareOutcome =
-  | 'shared-file'
-  | 'shared-text'
-  | 'downloaded'
-  | 'cancelled'
-  | 'failed';
+  'shared-file' | 'shared-text' | 'downloaded' | 'cancelled' | 'failed';
 
 export interface ShareResult {
   outcome: ShareOutcome;
@@ -98,7 +94,11 @@ export async function shareJsonExport(options: {
       };
     } catch (error) {
       if (isAbort(error)) {
-        return { outcome: 'cancelled', copiedToClipboard: false, message: 'Teilen abgebrochen.' };
+        return {
+          outcome: 'cancelled',
+          copiedToClipboard: false,
+          message: 'Teilen abgebrochen.',
+        };
       }
       // Fall through to the text path.
     }
@@ -116,7 +116,11 @@ export async function shareJsonExport(options: {
       };
     } catch (error) {
       if (isAbort(error)) {
-        return { outcome: 'cancelled', copiedToClipboard: false, message: 'Teilen abgebrochen.' };
+        return {
+          outcome: 'cancelled',
+          copiedToClipboard: false,
+          message: 'Teilen abgebrochen.',
+        };
       }
       // Fall through to the download path.
     }

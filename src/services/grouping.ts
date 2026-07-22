@@ -72,7 +72,9 @@ export function groupItems<T extends Groupable>(items: T[]): Block<T>[] {
         key: item.groupId ?? item.id,
         groupId: item.groupId ?? null,
         groupType: item.groupId ? (item.groupType ?? DEFAULT_GROUP_TYPE) : null,
-        groupRestMode: item.groupId ? (item.groupRestMode ?? DEFAULT_GROUP_REST_MODE) : null,
+        groupRestMode: item.groupId
+          ? (item.groupRestMode ?? DEFAULT_GROUP_REST_MODE)
+          : null,
         members: [item],
         letter: '',
       });
@@ -86,7 +88,10 @@ export function groupItems<T extends Groupable>(items: T[]): Block<T>[] {
 }
 
 /** "A1"/"A2" inside a group, or plain "A" for a standalone exercise. */
-export function memberLabel<T extends Groupable>(block: Block<T>, memberIndex: number): string {
+export function memberLabel<T extends Groupable>(
+  block: Block<T>,
+  memberIndex: number,
+): string {
   return block.groupId ? `${block.letter}${memberIndex + 1}` : block.letter;
 }
 

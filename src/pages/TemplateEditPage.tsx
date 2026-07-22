@@ -10,7 +10,10 @@ import {
   getTemplateWithExercises,
   reorderTemplateExercises,
 } from '@/db/repositories/templates';
-import { ActiveSessionExistsError, startSessionFromTemplate } from '@/db/repositories/sessions';
+import {
+  ActiveSessionExistsError,
+  startSessionFromTemplate,
+} from '@/db/repositories/sessions';
 import { ExercisePickerDialog } from '@/features/exercises/ExercisePickerDialog';
 import { TemplateExerciseRow } from '@/features/templates/TemplateExerciseRow';
 import { TemplateGroupHeader } from '@/features/templates/TemplateGroupHeader';
@@ -86,7 +89,10 @@ export default function TemplateEditPage() {
         navigate(`/training/${error.activeSessionId}`);
         return;
       }
-      toast.show(error instanceof Error ? error.message : 'Start fehlgeschlagen.', 'error');
+      toast.show(
+        error instanceof Error ? error.message : 'Start fehlgeschlagen.',
+        'error',
+      );
     }
   };
 

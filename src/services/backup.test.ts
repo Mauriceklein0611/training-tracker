@@ -349,7 +349,9 @@ describe('weekly goals round trip', () => {
     const restored = await db.settings.get('app-settings');
     expect(restored?.weeklyGoals?.sessionsPerWeek).toBe(4);
     expect(restored?.weeklyGoals?.workingSetsPerWeek).toBe(60);
-    expect(restored?.weeklyGoals?.exerciseGoals?.[0]?.exerciseNameSnapshot).toBe('Kniebeuge');
+    expect(restored?.weeklyGoals?.exerciseGoals?.[0]?.exerciseNameSnapshot).toBe(
+      'Kniebeuge',
+    );
   });
 
   it('accepts a backup written before weekly goals existed', async () => {
@@ -538,7 +540,9 @@ describe('superset grouping round trip', () => {
 
     await resetDatabase();
     await importBackup(backup, 'replace');
-    const restored = (await db.sessionExercises.toArray()).filter((entry) => entry.groupId);
+    const restored = (await db.sessionExercises.toArray()).filter(
+      (entry) => entry.groupId,
+    );
     expect(restored).toHaveLength(2);
     expect(restored[0].groupId).toBe(restored[1].groupId);
   });

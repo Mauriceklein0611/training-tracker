@@ -95,7 +95,8 @@ export function WeeklyGoalsCard({
 
   const current = weeks[weeks.length - 1] as WeekProgress;
   const finishedWeeks = weeks.slice(0, -1).reverse();
-  const hasOverallGoal = goals.sessionsPerWeek != null || goals.workingSetsPerWeek != null;
+  const hasOverallGoal =
+    goals.sessionsPerWeek != null || goals.workingSetsPerWeek != null;
 
   return (
     <Card>
@@ -165,7 +166,10 @@ export function WeeklyGoalsCard({
             <ul className="grid gap-1.5">
               {finishedWeeks.map((week) => {
                 const sessionsReached = goalReached(week.sessions, goals.sessionsPerWeek);
-                const setsReached = goalReached(week.workingSets, goals.workingSetsPerWeek);
+                const setsReached = goalReached(
+                  week.workingSets,
+                  goals.workingSetsPerWeek,
+                );
                 const allReached =
                   (goals.sessionsPerWeek == null || sessionsReached) &&
                   (goals.workingSetsPerWeek == null || setsReached);
@@ -183,7 +187,11 @@ export function WeeklyGoalsCard({
                         <span>{week.workingSets} Sätze</span>
                       ) : null}
                       {allReached ? (
-                        <Check size={15} className="text-success" aria-label="Ziel erreicht" />
+                        <Check
+                          size={15}
+                          className="text-success"
+                          aria-label="Ziel erreicht"
+                        />
                       ) : null}
                     </span>
                   </li>

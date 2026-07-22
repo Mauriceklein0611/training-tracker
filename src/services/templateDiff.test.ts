@@ -46,7 +46,9 @@ describe('diffTemplateSnapshots', () => {
     expect(entry.status).toBe('changed');
     const sets = entry.changes.find((change) => change.label === 'Sätze');
     expect(sets).toEqual({ label: 'Sätze', before: '3', after: '4' });
-    expect(entry.changes.find((change) => change.label === 'Pause (s)')?.after).toBe('90');
+    expect(entry.changes.find((change) => change.label === 'Pause (s)')?.after).toBe(
+      '90',
+    );
   });
 
   it('detects added and removed exercises', () => {
@@ -54,10 +56,14 @@ describe('diffTemplateSnapshots', () => {
     const after = snap('Plan', [ex('bench', 0), ex('squat', 1)]);
     const diff = diffTemplateSnapshots(before, after);
 
-    expect(diff.entries.find((entry) => entry.exerciseId === 'squat')?.status).toBe('added');
+    expect(diff.entries.find((entry) => entry.exerciseId === 'squat')?.status).toBe(
+      'added',
+    );
 
     const reversed = diffTemplateSnapshots(after, before);
-    expect(reversed.entries.find((entry) => entry.exerciseId === 'squat')?.status).toBe('removed');
+    expect(reversed.entries.find((entry) => entry.exerciseId === 'squat')?.status).toBe(
+      'removed',
+    );
   });
 
   it('flags a pure reorder as moved', () => {
@@ -69,7 +75,10 @@ describe('diffTemplateSnapshots', () => {
   });
 
   it('detects a name change', () => {
-    const diff = diffTemplateSnapshots(snap('Alt', [ex('bench', 0)]), snap('Neu', [ex('bench', 0)]));
+    const diff = diffTemplateSnapshots(
+      snap('Alt', [ex('bench', 0)]),
+      snap('Neu', [ex('bench', 0)]),
+    );
     expect(diff.nameChange).toEqual({ before: 'Alt', after: 'Neu' });
     expect(diff.hasChanges).toBe(true);
   });

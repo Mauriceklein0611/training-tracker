@@ -179,7 +179,8 @@ describe('stay in range', () => {
   it('does not suggest going past the top of the range', () => {
     const result = suggestProgression(setsWithReps([11, 12], 80), weighted, RANGE);
     // Mixed: one at the top, one below — hold, and never exceed the maximum.
-    if (result.suggestedReps != null) expect(result.suggestedReps).toBeLessThanOrEqual(12);
+    if (result.suggestedReps != null)
+      expect(result.suggestedReps).toBeLessThanOrEqual(12);
   });
 });
 
@@ -201,8 +202,20 @@ describe('reduce weight', () => {
 describe('timed exercises', () => {
   it('suggests a longer hold', () => {
     const sets = [
-      makeSet({ position: 0, setType: 'working', weightKg: undefined, reps: undefined, durationSeconds: 45 }),
-      makeSet({ position: 1, setType: 'working', weightKg: undefined, reps: undefined, durationSeconds: 50 }),
+      makeSet({
+        position: 0,
+        setType: 'working',
+        weightKg: undefined,
+        reps: undefined,
+        durationSeconds: 45,
+      }),
+      makeSet({
+        position: 1,
+        setType: 'working',
+        weightKg: undefined,
+        reps: undefined,
+        durationSeconds: 50,
+      }),
     ];
     const result = suggestProgression(sets, timed, {});
 

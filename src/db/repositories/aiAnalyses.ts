@@ -12,7 +12,9 @@ export async function recordAiExport(id: string, fingerprint: string): Promise<v
   const all = await db.aiExports.toArray();
   if (all.length > MAX_EXPORT_RECORDS) {
     all.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
-    await db.aiExports.bulkDelete(all.slice(0, all.length - MAX_EXPORT_RECORDS).map((r) => r.id));
+    await db.aiExports.bulkDelete(
+      all.slice(0, all.length - MAX_EXPORT_RECORDS).map((r) => r.id),
+    );
   }
 }
 

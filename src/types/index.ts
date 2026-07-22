@@ -222,8 +222,7 @@ export interface TemplateVersion {
  * completed trainings, sets or body data.
  */
 export type AiProposalOperation =
-  | 'update_template_exercise_target'
-  | 'update_template_note';
+  'update_template_exercise_target' | 'update_template_note';
 
 /** A single machine-readable change proposed by the AI. */
 export interface AiProposal {

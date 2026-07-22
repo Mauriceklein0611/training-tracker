@@ -79,7 +79,11 @@ export default function MorePage() {
                 <span className="block font-medium">{label}</span>
                 <span className="block truncate text-sm text-muted">{description}</span>
               </span>
-              <ChevronRight size={20} className="shrink-0 text-muted" aria-hidden="true" />
+              <ChevronRight
+                size={20}
+                className="shrink-0 text-muted"
+                aria-hidden="true"
+              />
             </Link>
           </li>
         ))}

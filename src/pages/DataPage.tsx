@@ -48,7 +48,12 @@ import { shareJsonExport } from '@/services/share';
 import { parseNumberInput } from '@/services/validation';
 import type { AnalysisContext, TrainingPhase } from '@/types';
 import { loadAnalyticsDataset } from '@/services/dataset';
-import { copyToClipboard, downloadCsv, downloadJson, readFileAsText } from '@/utils/download';
+import {
+  copyToClipboard,
+  downloadCsv,
+  downloadJson,
+  readFileAsText,
+} from '@/utils/download';
 import { formatDateTime, todayKey } from '@/utils/date';
 
 interface PendingImport {
@@ -167,7 +172,10 @@ export default function DataPage() {
     try {
       const result = await importBackup(pending.backup, mode);
       const added = Object.values(result.added).reduce((sum, value) => sum + value, 0);
-      const skipped = Object.values(result.skipped).reduce((sum, value) => sum + value, 0);
+      const skipped = Object.values(result.skipped).reduce(
+        (sum, value) => sum + value,
+        0,
+      );
       toast.show(
         mode === 'replace'
           ? `Daten ersetzt: ${added} Datensätze importiert.`
@@ -255,7 +263,9 @@ export default function DataPage() {
       toast.show(result.message, result.outcome === 'failed' ? 'error' : 'success');
     } catch (error) {
       toast.show(
-        error instanceof Error ? `Teilen fehlgeschlagen: ${error.message}` : 'Teilen fehlgeschlagen.',
+        error instanceof Error
+          ? `Teilen fehlgeschlagen: ${error.message}`
+          : 'Teilen fehlgeschlagen.',
         'error',
       );
     } finally {
@@ -280,7 +290,9 @@ export default function DataPage() {
       toast.show('KI-Export erstellt.', 'success');
     } catch (error) {
       toast.show(
-        error instanceof Error ? `Export fehlgeschlagen: ${error.message}` : 'Export fehlgeschlagen.',
+        error instanceof Error
+          ? `Export fehlgeschlagen: ${error.message}`
+          : 'Export fehlgeschlagen.',
         'error',
       );
     } finally {
@@ -299,7 +311,10 @@ export default function DataPage() {
           bodyWeightCsv(await listBodyWeightEntries()),
         );
       } else if (kind === 'exercises') {
-        downloadCsv(`training-uebungen-${today}.csv`, exercisesCsv(await db.exercises.toArray()));
+        downloadCsv(
+          `training-uebungen-${today}.csv`,
+          exercisesCsv(await db.exercises.toArray()),
+        );
       } else {
         const dataset = await loadAnalyticsDataset();
         downloadCsv(
@@ -310,7 +325,9 @@ export default function DataPage() {
       toast.show('CSV-Datei erstellt.', 'success');
     } catch (error) {
       toast.show(
-        error instanceof Error ? `Export fehlgeschlagen: ${error.message}` : 'Export fehlgeschlagen.',
+        error instanceof Error
+          ? `Export fehlgeschlagen: ${error.message}`
+          : 'Export fehlgeschlagen.',
         'error',
       );
     } finally {
@@ -341,8 +358,8 @@ export default function DataPage() {
           </Button>
           <p className="mt-2 text-xs leading-relaxed text-muted">
             Letzte Sicherung:{' '}
-            {settings.lastBackupAt ? formatDateTime(settings.lastBackupAt) : 'noch nie'}. Die
-            Datei wird lokal erzeugt und nur dorthin gespeichert, wo du sie ablegst.
+            {settings.lastBackupAt ? formatDateTime(settings.lastBackupAt) : 'noch nie'}.
+            Die Datei wird lokal erzeugt und nur dorthin gespeichert, wo du sie ablegst.
           </p>
         </Card>
 
@@ -422,7 +439,10 @@ export default function DataPage() {
                   max={aiOptions.customTo || undefined}
                   onChange={(event) => {
                     setPeriodErrors({});
-                    setAiOptions((current) => ({ ...current, customFrom: event.target.value }));
+                    setAiOptions((current) => ({
+                      ...current,
+                      customFrom: event.target.value,
+                    }));
                   }}
                 />
                 <TextField
@@ -434,7 +454,10 @@ export default function DataPage() {
                   min={aiOptions.customFrom || undefined}
                   onChange={(event) => {
                     setPeriodErrors({});
-                    setAiOptions((current) => ({ ...current, customTo: event.target.value }));
+                    setAiOptions((current) => ({
+                      ...current,
+                      customTo: event.target.value,
+                    }));
                   }}
                 />
               </div>
@@ -474,8 +497,8 @@ export default function DataPage() {
                 ))}
               </ul>
               <p className="mt-2 text-xs leading-relaxed text-muted">
-                Die Datei wird lokal erzeugt. Beim Teilen entscheidet dein Gerät, welche Apps
-                angeboten werden — die App überträgt selbst nichts.
+                Die Datei wird lokal erzeugt. Beim Teilen entscheidet dein Gerät, welche
+                Apps angeboten werden — die App überträgt selbst nichts.
               </p>
             </div>
 
@@ -521,7 +544,9 @@ export default function DataPage() {
               <summary className="min-h-[44px] cursor-pointer list-none py-2 text-xs font-medium text-accent">
                 Anweisung anzeigen
               </summary>
-              <p className="mt-2 text-xs leading-relaxed text-muted">{AI_ANALYSIS_PROMPT}</p>
+              <p className="mt-2 text-xs leading-relaxed text-muted">
+                {AI_ANALYSIS_PROMPT}
+              </p>
             </details>
           </div>
         </Card>
@@ -564,7 +589,9 @@ export default function DataPage() {
                 rows={2}
                 value={settings.analysisContext?.equipment ?? ''}
                 placeholder="z. B. Langhantel, Kurzhanteln bis 30 kg, Klimmzugstange"
-                onChange={(event) => void updateContext({ equipment: event.target.value })}
+                onChange={(event) =>
+                  void updateContext({ equipment: event.target.value })
+                }
               />
               <SelectField
                 label="Aktuelle Phase"
@@ -585,7 +612,9 @@ export default function DataPage() {
                 rows={2}
                 value={settings.analysisContext?.limitations ?? ''}
                 placeholder="z. B. linke Schulter empfindlich beim Überkopfdrücken"
-                onChange={(event) => void updateContext({ limitations: event.target.value })}
+                onChange={(event) =>
+                  void updateContext({ limitations: event.target.value })
+                }
               />
               <TextAreaField
                 label="Gewünschter Analyseschwerpunkt"
@@ -650,8 +679,9 @@ export default function DataPage() {
               App vollständig zurücksetzen
             </Button>
             <p className="text-xs leading-relaxed text-muted">
-              Löscht alle lokalen Daten: Übungen, Pläne, Trainings, Körperdaten, Equipment-Profile,
-              KI-Analysen und Einstellungen. Die App startet danach wie frisch installiert.
+              Löscht alle lokalen Daten: Übungen, Pläne, Trainings, Körperdaten,
+              Equipment-Profile, KI-Analysen und Einstellungen. Die App startet danach wie
+              frisch installiert.
             </p>
           </div>
         </Card>
@@ -716,8 +746,9 @@ export default function DataPage() {
                 unverändert — nichts wird überschrieben.
               </p>
               <p className="mt-1.5">
-                <span className="font-semibold text-text">Ersetzen:</span> löscht zuerst alle
-                aktuellen Trainingsdaten auf diesem Gerät und spielt anschließend die Datei ein.
+                <span className="font-semibold text-text">Ersetzen:</span> löscht zuerst
+                alle aktuellen Trainingsdaten auf diesem Gerät und spielt anschließend die
+                Datei ein.
               </p>
             </div>
           </div>
@@ -768,7 +799,9 @@ export default function DataPage() {
             </Button>
             <Button
               variant="danger"
-              disabled={busy !== null || resetInput.trim().toUpperCase() !== RESET_KEYWORD}
+              disabled={
+                busy !== null || resetInput.trim().toUpperCase() !== RESET_KEYWORD
+              }
               onClick={() => void handleResetAll()}
             >
               Alles löschen

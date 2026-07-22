@@ -82,7 +82,10 @@ export default function SessionDetailPage() {
         navigate(`/training/${error.activeSessionId}`);
         return;
       }
-      toast.show(error instanceof Error ? error.message : 'Start fehlgeschlagen.', 'error');
+      toast.show(
+        error instanceof Error ? error.message : 'Start fehlgeschlagen.',
+        'error',
+      );
     }
   };
 
@@ -106,7 +109,8 @@ export default function SessionDetailPage() {
           value={name ?? detail.session.name}
           onChange={(event) => setName(event.target.value)}
           onBlur={() => {
-            if (name != null && name.trim()) void updateSession(sessionId, { name: name.trim() });
+            if (name != null && name.trim())
+              void updateSession(sessionId, { name: name.trim() });
           }}
         />
         <TextAreaField
@@ -138,7 +142,9 @@ export default function SessionDetailPage() {
               key={entry.sessionExercise.id}
               className="rounded-2xl border border-border bg-surface p-3"
             >
-              <h3 className="font-medium">{entry.sessionExercise.exerciseNameSnapshot}</h3>
+              <h3 className="font-medium">
+                {entry.sessionExercise.exerciseNameSnapshot}
+              </h3>
               {entry.sessionExercise.notes ? (
                 <p className="mt-1 text-sm text-muted">{entry.sessionExercise.notes}</p>
               ) : null}
@@ -149,7 +155,9 @@ export default function SessionDetailPage() {
                     <CompletedSetRow
                       set={set}
                       sessionExercise={entry.sessionExercise}
-                      onEdit={() => setEditing({ set, sessionExercise: entry.sessionExercise })}
+                      onEdit={() =>
+                        setEditing({ set, sessionExercise: entry.sessionExercise })
+                      }
                     />
                   </li>
                 ))}

@@ -65,7 +65,10 @@ export default function HomePage() {
           navigate(`/training/${error.activeSessionId}`);
           return;
         }
-        toast.show(error instanceof Error ? error.message : 'Start fehlgeschlagen.', 'error');
+        toast.show(
+          error instanceof Error ? error.message : 'Start fehlgeschlagen.',
+          'error',
+        );
       }
     },
     [navigate, toast],
@@ -80,7 +83,10 @@ export default function HomePage() {
         navigate(`/training/${error.activeSessionId}`);
         return;
       }
-      toast.show(error instanceof Error ? error.message : 'Start fehlgeschlagen.', 'error');
+      toast.show(
+        error instanceof Error ? error.message : 'Start fehlgeschlagen.',
+        'error',
+      );
     }
   }, [navigate, toast]);
 
@@ -95,12 +101,18 @@ export default function HomePage() {
         navigate(`/training/${error.activeSessionId}`);
         return;
       }
-      toast.show(error instanceof Error ? error.message : 'Start fehlgeschlagen.', 'error');
+      toast.show(
+        error instanceof Error ? error.message : 'Start fehlgeschlagen.',
+        'error',
+      );
     }
   }, [navigate, toast, overview?.lastSession?.id]);
 
   const exerciseCount = useLiveQuery(() => db.exercises.count(), [], 0);
-  const backupOverdue = isBackupOverdue(settings.lastBackupAt, settings.backupReminderDays);
+  const backupOverdue = isBackupOverdue(
+    settings.lastBackupAt,
+    settings.backupReminderDays,
+  );
   const hasHistory = (overview?.totalSessions ?? 0) > 0;
   const lastTemplateId = overview?.lastSession?.templateId;
   const lastTemplate = lastTemplateId
@@ -135,7 +147,11 @@ export default function HomePage() {
           to="/mehr/daten"
           className="mb-4 flex items-start gap-3 rounded-2xl border border-warning/50 bg-surface p-4"
         >
-          <AlertTriangle size={20} className="mt-0.5 shrink-0 text-warning" aria-hidden="true" />
+          <AlertTriangle
+            size={20}
+            className="mt-0.5 shrink-0 text-warning"
+            aria-hidden="true"
+          />
           <div>
             <p className="text-sm font-semibold text-warning">Sicherung überfällig</p>
             <p className="mt-0.5 text-xs leading-relaxed text-muted">
@@ -171,8 +187,7 @@ export default function HomePage() {
                 fullWidth
                 onClick={() => void startTemplate(lastTemplate.id)}
               >
-                <Play size={18} aria-hidden="true" />
-                „{lastTemplate.name}" erneut starten
+                <Play size={18} aria-hidden="true" />„{lastTemplate.name}" erneut starten
               </Button>
             ) : null}
             {exerciseCount === 0 ? (
@@ -215,7 +230,9 @@ export default function HomePage() {
                   <Link to={`/plaene/${template.id}`} className="min-w-0 flex-1">
                     <p className="truncate font-medium">{template.name}</p>
                     {template.description ? (
-                      <p className="truncate text-sm text-muted">{template.description}</p>
+                      <p className="truncate text-sm text-muted">
+                        {template.description}
+                      </p>
                     ) : null}
                   </Link>
                   <Button

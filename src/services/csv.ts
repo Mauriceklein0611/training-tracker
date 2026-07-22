@@ -86,7 +86,9 @@ export function sessionsCsv(dataset: AnalyticsDataset): string {
     .sort((a, b) => a.startedAt.localeCompare(b.startedAt))
     .map((session) => {
       const duration = session.finishedAt
-        ? (new Date(session.finishedAt).getTime() - new Date(session.startedAt).getTime()) / 60000
+        ? (new Date(session.finishedAt).getTime() -
+            new Date(session.startedAt).getTime()) /
+          60000
         : null;
       return [
         session.startedAt.slice(0, 10),
@@ -125,7 +127,9 @@ export function setsCsv(dataset: AnalyticsDataset): string {
     'Notiz',
   ];
 
-  const exercisesById = new Map(dataset.exercises.map((exercise) => [exercise.id, exercise]));
+  const exercisesById = new Map(
+    dataset.exercises.map((exercise) => [exercise.id, exercise]),
+  );
   const contexts = buildSetContexts(dataset, { includeActiveSession: true }).sort(
     (a, b) =>
       a.session.startedAt.localeCompare(b.session.startedAt) ||
@@ -146,7 +150,8 @@ export function setsCsv(dataset: AnalyticsDataset): string {
       set.position + 1,
       SET_TYPE_LABELS[set.setType] ?? set.setType,
       num(set.weightKg),
-      WEIGHT_MODE_LABELS[sessionExercise.weightModeSnapshot] ?? sessionExercise.weightModeSnapshot,
+      WEIGHT_MODE_LABELS[sessionExercise.weightModeSnapshot] ??
+        sessionExercise.weightModeSnapshot,
       num(sessionExercise.weightMultiplierSnapshot, 2),
       set.reps ?? '',
       num(set.durationSeconds, 0),

@@ -23,11 +23,7 @@ import { isWorkingSet } from '@/services/metrics';
  */
 
 export type ProgressionAction =
-  | 'increase_weight'
-  | 'add_reps'
-  | 'hold'
-  | 'reduce_weight'
-  | 'insufficient_data';
+  'increase_weight' | 'add_reps' | 'hold' | 'reduce_weight' | 'insufficient_data';
 
 export interface ProgressionSuggestion {
   action: ProgressionAction;
@@ -70,7 +66,8 @@ export function nextWeightUp(
   current: number,
   config: Pick<ProgressionConfig, 'availableWeightsKg' | 'weightIncrementKg'>,
 ): number | null {
-  const available = config.availableWeightsKg?.filter((weight) => Number.isFinite(weight)) ?? [];
+  const available =
+    config.availableWeightsKg?.filter((weight) => Number.isFinite(weight)) ?? [];
   if (available.length > 0) {
     const heavier = available.filter((weight) => weight > current).sort((a, b) => a - b);
     return heavier[0] ?? null; // already at the top of the rack
@@ -83,7 +80,8 @@ export function nextWeightDown(
   current: number,
   config: Pick<ProgressionConfig, 'availableWeightsKg' | 'weightIncrementKg'>,
 ): number | null {
-  const available = config.availableWeightsKg?.filter((weight) => Number.isFinite(weight)) ?? [];
+  const available =
+    config.availableWeightsKg?.filter((weight) => Number.isFinite(weight)) ?? [];
   if (available.length > 0) {
     const lighter = available.filter((weight) => weight < current).sort((a, b) => b - a);
     return lighter[0] ?? null;
@@ -158,7 +156,9 @@ export function suggestProgression(
 
   const reps = basis.map((set) => set.reps as number);
   const atOrAboveMax = reps.every((value) => value >= targetRepMax);
-  const withinRange = reps.every((value) => value >= targetRepMin && value <= targetRepMax);
+  const withinRange = reps.every(
+    (value) => value >= targetRepMin && value <= targetRepMax,
+  );
   const belowMin = reps.filter((value) => value < targetRepMin).length;
 
   // RIR is optional; when it is missing the rule simply does not apply.

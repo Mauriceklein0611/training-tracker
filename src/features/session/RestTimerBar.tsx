@@ -36,7 +36,10 @@ export function RestTimerBar({
         <Timer
           size={22}
           aria-hidden="true"
-          className={cn('shrink-0', reached ? 'text-success rest-expired' : 'text-accent')}
+          className={cn(
+            'shrink-0',
+            reached ? 'text-success rest-expired' : 'text-accent',
+          )}
         />
         <div className="min-w-0 flex-1">
           <p className="text-xs font-medium uppercase tracking-wide text-muted">
@@ -47,7 +50,9 @@ export function RestTimerBar({
             // Announced politely so a screen reader does not read every second.
             aria-live="off"
           >
-            {reached ? `+${formatDuration(progress.overtimeSeconds)}` : formatDuration(progress.remainingSeconds)}
+            {reached
+              ? `+${formatDuration(progress.overtimeSeconds)}`
+              : formatDuration(progress.remainingSeconds)}
             <span className="ml-2 text-sm font-normal text-muted">
               Ziel {formatDuration(progress.targetSeconds)}
             </span>

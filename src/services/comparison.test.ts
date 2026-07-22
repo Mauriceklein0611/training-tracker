@@ -95,9 +95,14 @@ describe('findPreviousSetForComparison', () => {
   });
 
   it('ignores sets that were never completed', () => {
-    const withOpen = [makeSet({ position: 0, setType: 'working', completedAt: undefined })];
+    const withOpen = [
+      makeSet({ position: 0, setType: 'working', completedAt: undefined }),
+    ];
     expect(
-      findPreviousSetForComparison(withOpen, { setType: 'working', ordinalWithinType: 0 }),
+      findPreviousSetForComparison(withOpen, {
+        setType: 'working',
+        ordinalWithinType: 0,
+      }),
     ).toBeNull();
   });
 
@@ -155,31 +160,43 @@ describe('compareSet — weighted exercises', () => {
   });
 
   it('ignores floating point noise', () => {
-    const noisy = { set: makeSet({ weightKg: 0.1 + 0.2, reps: 8 }), matchedBy: 'same-position' as const };
+    const noisy = {
+      set: makeSet({ weightKg: 0.1 + 0.2, reps: 8 }),
+      matchedBy: 'same-position' as const,
+    };
     expect(compareSet({ weightKg: 0.3, reps: 8 }, noisy, weighted)?.deltas).toEqual([]);
   });
 });
 
 describe('compareSet — other tracking types', () => {
   it('treats less assistance as progress', () => {
-    const match = { set: makeSet({ weightKg: 20, reps: 8 }), matchedBy: 'same-position' as const };
+    const match = {
+      set: makeSet({ weightKg: 20, reps: 8 }),
+      matchedBy: 'same-position' as const,
+    };
     // 15 kg of assistance is easier support than 20 kg — that is an improvement.
     const result = compareSet({ weightKg: 15, reps: 8 }, match, assisted);
     expect(result?.deltas).toEqual([{ label: '−5 kg', direction: 'better' }]);
   });
 
   it('treats more assistance as a regression', () => {
-    const match = { set: makeSet({ weightKg: 15, reps: 8 }), matchedBy: 'same-position' as const };
-    expect(compareSet({ weightKg: 25, reps: 8 }, match, assisted)?.deltas[0].direction).toBe(
-      'worse',
-    );
+    const match = {
+      set: makeSet({ weightKg: 15, reps: 8 }),
+      matchedBy: 'same-position' as const,
+    };
+    expect(
+      compareSet({ weightKg: 25, reps: 8 }, match, assisted)?.deltas[0].direction,
+    ).toBe('worse');
   });
 
   it('treats more added weight as progress', () => {
-    const match = { set: makeSet({ weightKg: 10, reps: 8 }), matchedBy: 'same-position' as const };
-    expect(compareSet({ weightKg: 15, reps: 8 }, match, bodyweight)?.deltas[0].direction).toBe(
-      'better',
-    );
+    const match = {
+      set: makeSet({ weightKg: 10, reps: 8 }),
+      matchedBy: 'same-position' as const,
+    };
+    expect(
+      compareSet({ weightKg: 15, reps: 8 }, match, bodyweight)?.deltas[0].direction,
+    ).toBe('better');
   });
 
   it('compares repetitions only for reps-only exercises', () => {
@@ -213,8 +230,12 @@ describe('compareSet — other tracking types', () => {
 
 describe('record detection', () => {
   it('flags a heavier load as a record', () => {
-    expect(isNewRecord({ weightKg: 85, reps: 5 }, weighted, { bestLoadKg: 80 })).toBe(true);
-    expect(isNewRecord({ weightKg: 80, reps: 5 }, weighted, { bestLoadKg: 80 })).toBe(false);
+    expect(isNewRecord({ weightKg: 85, reps: 5 }, weighted, { bestLoadKg: 80 })).toBe(
+      true,
+    );
+    expect(isNewRecord({ weightKg: 80, reps: 5 }, weighted, { bestLoadKg: 80 })).toBe(
+      false,
+    );
   });
 
   it('makes no claim without a baseline', () => {
@@ -228,13 +249,19 @@ describe('record detection', () => {
   });
 
   it('uses duration for timed exercises', () => {
-    expect(isNewRecord({ durationSeconds: 70 }, timed, { bestDurationSeconds: 60 })).toBe(true);
+    expect(isNewRecord({ durationSeconds: 70 }, timed, { bestDurationSeconds: 60 })).toBe(
+      true,
+    );
   });
 
   it('accounts for the multiplier when judging a per-hand record', () => {
     // 21 per hand × 2 = 42 kg beats a 40 kg best.
-    expect(isNewRecord({ weightKg: 21, reps: 8 }, perHand, { bestLoadKg: 40 })).toBe(true);
-    expect(isNewRecord({ weightKg: 19, reps: 8 }, perHand, { bestLoadKg: 40 })).toBe(false);
+    expect(isNewRecord({ weightKg: 21, reps: 8 }, perHand, { bestLoadKg: 40 })).toBe(
+      true,
+    );
+    expect(isNewRecord({ weightKg: 19, reps: 8 }, perHand, { bestLoadKg: 40 })).toBe(
+      false,
+    );
   });
 });
 

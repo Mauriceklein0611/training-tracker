@@ -32,7 +32,11 @@ function datasetFor(
     }),
   );
   const sessionExercises = sessions.map((session) =>
-    makeSessionExercise({ id: `se-${session.id}`, sessionId: session.id, exerciseId: 'ex1' }),
+    makeSessionExercise({
+      id: `se-${session.id}`,
+      sessionId: session.id,
+      exerciseId: 'ex1',
+    }),
   );
   const sets = sessions.flatMap((session) =>
     Array.from({ length: session.workingSets }, (_, i) =>
@@ -88,10 +92,31 @@ describe('computeBlockMetrics', () => {
   it('averages body weight only from entries inside the block', () => {
     const dataset = datasetFor([{ id: 'a1', day: '2026-07-06', workingSets: 3 }]);
     const body: BodyWeightEntry[] = [
-      { id: 'b1', date: '2026-07-07', weightKg: 80, notes: '', createdAt: '', updatedAt: '' },
-      { id: 'b2', date: '2026-07-09', weightKg: 82, notes: '', createdAt: '', updatedAt: '' },
+      {
+        id: 'b1',
+        date: '2026-07-07',
+        weightKg: 80,
+        notes: '',
+        createdAt: '',
+        updatedAt: '',
+      },
+      {
+        id: 'b2',
+        date: '2026-07-09',
+        weightKg: 82,
+        notes: '',
+        createdAt: '',
+        updatedAt: '',
+      },
       // Outside the block:
-      { id: 'b3', date: '2026-08-01', weightKg: 90, notes: '', createdAt: '', updatedAt: '' },
+      {
+        id: 'b3',
+        date: '2026-08-01',
+        weightKg: 90,
+        notes: '',
+        createdAt: '',
+        updatedAt: '',
+      },
     ];
     const metrics = computeBlockMetrics(
       dataset,

@@ -61,7 +61,10 @@ export function TemplateDiffView({ diff }: { diff: TemplateDiff }) {
             {entry.changes.length > 0 ? (
               <dl className="mt-2 grid gap-1 text-sm">
                 {entry.changes.map((change) => (
-                  <div key={change.label} className="flex flex-wrap items-baseline gap-x-2">
+                  <div
+                    key={change.label}
+                    className="flex flex-wrap items-baseline gap-x-2"
+                  >
                     <dt className="text-muted">{change.label}:</dt>
                     <dd className="numeric">
                       <span className="line-through text-muted">{change.before}</span>

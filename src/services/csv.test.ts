@@ -9,7 +9,12 @@ import {
   UTF8_BOM,
 } from '@/services/csv';
 import type { AnalyticsDataset } from '@/services/analytics';
-import { makeExercise, makeSession, makeSessionExercise, makeSet } from '@/tests/factories';
+import {
+  makeExercise,
+  makeSession,
+  makeSessionExercise,
+  makeSet,
+} from '@/tests/factories';
 
 describe('escapeCsvValue', () => {
   it('leaves harmless values untouched', () => {

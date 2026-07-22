@@ -202,8 +202,17 @@ export const workoutSetSchema = z.object({
   position: z.number().int().min(0),
   setType: setTypeSchema,
   weightKg: z.number().min(0, 'Gewicht darf nicht negativ sein').max(1000).optional(),
-  reps: z.number().int('Wiederholungen müssen ganzzahlig sein').min(0).max(10000).optional(),
-  durationSeconds: z.number().min(0, 'Dauer darf nicht negativ sein').max(86400).optional(),
+  reps: z
+    .number()
+    .int('Wiederholungen müssen ganzzahlig sein')
+    .min(0)
+    .max(10000)
+    .optional(),
+  durationSeconds: z
+    .number()
+    .min(0, 'Dauer darf nicht negativ sein')
+    .max(86400)
+    .optional(),
   rir: z.number().min(0).max(10).optional(),
   rpe: z.number().min(1).max(10).optional(),
   restTargetSeconds: z.number().int().min(0).max(3600).default(0),
@@ -238,7 +247,11 @@ export const bodyWeightEntrySchema = z.object({
   id,
   date: isoDate,
   // Optional since version 3: an entry may record only measurements.
-  weightKg: z.number().positive('Körpergewicht muss größer als 0 sein').max(700).optional(),
+  weightKg: z
+    .number()
+    .positive('Körpergewicht muss größer als 0 sein')
+    .max(700)
+    .optional(),
   bodyFatPercent: z.number().positive().max(70).optional(),
   measurements: bodyMeasurementsSchema.optional(),
   notes: z.string().default(''),

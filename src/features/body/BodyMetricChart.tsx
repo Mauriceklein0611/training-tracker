@@ -41,7 +41,8 @@ export function BodyMetricChart({ entries }: { entries: BodyWeightEntry[] }) {
     ? metricKey
     : (available[0]?.key ?? 'weightKg');
   const option =
-    BODY_METRIC_OPTIONS.find((entry) => entry.key === activeKey) ?? BODY_METRIC_OPTIONS[0];
+    BODY_METRIC_OPTIONS.find((entry) => entry.key === activeKey) ??
+    BODY_METRIC_OPTIONS[0];
 
   const series = useMemo(
     () => buildBodyMetricSeries(entries, activeKey, range),
@@ -68,7 +69,8 @@ export function BodyMetricChart({ entries }: { entries: BodyWeightEntry[] }) {
       <Card>
         <CardHeader title="Diagramme" as="h2" />
         <p className="text-sm text-muted">
-          Sobald du eine Messreihe an mindestens zwei Tagen erfasst hast, erscheint hier ihr Verlauf.
+          Sobald du eine Messreihe an mindestens zwei Tagen erfasst hast, erscheint hier
+          ihr Verlauf.
         </p>
       </Card>
     );
@@ -103,7 +105,12 @@ export function BodyMetricChart({ entries }: { entries: BodyWeightEntry[] }) {
             </option>
           ))}
         </SelectField>
-        <Segmented label="Zeitraum" options={RANGE_OPTIONS} value={range} onChange={setRange} />
+        <Segmented
+          label="Zeitraum"
+          options={RANGE_OPTIONS}
+          value={range}
+          onChange={setRange}
+        />
         <CheckboxField
           label="Gleitenden Trend anzeigen"
           hint="Geglätteter Verlauf derselben Messreihe. Die Rohwerte bleiben sichtbar."
@@ -133,7 +140,11 @@ export function BodyMetricChart({ entries }: { entries: BodyWeightEntry[] }) {
             />
           }
         >
-          <TrendLineChart data={chartData} formatValue={formatValue} showTrend={trendEnabled} />
+          <TrendLineChart
+            data={chartData}
+            formatValue={formatValue}
+            showTrend={trendEnabled}
+          />
         </ChartFrame>
       </div>
     </Card>

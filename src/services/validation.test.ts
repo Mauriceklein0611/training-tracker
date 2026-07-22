@@ -46,16 +46,30 @@ describe('validateSetInput', () => {
   });
 
   it('keeps RIR between 0 and 10', () => {
-    expect(validateSetInput({ reps: 8, rir: 0 }, 'reps_only', 'none').rir).toBeUndefined();
-    expect(validateSetInput({ reps: 8, rir: 10 }, 'reps_only', 'none').rir).toBeUndefined();
-    expect(validateSetInput({ reps: 8, rir: 11 }, 'reps_only', 'none').rir).toContain('0 und 10');
-    expect(validateSetInput({ reps: 8, rir: -1 }, 'reps_only', 'none').rir).toContain('0 und 10');
+    expect(
+      validateSetInput({ reps: 8, rir: 0 }, 'reps_only', 'none').rir,
+    ).toBeUndefined();
+    expect(
+      validateSetInput({ reps: 8, rir: 10 }, 'reps_only', 'none').rir,
+    ).toBeUndefined();
+    expect(validateSetInput({ reps: 8, rir: 11 }, 'reps_only', 'none').rir).toContain(
+      '0 und 10',
+    );
+    expect(validateSetInput({ reps: 8, rir: -1 }, 'reps_only', 'none').rir).toContain(
+      '0 und 10',
+    );
   });
 
   it('keeps RPE between 1 and 10', () => {
-    expect(validateSetInput({ reps: 8, rpe: 1 }, 'reps_only', 'none').rpe).toBeUndefined();
-    expect(validateSetInput({ reps: 8, rpe: 0 }, 'reps_only', 'none').rpe).toContain('1 und 10');
-    expect(validateSetInput({ reps: 8, rpe: 11 }, 'reps_only', 'none').rpe).toContain('1 und 10');
+    expect(
+      validateSetInput({ reps: 8, rpe: 1 }, 'reps_only', 'none').rpe,
+    ).toBeUndefined();
+    expect(validateSetInput({ reps: 8, rpe: 0 }, 'reps_only', 'none').rpe).toContain(
+      '1 und 10',
+    );
+    expect(validateSetInput({ reps: 8, rpe: 11 }, 'reps_only', 'none').rpe).toContain(
+      '1 und 10',
+    );
   });
 
   it('requires the fields that belong to the tracking type', () => {
@@ -93,16 +107,24 @@ describe('validateExerciseForm', () => {
   });
 
   it('rejects a duplicate name regardless of case', () => {
-    expect(validateExerciseForm(valid, ['bankdrücken']).name).toContain('existiert bereits');
+    expect(validateExerciseForm(valid, ['bankdrücken']).name).toContain(
+      'existiert bereits',
+    );
   });
 
   it('requires a positive weight multiplier', () => {
-    expect(validateExerciseForm({ ...valid, weightMultiplier: 0 }).weightMultiplier).toBeTruthy();
-    expect(validateExerciseForm({ ...valid, weightMultiplier: 2 }).weightMultiplier).toBeUndefined();
+    expect(
+      validateExerciseForm({ ...valid, weightMultiplier: 0 }).weightMultiplier,
+    ).toBeTruthy();
+    expect(
+      validateExerciseForm({ ...valid, weightMultiplier: 2 }).weightMultiplier,
+    ).toBeUndefined();
   });
 
   it('keeps the default rest within a sensible range', () => {
-    expect(validateExerciseForm({ ...valid, defaultRestSeconds: -1 }).defaultRestSeconds).toBeTruthy();
+    expect(
+      validateExerciseForm({ ...valid, defaultRestSeconds: -1 }).defaultRestSeconds,
+    ).toBeTruthy();
     expect(
       validateExerciseForm({ ...valid, defaultRestSeconds: 4000 }).defaultRestSeconds,
     ).toBeTruthy();

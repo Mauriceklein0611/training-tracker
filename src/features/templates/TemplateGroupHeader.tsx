@@ -36,7 +36,9 @@ export function TemplateGroupHeader({
         label="Gruppentyp"
         value={groupType}
         onChange={(value) =>
-          void setTemplateGroupOptions(templateId, groupId, { groupType: value as GroupType })
+          void setTemplateGroupOptions(templateId, groupId, {
+            groupType: value as GroupType,
+          })
         }
         options={[
           { value: 'superset', label: 'Supersatz' },

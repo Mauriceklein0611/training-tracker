@@ -36,9 +36,13 @@ async function buildSuperset() {
   const seA = await addExerciseToSession(session.id, exA);
   const seB = await addExerciseToSession(session.id, exB);
   await attachSessionExerciseToPrevious(seB.id);
-  await setSessionGroupOptions(session.id, (await db.sessionExercises.get(seB.id))!.groupId!, {
-    groupRestMode: 'round',
-  });
+  await setSessionGroupOptions(
+    session.id,
+    (await db.sessionExercises.get(seB.id))!.groupId!,
+    {
+      groupRestMode: 'round',
+    },
+  );
   return { sessionId: session.id, seAId: seA.id, seBId: seB.id };
 }
 

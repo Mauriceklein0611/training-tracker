@@ -3,7 +3,10 @@ import { buildRecordBaseline, isNewRecord } from '@/services/comparison';
 import { suggestProgression } from '@/services/progression';
 import { makeSessionExercise, makeSet } from '@/tests/factories';
 
-const weightContext = makeSessionExercise({ trackingTypeSnapshot: 'weight_reps', weightModeSnapshot: 'total' });
+const weightContext = makeSessionExercise({
+  trackingTypeSnapshot: 'weight_reps',
+  weightModeSnapshot: 'total',
+});
 
 describe('records use the full history baseline', () => {
   it('an older record still counts, even when the last workout was weaker', () => {
@@ -23,7 +26,12 @@ describe('records use the full history baseline', () => {
 
   it('ignores warm-ups when building the baseline', () => {
     const history = [
-      makeSet({ weightKg: 120, reps: 5, setType: 'warmup', completedAt: '2026-05-01T10:00:00' }),
+      makeSet({
+        weightKg: 120,
+        reps: 5,
+        setType: 'warmup',
+        completedAt: '2026-05-01T10:00:00',
+      }),
       makeSet({ weightKg: 80, reps: 8, completedAt: '2026-05-01T10:05:00' }),
     ].map((set) => ({ set, context: weightContext }));
     expect(buildRecordBaseline(history).bestLoadKg).toBe(80);

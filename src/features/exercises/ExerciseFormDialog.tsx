@@ -3,7 +3,12 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db/db';
 import { Dialog } from '@/components/ui/Dialog';
 import { Button } from '@/components/ui/Button';
-import { NumberField, SelectField, TextAreaField, TextField } from '@/components/ui/Field';
+import {
+  NumberField,
+  SelectField,
+  TextAreaField,
+  TextField,
+} from '@/components/ui/Field';
 import { createExercise, updateExercise } from '@/db/repositories/exercises';
 import { validateExerciseForm, parseNumberInput } from '@/services/validation';
 import type { Exercise, ProgressionMethod, TrackingType, WeightMode } from '@/types';
@@ -76,7 +81,10 @@ function parseCues(raw: string): string[] | undefined {
 }
 
 /** Parses an optional numeric field; out-of-range or empty yields undefined. */
-function optionalNumber(raw: string, range: { min: number; max: number }): number | undefined {
+function optionalNumber(
+  raw: string,
+  range: { min: number; max: number },
+): number | undefined {
   const parsed = parseNumberInput(raw);
   if (parsed == null || Number.isNaN(parsed)) return undefined;
   if (parsed < range.min || parsed > range.max) return undefined;
@@ -88,7 +96,9 @@ function parseWeightList(raw: string): number[] | undefined {
   const values = raw
     .split(',')
     .map((part) => parseNumberInput(part))
-    .filter((value): value is number => value != null && Number.isFinite(value) && value > 0)
+    .filter(
+      (value): value is number => value != null && Number.isFinite(value) && value > 0,
+    )
     .sort((a, b) => a - b);
   // Deduplicate, so a typo cannot produce two identical rack entries.
   const unique = [...new Set(values)];
@@ -105,7 +115,8 @@ function toFormState(exercise?: Exercise, defaultRest = 120): FormState {
     weightMode: exercise?.weightMode ?? 'total',
     weightMultiplier: String(exercise?.weightMultiplier ?? 1),
     defaultRestSeconds: String(exercise?.defaultRestSeconds ?? defaultRest),
-    weightIncrementKg: exercise?.weightIncrementKg == null ? '' : String(exercise.weightIncrementKg),
+    weightIncrementKg:
+      exercise?.weightIncrementKg == null ? '' : String(exercise.weightIncrementKg),
     availableWeightsKg: exercise?.availableWeightsKg?.join(', ') ?? '',
     progressionMethod: exercise?.progressionMethod ?? 'auto',
     targetRir: exercise?.targetRir == null ? '' : String(exercise.targetRir),
@@ -138,13 +149,18 @@ export function ExerciseFormDialog({
 }) {
   const toast = useToast();
   const listId = useId();
-  const [form, setForm] = useState<FormState>(() => toFormState(exercise, defaultRestSeconds));
+  const [form, setForm] = useState<FormState>(() =>
+    toFormState(exercise, defaultRestSeconds),
+  );
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
 
   // Other exercises that can be picked as manual alternatives.
   const otherExercises = useLiveQuery(
-    () => db.exercises.filter((entry) => !entry.archived && entry.id !== exercise?.id).toArray(),
+    () =>
+      db.exercises
+        .filter((entry) => !entry.archived && entry.id !== exercise?.id)
+        .toArray(),
     [exercise?.id],
     [],
   );
@@ -156,7 +172,10 @@ export function ExerciseFormDialog({
     }
   }, [open, exercise, defaultRestSeconds]);
 
-  const weightModes = useMemo(() => allowedWeightModes(form.trackingType), [form.trackingType]);
+  const weightModes = useMemo(
+    () => allowedWeightModes(form.trackingType),
+    [form.trackingType],
+  );
   const showMultiplier = form.weightMode === 'per_hand';
 
   const update = <K extends keyof FormState>(key: K, value: FormState[K]) => {
@@ -214,7 +233,8 @@ export function ExerciseFormDialog({
       // rather than being filled with a guessed default.
       weightIncrementKg: optionalNumber(form.weightIncrementKg, { min: 0.1, max: 100 }),
       availableWeightsKg: parseWeightList(form.availableWeightsKg),
-      progressionMethod: form.progressionMethod === 'auto' ? undefined : form.progressionMethod,
+      progressionMethod:
+        form.progressionMethod === 'auto' ? undefined : form.progressionMethod,
       targetRir: optionalNumber(form.targetRir, { min: 0, max: 10 }),
       techniqueCues: parseCues(form.techniqueCues),
       alternativeExerciseIds:
@@ -236,7 +256,9 @@ export function ExerciseFormDialog({
       onClose();
     } catch (error) {
       toast.show(
-        error instanceof Error ? error.message : 'Die Übung konnte nicht gespeichert werden.',
+        error instanceof Error
+          ? error.message
+          : 'Die Übung konnte nicht gespeichert werden.',
         'error',
       );
     } finally {
@@ -307,7 +329,9 @@ export function ExerciseFormDialog({
           label="Tracking-Typ"
           value={form.trackingType}
           hint={TRACKING_TYPE_HELP[form.trackingType]}
-          onChange={(event) => handleTrackingTypeChange(event.target.value as TrackingType)}
+          onChange={(event) =>
+            handleTrackingTypeChange(event.target.value as TrackingType)
+          }
         >
           {(Object.keys(TRACKING_TYPE_LABELS) as TrackingType[]).map((type) => (
             <option key={type} value={type}>
@@ -355,8 +379,9 @@ export function ExerciseFormDialog({
           </summary>
           <div className="mt-3 grid gap-3">
             <p className="text-xs leading-relaxed text-muted">
-              Diese Angaben verbessern die lokale Progressionsempfehlung. Ohne sie wird eine
-              Standardsteigerung angenommen — es wird nichts geschätzt oder automatisch geändert.
+              Diese Angaben verbessern die lokale Progressionsempfehlung. Ohne sie wird
+              eine Standardsteigerung angenommen — es wird nichts geschätzt oder
+              automatisch geändert.
             </p>
 
             <NumberField
@@ -412,8 +437,8 @@ export function ExerciseFormDialog({
                 : ''}
             </summary>
             <p className="mb-2 mt-1 text-xs leading-relaxed text-muted">
-              Manuell gewählte Ersatzübungen — im Training schnell wählbar, z. B. wenn ein Gerät
-              belegt ist.
+              Manuell gewählte Ersatzübungen — im Training schnell wählbar, z. B. wenn ein
+              Gerät belegt ist.
             </p>
             <div className="grid max-h-56 gap-1 overflow-y-auto">
               {[...otherExercises]
@@ -421,7 +446,10 @@ export function ExerciseFormDialog({
                 .map((entry) => {
                   const checked = form.alternativeExerciseIds.includes(entry.id);
                   return (
-                    <label key={entry.id} className="flex items-center gap-2 py-1 text-sm">
+                    <label
+                      key={entry.id}
+                      className="flex items-center gap-2 py-1 text-sm"
+                    >
                       <input
                         type="checkbox"
                         checked={checked}
@@ -430,7 +458,9 @@ export function ExerciseFormDialog({
                           update(
                             'alternativeExerciseIds',
                             checked
-                              ? form.alternativeExerciseIds.filter((id) => id !== entry.id)
+                              ? form.alternativeExerciseIds.filter(
+                                  (id) => id !== entry.id,
+                                )
                               : [...form.alternativeExerciseIds, entry.id],
                           )
                         }

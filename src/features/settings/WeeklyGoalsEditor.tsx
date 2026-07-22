@@ -38,7 +38,10 @@ export function WeeklyGoalsEditor({
   );
 
   const current: WeeklyGoals = goals ?? {};
-  const exerciseGoals = useMemo(() => current.exerciseGoals ?? [], [current.exerciseGoals]);
+  const exerciseGoals = useMemo(
+    () => current.exerciseGoals ?? [],
+    [current.exerciseGoals],
+  );
   const [addId, setAddId] = useState('');
 
   const available = useMemo(() => {
@@ -61,7 +64,9 @@ export function WeeklyGoalsEditor({
   };
 
   const removeExerciseGoal = (exerciseId: string) => {
-    update({ exerciseGoals: exerciseGoals.filter((goal) => goal.exerciseId !== exerciseId) });
+    update({
+      exerciseGoals: exerciseGoals.filter((goal) => goal.exerciseId !== exerciseId),
+    });
   };
 
   const addExerciseGoal = () => {
@@ -83,20 +88,27 @@ export function WeeklyGoalsEditor({
   return (
     <div className="grid gap-4">
       <p className="text-sm leading-relaxed text-muted">
-        Ziele sind freiwillig und helfen nur beim Dranbleiben. Leere Felder bedeuten „kein Ziel“.
+        Ziele sind freiwillig und helfen nur beim Dranbleiben. Leere Felder bedeuten „kein
+        Ziel“.
       </p>
 
       <NumberField
         label="Trainingseinheiten pro Woche"
         value={current.sessionsPerWeek != null ? String(current.sessionsPerWeek) : ''}
         placeholder="kein Ziel"
-        onChange={(event) => update({ sessionsPerWeek: toGoalValue(event.target.value, 14) })}
+        onChange={(event) =>
+          update({ sessionsPerWeek: toGoalValue(event.target.value, 14) })
+        }
       />
       <NumberField
         label="Arbeitssätze pro Woche"
-        value={current.workingSetsPerWeek != null ? String(current.workingSetsPerWeek) : ''}
+        value={
+          current.workingSetsPerWeek != null ? String(current.workingSetsPerWeek) : ''
+        }
         placeholder="kein Ziel"
-        onChange={(event) => update({ workingSetsPerWeek: toGoalValue(event.target.value, 500) })}
+        onChange={(event) =>
+          update({ workingSetsPerWeek: toGoalValue(event.target.value, 500) })
+        }
       />
 
       <div className="grid gap-3">
@@ -104,14 +116,16 @@ export function WeeklyGoalsEditor({
 
         {exerciseGoals.length === 0 ? (
           <p className="text-xs text-muted">
-            Noch keine übungsspezifischen Ziele. Du kannst z. B. „Kniebeugen 2× pro Woche“ festlegen.
+            Noch keine übungsspezifischen Ziele. Du kannst z. B. „Kniebeugen 2× pro Woche“
+            festlegen.
           </p>
         ) : (
           <ul className="grid gap-3">
             {exerciseGoals.map((goal) => {
               const metric: ExerciseMetric =
                 goal.sessionsPerWeek != null ? 'sessions' : 'sets';
-              const value = metric === 'sessions' ? goal.sessionsPerWeek : goal.workingSetsPerWeek;
+              const value =
+                metric === 'sessions' ? goal.sessionsPerWeek : goal.workingSetsPerWeek;
               return (
                 <li
                   key={goal.exerciseId}
@@ -136,8 +150,10 @@ export function WeeklyGoalsEditor({
                       onChange={(event) => {
                         const nextMetric = event.target.value as ExerciseMetric;
                         updateExerciseGoal(goal.exerciseId, {
-                          sessionsPerWeek: nextMetric === 'sessions' ? (value ?? 2) : undefined,
-                          workingSetsPerWeek: nextMetric === 'sets' ? (value ?? 6) : undefined,
+                          sessionsPerWeek:
+                            nextMetric === 'sessions' ? (value ?? 2) : undefined,
+                          workingSetsPerWeek:
+                            nextMetric === 'sets' ? (value ?? 6) : undefined,
                         });
                       }}
                     >
@@ -148,7 +164,10 @@ export function WeeklyGoalsEditor({
                       label="Anzahl"
                       value={value != null ? String(value) : ''}
                       onChange={(event) => {
-                        const parsed = toGoalValue(event.target.value, metric === 'sessions' ? 14 : 200);
+                        const parsed = toGoalValue(
+                          event.target.value,
+                          metric === 'sessions' ? 14 : 200,
+                        );
                         updateExerciseGoal(goal.exerciseId, {
                           sessionsPerWeek: metric === 'sessions' ? parsed : undefined,
                           workingSetsPerWeek: metric === 'sets' ? parsed : undefined,

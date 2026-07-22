@@ -67,7 +67,9 @@ describe('template grouping', () => {
     const groupId = ordered[0].groupId;
     expect(ordered.every((row) => row.groupId === groupId)).toBe(true);
 
-    await setTemplateGroupOptions(templateId, groupId as string, { groupType: 'circuit' });
+    await setTemplateGroupOptions(templateId, groupId as string, {
+      groupType: 'circuit',
+    });
     const updated = await orderedRows(templateId);
     expect(updated.every((row) => row.groupType === 'circuit')).toBe(true);
   });

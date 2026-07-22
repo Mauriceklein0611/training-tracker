@@ -2,7 +2,10 @@ import { db } from '@/db/db';
 import type { Exercise } from '@/types';
 import { nowIso, uuid } from '@/utils/id';
 
-export type ExerciseDraft = Omit<Exercise, 'id' | 'createdAt' | 'updatedAt' | 'archived'> &
+export type ExerciseDraft = Omit<
+  Exercise,
+  'id' | 'createdAt' | 'updatedAt' | 'archived'
+> &
   Partial<Pick<Exercise, 'archived'>>;
 
 export async function listExercises(): Promise<Exercise[]> {
@@ -63,12 +66,18 @@ export class ExerciseInUseError extends Error {
  * Refuses to run when history references it — that data must stay intact.
  */
 export async function deleteExercise(id: string): Promise<void> {
-  await db.transaction('rw', db.exercises, db.sessionExercises, db.templateExercises, async () => {
-    const used = await db.sessionExercises.where('exerciseId').equals(id).count();
-    if (used > 0) throw new ExerciseInUseError();
-    await db.templateExercises.where('exerciseId').equals(id).delete();
-    await db.exercises.delete(id);
-  });
+  await db.transaction(
+    'rw',
+    db.exercises,
+    db.sessionExercises,
+    db.templateExercises,
+    async () => {
+      const used = await db.sessionExercises.where('exerciseId').equals(id).count();
+      if (used > 0) throw new ExerciseInUseError();
+      await db.templateExercises.where('exerciseId').equals(id).delete();
+      await db.exercises.delete(id);
+    },
+  );
 }
 
 /** Distinct muscle groups / equipment values, for filter dropdowns. */
@@ -92,7 +101,12 @@ export function collectFilterValues(exercises: Exercise[]): {
 /** Case-insensitive search over name, muscle groups and equipment. */
 export function filterExercises(
   exercises: Exercise[],
-  options: { search?: string; muscleGroup?: string; equipment?: string; showArchived?: boolean },
+  options: {
+    search?: string;
+    muscleGroup?: string;
+    equipment?: string;
+    showArchived?: boolean;
+  },
 ): Exercise[] {
   const search = options.search?.trim().toLowerCase() ?? '';
   return exercises.filter((exercise) => {

@@ -111,7 +111,8 @@ export function estimatedOneRepMax(
   >,
 ): number | null {
   if (context.trackingTypeSnapshot !== 'weight_reps') return null;
-  if (set.reps == null || set.reps < ONE_RM_MIN_REPS || set.reps > ONE_RM_MAX_REPS) return null;
+  if (set.reps == null || set.reps < ONE_RM_MIN_REPS || set.reps > ONE_RM_MAX_REPS)
+    return null;
   const load = effectiveLoadKg(set, context);
   if (load == null || load <= 0) return null;
   if (set.reps === 1) return load;
@@ -277,7 +278,11 @@ export function computePersonalRecords(
     const key = sessionExercise.exerciseId;
     const record =
       records.get(key) ??
-      emptyRecords(key, sessionExercise.exerciseNameSnapshot, sessionExercise.trackingTypeSnapshot);
+      emptyRecords(
+        key,
+        sessionExercise.exerciseNameSnapshot,
+        sessionExercise.trackingTypeSnapshot,
+      );
     // Keep the most recent name for display.
     record.exerciseName = sessionExercise.exerciseNameSnapshot;
     const at = set.completedAt ?? session.startedAt;
@@ -305,7 +310,8 @@ export function computePersonalRecords(
 
     if (
       set.durationSeconds != null &&
-      (record.bestDurationSeconds == null || set.durationSeconds > record.bestDurationSeconds)
+      (record.bestDurationSeconds == null ||
+        set.durationSeconds > record.bestDurationSeconds)
     ) {
       record.bestDurationSeconds = set.durationSeconds;
       record.bestDurationAt = at;
@@ -394,7 +400,12 @@ export function findNewRecords(
       previous?.bestEstimatedOneRepMax ?? null,
     );
     compare(current, 'reps', current.bestReps, previous?.bestReps ?? null);
-    compare(current, 'duration', current.bestDurationSeconds, previous?.bestDurationSeconds ?? null);
+    compare(
+      current,
+      'duration',
+      current.bestDurationSeconds,
+      previous?.bestDurationSeconds ?? null,
+    );
     compare(
       current,
       'sessionVolume',

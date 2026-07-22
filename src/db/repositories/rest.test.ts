@@ -109,7 +109,9 @@ describe('at most one open rest per workout', () => {
     await finishSession(session.id);
 
     const secondSeed = await seed();
-    const second = await addSet(secondSeed.sessionExercise.id, { restTargetSeconds: 120 });
+    const second = await addSet(secondSeed.sessionExercise.id, {
+      restTargetSeconds: 120,
+    });
     await completeSet(second.id, { weightKg: 80, reps: 8 });
 
     // The finished workout keeps its own recorded duration untouched.
@@ -174,7 +176,9 @@ describe('finishing a workout ends the running rest without counting it', () => 
     const stats = computeRestStatistics(await allSets());
     // Only the first, real between-set rest is evaluated; the trailing one is not.
     expect(stats.evaluatedSets).toBe(1);
-    expect((await db.workoutSets.get(first.id))?.restActualSeconds).toBeGreaterThanOrEqual(0);
+    expect(
+      (await db.workoutSets.get(first.id))?.restActualSeconds,
+    ).toBeGreaterThanOrEqual(0);
     expect((await db.workoutSets.get(second.id))?.restActualSeconds).toBeUndefined();
   });
 });

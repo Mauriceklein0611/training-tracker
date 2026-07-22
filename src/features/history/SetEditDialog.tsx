@@ -72,7 +72,11 @@ export function SetEditDialog({
     rir: toNumber(form.rir),
     rpe: toNumber(form.rpe),
   };
-  const errors = validateSetInput(values, trackingType, sessionExercise.weightModeSnapshot);
+  const errors = validateSetInput(
+    values,
+    trackingType,
+    sessionExercise.weightModeSnapshot,
+  );
   const visibleErrors = touched ? errors : {};
 
   const handleSave = async () => {
@@ -155,7 +159,9 @@ export function SetEditDialog({
             label="Wiederholungen"
             value={form.reps}
             error={visibleErrors.reps}
-            onChange={(event) => setForm((current) => ({ ...current, reps: event.target.value }))}
+            onChange={(event) =>
+              setForm((current) => ({ ...current, reps: event.target.value }))
+            }
           />
         ) : null}
 
@@ -175,14 +181,18 @@ export function SetEditDialog({
           decimal
           value={form.rir}
           error={visibleErrors.rir}
-          onChange={(event) => setForm((current) => ({ ...current, rir: event.target.value }))}
+          onChange={(event) =>
+            setForm((current) => ({ ...current, rir: event.target.value }))
+          }
         />
         <NumberField
           label="RPE"
           decimal
           value={form.rpe}
           error={visibleErrors.rpe}
-          onChange={(event) => setForm((current) => ({ ...current, rpe: event.target.value }))}
+          onChange={(event) =>
+            setForm((current) => ({ ...current, rpe: event.target.value }))
+          }
         />
         <NumberField
           label="Zielpause (s)"

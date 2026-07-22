@@ -11,8 +11,10 @@ export const TRACKING_TYPE_LABELS: Record<TrackingType, string> = {
 };
 
 export const TRACKING_TYPE_HELP: Record<TrackingType, string> = {
-  weight_reps: 'Externes Gewicht und Wiederholungen, z. B. Bankdrücken oder Kurzhantelcurls.',
-  bodyweight_reps: 'Eigengewicht mit optionalem Zusatzgewicht, z. B. Klimmzüge oder Dips.',
+  weight_reps:
+    'Externes Gewicht und Wiederholungen, z. B. Bankdrücken oder Kurzhantelcurls.',
+  bodyweight_reps:
+    'Eigengewicht mit optionalem Zusatzgewicht, z. B. Klimmzüge oder Dips.',
   assisted_bodyweight_reps:
     'Unterstützte Eigengewichtsübung, z. B. Klimmzüge an der Maschine oder mit Band.',
   reps_only: 'Nur Wiederholungen ohne sinnvolle Last, z. B. TRX-Rudern oder Mobilität.',
@@ -28,10 +30,13 @@ export const WEIGHT_MODE_LABELS: Record<WeightMode, string> = {
 };
 
 export const WEIGHT_MODE_HELP: Record<WeightMode, string> = {
-  per_hand: 'Der eingetragene Wert gilt pro Hantel. Der Multiplikator bestimmt die Gesamtlast.',
-  total: 'Der eingetragene Wert ist bereits die Gesamtlast, z. B. Langhantel inklusive Stange.',
+  per_hand:
+    'Der eingetragene Wert gilt pro Hantel. Der Multiplikator bestimmt die Gesamtlast.',
+  total:
+    'Der eingetragene Wert ist bereits die Gesamtlast, z. B. Langhantel inklusive Stange.',
   added_weight: 'Zusätzliches Gewicht zum Körpergewicht, z. B. Gewichtsgürtel.',
-  assistance: 'Unterstützung, die die Last verringert, z. B. Gegengewicht an der Maschine.',
+  assistance:
+    'Unterstützung, die die Last verringert, z. B. Gegengewicht an der Maschine.',
   none: 'Für diese Übung wird kein Gewicht erfasst.',
 };
 
@@ -168,7 +173,8 @@ export function describeSet(
     return set.durationSeconds != null ? `${Math.round(set.durationSeconds)} s` : '–';
   }
   const reps = set.reps != null ? `${set.reps} Wdh.` : '–';
-  if (trackingType === 'reps_only' || weightMode === 'none' || set.weightKg == null) return reps;
+  if (trackingType === 'reps_only' || weightMode === 'none' || set.weightKg == null)
+    return reps;
 
   const suffix =
     weightMode === 'per_hand'

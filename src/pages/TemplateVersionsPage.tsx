@@ -53,9 +53,10 @@ export default function TemplateVersionsPage() {
 
   const [label, setLabel] = useState('');
   const [showArchived, setShowArchived] = useState(false);
-  const [compare, setCompare] = useState<{ version: TemplateVersion; diff: TemplateDiff } | null>(
-    null,
-  );
+  const [compare, setCompare] = useState<{
+    version: TemplateVersion;
+    diff: TemplateDiff;
+  } | null>(null);
   const [restore, setRestore] = useState<TemplateVersion | null>(null);
   const [remove, setRemove] = useState<TemplateVersion | null>(null);
   const [deloadIntensity, setDeloadIntensity] = useState<DeloadIntensity>('medium');
@@ -80,7 +81,10 @@ export default function TemplateVersionsPage() {
     if (!restore) return;
     await activateTemplateVersion(restore.id);
     setRestore(null);
-    toast.show('Version wiederhergestellt. Der vorherige Stand wurde gesichert.', 'success');
+    toast.show(
+      'Version wiederhergestellt. Der vorherige Stand wurde gesichert.',
+      'success',
+    );
     navigate(`/plaene/${templateId}`);
   };
 
@@ -93,7 +97,10 @@ export default function TemplateVersionsPage() {
   const handleDeload = async () => {
     await activateDeload(templateId, deloadIntensity);
     setDeloadPreview(null);
-    toast.show('Deload aktiviert. Der normale Plan wurde als Version gesichert.', 'success');
+    toast.show(
+      'Deload aktiviert. Der normale Plan wurde als Version gesichert.',
+      'success',
+    );
     navigate(`/plaene/${templateId}`);
   };
 
@@ -112,7 +119,10 @@ export default function TemplateVersionsPage() {
     return (
       <>
         <PageHeader title="Versionen" backTo="/plaene" />
-        <EmptyState title="Plan nicht gefunden" description="Dieser Trainingsplan existiert nicht mehr." />
+        <EmptyState
+          title="Plan nicht gefunden"
+          description="Dieser Trainingsplan existiert nicht mehr."
+        />
       </>
     );
   }
@@ -201,7 +211,11 @@ export default function TemplateVersionsPage() {
               </div>
 
               <div className="mt-3 flex flex-wrap gap-2">
-                <Button size="sm" variant="secondary" onClick={() => void openCompare(version)}>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => void openCompare(version)}
+                >
                   <GitCompareArrows size={16} aria-hidden="true" />
                   Vergleichen
                 </Button>
@@ -210,7 +224,9 @@ export default function TemplateVersionsPage() {
                   Wiederherstellen
                 </Button>
                 <IconButton
-                  label={version.archived ? 'Version reaktivieren' : 'Version archivieren'}
+                  label={
+                    version.archived ? 'Version reaktivieren' : 'Version archivieren'
+                  }
                   onClick={() =>
                     void setTemplateVersionArchived(version.id, !version.archived)
                   }
@@ -236,14 +252,20 @@ export default function TemplateVersionsPage() {
           onClick={() => setShowArchived((value) => !value)}
           className="mt-3 min-h-[44px] text-sm font-medium text-accent"
         >
-          {showArchived ? 'Archivierte ausblenden' : `Archivierte anzeigen (${archivedCount})`}
+          {showArchived
+            ? 'Archivierte ausblenden'
+            : `Archivierte anzeigen (${archivedCount})`}
         </button>
       ) : null}
 
       <Dialog
         open={compare != null}
         onClose={() => setCompare(null)}
-        title={compare ? `Vergleich: v${compare.version.versionNumber} → aktueller Plan` : 'Vergleich'}
+        title={
+          compare
+            ? `Vergleich: v${compare.version.versionNumber} → aktueller Plan`
+            : 'Vergleich'
+        }
         description="Was sich von dieser gespeicherten Version zum aktuellen Plan geändert hat."
       >
         {compare ? <TemplateDiffView diff={compare.diff} /> : null}

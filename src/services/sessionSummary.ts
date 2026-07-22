@@ -64,7 +64,8 @@ export function summarizeSession(
   return {
     session,
     durationSeconds: Number.isFinite(durationSeconds) ? durationSeconds : null,
-    exerciseCount: new Set(sessionContexts.map((context) => context.sessionExercise.id)).size,
+    exerciseCount: new Set(sessionContexts.map((context) => context.sessionExercise.id))
+      .size,
     workingSetCount: volume.setCount,
     totalReps: volume.totalReps,
     volume,

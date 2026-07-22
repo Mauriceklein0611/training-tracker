@@ -11,12 +11,21 @@ import {
 } from '@/services/aiExport';
 import type { AnalyticsDataset } from '@/services/analytics';
 import type { AnalysisContext, BodyWeightEntry } from '@/types';
-import { makeExercise, makeSession, makeSessionExercise, makeSet } from '@/tests/factories';
+import {
+  makeExercise,
+  makeSession,
+  makeSessionExercise,
+  makeSet,
+} from '@/tests/factories';
 
 const NOW = new Date('2026-07-21T12:00:00.000Z');
 
 function buildDataset(): AnalyticsDataset {
-  const bench = makeExercise({ id: 'ex-bench', name: 'Bankdrücken', primaryMuscleGroup: 'Brust' });
+  const bench = makeExercise({
+    id: 'ex-bench',
+    name: 'Bankdrücken',
+    primaryMuscleGroup: 'Brust',
+  });
   const plank = makeExercise({
     id: 'ex-plank',
     name: 'Plank',
@@ -98,12 +107,18 @@ const BODY_WEIGHT: BodyWeightEntry[] = [
 
 describe('resolveExportRange', () => {
   it('returns no range for the full history', () => {
-    expect(resolveExportRange({ ...DEFAULT_AI_EXPORT_OPTIONS, period: 'all' }, NOW)).toBeNull();
+    expect(
+      resolveExportRange({ ...DEFAULT_AI_EXPORT_OPTIONS, period: 'all' }, NOW),
+    ).toBeNull();
   });
 
   it('builds the last 30 and 90 day windows', () => {
-    expect(resolveExportRange({ ...DEFAULT_AI_EXPORT_OPTIONS, period: '30d' }, NOW)).not.toBeNull();
-    expect(resolveExportRange({ ...DEFAULT_AI_EXPORT_OPTIONS, period: '90d' }, NOW)).not.toBeNull();
+    expect(
+      resolveExportRange({ ...DEFAULT_AI_EXPORT_OPTIONS, period: '30d' }, NOW),
+    ).not.toBeNull();
+    expect(
+      resolveExportRange({ ...DEFAULT_AI_EXPORT_OPTIONS, period: '90d' }, NOW),
+    ).not.toBeNull();
   });
 
   it('refuses an incomplete custom range instead of exporting everything', () => {
@@ -190,7 +205,9 @@ describe('validateExportPeriod', () => {
   it('has nothing to complain about for the preset periods', () => {
     for (const period of ['all', '30d', '90d'] as const) {
       expect(
-        hasExportPeriodErrors(validateExportPeriod({ ...DEFAULT_AI_EXPORT_OPTIONS, period })),
+        hasExportPeriodErrors(
+          validateExportPeriod({ ...DEFAULT_AI_EXPORT_OPTIONS, period }),
+        ),
       ).toBe(false);
     }
   });
@@ -217,9 +234,9 @@ describe('buildAiExport', () => {
     }
 
     const withNotes = buildAiExport(dataset, [], DEFAULT_AI_EXPORT_OPTIONS, NOW);
-    const workout = (withNotes.workouts as { checkInBefore?: Record<string, unknown> }[]).find(
-      (entry) => entry.checkInBefore,
-    );
+    const workout = (
+      withNotes.workouts as { checkInBefore?: Record<string, unknown> }[]
+    ).find((entry) => entry.checkInBefore);
     expect(workout?.checkInBefore?.energy).toBe(4);
     expect(workout?.checkInBefore?.painNote).toBe('Knie zwickt');
     // Data-quality note must flag them as subjective and non-causal.
@@ -240,7 +257,12 @@ describe('buildAiExport', () => {
   });
 
   it('is self-describing: carries sourceExport, analysisRequest and the contract', () => {
-    const file = buildAiExport(buildDataset(), [], { ...DEFAULT_AI_EXPORT_OPTIONS, exportId: 'exp-1' }, NOW);
+    const file = buildAiExport(
+      buildDataset(),
+      [],
+      { ...DEFAULT_AI_EXPORT_OPTIONS, exportId: 'exp-1' },
+      NOW,
+    );
     // sourceExport mirrors the top-level provenance fields consistently.
     expect(file.sourceExport.exportId).toBe('exp-1');
     expect(file.sourceExport.exportId).toBe(file.exportId);
@@ -264,7 +286,11 @@ describe('buildAiExport', () => {
         weeklyGoals: {
           sessionsPerWeek: 4,
           exerciseGoals: [
-            { exerciseId: 'e1', exerciseNameSnapshot: 'Kniebeuge', workingSetsPerWeek: 9 },
+            {
+              exerciseId: 'e1',
+              exerciseNameSnapshot: 'Kniebeuge',
+              workingSetsPerWeek: 9,
+            },
           ],
         },
       },
@@ -322,7 +348,12 @@ describe('buildAiExport', () => {
   });
 
   it('omits body data unless it was selected', () => {
-    const without = buildAiExport(buildDataset(), BODY_WEIGHT, DEFAULT_AI_EXPORT_OPTIONS, NOW);
+    const without = buildAiExport(
+      buildDataset(),
+      BODY_WEIGHT,
+      DEFAULT_AI_EXPORT_OPTIONS,
+      NOW,
+    );
     expect(without.bodyWeight).toBeUndefined();
     // Not even the measurements may leak into an unselected export.
     expect(JSON.stringify(without)).not.toContain('waistCm');
@@ -359,7 +390,16 @@ describe('buildAiExport', () => {
   it('omits the measurement block when nothing was measured', () => {
     const file = buildAiExport(
       buildDataset(),
-      [{ id: 'bw-2', date: '2026-07-19', weightKg: 80, notes: '', createdAt: '', updatedAt: '' }],
+      [
+        {
+          id: 'bw-2',
+          date: '2026-07-19',
+          weightKg: 80,
+          notes: '',
+          createdAt: '',
+          updatedAt: '',
+        },
+      ],
       { ...DEFAULT_AI_EXPORT_OPTIONS, includeBodyWeight: true },
       NOW,
     );

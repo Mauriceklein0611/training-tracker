@@ -161,7 +161,8 @@ export class TrainingDatabase extends Dexie {
           .table<Exercise>('exercises')
           .toCollection()
           .modify((exercise) => {
-            if (typeof exercise.weightMultiplier !== 'number') exercise.weightMultiplier = 1;
+            if (typeof exercise.weightMultiplier !== 'number')
+              exercise.weightMultiplier = 1;
             if (typeof exercise.archived !== 'boolean') exercise.archived = false;
             if (!Array.isArray(exercise.secondaryMuscleGroups)) {
               exercise.secondaryMuscleGroups = [];
@@ -211,7 +212,8 @@ export class TrainingDatabase extends Dexie {
         .toCollection()
         .modify((entry) => {
           if (typeof entry.restSecondsSnapshot !== 'number') {
-            entry.restSecondsSnapshot = defaultsById.get(entry.exerciseId) ?? globalDefault;
+            entry.restSecondsSnapshot =
+              defaultsById.get(entry.exerciseId) ?? globalDefault;
           }
         });
 
@@ -405,7 +407,9 @@ export const DEFAULT_SETTINGS: AppSettings = {
  * Reads the settings singleton, creating it on first launch.
  * Never throws for a missing row — the app must always come up.
  */
-export async function ensureSettings(database: TrainingDatabase = db): Promise<AppSettings> {
+export async function ensureSettings(
+  database: TrainingDatabase = db,
+): Promise<AppSettings> {
   const existing = await database.settings.get('app-settings');
   if (existing) return { ...DEFAULT_SETTINGS, ...existing };
 

@@ -85,7 +85,10 @@ export function ChartFrame({
 }) {
   const id = useId();
   return (
-    <section aria-labelledby={id} className="rounded-2xl border border-border bg-surface p-3">
+    <section
+      aria-labelledby={id}
+      className="rounded-2xl border border-border bg-surface p-3"
+    >
       <h3 id={id} className="text-sm font-semibold">
         {title}
       </h3>
@@ -131,7 +134,12 @@ export function SimpleBarChart({
     <ResponsiveContainer width="100%" height={190}>
       <BarChart data={data} margin={{ top: 4, right: 4, bottom: 0, left: -18 }}>
         <CartesianGrid stroke={GRID_COLOR} vertical={false} />
-        <XAxis dataKey="label" {...AXIS_PROPS} interval="preserveStartEnd" minTickGap={12} />
+        <XAxis
+          dataKey="label"
+          {...AXIS_PROPS}
+          interval="preserveStartEnd"
+          minTickGap={12}
+        />
         <YAxis {...AXIS_PROPS} width={52} tickFormatter={formatValue} />
         <Tooltip
           cursor={{ fill: 'color-mix(in oklab, var(--muted) 15%, transparent)' }}
@@ -195,8 +203,18 @@ export function SimpleLineChart({
     <ResponsiveContainer width="100%" height={200}>
       <LineChart data={data} margin={{ top: 8, right: 10, bottom: 0, left: -18 }}>
         <CartesianGrid stroke={GRID_COLOR} vertical={false} />
-        <XAxis dataKey="label" {...AXIS_PROPS} interval="preserveStartEnd" minTickGap={16} />
-        <YAxis {...AXIS_PROPS} width={52} tickFormatter={formatValue} domain={['auto', 'auto']} />
+        <XAxis
+          dataKey="label"
+          {...AXIS_PROPS}
+          interval="preserveStartEnd"
+          minTickGap={16}
+        />
+        <YAxis
+          {...AXIS_PROPS}
+          width={52}
+          tickFormatter={formatValue}
+          domain={['auto', 'auto']}
+        />
         <Tooltip content={<ChartTooltip formatter={(value) => formatValue(value)} />} />
         <Line
           type="monotone"
@@ -241,8 +259,18 @@ export function TrendLineChart({
     <ResponsiveContainer width="100%" height={210}>
       <LineChart data={data} margin={{ top: 8, right: 10, bottom: 0, left: -18 }}>
         <CartesianGrid stroke={GRID_COLOR} vertical={false} />
-        <XAxis dataKey="label" {...AXIS_PROPS} interval="preserveStartEnd" minTickGap={16} />
-        <YAxis {...AXIS_PROPS} width={52} tickFormatter={formatValue} domain={['auto', 'auto']} />
+        <XAxis
+          dataKey="label"
+          {...AXIS_PROPS}
+          interval="preserveStartEnd"
+          minTickGap={16}
+        />
+        <YAxis
+          {...AXIS_PROPS}
+          width={52}
+          tickFormatter={formatValue}
+          domain={['auto', 'auto']}
+        />
         <Tooltip content={<ChartTooltip formatter={(value) => formatValue(value)} />} />
         {showTrend ? (
           <Line
@@ -289,7 +317,11 @@ export function DataTable({
       <thead>
         <tr className="text-muted">
           {columns.map((column) => (
-            <th key={column} scope="col" className="whitespace-nowrap py-1 pr-3 font-medium">
+            <th
+              key={column}
+              scope="col"
+              className="whitespace-nowrap py-1 pr-3 font-medium"
+            >
               {column}
             </th>
           ))}

@@ -70,7 +70,11 @@ describe('setVolumeKg', () => {
   });
 
   it('never invents a volume for assisted, reps-only or timed work', () => {
-    for (const trackingType of ['assisted_bodyweight_reps', 'reps_only', 'duration'] as const) {
+    for (const trackingType of [
+      'assisted_bodyweight_reps',
+      'reps_only',
+      'duration',
+    ] as const) {
       const context = makeSessionExercise({ trackingTypeSnapshot: trackingType });
       expect(setVolumeKg(makeSet({ weightKg: 10, reps: 8 }), context)).toBeNull();
     }
@@ -94,12 +98,17 @@ describe('setVolumeKg', () => {
 
 describe('estimatedOneRepMax (Epley)', () => {
   it('returns the load itself for a single repetition', () => {
-    expect(estimatedOneRepMax(makeSet({ weightKg: 120, reps: 1 }), makeSessionExercise())).toBe(120);
+    expect(
+      estimatedOneRepMax(makeSet({ weightKg: 120, reps: 1 }), makeSessionExercise()),
+    ).toBe(120);
   });
 
   it('follows the documented Epley formula', () => {
     // 100 kg × 10 reps → 100 × (1 + 10/30) = 133.33 kg
-    const result = estimatedOneRepMax(makeSet({ weightKg: 100, reps: 10 }), makeSessionExercise());
+    const result = estimatedOneRepMax(
+      makeSet({ weightKg: 100, reps: 10 }),
+      makeSessionExercise(),
+    );
     expect(result).toBeCloseTo(133.33, 2);
   });
 
@@ -109,7 +118,10 @@ describe('estimatedOneRepMax (Epley)', () => {
       weightMultiplierSnapshot: 2,
     });
     // Total load 60 kg × (1 + 6/30) = 72
-    expect(estimatedOneRepMax(makeSet({ weightKg: 30, reps: 6 }), context)).toBeCloseTo(72, 5);
+    expect(estimatedOneRepMax(makeSet({ weightKg: 30, reps: 6 }), context)).toBeCloseTo(
+      72,
+      5,
+    );
   });
 
   it('refuses to estimate outside the reliable repetition range', () => {
@@ -139,7 +151,10 @@ describe('aggregateVolume', () => {
 
   it('ignores sets that were never completed', () => {
     const entries = [
-      { set: makeSet({ completedAt: undefined, weightKg: 100, reps: 10 }), sessionExercise },
+      {
+        set: makeSet({ completedAt: undefined, weightKg: 100, reps: 10 }),
+        sessionExercise,
+      },
     ];
     expect(aggregateVolume(entries).setCount).toBe(0);
   });
@@ -163,8 +178,14 @@ describe('aggregateVolume', () => {
   it('sums the duration of timed sets', () => {
     const timed = makeSessionExercise({ trackingTypeSnapshot: 'duration' });
     const totals = aggregateVolume([
-      { set: makeSet({ weightKg: undefined, reps: undefined, durationSeconds: 45 }), sessionExercise: timed },
-      { set: makeSet({ weightKg: undefined, reps: undefined, durationSeconds: 60 }), sessionExercise: timed },
+      {
+        set: makeSet({ weightKg: undefined, reps: undefined, durationSeconds: 45 }),
+        sessionExercise: timed,
+      },
+      {
+        set: makeSet({ weightKg: undefined, reps: undefined, durationSeconds: 60 }),
+        sessionExercise: timed,
+      },
     ]);
     expect(totals.totalDurationSeconds).toBe(105);
     expect(totals.volumeKg).toBe(0);
@@ -180,9 +201,21 @@ describe('isWorkingSet and required fields', () => {
   });
 
   it('requires the fields that match the tracking type', () => {
-    expect(requiredFieldsFor('weight_reps')).toEqual({ weight: true, reps: true, duration: false });
-    expect(requiredFieldsFor('duration')).toEqual({ weight: false, reps: false, duration: true });
-    expect(requiredFieldsFor('reps_only')).toEqual({ weight: false, reps: true, duration: false });
+    expect(requiredFieldsFor('weight_reps')).toEqual({
+      weight: true,
+      reps: true,
+      duration: false,
+    });
+    expect(requiredFieldsFor('duration')).toEqual({
+      weight: false,
+      reps: false,
+      duration: true,
+    });
+    expect(requiredFieldsFor('reps_only')).toEqual({
+      weight: false,
+      reps: true,
+      duration: false,
+    });
   });
 });
 
@@ -218,10 +251,18 @@ describe('personal records', () => {
     const shared = { exerciseId: 'exercise-1', exerciseNameSnapshot: 'Bankdrücken' };
     const history = [makeContext({ weightKg: 100, reps: 5 }, shared)];
 
-    const beaten = findNewRecords([makeContext({ weightKg: 105, reps: 5 }, shared)], history);
-    expect(beaten.some((record) => record.kind === 'load' && record.value === 105)).toBe(true);
+    const beaten = findNewRecords(
+      [makeContext({ weightKg: 105, reps: 5 }, shared)],
+      history,
+    );
+    expect(beaten.some((record) => record.kind === 'load' && record.value === 105)).toBe(
+      true,
+    );
 
-    const notBeaten = findNewRecords([makeContext({ weightKg: 95, reps: 5 }, shared)], history);
+    const notBeaten = findNewRecords(
+      [makeContext({ weightKg: 95, reps: 5 }, shared)],
+      history,
+    );
     expect(notBeaten.some((record) => record.kind === 'load')).toBe(false);
   });
 

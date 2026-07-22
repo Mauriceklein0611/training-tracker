@@ -10,7 +10,12 @@ import {
   type AnalyticsDataset,
 } from '@/services/analytics';
 import { lastDaysRange } from '@/utils/date';
-import { makeExercise, makeSession, makeSessionExercise, makeSet } from '@/tests/factories';
+import {
+  makeExercise,
+  makeSession,
+  makeSessionExercise,
+  makeSet,
+} from '@/tests/factories';
 
 /** Builds a small but complete dataset spanning two sessions. */
 function buildDataset(): AnalyticsDataset {
@@ -106,7 +111,9 @@ describe('buildSetContexts', () => {
 
   it('excludes the running session unless explicitly requested', () => {
     const dataset = buildDataset();
-    dataset.sessions.push(makeSession({ id: 's-live', status: 'active', finishedAt: undefined }));
+    dataset.sessions.push(
+      makeSession({ id: 's-live', status: 'active', finishedAt: undefined }),
+    );
     dataset.sessionExercises.push(
       makeSessionExercise({ id: 'se-live', sessionId: 's-live', exerciseId: 'ex-bench' }),
     );
@@ -126,7 +133,11 @@ describe('per-week rate over the whole history', () => {
       makeSession({ id: `s-${index}`, startedAt: `${day}T10:00:00` }),
     );
     const sessionExercises = days.map((_, index) =>
-      makeSessionExercise({ id: `se-${index}`, sessionId: `s-${index}`, exerciseId: 'ex-1' }),
+      makeSessionExercise({
+        id: `se-${index}`,
+        sessionId: `s-${index}`,
+        exerciseId: 'ex-1',
+      }),
     );
     const sets = days.map((_, index) =>
       makeSet({
@@ -138,7 +149,10 @@ describe('per-week rate over the whole history', () => {
       }),
     );
 
-    const analytics = computeAnalytics({ exercises: [exercise], sessions, sessionExercises, sets }, null);
+    const analytics = computeAnalytics(
+      { exercises: [exercise], sessions, sessionExercises, sets },
+      null,
+    );
     expect(analytics.trainingDays).toBe(4);
     // 28-day span → divisor 4 → exactly 1 training day per week (not 4/5 = 0.8).
     expect(analytics.trainingDaysPerWeek).toBeCloseTo(1, 5);
@@ -205,7 +219,9 @@ describe('muscle group evaluation', () => {
     const contexts = buildSetContexts(dataset).filter(
       (context) => context.set.setType !== 'warmup',
     );
-    const exercisesById = new Map(dataset.exercises.map((exercise) => [exercise.id, exercise]));
+    const exercisesById = new Map(
+      dataset.exercises.map((exercise) => [exercise.id, exercise]),
+    );
     const groups = computeMuscleGroupLoad(contexts, exercisesById);
 
     const chest = groups.find((group) => group.muscleGroup === 'Brust');

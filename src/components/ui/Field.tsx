@@ -54,7 +54,10 @@ function FieldShell({
   );
 }
 
-export interface TextFieldProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'id'> {
+export interface TextFieldProps extends Omit<
+  InputHTMLAttributes<HTMLInputElement>,
+  'id'
+> {
   label: string;
   hint?: ReactNode;
   error?: string;
@@ -67,7 +70,13 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(function T
 ) {
   const id = useId();
   return (
-    <FieldShell id={id} label={label} hint={hint} error={error} className={containerClassName}>
+    <FieldShell
+      id={id}
+      label={label}
+      hint={hint}
+      error={error}
+      className={containerClassName}
+    >
       <input
         ref={ref}
         id={id}
@@ -93,55 +102,72 @@ export interface NumberFieldProps extends Omit<TextFieldProps, 'type' | 'inputMo
  * accidental value changes when scrolling, and lets us accept a comma as
  * decimal separator.
  */
-export const NumberField = forwardRef<HTMLInputElement, NumberFieldProps>(function NumberField(
-  { decimal = false, className, ...props },
-  ref,
-) {
-  return (
-    <TextField
-      ref={ref}
-      type="text"
-      inputMode={decimal ? 'decimal' : 'numeric'}
-      autoComplete="off"
-      autoCorrect="off"
-      spellCheck={false}
-      pattern={decimal ? '[0-9]*[.,]?[0-9]*' : '[0-9]*'}
-      className={cn('numeric text-lg', className)}
-      {...props}
-    />
-  );
-});
+export const NumberField = forwardRef<HTMLInputElement, NumberFieldProps>(
+  function NumberField({ decimal = false, className, ...props }, ref) {
+    return (
+      <TextField
+        ref={ref}
+        type="text"
+        inputMode={decimal ? 'decimal' : 'numeric'}
+        autoComplete="off"
+        autoCorrect="off"
+        spellCheck={false}
+        pattern={decimal ? '[0-9]*[.,]?[0-9]*' : '[0-9]*'}
+        className={cn('numeric text-lg', className)}
+        {...props}
+      />
+    );
+  },
+);
 
-export interface SelectFieldProps extends Omit<SelectHTMLAttributes<HTMLSelectElement>, 'id'> {
+export interface SelectFieldProps extends Omit<
+  SelectHTMLAttributes<HTMLSelectElement>,
+  'id'
+> {
   label: string;
   hint?: ReactNode;
   error?: string;
   containerClassName?: string;
 }
 
-export const SelectField = forwardRef<HTMLSelectElement, SelectFieldProps>(function SelectField(
-  { label, hint, error, containerClassName, className, children, ...props },
-  ref,
-) {
-  const id = useId();
-  return (
-    <FieldShell id={id} label={label} hint={hint} error={error} className={containerClassName}>
-      <select
-        ref={ref}
+export const SelectField = forwardRef<HTMLSelectElement, SelectFieldProps>(
+  function SelectField(
+    { label, hint, error, containerClassName, className, children, ...props },
+    ref,
+  ) {
+    const id = useId();
+    return (
+      <FieldShell
         id={id}
-        aria-invalid={error ? true : undefined}
-        aria-describedby={error ? `${id}-error` : hint ? `${id}-hint` : undefined}
-        className={cn(CONTROL, 'appearance-none pr-8', error && CONTROL_INVALID, className)}
-        {...props}
+        label={label}
+        hint={hint}
+        error={error}
+        className={containerClassName}
       >
-        {children}
-      </select>
-    </FieldShell>
-  );
-});
+        <select
+          ref={ref}
+          id={id}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error ? `${id}-error` : hint ? `${id}-hint` : undefined}
+          className={cn(
+            CONTROL,
+            'appearance-none pr-8',
+            error && CONTROL_INVALID,
+            className,
+          )}
+          {...props}
+        >
+          {children}
+        </select>
+      </FieldShell>
+    );
+  },
+);
 
-export interface TextAreaFieldProps
-  extends Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, 'id'> {
+export interface TextAreaFieldProps extends Omit<
+  TextareaHTMLAttributes<HTMLTextAreaElement>,
+  'id'
+> {
   label: string;
   hint?: ReactNode;
   error?: string;
@@ -149,10 +175,19 @@ export interface TextAreaFieldProps
 }
 
 export const TextAreaField = forwardRef<HTMLTextAreaElement, TextAreaFieldProps>(
-  function TextAreaField({ label, hint, error, containerClassName, className, ...props }, ref) {
+  function TextAreaField(
+    { label, hint, error, containerClassName, className, ...props },
+    ref,
+  ) {
     const id = useId();
     return (
-      <FieldShell id={id} label={label} hint={hint} error={error} className={containerClassName}>
+      <FieldShell
+        id={id}
+        label={label}
+        hint={hint}
+        error={error}
+        className={containerClassName}
+      >
         <textarea
           ref={ref}
           id={id}
@@ -248,7 +283,9 @@ export function Segmented<T extends string>({
             onClick={() => onChange(option.value)}
             className={cn(
               'min-h-[40px] flex-1 whitespace-nowrap rounded-lg px-3 text-sm font-medium transition-colors',
-              selected ? 'bg-accent text-accent-contrast' : 'text-muted active:bg-surface-3',
+              selected
+                ? 'bg-accent text-accent-contrast'
+                : 'text-muted active:bg-surface-3',
             )}
           >
             {option.label}

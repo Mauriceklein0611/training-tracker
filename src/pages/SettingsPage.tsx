@@ -31,7 +31,9 @@ export default function SettingsPage() {
               onChange={(event) => {
                 const value = parseNumberInput(event.target.value);
                 if (value == null || Number.isNaN(value)) return;
-                void update({ defaultRestSeconds: Math.min(3600, Math.max(0, Math.round(value))) });
+                void update({
+                  defaultRestSeconds: Math.min(3600, Math.max(0, Math.round(value))),
+                });
               }}
             />
             <SelectField
@@ -120,7 +122,9 @@ export default function SettingsPage() {
             label="Standardzeitraum"
             value={settings.defaultAnalyticsRange}
             onChange={(event) =>
-              void update({ defaultAnalyticsRange: event.target.value as AnalyticsRangeKey })
+              void update({
+                defaultAnalyticsRange: event.target.value as AnalyticsRangeKey,
+              })
             }
           >
             <option value="7d">7 Tage</option>
@@ -152,13 +156,17 @@ export default function SettingsPage() {
               onChange={(event) => {
                 const value = parseNumberInput(event.target.value);
                 if (value == null || Number.isNaN(value)) return;
-                void update({ backupReminderDays: Math.min(365, Math.max(0, Math.round(value))) });
+                void update({
+                  backupReminderDays: Math.min(365, Math.max(0, Math.round(value))),
+                });
               }}
             />
             <p className="text-sm text-muted">
               Letzte Sicherung:{' '}
               <span className="font-medium text-text">
-                {settings.lastBackupAt ? formatDateTime(settings.lastBackupAt) : 'noch nie'}
+                {settings.lastBackupAt
+                  ? formatDateTime(settings.lastBackupAt)
+                  : 'noch nie'}
               </span>
             </p>
           </div>
@@ -174,8 +182,8 @@ export default function SettingsPage() {
               <li>Die App künftig über das Symbol auf dem Home-Bildschirm starten.</li>
             </ol>
             <p className="mt-2 text-xs leading-relaxed text-muted">
-              Als installierte App läuft der Tracker im Vollbild und funktioniert vollständig
-              ohne Internetverbindung.
+              Als installierte App läuft der Tracker im Vollbild und funktioniert
+              vollständig ohne Internetverbindung.
             </p>
           </Card>
         ) : null}

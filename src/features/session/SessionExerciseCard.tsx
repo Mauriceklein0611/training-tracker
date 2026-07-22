@@ -168,7 +168,9 @@ export function SessionExerciseCard({
     const ids = exercise?.alternativeExerciseIds ?? [];
     if (ids.length === 0) return [];
     const rows = await db.exercises.bulkGet(ids);
-    return rows.filter((row): row is NonNullable<typeof row> => row != null && !row.archived);
+    return rows.filter(
+      (row): row is NonNullable<typeof row> => row != null && !row.archived,
+    );
   }, [exercise?.alternativeExerciseIds]);
 
   /**
@@ -192,7 +194,9 @@ export function SessionExerciseCard({
   /** Date line above the sets, so the comparison has a reference point. */
   const previousSessionLabel = useMemo(
     () =>
-      lastPerformance ? `Letztes Training: ${formatDate(lastPerformance.session.startedAt)}` : null,
+      lastPerformance
+        ? `Letztes Training: ${formatDate(lastPerformance.session.startedAt)}`
+        : null,
     [lastPerformance],
   );
 
@@ -247,7 +251,10 @@ export function SessionExerciseCard({
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <h2 id={`exercise-${sessionExercise.id}`} className="font-semibold leading-tight">
+          <h2
+            id={`exercise-${sessionExercise.id}`}
+            className="font-semibold leading-tight"
+          >
             <span className="text-muted">{label ?? `${index + 1}.`} </span>
             {sessionExercise.exerciseNameSnapshot}
           </h2>
@@ -385,7 +392,9 @@ export function SessionExerciseCard({
             onClick={() => void handleAddSet()}
           >
             <Plus size={18} aria-hidden="true" />
-            {completedSets.length === 0 ? 'Ersten Satz erfassen' : 'Weiteren Satz erfassen'}
+            {completedSets.length === 0
+              ? 'Ersten Satz erfassen'
+              : 'Weiteren Satz erfassen'}
           </Button>
         )}
       </div>

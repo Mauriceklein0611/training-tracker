@@ -56,25 +56,27 @@ export interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement>
   variant?: Variant;
 }
 
-export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(function IconButton(
-  { label, variant = 'ghost', className, type, children, ...props },
-  ref,
-) {
-  return (
-    <button
-      ref={ref}
-      type={type ?? 'button'}
-      aria-label={label}
-      title={label}
-      className={cn(
-        'inline-flex items-center justify-center rounded-xl touch-target transition-colors',
-        'disabled:opacity-40 disabled:pointer-events-none',
-        VARIANTS[variant],
-        className,
-      )}
-      {...props}
-    >
-      {children}
-    </button>
-  );
-});
+export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(
+  function IconButton(
+    { label, variant = 'ghost', className, type, children, ...props },
+    ref,
+  ) {
+    return (
+      <button
+        ref={ref}
+        type={type ?? 'button'}
+        aria-label={label}
+        title={label}
+        className={cn(
+          'inline-flex items-center justify-center rounded-xl touch-target transition-colors',
+          'disabled:opacity-40 disabled:pointer-events-none',
+          VARIANTS[variant],
+          className,
+        )}
+        {...props}
+      >
+        {children}
+      </button>
+    );
+  },
+);

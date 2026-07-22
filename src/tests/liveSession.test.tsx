@@ -61,7 +61,9 @@ describe('live workout view', () => {
     const session = await seedSession();
     renderLiveSession(session.id);
 
-    expect(await screen.findByRole('heading', { name: /Testtraining/ })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: /Testtraining/ }),
+    ).toBeInTheDocument();
     // The exercise name also appears in icon-button labels, so target the heading.
     expect(
       await screen.findByRole('heading', { name: /Bankdrücken/, level: 2 }),
@@ -154,7 +156,9 @@ describe('live workout view', () => {
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByText(/Training beenden\?/)).toBeInTheDocument();
 
-    await user.click(within(dialog).getByRole('button', { name: /Training abschließen/ }));
+    await user.click(
+      within(dialog).getByRole('button', { name: /Training abschließen/ }),
+    );
 
     await waitFor(async () => {
       expect((await db.workoutSessions.get(session.id))?.status).toBe('completed');

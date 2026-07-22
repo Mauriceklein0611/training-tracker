@@ -51,10 +51,14 @@ describe('equipment profile repository', () => {
   it('clears the active selection when the active profile is deleted', async () => {
     const profile = await createEquipmentProfile('Gym', ['Langhantel']);
     await setActiveEquipmentProfile(profile.id);
-    expect((await db.settings.get('app-settings'))?.activeEquipmentProfileId).toBe(profile.id);
+    expect((await db.settings.get('app-settings'))?.activeEquipmentProfileId).toBe(
+      profile.id,
+    );
 
     await deleteEquipmentProfile(profile.id);
-    expect((await db.settings.get('app-settings'))?.activeEquipmentProfileId).toBeUndefined();
+    expect(
+      (await db.settings.get('app-settings'))?.activeEquipmentProfileId,
+    ).toBeUndefined();
   });
 
   it('survives a backup round trip including the active selection', async () => {
@@ -70,6 +74,8 @@ describe('equipment profile repository', () => {
 
     const restored = (await listEquipmentProfiles())[0];
     expect(restored.equipment).toEqual(['Kurzhantel', 'Band']);
-    expect((await db.settings.get('app-settings'))?.activeEquipmentProfileId).toBe(profile.id);
+    expect((await db.settings.get('app-settings'))?.activeEquipmentProfileId).toBe(
+      profile.id,
+    );
   });
 });

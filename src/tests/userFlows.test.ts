@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { db } from '@/db/db';
-import { createExercise, deleteExercise, isExerciseInUse } from '@/db/repositories/exercises';
+import {
+  createExercise,
+  deleteExercise,
+  isExerciseInUse,
+} from '@/db/repositories/exercises';
 import {
   addExerciseToTemplate,
   createTemplate,
@@ -134,7 +138,9 @@ describe('central user flows', () => {
     expect(analytics.sessionCount).toBe(1);
     expect(analytics.volume.volumeKg).toBe(640);
     expect(analytics.restStatistics.averageDeviationSeconds).toBe(5);
-    expect(analytics.muscleGroups.find((group) => group.muscleGroup === 'Brust')?.directSets).toBe(1);
+    expect(
+      analytics.muscleGroups.find((group) => group.muscleGroup === 'Brust')?.directSets,
+    ).toBe(1);
 
     // A correction to the past workout updates the analysis immediately.
     await updateSet(set.id, { reps: 10 });
@@ -181,7 +187,9 @@ describe('active session handling', () => {
 
   it('allows only one active workout at a time', async () => {
     await startFreeSession('Erste');
-    await expect(startFreeSession('Zweite')).rejects.toBeInstanceOf(ActiveSessionExistsError);
+    await expect(startFreeSession('Zweite')).rejects.toBeInstanceOf(
+      ActiveSessionExistsError,
+    );
     expect(await db.workoutSessions.count()).toBe(1);
   });
 
@@ -213,7 +221,10 @@ describe('active session handling', () => {
 
     const restored = await db.workoutSets.get(set.id);
     const startedAt = new Date(restored!.restStartedAt!);
-    const progress = computeRestProgress(restored, new Date(startedAt.getTime() + 300_000));
+    const progress = computeRestProgress(
+      restored,
+      new Date(startedAt.getTime() + 300_000),
+    );
 
     // Five minutes passed while the app was closed — the timer knows it.
     expect(progress.elapsedSeconds).toBe(300);

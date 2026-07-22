@@ -24,7 +24,11 @@ export function PlateauHint({ analysis }: { analysis: PlateauAnalysis }) {
         {messages.map((message, index) => (
           <p
             key={index}
-            className={index === 0 ? 'text-sm leading-relaxed' : 'text-xs leading-relaxed text-muted'}
+            className={
+              index === 0
+                ? 'text-sm leading-relaxed'
+                : 'text-xs leading-relaxed text-muted'
+            }
           >
             {message}
           </p>

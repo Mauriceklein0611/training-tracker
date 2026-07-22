@@ -93,7 +93,9 @@ describe('hasAnyBodyValue', () => {
   it('accepts an entry with any single value', () => {
     expect(hasAnyBodyValue({ date: '2026-07-20', weightKg: 80 })).toBe(true);
     expect(hasAnyBodyValue({ date: '2026-07-20', bodyFatPercent: 17 })).toBe(true);
-    expect(hasAnyBodyValue({ date: '2026-07-20', measurements: { neckCm: 39 } })).toBe(true);
+    expect(hasAnyBodyValue({ date: '2026-07-20', measurements: { neckCm: 39 } })).toBe(
+      true,
+    );
   });
 });
 
@@ -102,7 +104,10 @@ describe('bodyValueTrend', () => {
     await upsertBodyWeightEntry({ date: '2026-07-01', weightKg: 84 });
     await upsertBodyWeightEntry({ date: '2026-07-20', weightKg: 80 });
 
-    const trend = bodyValueTrend(await listBodyWeightEntries(), (entry) => entry.weightKg);
+    const trend = bodyValueTrend(
+      await listBodyWeightEntries(),
+      (entry) => entry.weightKg,
+    );
     expect(trend.latest).toBe(80);
     expect(trend.first).toBe(84);
     expect(trend.change).toBe(-4);
@@ -124,7 +129,10 @@ describe('bodyValueTrend', () => {
   it('reports no change when only one value exists', async () => {
     await upsertBodyWeightEntry({ date: '2026-07-20', weightKg: 80 });
 
-    const trend = bodyValueTrend(await listBodyWeightEntries(), (entry) => entry.weightKg);
+    const trend = bodyValueTrend(
+      await listBodyWeightEntries(),
+      (entry) => entry.weightKg,
+    );
     expect(trend.latest).toBe(80);
     expect(trend.change).toBeNull();
   });

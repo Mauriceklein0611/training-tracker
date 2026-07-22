@@ -9,7 +9,10 @@ import {
 } from '@/services/aiResponse';
 import { listTemplatesWithExercises } from '@/db/repositories/templates';
 import { createTemplateVersionWithinTransaction } from '@/db/repositories/templateVersions';
-import { knownImportFingerprints, listAiExportRecords } from '@/db/repositories/aiAnalyses';
+import {
+  knownImportFingerprints,
+  listAiExportRecords,
+} from '@/db/repositories/aiAnalyses';
 import type { AiAnalysis, StoredAiProposal } from '@/types';
 import { fingerprint } from '@/utils/fingerprint';
 import { nowIso, uuid } from '@/utils/id';
@@ -54,8 +57,7 @@ export async function buildPlanContext(): Promise<PlanContext> {
 }
 
 export type ImportResult =
-  | { ok: true; value: ValidatedAiImport }
-  | { ok: false; errors: string[] };
+  { ok: true; value: ValidatedAiImport } | { ok: false; errors: string[] };
 
 /** Parses and validates a response file; does not persist anything yet. */
 export async function importAiResponse(text: string): Promise<ImportResult> {
@@ -92,12 +94,17 @@ export async function commitAiAnalysis(
   const candidateIds = new Set(
     validated.proposalsApplicable
       ? validated.proposals
-          .filter((proposal) => proposal.status === 'pending' && selected.has(proposal.proposalId))
+          .filter(
+            (proposal) =>
+              proposal.status === 'pending' && selected.has(proposal.proposalId),
+          )
           .map((proposal) => proposal.proposalId)
       : [],
   );
 
-  const finalProposals: StoredAiProposal[] = validated.proposals.map((proposal) => ({ ...proposal }));
+  const finalProposals: StoredAiProposal[] = validated.proposals.map((proposal) => ({
+    ...proposal,
+  }));
   const byId = new Map(finalProposals.map((proposal) => [proposal.proposalId, proposal]));
 
   const analysis: AiAnalysis = {
@@ -164,21 +171,30 @@ export async function commitAiAnalysis(
   return analysis;
 }
 
-type Verdict = { ok: true } | { ok: false; change: Pick<StoredAiProposal, 'status' | 'issue'> };
+type Verdict =
+  { ok: true } | { ok: false; change: Pick<StoredAiProposal, 'status' | 'issue'> };
 
 /** Re-checks a proposal against the live plan inside the commit transaction. */
 async function revalidate(proposal: StoredAiProposal): Promise<Verdict> {
   if (proposal.operation === 'update_template_exercise_target') {
-    const exercise = await db.templateExercises.get(proposal.target.templateExerciseId ?? '');
+    const exercise = await db.templateExercises.get(
+      proposal.target.templateExerciseId ?? '',
+    );
     if (!exercise || exercise.templateId !== proposal.target.templateId) {
-      return { ok: false, change: { status: 'invalid', issue: 'Die Zielübung existiert nicht mehr.' } };
+      return {
+        ok: false,
+        change: { status: 'invalid', issue: 'Die Zielübung existiert nicht mehr.' },
+      };
     }
     for (const [field, value] of Object.entries(proposal.expected ?? {})) {
       const column = FIELD_TO_COLUMN[field as keyof typeof FIELD_TO_COLUMN];
       const current = exercise[column];
       const matches = value === null ? current == null : current === value;
       if (!matches) {
-        return { ok: false, change: { status: 'conflict', issue: 'Der Plan wurde inzwischen geändert.' } };
+        return {
+          ok: false,
+          change: { status: 'conflict', issue: 'Der Plan wurde inzwischen geändert.' },
+        };
       }
     }
     return { ok: true };
@@ -186,13 +202,23 @@ async function revalidate(proposal: StoredAiProposal): Promise<Verdict> {
 
   const template = await db.workoutTemplates.get(proposal.target.templateId);
   if (!template) {
-    return { ok: false, change: { status: 'invalid', issue: 'Der Zielplan existiert nicht mehr.' } };
+    return {
+      ok: false,
+      change: { status: 'invalid', issue: 'Der Zielplan existiert nicht mehr.' },
+    };
   }
   const expected = proposal.expected?.description;
   if (expected !== undefined) {
-    const matches = expected === null ? !template.description : expected === template.description;
+    const matches =
+      expected === null ? !template.description : expected === template.description;
     if (!matches) {
-      return { ok: false, change: { status: 'conflict', issue: 'Die Beschreibung wurde inzwischen geändert.' } };
+      return {
+        ok: false,
+        change: {
+          status: 'conflict',
+          issue: 'Die Beschreibung wurde inzwischen geändert.',
+        },
+      };
     }
   }
   return { ok: true };
@@ -205,7 +231,10 @@ async function applyProposal(proposal: StoredAiProposal): Promise<void> {
     for (const [field, value] of Object.entries(proposal.changes)) {
       changes[FIELD_TO_COLUMN[field as keyof typeof FIELD_TO_COLUMN]] = value as number;
     }
-    await db.templateExercises.update(proposal.target.templateExerciseId as string, changes);
+    await db.templateExercises.update(
+      proposal.target.templateExerciseId as string,
+      changes,
+    );
     return;
   }
   await db.workoutTemplates.update(proposal.target.templateId, {

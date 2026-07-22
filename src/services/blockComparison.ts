@@ -81,7 +81,9 @@ export function computeBlockMetrics(
     (entry) => entry.date >= fromKey && entry.date <= toKey,
   );
   const avgBodyWeightKg = average(
-    bodyInRange.map((entry) => entry.weightKg).filter((value): value is number => value != null),
+    bodyInRange
+      .map((entry) => entry.weightKg)
+      .filter((value): value is number => value != null),
   );
   const avgBodyFatPercent = average(
     bodyInRange

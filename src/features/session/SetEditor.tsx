@@ -150,7 +150,8 @@ export function SetEditor({
    */
   const ordinalWithinType = useMemo(
     () =>
-      sessionSets.filter((entry) => entry.completedAt && entry.setType === draft.setType).length,
+      sessionSets.filter((entry) => entry.completedAt && entry.setType === draft.setType)
+        .length,
     [sessionSets, draft.setType],
   );
 
@@ -194,7 +195,10 @@ export function SetEditor({
       autosave.disable();
     } catch {
       // Surface the failure instead of swallowing it, and allow another attempt.
-      toast.show('Der Satz konnte nicht gespeichert werden. Bitte erneut versuchen.', 'error');
+      toast.show(
+        'Der Satz konnte nicht gespeichert werden. Bitte erneut versuchen.',
+        'error',
+      );
     } finally {
       completingRef.current = false;
       setIsCompleting(false);
@@ -375,7 +379,11 @@ export function CompletedSetRow({
         {set.position + 1}
       </span>
       <span className="numeric min-w-0 flex-1 truncate font-medium">
-        {describeSet(set, sessionExercise.trackingTypeSnapshot, sessionExercise.weightModeSnapshot)}
+        {describeSet(
+          set,
+          sessionExercise.trackingTypeSnapshot,
+          sessionExercise.weightModeSnapshot,
+        )}
       </span>
       {set.setType !== 'working' ? (
         <Badge tone={set.setType === 'warmup' ? 'default' : 'accent'}>

@@ -59,9 +59,11 @@ const METRIC_LABELS: Record<Metric, string> = {
 
 export default function AnalyticsPage() {
   const { settings } = useSettings();
-  const [rangeKey, setRangeKey] = useState<AnalyticsRangeKey>(settings.defaultAnalyticsRange);
-  const [customFrom, setCustomFrom] = useState(
-    () => dayKey(new Date(Date.now() - 30 * 86400000)),
+  const [rangeKey, setRangeKey] = useState<AnalyticsRangeKey>(
+    settings.defaultAnalyticsRange,
+  );
+  const [customFrom, setCustomFrom] = useState(() =>
+    dayKey(new Date(Date.now() - 30 * 86400000)),
   );
   const [customTo, setCustomTo] = useState(() => todayKey());
   const [exerciseId, setExerciseId] = useState('');
@@ -94,7 +96,10 @@ export default function AnalyticsPage() {
       // latest sessions rather than only those inside the selected range.
       plateau:
         exerciseId && selected
-          ? analyzePlateau(computeExerciseSeries(dataset, exerciseId, null), selected.trackingType)
+          ? analyzePlateau(
+              computeExerciseSeries(dataset, exerciseId, null),
+              selected.trackingType,
+            )
           : null,
     };
   }, [range, exerciseId]);
@@ -152,7 +157,10 @@ export default function AnalyticsPage() {
 
   return (
     <>
-      <PageHeader title="Analyse" subtitle="Berechnet ausschließlich aus deinen lokalen Daten" />
+      <PageHeader
+        title="Analyse"
+        subtitle="Berechnet ausschließlich aus deinen lokalen Daten"
+      />
 
       <Link
         to="/analyse/vergleich"
@@ -199,7 +207,11 @@ export default function AnalyticsPage() {
       ) : (
         <div className="grid gap-4">
           <section aria-label="Kennzahlen" className="grid grid-cols-2 gap-2">
-            <Stat label="Einheiten" value={formatNumber(analytics.sessionCount)} tone="accent" />
+            <Stat
+              label="Einheiten"
+              value={formatNumber(analytics.sessionCount)}
+              tone="accent"
+            />
             <Stat label="Trainingstage" value={formatNumber(analytics.trainingDays)} />
             <Stat
               label="Tage / Woche"
@@ -375,7 +387,9 @@ export default function AnalyticsPage() {
               />
               <Stat
                 label="Ø Abweichung"
-                value={formatSignedSeconds(analytics.restStatistics.averageDeviationSeconds)}
+                value={formatSignedSeconds(
+                  analytics.restStatistics.averageDeviationSeconds,
+                )}
                 hint="von der Zielpause"
               />
               <Stat
@@ -389,8 +403,8 @@ export default function AnalyticsPage() {
               />
             </div>
             <p className="mt-2 text-xs leading-relaxed text-muted">
-              Bewertet werden nur Sätze mit Zielpause und tatsächlich erfasster Pause. Eine
-              positive Abweichung bedeutet eine längere Pause als geplant.
+              Bewertet werden nur Sätze mit Zielpause und tatsächlich erfasster Pause.
+              Eine positive Abweichung bedeutet eine längere Pause als geplant.
             </p>
           </Card>
 
@@ -401,7 +415,10 @@ export default function AnalyticsPage() {
             ) : (
               <ul className="grid gap-2">
                 {analytics.personalRecords.map((record) => (
-                  <li key={record.exerciseId} className="border-t border-border pt-2 first:border-0 first:pt-0">
+                  <li
+                    key={record.exerciseId}
+                    className="border-t border-border pt-2 first:border-0 first:pt-0"
+                  >
                     <p className="font-medium">{record.exerciseName}</p>
                     <p className="numeric mt-0.5 text-sm text-muted">
                       {record.bestLoadKg != null
@@ -423,10 +440,10 @@ export default function AnalyticsPage() {
 
           {analytics.setsWithoutVolume > 0 ? (
             <p className="text-xs leading-relaxed text-muted">
-              Hinweis zur Datenqualität: {analytics.setsWithoutVolume} Arbeitssätze im Zeitraum
-              haben kein berechenbares Kilogramm-Volumen (Körpergewicht, unterstützte oder
-              zeitbasierte Übungen). Sie fließen bewusst nicht in die Volumenzahlen ein, werden
-              aber bei Sätzen und Wiederholungen mitgezählt.
+              Hinweis zur Datenqualität: {analytics.setsWithoutVolume} Arbeitssätze im
+              Zeitraum haben kein berechenbares Kilogramm-Volumen (Körpergewicht,
+              unterstützte oder zeitbasierte Übungen). Sie fließen bewusst nicht in die
+              Volumenzahlen ein, werden aber bei Sätzen und Wiederholungen mitgezählt.
             </p>
           ) : null}
         </div>

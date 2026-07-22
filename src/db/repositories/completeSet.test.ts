@@ -10,7 +10,9 @@ import {
 import { resetDatabase } from '@/tests/dbTestUtils';
 import type { Exercise, WorkoutSet } from '@/types';
 
-type SetValues = Partial<Pick<WorkoutSet, 'weightKg' | 'reps' | 'durationSeconds' | 'setType'>>;
+type SetValues = Partial<
+  Pick<WorkoutSet, 'weightKg' | 'reps' | 'durationSeconds' | 'setType'>
+>;
 
 async function seed(): Promise<{ sessionExerciseId: string }> {
   const exercise: Exercise = await createExercise({
@@ -30,7 +32,11 @@ async function seed(): Promise<{ sessionExerciseId: string }> {
 }
 
 /** Mirrors the live view: complete once, and only then queue the next set. */
-async function completeAndMaybeAdd(sessionExerciseId: string, setId: string, values: SetValues) {
+async function completeAndMaybeAdd(
+  sessionExerciseId: string,
+  setId: string,
+  values: SetValues,
+) {
   const { newlyCompleted } = await completeSet(setId, values);
   if (newlyCompleted) {
     await addSet(sessionExerciseId, {
@@ -89,8 +95,16 @@ describe('rapid / parallel completion', () => {
     const { sessionExerciseId } = await seed();
     const set = await addSet(sessionExerciseId, { restTargetSeconds: 120 });
 
-    await completeAndMaybeAdd(sessionExerciseId, set.id, { setType: 'working', weightKg: 80, reps: 8 });
-    await completeAndMaybeAdd(sessionExerciseId, set.id, { setType: 'working', weightKg: 80, reps: 8 });
+    await completeAndMaybeAdd(sessionExerciseId, set.id, {
+      setType: 'working',
+      weightKg: 80,
+      reps: 8,
+    });
+    await completeAndMaybeAdd(sessionExerciseId, set.id, {
+      setType: 'working',
+      weightKg: 80,
+      reps: 8,
+    });
 
     expect(await completedSets()).toHaveLength(1);
     expect((await openSets()).length).toBeLessThanOrEqual(1);
@@ -101,8 +115,16 @@ describe('rapid / parallel completion', () => {
     const set = await addSet(sessionExerciseId, { restTargetSeconds: 120 });
 
     await Promise.all([
-      completeAndMaybeAdd(sessionExerciseId, set.id, { setType: 'working', weightKg: 80, reps: 8 }),
-      completeAndMaybeAdd(sessionExerciseId, set.id, { setType: 'working', weightKg: 80, reps: 8 }),
+      completeAndMaybeAdd(sessionExerciseId, set.id, {
+        setType: 'working',
+        weightKg: 80,
+        reps: 8,
+      }),
+      completeAndMaybeAdd(sessionExerciseId, set.id, {
+        setType: 'working',
+        weightKg: 80,
+        reps: 8,
+      }),
     ]);
 
     expect(await completedSets()).toHaveLength(1);

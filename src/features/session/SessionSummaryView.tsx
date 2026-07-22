@@ -2,7 +2,13 @@ import { Trophy } from 'lucide-react';
 import { Stat } from '@/components/ui/Card';
 import type { SessionSummary } from '@/services/sessionSummary';
 import { formatDurationLong } from '@/utils/date';
-import { formatKg, formatNumber, formatPercent, formatSignedSeconds, formatVolume } from '@/utils/format';
+import {
+  formatKg,
+  formatNumber,
+  formatPercent,
+  formatSignedSeconds,
+  formatVolume,
+} from '@/utils/format';
 
 /** Shared summary block, used both when finishing and when reviewing a workout. */
 export function SessionSummaryView({ summary }: { summary: SessionSummary }) {
@@ -13,7 +19,11 @@ export function SessionSummaryView({ summary }: { summary: SessionSummary }) {
       <div className="grid grid-cols-2 gap-2">
         <Stat
           label="Dauer"
-          value={summary.durationSeconds == null ? '–' : formatDurationLong(summary.durationSeconds)}
+          value={
+            summary.durationSeconds == null
+              ? '–'
+              : formatDurationLong(summary.durationSeconds)
+          }
           tone="accent"
         />
         <Stat label="Übungen" value={formatNumber(summary.exerciseCount)} />
@@ -37,8 +47,8 @@ export function SessionSummaryView({ summary }: { summary: SessionSummary }) {
 
       {summary.volume.addedWeightVolumeKg > 0 ? (
         <p className="text-xs text-muted">
-          Zusätzlich {formatKg(summary.volume.addedWeightVolumeKg)} Zusatzgewichtsvolumen bei
-          Körpergewichtsübungen.
+          Zusätzlich {formatKg(summary.volume.addedWeightVolumeKg)} Zusatzgewichtsvolumen
+          bei Körpergewichtsübungen.
         </p>
       ) : null}
 

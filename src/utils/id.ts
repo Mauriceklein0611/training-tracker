@@ -15,7 +15,10 @@ export function uuid(): string {
   }
 
   // Last resort — still collision-safe enough for a single-device app.
-  const rnd = () => Math.floor(Math.random() * 0xffff).toString(16).padStart(4, '0');
+  const rnd = () =>
+    Math.floor(Math.random() * 0xffff)
+      .toString(16)
+      .padStart(4, '0');
   return `${rnd()}${rnd()}-${rnd()}-4${rnd().slice(1)}-a${rnd().slice(1)}-${rnd()}${rnd()}${rnd()}`;
 }
 

@@ -20,7 +20,9 @@ function point(date: string, values: Partial<ExerciseSeriesPoint>): ExerciseSeri
 
 function oneRmSeries(values: number[]): ExerciseSeriesPoint[] {
   return values.map((value, index) =>
-    point(`2026-07-${String(10 + index).padStart(2, '0')}`, { estimatedOneRepMax: value }),
+    point(`2026-07-${String(10 + index).padStart(2, '0')}`, {
+      estimatedOneRepMax: value,
+    }),
   );
 }
 
@@ -40,7 +42,10 @@ describe('analyzePlateau — sufficiency', () => {
 
 describe('analyzePlateau — trend', () => {
   it('flags a flat estimated 1RM as a plateau', () => {
-    const result = analyzePlateau(oneRmSeries([100, 100.5, 99.5, 100, 100.2]), 'weight_reps');
+    const result = analyzePlateau(
+      oneRmSeries([100, 100.5, 99.5, 100, 100.2]),
+      'weight_reps',
+    );
     expect(result.status).toBe('plateau');
     expect(result.metric).toBe('oneRepMax');
     expect(result.windowSize).toBe(5);

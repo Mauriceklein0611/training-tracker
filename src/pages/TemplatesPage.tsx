@@ -15,7 +15,10 @@ import {
   listTemplates,
   updateTemplate,
 } from '@/db/repositories/templates';
-import { ActiveSessionExistsError, startSessionFromTemplate } from '@/db/repositories/sessions';
+import {
+  ActiveSessionExistsError,
+  startSessionFromTemplate,
+} from '@/db/repositories/sessions';
 import { useActiveSession } from '@/hooks/useActiveSession';
 import { useToast } from '@/hooks/useToast';
 import type { WorkoutTemplate } from '@/types';
@@ -29,7 +32,8 @@ export default function TemplatesPage() {
   const exerciseCounts = useLiveQuery(async () => {
     const rows = await db.templateExercises.toArray();
     const counts = new Map<string, number>();
-    for (const row of rows) counts.set(row.templateId, (counts.get(row.templateId) ?? 0) + 1);
+    for (const row of rows)
+      counts.set(row.templateId, (counts.get(row.templateId) ?? 0) + 1);
     return counts;
   }, []);
 
@@ -58,7 +62,10 @@ export default function TemplatesPage() {
       return;
     }
     if (editing) {
-      await updateTemplate(editing.id, { name: trimmed, description: description.trim() });
+      await updateTemplate(editing.id, {
+        name: trimmed,
+        description: description.trim(),
+      });
       setEditing(null);
       toast.show('Plan gespeichert.', 'success');
     } else {
@@ -78,7 +85,10 @@ export default function TemplatesPage() {
         navigate(`/training/${error.activeSessionId}`);
         return;
       }
-      toast.show(error instanceof Error ? error.message : 'Start fehlgeschlagen.', 'error');
+      toast.show(
+        error instanceof Error ? error.message : 'Start fehlgeschlagen.',
+        'error',
+      );
     }
   };
 
@@ -109,7 +119,10 @@ export default function TemplatesPage() {
       ) : (
         <ul className="grid gap-2">
           {templates.map((template) => (
-            <li key={template.id} className="rounded-2xl border border-border bg-surface p-3">
+            <li
+              key={template.id}
+              className="rounded-2xl border border-border bg-surface p-3"
+            >
               <div className="flex items-start justify-between gap-2">
                 <Link to={`/plaene/${template.id}`} className="min-w-0 flex-1">
                   <p className="truncate font-medium">{template.name}</p>

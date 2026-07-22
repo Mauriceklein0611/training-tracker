@@ -27,7 +27,11 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-const payload = { fileName: 'training-ai-export-2026-07-21.json', data: { a: 1 }, title: 'T' };
+const payload = {
+  fileName: 'training-ai-export-2026-07-21.json',
+  data: { a: 1 },
+  title: 'T',
+};
 
 describe('capability detection', () => {
   it('reports no sharing when the API is absent', () => {

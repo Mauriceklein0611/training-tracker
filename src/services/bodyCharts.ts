@@ -21,7 +21,9 @@ export interface BodyMetricOption {
   unit: BodyMetricUnit;
 }
 
-const MEASUREMENT_KEYS = BODY_MEASUREMENT_FIELDS.map((field) => field.key as keyof BodyMeasurements);
+const MEASUREMENT_KEYS = BODY_MEASUREMENT_FIELDS.map(
+  (field) => field.key as keyof BodyMeasurements,
+);
 
 /** Every metric that can be charted, weight and body fat first. */
 export const BODY_METRIC_OPTIONS: BodyMetricOption[] = [
@@ -66,7 +68,10 @@ export function availableBodyMetrics(entries: BodyWeightEntry[]): BodyMetricOpti
 }
 
 /** Inclusive earliest day key for a range, or null for "all". */
-export function bodyRangeStartKey(range: BodyMetricRange, now: Date = new Date()): string | null {
+export function bodyRangeStartKey(
+  range: BodyMetricRange,
+  now: Date = new Date(),
+): string | null {
   if (range === 'all') return null;
   return dayKey(subDays(now, RANGE_DAYS[range] - 1));
 }

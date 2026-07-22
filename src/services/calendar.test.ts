@@ -29,9 +29,19 @@ interface Built {
 }
 
 function buildDataset(config: {
-  sessions: { id: string; startedAt: string; finishedAt?: string; status?: 'active' | 'completed' }[];
+  sessions: {
+    id: string;
+    startedAt: string;
+    finishedAt?: string;
+    status?: 'active' | 'completed';
+  }[];
   /** exerciseId + list of sessionIds it was performed in, with working set count each. */
-  entries?: { exerciseId: string; sessionId: string; workingSets: number; warmupSets?: number }[];
+  entries?: {
+    exerciseId: string;
+    sessionId: string;
+    workingSets: number;
+    warmupSets?: number;
+  }[];
 }): Built {
   resetFactoryCounter();
   const exerciseIds = new Set((config.entries ?? []).map((entry) => entry.exerciseId));
@@ -62,7 +72,12 @@ function buildDataset(config: {
     );
     for (let i = 0; i < entry.workingSets; i += 1) {
       sets.push(
-        makeSet({ id: `${seId}-w${i}`, sessionExerciseId: seId, position: i, setType: 'working' }),
+        makeSet({
+          id: `${seId}-w${i}`,
+          sessionExerciseId: seId,
+          position: i,
+          setType: 'working',
+        }),
       );
     }
     for (let i = 0; i < (entry.warmupSets ?? 0); i += 1) {
@@ -131,7 +146,9 @@ describe('buildCalendarCells', () => {
   it('flags today, future days and out-of-month padding', () => {
     const now = new Date('2026-07-15T12:00:00');
     const { dataset } = buildDataset({
-      sessions: [{ id: 's1', startedAt: '2026-07-14T18:00:00', finishedAt: '2026-07-14T19:00:00' }],
+      sessions: [
+        { id: 's1', startedAt: '2026-07-14T18:00:00', finishedAt: '2026-07-14T19:00:00' },
+      ],
       entries: [{ exerciseId: 'e1', sessionId: 's1', workingSets: 3 }],
     });
     const activity = buildDayActivity(dataset);
@@ -194,7 +211,11 @@ describe('computeCurrentWeekExerciseProgress', () => {
       sessions: [
         { id: 'c1', startedAt: '2026-07-20T18:00:00', finishedAt: '2026-07-20T19:00:00' },
         { id: 'c2', startedAt: '2026-07-21T18:00:00', finishedAt: '2026-07-21T19:00:00' },
-        { id: 'old', startedAt: '2026-07-10T18:00:00', finishedAt: '2026-07-10T19:00:00' },
+        {
+          id: 'old',
+          startedAt: '2026-07-10T18:00:00',
+          finishedAt: '2026-07-10T19:00:00',
+        },
       ],
       entries: [
         { exerciseId: 'squat', sessionId: 'c1', workingSets: 3 },
@@ -229,11 +250,15 @@ describe('goal helpers', () => {
     expect(hasAnyWeeklyGoal({ sessionsPerWeek: 3 })).toBe(true);
     expect(
       hasAnyWeeklyGoal({
-        exerciseGoals: [{ exerciseId: 'x', exerciseNameSnapshot: 'X', workingSetsPerWeek: 6 }],
+        exerciseGoals: [
+          { exerciseId: 'x', exerciseNameSnapshot: 'X', workingSetsPerWeek: 6 },
+        ],
       }),
     ).toBe(true);
     expect(
-      hasAnyWeeklyGoal({ exerciseGoals: [{ exerciseId: 'x', exerciseNameSnapshot: 'X' }] }),
+      hasAnyWeeklyGoal({
+        exerciseGoals: [{ exerciseId: 'x', exerciseNameSnapshot: 'X' }],
+      }),
     ).toBe(false);
   });
 });

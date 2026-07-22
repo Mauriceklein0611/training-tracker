@@ -66,7 +66,10 @@ export default function BodyWeightPage() {
     const nextErrors: Record<string, string> = {};
 
     const weightValue = readNumber(weight);
-    if (weightValue != null && (Number.isNaN(weightValue) || weightValue <= 0 || weightValue > 700)) {
+    if (
+      weightValue != null &&
+      (Number.isNaN(weightValue) || weightValue <= 0 || weightValue > 700)
+    ) {
       nextErrors.weight = 'Bitte ein Gewicht zwischen 0 und 700 kg eingeben.';
     }
 
@@ -168,8 +171,8 @@ export default function BodyWeightPage() {
             {measurementsOpen ? (
               <>
                 <p className="mb-3 mt-1 text-xs leading-relaxed text-muted">
-                  Alle Felder sind freiwillig. Trage nur ein, was du tatsächlich gemessen hast —
-                  leere Felder bleiben leer und werden nicht geschätzt.
+                  Alle Felder sind freiwillig. Trage nur ein, was du tatsächlich gemessen
+                  hast — leere Felder bleiben leer und werden nicht geschätzt.
                 </p>
                 <div className="grid grid-cols-2 gap-2">
                   {BODY_MEASUREMENT_FIELDS.map((field) => (

@@ -47,7 +47,9 @@ function CheckInShell({
       >
         <div className="min-w-0">
           <h2 className="text-base font-semibold leading-tight">{title}</h2>
-          <p className="mt-0.5 text-sm text-muted">{filled ? 'Ausgefüllt · antippen' : subtitle}</p>
+          <p className="mt-0.5 text-sm text-muted">
+            {filled ? 'Ausgefüllt · antippen' : subtitle}
+          </p>
         </div>
         {open ? (
           <ChevronUp size={20} className="shrink-0 text-muted" aria-hidden="true" />

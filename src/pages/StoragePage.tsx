@@ -31,9 +31,9 @@ export default function StoragePage() {
             </p>
           ) : !status.supported ? (
             <p className="text-sm leading-relaxed text-muted">
-              Dieser Browser stellt die Storage-API nicht bereit. Die App funktioniert normal
-              weiter, der Browser kann die Daten aber theoretisch bei Speichermangel entfernen.
-              Erstelle deshalb regelmäßig eine Sicherung.
+              Dieser Browser stellt die Storage-API nicht bereit. Die App funktioniert
+              normal weiter, der Browser kann die Daten aber theoretisch bei
+              Speichermangel entfernen. Erstelle deshalb regelmäßig eine Sicherung.
             </p>
           ) : (
             <div className="grid gap-3">
@@ -66,7 +66,8 @@ export default function StoragePage() {
                   </Button>
                   <p className="text-xs leading-relaxed text-muted">
                     Viele Browser gewähren das erst, wenn die App zum Home-Bildschirm
-                    hinzugefügt oder regelmäßig genutzt wurde. Eine Ablehnung ist kein Fehler.
+                    hinzugefügt oder regelmäßig genutzt wurde. Eine Ablehnung ist kein
+                    Fehler.
                   </p>
                 </>
               ) : null}
@@ -76,8 +77,8 @@ export default function StoragePage() {
                 <Stat label="Verfügbar" value={formatBytes(status.quotaBytes)} />
               </div>
               <p className="text-xs leading-relaxed text-muted">
-                Die Werte sind Schätzungen des Browsers und umfassen auch zwischengespeicherte
-                App-Dateien, nicht nur deine Trainingsdaten.
+                Die Werte sind Schätzungen des Browsers und umfassen auch
+                zwischengespeicherte App-Dateien, nicht nur deine Trainingsdaten.
               </p>
             </div>
           )}
@@ -103,7 +104,8 @@ export default function StoragePage() {
               Schemaversion: <span className="numeric font-medium">{SCHEMA_VERSION}</span>
             </p>
             <p>
-              Speicherort: <span className="font-medium">IndexedDB („training-tracker“)</span>
+              Speicherort:{' '}
+              <span className="font-medium">IndexedDB („training-tracker“)</span>
             </p>
             <p>
               Offline-Betrieb:{' '}
@@ -123,7 +125,9 @@ export default function StoragePage() {
           <ul className="mt-2 grid gap-2">
             {MIGRATIONS.map((migration) => (
               <li key={migration.version} className="text-xs leading-relaxed text-muted">
-                <span className="font-medium text-text">Version {migration.version}:</span>{' '}
+                <span className="font-medium text-text">
+                  Version {migration.version}:
+                </span>{' '}
                 {migration.description}
               </li>
             ))}
@@ -136,7 +140,9 @@ export default function StoragePage() {
             <li>Jeder Browser und jedes Gerät besitzt einen eigenen Datenbestand.</li>
             <li>Es gibt keine automatische Synchronisation zwischen Geräten.</li>
             <li>Ein App-Update löscht deine Trainingsdaten nicht.</li>
-            <li>Das Löschen der Browser-Websitedaten löscht auch deine Trainingshistorie.</li>
+            <li>
+              Das Löschen der Browser-Websitedaten löscht auch deine Trainingshistorie.
+            </li>
           </ul>
         </Card>
       </div>

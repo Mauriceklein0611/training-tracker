@@ -7,7 +7,11 @@ import {
   updateTemplateExercise,
 } from '@/db/repositories/templates';
 import { listTemplateVersions } from '@/db/repositories/templateVersions';
-import { buildPlanContext, commitAiAnalysis, importAiResponse } from '@/db/repositories/aiApply';
+import {
+  buildPlanContext,
+  commitAiAnalysis,
+  importAiResponse,
+} from '@/db/repositories/aiApply';
 import {
   knownImportFingerprints,
   listAiAnalyses,
@@ -84,7 +88,9 @@ beforeEach(async () => {
 describe('importAiResponse', () => {
   it('validates against the live plan and returns pending proposals', async () => {
     const { templateId, exerciseRowId, fingerprint } = await prepareWithExport();
-    const result = await importAiResponse(response(templateId, exerciseRowId, fingerprint));
+    const result = await importAiResponse(
+      response(templateId, exerciseRowId, fingerprint),
+    );
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.value.provenance).toBe('valid');
@@ -94,7 +100,9 @@ describe('importAiResponse', () => {
 
   it('locks proposals but keeps feedback when the export is unknown', async () => {
     const { templateId, exerciseRowId } = await buildPlan(); // no export recorded
-    const result = await importAiResponse(response(templateId, exerciseRowId, 'unknown-fp'));
+    const result = await importAiResponse(
+      response(templateId, exerciseRowId, 'unknown-fp'),
+    );
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.value.proposalsApplicable).toBe(false);
@@ -106,7 +114,9 @@ describe('importAiResponse', () => {
 describe('commitAiAnalysis', () => {
   it('applies a chosen proposal and freezes the plan as an ai-import version', async () => {
     const { templateId, exerciseRowId, fingerprint } = await prepareWithExport();
-    const result = await importAiResponse(response(templateId, exerciseRowId, fingerprint));
+    const result = await importAiResponse(
+      response(templateId, exerciseRowId, fingerprint),
+    );
     if (!result.ok) throw new Error('import failed');
 
     const analysis = await commitAiAnalysis(result.value, ['p1']);
@@ -128,7 +138,9 @@ describe('commitAiAnalysis', () => {
 
   it('does not apply a proposal that was left unselected', async () => {
     const { templateId, exerciseRowId, fingerprint } = await prepareWithExport();
-    const result = await importAiResponse(response(templateId, exerciseRowId, fingerprint));
+    const result = await importAiResponse(
+      response(templateId, exerciseRowId, fingerprint),
+    );
     if (!result.ok) throw new Error('import failed');
 
     const analysis = await commitAiAnalysis(result.value, []); // nothing selected
@@ -143,7 +155,9 @@ describe('commitAiAnalysis', () => {
     const { templateId, exerciseRowId, fingerprint } = await prepareWithExport();
     // expected sets 5, but the plan has 3 → conflict (expected still covers changes).
     const result = await importAiResponse(
-      response(templateId, exerciseRowId, fingerprint, { expected: { sets: 5, restSeconds: 120 } }),
+      response(templateId, exerciseRowId, fingerprint, {
+        expected: { sets: 5, restSeconds: 120 },
+      }),
     );
     if (!result.ok) throw new Error('import failed');
     expect(result.value.proposals[0].status).toBe('conflict');
@@ -155,22 +169,26 @@ describe('commitAiAnalysis', () => {
 
   it('never applies changes from an unknown-export response', async () => {
     const { templateId, exerciseRowId } = await buildPlan();
-    const result = await importAiResponse(response(templateId, exerciseRowId, 'unknown-fp'));
+    const result = await importAiResponse(
+      response(templateId, exerciseRowId, 'unknown-fp'),
+    );
     if (!result.ok) throw new Error('import failed');
 
     const analysis = await commitAiAnalysis(result.value, ['p1']);
     // Feedback is saved, but nothing is applied and no version is created.
     expect(analysis.proposals[0].status).toBe('invalid');
     expect((await db.templateExercises.get(exerciseRowId))?.targetSets).toBe(3);
-    expect((await listTemplateVersions(templateId)).some((v) => v.source === 'ai-import')).toBe(
-      false,
-    );
+    expect(
+      (await listTemplateVersions(templateId)).some((v) => v.source === 'ai-import'),
+    ).toBe(false);
     expect(await listAiAnalyses()).toHaveLength(1);
   });
 
   it('rolls the whole transaction back when saving fails', async () => {
     const { templateId, exerciseRowId, fingerprint } = await prepareWithExport();
-    const result = await importAiResponse(response(templateId, exerciseRowId, fingerprint));
+    const result = await importAiResponse(
+      response(templateId, exerciseRowId, fingerprint),
+    );
     if (!result.ok) throw new Error('import failed');
 
     await expect(
@@ -183,15 +201,17 @@ describe('commitAiAnalysis', () => {
 
     // Nothing survived: no plan change, no restore version, no saved analysis.
     expect((await db.templateExercises.get(exerciseRowId))?.targetSets).toBe(3);
-    expect((await listTemplateVersions(templateId)).some((v) => v.source === 'ai-import')).toBe(
-      false,
-    );
+    expect(
+      (await listTemplateVersions(templateId)).some((v) => v.source === 'ai-import'),
+    ).toBe(false);
     expect(await listAiAnalyses()).toHaveLength(0);
   });
 
   it('records the import fingerprint so a duplicate can be detected', async () => {
     const { templateId, exerciseRowId, fingerprint } = await prepareWithExport();
-    const result = await importAiResponse(response(templateId, exerciseRowId, fingerprint));
+    const result = await importAiResponse(
+      response(templateId, exerciseRowId, fingerprint),
+    );
     if (!result.ok) throw new Error('import failed');
     await commitAiAnalysis(result.value, ['p1']);
 

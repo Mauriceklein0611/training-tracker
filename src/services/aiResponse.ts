@@ -54,7 +54,9 @@ const updateTargetProposal = z
       .object(targetChangeFields)
       .partial()
       .strict()
-      .refine((value) => Object.keys(value).length > 0, { message: 'Vorschlag ohne Änderung' }),
+      .refine((value) => Object.keys(value).length > 0, {
+        message: 'Vorschlag ohne Änderung',
+      }),
     reason: z.string().max(2000).default(''),
   })
   .strict();
@@ -64,7 +66,11 @@ const updateNoteProposal = z
     proposalId: z.string().min(1),
     operation: z.literal('update_template_note'),
     target: z.object({ templateId: z.string().min(1) }).strict(),
-    expected: z.object({ description: nullable(descriptionSchema) }).partial().strict().optional(),
+    expected: z
+      .object({ description: nullable(descriptionSchema) })
+      .partial()
+      .strict()
+      .optional(),
     changes: z.object({ description: descriptionSchema }).strict(),
     reason: z.string().max(2000).default(''),
   })
@@ -139,8 +145,7 @@ export const aiResponseSchema = z
 export type AiResponse = z.infer<typeof aiResponseSchema>;
 
 export type ParseResult =
-  | { ok: true; data: AiResponse }
-  | { ok: false; errors: string[] };
+  { ok: true; data: AiResponse } | { ok: false; errors: string[] };
 
 /** Strictly parses a response string. Never interprets free text. */
 export function parseAiResponse(text: string): ParseResult {
@@ -214,7 +219,10 @@ const FIELD_TO_CURRENT: Record<string, keyof PlanContextExercise> = {
 };
 
 function checkTargetProposal(
-  proposal: Extract<AiResponse['proposals'][number], { operation: 'update_template_exercise_target' }>,
+  proposal: Extract<
+    AiResponse['proposals'][number],
+    { operation: 'update_template_exercise_target' }
+  >,
   context: PlanContext,
 ): StoredAiProposal {
   const base: StoredAiProposal = { ...proposal, status: 'pending' };
@@ -225,7 +233,11 @@ function checkTargetProposal(
   base.templateName = template.name;
   const exercise = template.exercises.get(proposal.target.templateExerciseId);
   if (!exercise) {
-    return { ...base, status: 'invalid', issue: 'Die Zielübung existiert nicht in diesem Plan.' };
+    return {
+      ...base,
+      status: 'invalid',
+      issue: 'Die Zielübung existiert nicht in diesem Plan.',
+    };
   }
   base.exerciseName = exercise.name;
 
@@ -256,7 +268,10 @@ function checkTargetProposal(
 }
 
 function checkNoteProposal(
-  proposal: Extract<AiResponse['proposals'][number], { operation: 'update_template_note' }>,
+  proposal: Extract<
+    AiResponse['proposals'][number],
+    { operation: 'update_template_note' }
+  >,
   context: PlanContext,
 ): StoredAiProposal {
   const base: StoredAiProposal = { ...proposal, status: 'pending' };
@@ -267,7 +282,8 @@ function checkNoteProposal(
   base.templateName = template.name;
   if (proposal.expected && 'description' in proposal.expected) {
     const expected = proposal.expected.description;
-    const matches = expected === null ? !template.description : expected === template.description;
+    const matches =
+      expected === null ? !template.description : expected === template.description;
     if (!matches) {
       return {
         ...base,
@@ -322,16 +338,15 @@ export function validateAiResponse(
 
   // Only a valid provenance (and a non-duplicate import) lets proposals be
   // applied. Feedback is always shown and saved regardless.
-  const blockReason =
-    duplicate
-      ? 'Diese Antwortdatei wurde bereits importiert — Planänderungen werden nicht erneut angewendet.'
-      : provenance === 'missing'
-        ? 'Ohne gültige Exportreferenz können keine Planänderungen übernommen werden.'
-        : provenance === 'unknown'
-          ? 'Der referenzierte Export ist unbekannt — Planänderungen sind gesperrt.'
-          : provenance === 'fingerprint-mismatch'
-            ? 'Die Exportreferenz passt nicht zum gespeicherten Export — Planänderungen sind gesperrt.'
-            : null;
+  const blockReason = duplicate
+    ? 'Diese Antwortdatei wurde bereits importiert — Planänderungen werden nicht erneut angewendet.'
+    : provenance === 'missing'
+      ? 'Ohne gültige Exportreferenz können keine Planänderungen übernommen werden.'
+      : provenance === 'unknown'
+        ? 'Der referenzierte Export ist unbekannt — Planänderungen sind gesperrt.'
+        : provenance === 'fingerprint-mismatch'
+          ? 'Die Exportreferenz passt nicht zum gespeicherten Export — Planänderungen sind gesperrt.'
+          : null;
 
   if (blockReason && response.proposals.length > 0) warnings.push(blockReason);
 
@@ -345,7 +360,12 @@ export function validateAiResponse(
 
   const proposals: StoredAiProposal[] = response.proposals.map((proposal) => {
     if (blockReason) {
-      return { ...proposal, status: 'invalid', issue: blockReason, ...resolveNames(proposal, context) };
+      return {
+        ...proposal,
+        status: 'invalid',
+        issue: blockReason,
+        ...resolveNames(proposal, context),
+      };
     }
     return proposal.operation === 'update_template_exercise_target'
       ? checkTargetProposal(proposal, context)

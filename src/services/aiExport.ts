@@ -74,7 +74,10 @@ export function buildPlansExport(templates: TemplateWithExercises[]): PlanExport
     for (const block of blocks) {
       if (!block.groupId) continue;
       for (const member of block.members) {
-        groupById.set(member.id, `${GROUP_TYPE_LABELS[block.groupType ?? 'superset']} ${block.letter}`);
+        groupById.set(
+          member.id,
+          `${GROUP_TYPE_LABELS[block.groupType ?? 'superset']} ${block.letter}`,
+        );
       }
     }
     return {
@@ -218,7 +221,8 @@ export function buildGoalsBlock(
     note: 'Vom Nutzer selbst gesetzte Wochenziele. Es sind Vorgaben, keine Messwerte.',
   };
   if (goals?.sessionsPerWeek != null) block.sessionsPerWeek = goals.sessionsPerWeek;
-  if (goals?.workingSetsPerWeek != null) block.workingSetsPerWeek = goals.workingSetsPerWeek;
+  if (goals?.workingSetsPerWeek != null)
+    block.workingSetsPerWeek = goals.workingSetsPerWeek;
 
   const exerciseGoals = (goals?.exerciseGoals ?? []).filter(
     (goal) => goal.sessionsPerWeek != null || goal.workingSetsPerWeek != null,
@@ -227,7 +231,9 @@ export function buildGoalsBlock(
     block.exercises = exerciseGoals.map((goal) => ({
       exercise: goal.exerciseNameSnapshot,
       ...(goal.sessionsPerWeek != null ? { sessionsPerWeek: goal.sessionsPerWeek } : {}),
-      ...(goal.workingSetsPerWeek != null ? { workingSetsPerWeek: goal.workingSetsPerWeek } : {}),
+      ...(goal.workingSetsPerWeek != null
+        ? { workingSetsPerWeek: goal.workingSetsPerWeek }
+        : {}),
     }));
   }
   return block;
@@ -297,7 +303,10 @@ export class InvalidExportPeriodError extends Error {
  * Custom ranges are interpreted as local calendar days (00:00 to 23:59:59 local
  * time), not UTC.
  */
-export function resolveExportRange(options: AiExportOptions, now = new Date()): DateRange | null {
+export function resolveExportRange(
+  options: AiExportOptions,
+  now = new Date(),
+): DateRange | null {
   switch (options.period) {
     case '30d':
       return lastDaysRange(30, now);
@@ -331,9 +340,11 @@ const WEIGHT_MODE_EXPLANATIONS: Record<string, string> = {
   per_hand:
     'Das Feld "weightKg" beschreibt das Gewicht je Hand/Seite. Die Gesamtlast ergibt ' +
     'sich aus weightKg * weightMultiplier.',
-  total: 'Das Feld "weightKg" ist bereits die Gesamtlast (inkl. Stange bzw. Maschinenstack).',
+  total:
+    'Das Feld "weightKg" ist bereits die Gesamtlast (inkl. Stange bzw. Maschinenstack).',
   added_weight: 'Das Feld "weightKg" ist Zusatzgewicht zum Körpergewicht.',
-  assistance: 'Das Feld "weightKg" ist die Unterstützung, die die effektive Last reduziert.',
+  assistance:
+    'Das Feld "weightKg" ist die Unterstützung, die die effektive Last reduziert.',
   none: 'Für diese Übung wird kein Gewicht erfasst.',
 };
 
@@ -433,7 +444,12 @@ function checkInForExport(
 function markRecordSets(contexts: SetWithContext[]): Map<string, string[]> {
   const best = new Map<
     string,
-    { load?: { id: string; value: number }; oneRm?: { id: string; value: number }; reps?: { id: string; value: number }; duration?: { id: string; value: number } }
+    {
+      load?: { id: string; value: number };
+      oneRm?: { id: string; value: number };
+      reps?: { id: string; value: number };
+      duration?: { id: string; value: number };
+    }
   >();
 
   for (const { set, sessionExercise } of contexts) {
@@ -498,11 +514,14 @@ export function buildAiExport(
   const allContexts = buildSetContexts(dataset);
   const contexts = filterContextsByRange(allContexts, range).filter(
     (context) =>
-      isCompleted(context.set) && (options.includeWarmupSets || isWorkingSet(context.set)),
+      isCompleted(context.set) &&
+      (options.includeWarmupSets || isWorkingSet(context.set)),
   );
 
   const recordMarks = markRecordSets(contexts);
-  const exercisesById = new Map(dataset.exercises.map((exercise) => [exercise.id, exercise]));
+  const exercisesById = new Map(
+    dataset.exercises.map((exercise) => [exercise.id, exercise]),
+  );
 
   // ---- workouts ---------------------------------------------------------
   const bySession = new Map<string, SetWithContext[]>();
@@ -579,7 +598,8 @@ export function buildAiExport(
 
       const durationMinutes = session.finishedAt
         ? round(
-            (new Date(session.finishedAt).getTime() - new Date(session.startedAt).getTime()) /
+            (new Date(session.finishedAt).getTime() -
+              new Date(session.startedAt).getTime()) /
               60000,
             1,
           )
@@ -624,7 +644,8 @@ export function buildAiExport(
   // ---- data quality -----------------------------------------------------
   const setsMissingReps = contexts.filter(
     (context) =>
-      context.sessionExercise.trackingTypeSnapshot !== 'duration' && context.set.reps == null,
+      context.sessionExercise.trackingTypeSnapshot !== 'duration' &&
+      context.set.reps == null,
   ).length;
   const setsMissingWeight = contexts.filter(
     (context) =>
@@ -641,11 +662,14 @@ export function buildAiExport(
     'volumeKg ist nur bei Übungen vom Typ weight_reps gesetzt. Bei allen anderen ' +
       'Typen ist ein kg-Volumen fachlich nicht sinnvoll und daher null.',
   ];
-  const withCheckIn = contexts.length > 0
-    ? [...new Set(contexts.map((context) => context.session.id))]
-        .map((sessionId) => dataset.sessions.find((session) => session.id === sessionId))
-        .filter((session) => session?.preCheckIn || session?.postCheckIn).length
-    : 0;
+  const withCheckIn =
+    contexts.length > 0
+      ? [...new Set(contexts.map((context) => context.session.id))]
+          .map((sessionId) =>
+            dataset.sessions.find((session) => session.id === sessionId),
+          )
+          .filter((session) => session?.preCheckIn || session?.postCheckIn).length
+      : 0;
   if (withCheckIn > 0) {
     notes.push(
       'checkInBefore/checkInAfter enthalten subjektive Selbsteinschätzungen auf ' +
@@ -654,13 +678,16 @@ export function buildAiExport(
         'von Korrelationen, niemals eine Kausalaussage.',
     );
   }
-  if (!options.includeWarmupSets) notes.push('Aufwärmsätze wurden bewusst nicht exportiert.');
+  if (!options.includeWarmupSets)
+    notes.push('Aufwärmsätze wurden bewusst nicht exportiert.');
   if (!options.includeNotes) notes.push('Notizen wurden bewusst nicht exportiert.');
   if (!options.includeBodyWeight) {
     notes.push('Körpergewichtsdaten wurden bewusst nicht exportiert.');
   }
   if (analytics.sessionCount === 0) {
-    notes.push('Im gewählten Zeitraum liegen keine abgeschlossenen Trainingseinheiten vor.');
+    notes.push(
+      'Im gewählten Zeitraum liegen keine abgeschlossenen Trainingseinheiten vor.',
+    );
   }
 
   const file: AiExportFile = {
@@ -693,8 +720,12 @@ export function buildAiExport(
       setTypes: SET_TYPE_EXPLANATIONS,
     },
     // Omitted entirely when the user filled in nothing.
-    ...(buildContextBlock(options.context) ? { context: buildContextBlock(options.context) } : {}),
-    ...(buildGoalsBlock(options.weeklyGoals) ? { goals: buildGoalsBlock(options.weeklyGoals) } : {}),
+    ...(buildContextBlock(options.context)
+      ? { context: buildContextBlock(options.context) }
+      : {}),
+    ...(buildGoalsBlock(options.weeklyGoals)
+      ? { goals: buildGoalsBlock(options.weeklyGoals) }
+      : {}),
     summary: {
       workouts: analytics.sessionCount,
       trainingDays: analytics.trainingDays,

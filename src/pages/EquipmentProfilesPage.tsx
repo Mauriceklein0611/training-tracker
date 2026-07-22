@@ -29,9 +29,11 @@ export default function EquipmentProfilesPage() {
 
   const knownEquipment = useMemo(
     () =>
-      [...new Set(exercises.map((exercise) => exercise.equipment.trim()).filter(Boolean))].sort(
-        (a, b) => a.localeCompare(b, 'de'),
-      ),
+      [
+        ...new Set(
+          exercises.map((exercise) => exercise.equipment.trim()).filter(Boolean),
+        ),
+      ].sort((a, b) => a.localeCompare(b, 'de')),
     [exercises],
   );
 
@@ -53,7 +55,7 @@ export default function EquipmentProfilesPage() {
         />
         <p className="text-sm">
           {activeId
-            ? profiles.find((profile) => profile.id === activeId)?.name ?? 'Unbekannt'
+            ? (profiles.find((profile) => profile.id === activeId)?.name ?? 'Unbekannt')
             : 'Kein Profil aktiv — alle Übungen verfügbar.'}
         </p>
         {activeId ? (
@@ -84,7 +86,10 @@ export default function EquipmentProfilesPage() {
       ) : (
         <ul className="grid gap-2">
           {profiles.map((profile) => (
-            <li key={profile.id} className="rounded-2xl border border-border bg-surface p-3">
+            <li
+              key={profile.id}
+              className="rounded-2xl border border-border bg-surface p-3"
+            >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <p className="flex items-center gap-2 font-medium">
@@ -98,10 +103,16 @@ export default function EquipmentProfilesPage() {
                   </p>
                 </div>
                 <div className="flex shrink-0 gap-1">
-                  <IconButton label={`${profile.name} bearbeiten`} onClick={() => setEditing(profile)}>
+                  <IconButton
+                    label={`${profile.name} bearbeiten`}
+                    onClick={() => setEditing(profile)}
+                  >
                     <Pencil size={18} aria-hidden="true" />
                   </IconButton>
-                  <IconButton label={`${profile.name} löschen`} onClick={() => setRemove(profile)}>
+                  <IconButton
+                    label={`${profile.name} löschen`}
+                    onClick={() => setRemove(profile)}
+                  >
                     <Trash2 size={18} aria-hidden="true" />
                   </IconButton>
                 </div>
@@ -168,13 +179,18 @@ function ProfileEditor({
 
   // Every option to show: known equipment plus anything already on the profile.
   const options = useMemo(
-    () => [...new Set([...knownEquipment, ...selected])].sort((a, b) => a.localeCompare(b, 'de')),
+    () =>
+      [...new Set([...knownEquipment, ...selected])].sort((a, b) =>
+        a.localeCompare(b, 'de'),
+      ),
     [knownEquipment, selected],
   );
 
   const toggle = (item: string) =>
     setSelected((current) =>
-      current.includes(item) ? current.filter((entry) => entry !== item) : [...current, item],
+      current.includes(item)
+        ? current.filter((entry) => entry !== item)
+        : [...current, item],
     );
 
   const addCustom = () => {
@@ -200,7 +216,11 @@ function ProfileEditor({
           <Button variant="secondary" onClick={onClose}>
             Abbrechen
           </Button>
-          <Button variant="primary" disabled={!name.trim()} onClick={() => void handleSave()}>
+          <Button
+            variant="primary"
+            disabled={!name.trim()}
+            onClick={() => void handleSave()}
+          >
             Speichern
           </Button>
         </>

@@ -23,7 +23,9 @@ function cleanMeasurements(
   const entries = Object.entries(measurements).filter(
     ([, value]) => typeof value === 'number' && Number.isFinite(value) && value > 0,
   );
-  return entries.length > 0 ? (Object.fromEntries(entries) as BodyMeasurements) : undefined;
+  return entries.length > 0
+    ? (Object.fromEntries(entries) as BodyMeasurements)
+    : undefined;
 }
 
 /** True when an entry carries at least one measured value. */

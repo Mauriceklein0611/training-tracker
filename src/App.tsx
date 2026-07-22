@@ -47,7 +47,10 @@ export default function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/plaene" element={<TemplatesPage />} />
           <Route path="/plaene/:templateId" element={<TemplateEditPage />} />
-          <Route path="/plaene/:templateId/versionen" element={<TemplateVersionsPage />} />
+          <Route
+            path="/plaene/:templateId/versionen"
+            element={<TemplateVersionsPage />}
+          />
           <Route path="/verlauf" element={<HistoryPage />} />
           <Route path="/verlauf/:sessionId" element={<SessionDetailPage />} />
           <Route path="/analyse" element={<AnalyticsPage />} />

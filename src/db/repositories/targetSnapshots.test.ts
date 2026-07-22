@@ -33,8 +33,16 @@ describe('target snapshots frozen at start', () => {
     const exercise = await makeExerciseRow();
     const rowA = await addExerciseToTemplate(template.id, exercise);
     const rowB = await addExerciseToTemplate(template.id, exercise);
-    await updateTemplateExercise(rowA.id, { targetSets: 3, targetRepMin: 8, targetRepMax: 12 });
-    await updateTemplateExercise(rowB.id, { targetSets: 5, targetRepMin: 3, targetRepMax: 5 });
+    await updateTemplateExercise(rowA.id, {
+      targetSets: 3,
+      targetRepMin: 8,
+      targetRepMax: 12,
+    });
+    await updateTemplateExercise(rowB.id, {
+      targetSets: 5,
+      targetRepMin: 3,
+      targetRepMax: 5,
+    });
 
     const session = await startSessionFromTemplate(template.id);
     const detail = await getSessionDetail(session.id);
@@ -57,12 +65,20 @@ describe('target snapshots frozen at start', () => {
     const template = await createTemplate('Plan');
     const exercise = await makeExerciseRow();
     const row = await addExerciseToTemplate(template.id, exercise);
-    await updateTemplateExercise(row.id, { targetSets: 3, targetRepMin: 8, targetRepMax: 12 });
+    await updateTemplateExercise(row.id, {
+      targetSets: 3,
+      targetRepMin: 8,
+      targetRepMax: 12,
+    });
 
     const session = await startSessionFromTemplate(template.id);
 
     // Edit the plan while the workout is under way.
-    await updateTemplateExercise(row.id, { targetSets: 6, targetRepMin: 4, targetRepMax: 6 });
+    await updateTemplateExercise(row.id, {
+      targetSets: 6,
+      targetRepMin: 4,
+      targetRepMax: 6,
+    });
 
     const detail = await getSessionDetail(session.id);
     const snapshot = detail!.exercises[0].sessionExercise;

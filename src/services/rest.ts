@@ -54,7 +54,10 @@ export interface RestProgress {
 }
 
 export function computeRestProgress(
-  set: Pick<WorkoutSet, 'restStartedAt' | 'restEndedAt' | 'restTargetSeconds'> | undefined | null,
+  set:
+    | Pick<WorkoutSet, 'restStartedAt' | 'restEndedAt' | 'restTargetSeconds'>
+    | undefined
+    | null,
   now: Date = new Date(),
 ): RestProgress {
   const targetSeconds = set?.restTargetSeconds ?? 0;
@@ -128,7 +131,10 @@ export function computeRestStatistics(sets: WorkoutSet[]): RestStatistics {
   );
   if (evaluated.length === 0) return emptyRestStatistics();
 
-  const totalActual = evaluated.reduce((sum, set) => sum + (set.restActualSeconds ?? 0), 0);
+  const totalActual = evaluated.reduce(
+    (sum, set) => sum + (set.restActualSeconds ?? 0),
+    0,
+  );
   const totalTarget = evaluated.reduce((sum, set) => sum + set.restTargetSeconds, 0);
   const met = evaluated.filter((set) => restTargetMet(set) === true).length;
 

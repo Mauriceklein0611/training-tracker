@@ -66,7 +66,9 @@ export function TemplateExerciseRow({
             {name}
           </p>
           <p className="text-xs text-muted">
-            {exercise ? TRACKING_TYPE_LABELS[exercise.trackingType] : 'Diese Übung existiert nicht mehr.'}
+            {exercise
+              ? TRACKING_TYPE_LABELS[exercise.trackingType]
+              : 'Diese Übung existiert nicht mehr.'}
           </p>
         </div>
         <div className="flex shrink-0 gap-1">
@@ -84,7 +86,10 @@ export function TemplateExerciseRow({
           >
             <ArrowDown size={18} aria-hidden="true" />
           </IconButton>
-          <IconButton label={`${name} entfernen`} onClick={() => void removeTemplateExercise(entry.id)}>
+          <IconButton
+            label={`${name} entfernen`}
+            onClick={() => void removeTemplateExercise(entry.id)}
+          >
             <Trash2 size={18} aria-hidden="true" />
           </IconButton>
         </div>
@@ -117,7 +122,10 @@ export function TemplateExerciseRow({
           value={String(entry.targetSets)}
           onChange={(event) =>
             void updateTemplateExercise(entry.id, {
-              targetSets: Math.max(1, Math.round(parseNumberInput(event.target.value) ?? 1)),
+              targetSets: Math.max(
+                1,
+                Math.round(parseNumberInput(event.target.value) ?? 1),
+              ),
             })
           }
         />
@@ -126,7 +134,10 @@ export function TemplateExerciseRow({
           value={String(entry.restSeconds)}
           onChange={(event) =>
             void updateTemplateExercise(entry.id, {
-              restSeconds: Math.max(0, Math.round(parseNumberInput(event.target.value) ?? 0)),
+              restSeconds: Math.max(
+                0,
+                Math.round(parseNumberInput(event.target.value) ?? 0),
+              ),
             })
           }
         />
@@ -154,7 +165,10 @@ export function TemplateExerciseRow({
                   targetRepMin:
                     parseNumberInput(event.target.value) == null
                       ? undefined
-                      : Math.max(0, Math.round(parseNumberInput(event.target.value) ?? 0)),
+                      : Math.max(
+                          0,
+                          Math.round(parseNumberInput(event.target.value) ?? 0),
+                        ),
                 })
               }
             />
@@ -166,7 +180,10 @@ export function TemplateExerciseRow({
                   targetRepMax:
                     parseNumberInput(event.target.value) == null
                       ? undefined
-                      : Math.max(0, Math.round(parseNumberInput(event.target.value) ?? 0)),
+                      : Math.max(
+                          0,
+                          Math.round(parseNumberInput(event.target.value) ?? 0),
+                        ),
                 })
               }
             />
@@ -177,7 +194,9 @@ export function TemplateExerciseRow({
           containerClassName="col-span-2"
           value={entry.notes}
           placeholder="Optional"
-          onChange={(event) => void updateTemplateExercise(entry.id, { notes: event.target.value })}
+          onChange={(event) =>
+            void updateTemplateExercise(entry.id, { notes: event.target.value })
+          }
         />
       </div>
     </div>

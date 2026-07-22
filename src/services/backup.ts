@@ -205,7 +205,9 @@ export function validateBackupJson(raw: unknown): BackupValidationResult {
   ).length;
 
   if (orphanExercises > 0) {
-    warnings.push(`${orphanExercises} Übungseinträge verweisen auf fehlende Trainingseinheiten.`);
+    warnings.push(
+      `${orphanExercises} Übungseinträge verweisen auf fehlende Trainingseinheiten.`,
+    );
   }
   if (orphanSets > 0) {
     warnings.push(`${orphanSets} Sätze verweisen auf fehlende Übungseinträge.`);
@@ -321,7 +323,9 @@ export async function importBackup(
         if (rows.length === 0) continue;
 
         if (mode === 'replace') {
-          await (database[key] as { bulkPut: (r: unknown[]) => Promise<unknown> }).bulkPut(rows);
+          await (
+            database[key] as { bulkPut: (r: unknown[]) => Promise<unknown> }
+          ).bulkPut(rows);
           added[key] = rows.length;
           continue;
         }
@@ -333,7 +337,9 @@ export async function importBackup(
         );
         const newRows = rows.filter((row) => !existingIds.has(row.id));
         if (newRows.length > 0) {
-          await (database[key] as { bulkPut: (r: unknown[]) => Promise<unknown> }).bulkPut(newRows);
+          await (
+            database[key] as { bulkPut: (r: unknown[]) => Promise<unknown> }
+          ).bulkPut(newRows);
         }
         added[key] = newRows.length;
         skipped[key] = rows.length - newRows.length;
@@ -352,7 +358,10 @@ export async function importBackup(
       }
 
       // Enforce the "at most one active session" invariant after any import.
-      const active = await database.workoutSessions.where('status').equals('active').toArray();
+      const active = await database.workoutSessions
+        .where('status')
+        .equals('active')
+        .toArray();
       if (active.length > 1) {
         active.sort((a, b) => b.startedAt.localeCompare(a.startedAt));
         for (const session of active.slice(1)) {

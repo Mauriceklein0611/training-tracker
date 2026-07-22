@@ -96,7 +96,8 @@ export async function applyServiceWorkerUpdate(): Promise<void> {
 /** True when the app runs from the home screen rather than a browser tab. */
 export function isStandalone(): boolean {
   if (typeof window === 'undefined') return false;
-  const iosStandalone = (window.navigator as unknown as { standalone?: boolean }).standalone;
+  const iosStandalone = (window.navigator as unknown as { standalone?: boolean })
+    .standalone;
   return (
     iosStandalone === true ||
     (typeof window.matchMedia === 'function' &&

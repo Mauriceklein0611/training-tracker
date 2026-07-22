@@ -3,7 +3,8 @@ import { openDatabase } from '@/db/db';
 import { requestPersistentStorage } from '@/services/storage';
 import { Button } from '@/components/ui/Button';
 
-type State = { status: 'loading' } | { status: 'ready' } | { status: 'error'; message: string };
+type State =
+  { status: 'loading' } | { status: 'ready' } | { status: 'error'; message: string };
 
 /**
  * Opens IndexedDB before any screen renders.

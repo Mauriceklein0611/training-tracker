@@ -22,7 +22,8 @@ export async function readStorageStatus(): Promise<StorageStatus> {
 
   let persisted: boolean | null = null;
   try {
-    persisted = typeof storage.persisted === 'function' ? await storage.persisted() : null;
+    persisted =
+      typeof storage.persisted === 'function' ? await storage.persisted() : null;
   } catch {
     persisted = null;
   }

@@ -4,7 +4,11 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { db } from '@/db/db';
 import { createExercise } from '@/db/repositories/exercises';
-import { addExerciseToSession, finishSession, startFreeSession } from '@/db/repositories/sessions';
+import {
+  addExerciseToSession,
+  finishSession,
+  startFreeSession,
+} from '@/db/repositories/sessions';
 import { ToastProvider } from '@/components/ui/ToastProvider';
 import ExercisesPage from '@/pages/ExercisesPage';
 import { resetDatabase } from '@/tests/dbTestUtils';
@@ -51,7 +55,10 @@ describe('exercise management', () => {
     const dialog = await screen.findByRole('dialog');
     await user.type(within(dialog).getByLabelText(/^Name$/), 'Klimmzüge');
     await user.type(within(dialog).getByLabelText(/Primäre Muskelgruppe/), 'Rücken');
-    await user.selectOptions(within(dialog).getByLabelText(/Tracking-Typ/), 'bodyweight_reps');
+    await user.selectOptions(
+      within(dialog).getByLabelText(/Tracking-Typ/),
+      'bodyweight_reps',
+    );
 
     await user.click(within(dialog).getByRole('button', { name: /^Speichern$/ }));
 
@@ -75,7 +82,9 @@ describe('exercise management', () => {
     await user.type(within(dialog).getByLabelText(/^Name$/), 'bankdrücken');
     await user.click(within(dialog).getByRole('button', { name: /^Speichern$/ }));
 
-    expect(await within(dialog).findByRole('alert')).toHaveTextContent(/existiert bereits/);
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent(
+      /existiert bereits/,
+    );
     expect(await db.exercises.count()).toBe(1);
   });
 
@@ -86,9 +95,14 @@ describe('exercise management', () => {
     await user.click(await screen.findByRole('button', { name: /^Neu$/ }));
     const dialog = await screen.findByRole('dialog');
 
-    expect(within(dialog).queryByLabelText(/Gewichtsmultiplikator/)).not.toBeInTheDocument();
+    expect(
+      within(dialog).queryByLabelText(/Gewichtsmultiplikator/),
+    ).not.toBeInTheDocument();
 
-    await user.selectOptions(within(dialog).getByLabelText(/Gewichtskonvention/), 'per_hand');
+    await user.selectOptions(
+      within(dialog).getByLabelText(/Gewichtskonvention/),
+      'per_hand',
+    );
     expect(within(dialog).getByLabelText(/Gewichtsmultiplikator/)).toBeInTheDocument();
   });
 
@@ -112,7 +126,9 @@ describe('exercise management', () => {
     const exercise = await createExercise({ ...BASE, name: 'Bankdrücken' });
     renderExercises();
 
-    await user.click(await screen.findByRole('button', { name: /Bankdrücken archivieren/ }));
+    await user.click(
+      await screen.findByRole('button', { name: /Bankdrücken archivieren/ }),
+    );
 
     await waitFor(async () => {
       expect((await db.exercises.get(exercise.id))?.archived).toBe(true);
@@ -120,7 +136,9 @@ describe('exercise management', () => {
 
     // Archived entries are hidden until they are explicitly shown again.
     await user.click(await screen.findByLabelText(/Archivierte Übungen anzeigen/));
-    await user.click(await screen.findByRole('button', { name: /Bankdrücken wiederherstellen/ }));
+    await user.click(
+      await screen.findByRole('button', { name: /Bankdrücken wiederherstellen/ }),
+    );
 
     await waitFor(async () => {
       expect((await db.exercises.get(exercise.id))?.archived).toBe(false);
@@ -138,7 +156,9 @@ describe('exercise management', () => {
     await user.click(await screen.findByRole('button', { name: /Bankdrücken löschen/ }));
 
     // No confirmation dialog: the action is refused with an explanation.
-    expect(await screen.findByRole('status')).toHaveTextContent(/kann nicht gelöscht werden/);
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      /kann nicht gelöscht werden/,
+    );
     expect(await db.exercises.count()).toBe(1);
   });
 

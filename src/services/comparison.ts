@@ -169,7 +169,11 @@ export function compareSet(
   if (type === 'duration') {
     if (current.durationSeconds == null) return null;
     if (previous.durationSeconds != null) {
-      const delta = describeDelta(current.durationSeconds, previous.durationSeconds, 'seconds');
+      const delta = describeDelta(
+        current.durationSeconds,
+        previous.durationSeconds,
+        'seconds',
+      );
       if (delta) deltas.push(delta);
     }
   } else {
@@ -186,7 +190,12 @@ export function compareSet(
     } else if (current.weightKg != null && previous.weightKg != null) {
       // Bodyweight: added weight up is better, assistance down is better.
       const lowerIsBetter = context.weightModeSnapshot === 'assistance';
-      const delta = describeDelta(current.weightKg, previous.weightKg, 'kg', lowerIsBetter);
+      const delta = describeDelta(
+        current.weightKg,
+        previous.weightKg,
+        'kg',
+        lowerIsBetter,
+      );
       if (delta) deltas.push(delta);
     }
 
@@ -223,7 +232,8 @@ export function isNewRecord(
   const type = context.trackingTypeSnapshot;
 
   if (type === 'duration') {
-    if (current.durationSeconds == null || baseline.bestDurationSeconds == null) return false;
+    if (current.durationSeconds == null || baseline.bestDurationSeconds == null)
+      return false;
     return current.durationSeconds > baseline.bestDurationSeconds;
   }
 
@@ -239,7 +249,9 @@ export function isNewRecord(
       context,
     );
     const oneRmRecord =
-      oneRm != null && baseline.bestOneRepMaxKg != null && oneRm > baseline.bestOneRepMaxKg;
+      oneRm != null &&
+      baseline.bestOneRepMaxKg != null &&
+      oneRm > baseline.bestOneRepMaxKg;
 
     return loadRecord || oneRmRecord;
   }
@@ -267,7 +279,10 @@ export function buildRecordBaseline(entries: RecordEntry[]): RecordBaseline {
       baseline.bestLoadKg = load;
     }
     const oneRm = estimatedOneRepMax(set, context);
-    if (oneRm != null && (baseline.bestOneRepMaxKg == null || oneRm > baseline.bestOneRepMaxKg)) {
+    if (
+      oneRm != null &&
+      (baseline.bestOneRepMaxKg == null || oneRm > baseline.bestOneRepMaxKg)
+    ) {
       baseline.bestOneRepMaxKg = oneRm;
     }
     if (set.reps != null && (baseline.bestReps == null || set.reps > baseline.bestReps)) {
@@ -275,7 +290,8 @@ export function buildRecordBaseline(entries: RecordEntry[]): RecordBaseline {
     }
     if (
       set.durationSeconds != null &&
-      (baseline.bestDurationSeconds == null || set.durationSeconds > baseline.bestDurationSeconds)
+      (baseline.bestDurationSeconds == null ||
+        set.durationSeconds > baseline.bestDurationSeconds)
     ) {
       baseline.bestDurationSeconds = set.durationSeconds;
     }

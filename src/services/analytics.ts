@@ -135,7 +135,8 @@ export interface AnalyticsResult {
 function sessionDurationSeconds(session: WorkoutSession): number | null {
   if (!session.finishedAt) return null;
   const seconds =
-    (new Date(session.finishedAt).getTime() - new Date(session.startedAt).getTime()) / 1000;
+    (new Date(session.finishedAt).getTime() - new Date(session.startedAt).getTime()) /
+    1000;
   return Number.isFinite(seconds) && seconds >= 0 ? seconds : null;
 }
 
@@ -160,7 +161,8 @@ export function computeAnalytics(
 
   const sessionsInRange = dataset.sessions.filter(
     (session) =>
-      session.status === 'completed' && (!range || isWithinRange(session.startedAt, range)),
+      session.status === 'completed' &&
+      (!range || isWithinRange(session.startedAt, range)),
   );
 
   const durations = sessionsInRange
@@ -168,7 +170,9 @@ export function computeAnalytics(
     .filter((value): value is number => value != null);
   const totalDurationSeconds = durations.reduce((sum, value) => sum + value, 0);
 
-  const trainingDayKeys = new Set(sessionsInRange.map((session) => dayKey(session.startedAt)));
+  const trainingDayKeys = new Set(
+    sessionsInRange.map((session) => dayKey(session.startedAt)),
+  );
   // Calendar weeks drive "share of weeks trained" (consistency); per-week rates
   // use the actual day span / 7 so a 28-day window always divides by 4.
   const calendarWeeks = range ? weeksInRange(range) : weeksSpanned(sessionsInRange);
@@ -179,7 +183,9 @@ export function computeAnalytics(
     { includeWarmup: true, requireCompleted: false },
   );
 
-  const exercisesById = new Map(dataset.exercises.map((exercise) => [exercise.id, exercise]));
+  const exercisesById = new Map(
+    dataset.exercises.map((exercise) => [exercise.id, exercise]),
+  );
 
   return {
     range,
@@ -187,23 +193,25 @@ export function computeAnalytics(
     trainingDays: trainingDayKeys.size,
     trainingDaysPerWeek: perWeekDivisor > 0 ? trainingDayKeys.size / perWeekDivisor : 0,
     totalDurationSeconds,
-    averageDurationSeconds: durations.length > 0 ? totalDurationSeconds / durations.length : null,
+    averageDurationSeconds:
+      durations.length > 0 ? totalDurationSeconds / durations.length : null,
     workingSetCount: volume.setCount,
     totalReps: volume.totalReps,
     volume,
     muscleGroups: computeMuscleGroupLoad(countedContexts, exercisesById),
     weekly: computeWeeklySeries(countedContexts, sessionsInRange),
     restStatistics: computeRestStatistics(countedContexts.map((context) => context.set)),
-    personalRecords: [...computePersonalRecords(contexts, { includeWarmup }).values()].sort((a, b) =>
-      a.exerciseName.localeCompare(b.exerciseName, 'de'),
-    ),
+    personalRecords: [
+      ...computePersonalRecords(contexts, { includeWarmup }).values(),
+    ].sort((a, b) => a.exerciseName.localeCompare(b.exerciseName, 'de')),
     streakWeeks: currentWeeklyStreak(
       dataset.sessions
         .filter((session) => session.status === 'completed')
         .map((session) => session.startedAt),
       now,
     ),
-    consistency: calendarWeeks > 0 ? countTrainingWeeks(sessionsInRange) / calendarWeeks : 0,
+    consistency:
+      calendarWeeks > 0 ? countTrainingWeeks(sessionsInRange) / calendarWeeks : 0,
     setsWithoutVolume: volume.setsWithoutVolume,
   };
 }
@@ -271,7 +279,8 @@ export function computeMuscleGroupLoad(
   }
 
   return [...byGroup.values()].sort(
-    (a, b) => b.directSets - a.directSets || a.muscleGroup.localeCompare(b.muscleGroup, 'de'),
+    (a, b) =>
+      b.directSets - a.directSets || a.muscleGroup.localeCompare(b.muscleGroup, 'de'),
   );
 }
 
@@ -284,7 +293,13 @@ export function computeWeeklySeries(
   const ensure = (week: string): WeeklyPoint => {
     const existing = byWeek.get(week);
     if (existing) return existing;
-    const created: WeeklyPoint = { week, volumeKg: 0, workingSets: 0, totalReps: 0, sessions: 0 };
+    const created: WeeklyPoint = {
+      week,
+      volumeKg: 0,
+      workingSets: 0,
+      totalReps: 0,
+      sessions: 0,
+    };
     byWeek.set(week, created);
     return created;
   };
@@ -355,7 +370,8 @@ export function computeExerciseSeries(
       const oneRm = estimatedOneRepMax(set, sessionExercise);
       if (oneRm != null && (bestOneRm == null || oneRm > bestOneRm)) bestOneRm = oneRm;
       totalReps += set.reps ?? 0;
-      if (set.reps != null && (bestReps == null || set.reps > bestReps)) bestReps = set.reps;
+      if (set.reps != null && (bestReps == null || set.reps > bestReps))
+        bestReps = set.reps;
       if (
         set.durationSeconds != null &&
         (maxDurationSeconds == null || set.durationSeconds > maxDurationSeconds)
@@ -385,7 +401,10 @@ export function computeExerciseSeries(
 export function listTrackedExercises(
   dataset: AnalyticsDataset,
 ): { id: string; name: string; trackingType: TrackingType }[] {
-  const seen = new Map<string, { id: string; name: string; trackingType: TrackingType }>();
+  const seen = new Map<
+    string,
+    { id: string; name: string; trackingType: TrackingType }
+  >();
   for (const entry of dataset.sessionExercises) {
     seen.set(entry.exerciseId, {
       id: entry.exerciseId,

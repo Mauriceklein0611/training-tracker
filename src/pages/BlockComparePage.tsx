@@ -27,15 +27,7 @@ import {
 const dayOffset = (days: number) => dayKey(new Date(Date.now() + days * 86400000));
 
 /** One comparison row; a missing value is shown honestly rather than as zero. */
-function Row({
-  label,
-  a,
-  b,
-}: {
-  label: string;
-  a: string;
-  b: string;
-}) {
+function Row({ label, a, b }: { label: string; a: string; b: string }) {
   return (
     <div className="grid grid-cols-[1.4fr_1fr_1fr] items-baseline gap-2 border-t border-border py-1.5 first:border-0">
       <span className="text-sm text-muted">{label}</span>
@@ -45,7 +37,10 @@ function Row({
   );
 }
 
-function num(value: number | null | undefined, format: (value: number) => string): string {
+function num(
+  value: number | null | undefined,
+  format: (value: number) => string,
+): string {
   return value == null ? 'keine Daten' : format(value);
 }
 
@@ -62,7 +57,9 @@ function Section({
 }) {
   return (
     <div className="mt-3">
-      <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted">{title}</h3>
+      <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted">
+        {title}
+      </h3>
       <div className="grid grid-cols-[1.4fr_1fr_1fr] gap-2 pb-1 text-xs font-semibold text-muted">
         <span>Kennzahl</span>
         <span className="text-right">A</span>
@@ -83,7 +80,10 @@ export default function BlockComparePage() {
   const [bTo, setBTo] = useState(() => dayOffset(0));
 
   const data = useLiveQuery(async () => {
-    const [dataset, body] = await Promise.all([loadAnalyticsDataset(), listBodyWeightEntries()]);
+    const [dataset, body] = await Promise.all([
+      loadAnalyticsDataset(),
+      listBodyWeightEntries(),
+    ]);
     return { dataset, body };
   }, []);
 
@@ -131,7 +131,12 @@ export default function BlockComparePage() {
           <div>
             <p className="mb-1 text-sm font-medium">Block A</p>
             <div className="grid grid-cols-2 gap-2">
-              <TextField label="Von" type="date" value={aFrom} onChange={(e) => setAFrom(e.target.value)} />
+              <TextField
+                label="Von"
+                type="date"
+                value={aFrom}
+                onChange={(e) => setAFrom(e.target.value)}
+              />
               <TextField
                 label="Bis"
                 type="date"
@@ -144,7 +149,12 @@ export default function BlockComparePage() {
           <div>
             <p className="mb-1 text-sm font-medium">Block B</p>
             <div className="grid grid-cols-2 gap-2">
-              <TextField label="Von" type="date" value={bFrom} onChange={(e) => setBFrom(e.target.value)} />
+              <TextField
+                label="Von"
+                type="date"
+                value={bFrom}
+                onChange={(e) => setBFrom(e.target.value)}
+              />
               <TextField
                 label="Bis"
                 type="date"
@@ -159,7 +169,9 @@ export default function BlockComparePage() {
 
       {!comparison ? (
         <p className="text-sm text-muted" role="status">
-          {validA && validB ? 'Vergleich wird berechnet …' : 'Bitte gültige Zeiträume wählen.'}
+          {validA && validB
+            ? 'Vergleich wird berechnet …'
+            : 'Bitte gültige Zeiträume wählen.'}
         </p>
       ) : (
         <Card>
@@ -190,7 +202,10 @@ export default function BlockComparePage() {
             rows={[
               { label: 'Einheiten', get: (m) => formatNumber(m.sessions) },
               { label: 'Trainingstage', get: (m) => formatNumber(m.trainingDays) },
-              { label: 'Dauer gesamt', get: (m) => formatDurationLong(m.durationSeconds) },
+              {
+                label: 'Dauer gesamt',
+                get: (m) => formatDurationLong(m.durationSeconds),
+              },
               { label: 'Arbeitssätze', get: (m) => formatNumber(m.workingSets) },
               { label: 'Wiederholungen', get: (m) => formatNumber(m.totalReps) },
               { label: 'Volumen', get: (m) => formatVolume(m.volumeKg) },
@@ -203,7 +218,10 @@ export default function BlockComparePage() {
             a={comparison.a}
             b={comparison.b}
             rows={[
-              { label: 'Einheiten / Wo.', get: (m) => formatNumber(m.sessionsPerWeek, 1) },
+              {
+                label: 'Einheiten / Wo.',
+                get: (m) => formatNumber(m.sessionsPerWeek, 1),
+              },
               { label: 'Sätze / Wo.', get: (m) => formatNumber(m.workingSetsPerWeek, 1) },
               { label: 'Volumen / Wo.', get: (m) => formatVolume(m.volumePerWeekKg) },
               {
@@ -228,7 +246,10 @@ export default function BlockComparePage() {
                 label: 'Ø Pausenabweichung',
                 get: (m) => num(m.avgRestDeviationSeconds, formatSignedSeconds),
               },
-              { label: 'Ø Körpergewicht', get: (m) => num(m.avgBodyWeightKg, (v) => formatKg(v)) },
+              {
+                label: 'Ø Körpergewicht',
+                get: (m) => num(m.avgBodyWeightKg, (v) => formatKg(v)),
+              },
               {
                 label: 'Ø Körperfett',
                 get: (m) => num(m.avgBodyFatPercent, formatPercentValue),
@@ -237,8 +258,9 @@ export default function BlockComparePage() {
           />
 
           <p className="mt-3 text-xs leading-relaxed text-muted">
-            „keine Daten“ bedeutet, dass für diesen Zeitraum nichts erfasst wurde. Es werden keine
-            Werte geschätzt und keine Schlüsse gezogen — die Einordnung bleibt dir überlassen.
+            „keine Daten“ bedeutet, dass für diesen Zeitraum nichts erfasst wurde. Es
+            werden keine Werte geschätzt und keine Schlüsse gezogen — die Einordnung
+            bleibt dir überlassen.
           </p>
 
           <div className="mt-4 grid grid-cols-2 gap-2">

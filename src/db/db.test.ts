@@ -154,7 +154,9 @@ describe('schema migrations', () => {
     const upgraded = new TrainingDatabase(NAME);
     await upgraded.open();
 
-    expect((await upgraded.settings.get('app-settings'))?.schemaVersion).toBe(SCHEMA_VERSION);
+    expect((await upgraded.settings.get('app-settings'))?.schemaVersion).toBe(
+      SCHEMA_VERSION,
+    );
     upgraded.close();
   });
 
@@ -237,7 +239,9 @@ describe('schema migrations', () => {
     const upgraded = new TrainingDatabase(NAME);
     await upgraded.open();
 
-    expect((await upgraded.sessionExercises.get('se-orphan'))?.restSecondsSnapshot).toBe(175);
+    expect((await upgraded.sessionExercises.get('se-orphan'))?.restSecondsSnapshot).toBe(
+      175,
+    );
     upgraded.close();
   });
 
