@@ -324,6 +324,17 @@ export interface SessionExercise extends ExerciseGrouping {
    * Undefined for free workouts, where sets are simply added as needed.
    */
   targetSetsSnapshot?: number;
+  /**
+   * The plan targets frozen when the exercise entered this workout. They keep a
+   * running workout stable even if the underlying plan is edited afterwards, and
+   * — because they live on each session-exercise row — the same exercise used at
+   * two plan positions keeps its own targets. Absent for free workouts and for
+   * sessions started before these snapshots existed (a compatible fallback).
+   */
+  templateExerciseIdSnapshot?: string;
+  targetRepMinSnapshot?: number;
+  targetRepMaxSnapshot?: number;
+  targetDurationSecondsSnapshot?: number;
   notes: string;
   createdAt: ISODateTime;
   updatedAt: ISODateTime;

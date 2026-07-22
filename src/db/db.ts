@@ -21,7 +21,7 @@ import { nowIso } from '@/utils/id';
  * Bump this together with a new `.version()` block below and record the change
  * in MIGRATIONS so the settings screen can show what the database went through.
  */
-export const SCHEMA_VERSION = 14;
+export const SCHEMA_VERSION = 15;
 
 export const MIGRATIONS: { version: number; description: string }[] = [
   { version: 1, description: 'Initiales Schema: Übungen, Pläne, Einheiten, Sätze.' },
@@ -109,6 +109,13 @@ export const MIGRATIONS: { version: number; description: string }[] = [
     description:
       'Optionale Sprachansage am Pausenende (Browser-Sprachausgabe, lokal). ' +
       'Standardmäßig aus; funktioniert nur, wo der Browser es unterstützt.',
+  },
+  {
+    version: 15,
+    description:
+      'Übungen in Trainingseinheiten frieren beim Start zusätzlich Ziel-' +
+      'Wiederholungen, Zieldauer und die Planübungs-ID als Snapshot ein, damit ' +
+      'Änderungen am Plan ein laufendes Training nicht mehr verändern.',
   },
 ];
 
@@ -357,6 +364,20 @@ export class TrainingDatabase extends Dexie {
             settings.voiceAnnouncementsEnabled = false;
           }
           settings.schemaVersion = 14;
+        });
+    });
+
+    // ---- v15 ------------------------------------------------------------
+    // SessionExercise gained optional rep/duration/plan-exercise snapshots.
+    // They are only filled for workouts started from a plan after this version;
+    // existing rows keep working through the live view's fallback, so nothing is
+    // backfilled — only the recorded schema version is advanced.
+    this.version(15).upgrade(async (tx) => {
+      await tx
+        .table<AppSettings>('settings')
+        .toCollection()
+        .modify((settings) => {
+          settings.schemaVersion = 15;
         });
     });
   }

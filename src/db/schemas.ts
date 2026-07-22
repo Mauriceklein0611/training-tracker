@@ -179,6 +179,11 @@ export const sessionExerciseSchema = z.object({
   // written by older versions of the app still validate and import cleanly.
   restSecondsSnapshot: z.number().int().min(0).max(3600).default(120),
   targetSetsSnapshot: z.number().int().min(1).max(50).optional(),
+  // Added in schema version 15; all optional, so older backups still validate.
+  templateExerciseIdSnapshot: id.optional(),
+  targetRepMinSnapshot: z.number().int().min(0).max(1000).optional(),
+  targetRepMaxSnapshot: z.number().int().min(0).max(1000).optional(),
+  targetDurationSecondsSnapshot: z.number().int().min(0).max(36000).optional(),
   notes: z.string().default(''),
   ...groupingFields,
   createdAt: isoDateTime,

@@ -76,6 +76,28 @@ export function SessionExerciseCard({
   vibrationEnabled?: boolean;
 }) {
   const { sessionExercise, sets } = detail;
+
+  /*
+   * Targets come first from this session-exercise's own frozen snapshots, so a
+   * later edit of the plan cannot change a running workout and the same exercise
+   * at two plan positions keeps its own targets. Only sessions started before
+   * the snapshots existed fall back to the plan lookup passed in as `target`.
+   */
+  const snapshotHasTargets =
+    sessionExercise.targetSetsSnapshot != null ||
+    sessionExercise.targetRepMinSnapshot != null ||
+    sessionExercise.targetRepMaxSnapshot != null ||
+    sessionExercise.targetDurationSecondsSnapshot != null;
+  const effectiveTarget: ExerciseTarget | undefined = snapshotHasTargets
+    ? {
+        targetSets: sessionExercise.targetSetsSnapshot,
+        targetRepMin: sessionExercise.targetRepMinSnapshot,
+        targetRepMax: sessionExercise.targetRepMaxSnapshot,
+        targetDurationSeconds: sessionExercise.targetDurationSecondsSnapshot,
+        restSeconds: sessionExercise.restSecondsSnapshot,
+      }
+    : target;
+
   const [notesOpen, setNotesOpen] = useState(Boolean(sessionExercise.notes));
   const [notes, setNotes] = useState(sessionExercise.notes);
 
@@ -170,14 +192,14 @@ export function SessionExerciseCard({
     const currentWorkingSets = sets.filter((set) => set.completedAt && isWorkingSet(set));
     if (currentWorkingSets.length === 0) return null;
     return suggestProgression(currentWorkingSets, sessionExercise, {
-      targetRepMin: target?.targetRepMin,
-      targetRepMax: target?.targetRepMax,
+      targetRepMin: effectiveTarget?.targetRepMin,
+      targetRepMax: effectiveTarget?.targetRepMax,
       targetRir: exercise?.targetRir,
       weightIncrementKg: exercise?.weightIncrementKg,
       availableWeightsKg: exercise?.availableWeightsKg,
       progressionMethod: exercise?.progressionMethod,
     });
-  }, [sets, sessionExercise, target, exercise]);
+  }, [sets, sessionExercise, effectiveTarget, exercise]);
 
   /** Date line above the sets, so the comparison has a reference point. */
   const previousSessionLabel = useMemo(
@@ -244,7 +266,9 @@ export function SessionExerciseCard({
           <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted">
             {highlightNext ? <Badge tone="accent">Als Nächstes</Badge> : null}
             <Badge>{TRACKING_TYPE_LABELS[sessionExercise.trackingTypeSnapshot]}</Badge>
-            {describeTarget(target) ? <span>Ziel: {describeTarget(target)}</span> : null}
+            {describeTarget(effectiveTarget) ? (
+              <span>Ziel: {describeTarget(effectiveTarget)}</span>
+            ) : null}
             <span>Pause {restTarget}s</span>
             {sessionExercise.weightModeSnapshot === 'per_hand' ? (
               <span>je Hand ×{sessionExercise.weightMultiplierSnapshot}</span>
@@ -341,7 +365,7 @@ export function SessionExerciseCard({
             previousSets={previousSets}
             sessionSets={sets}
             recordBaseline={recordBaseline}
-            targetDurationSeconds={target?.targetDurationSeconds}
+            targetDurationSeconds={effectiveTarget?.targetDurationSeconds}
             soundEnabled={soundEnabled}
             vibrationEnabled={vibrationEnabled}
             onPersist={(values) => void updateSet(openSet.id, values)}

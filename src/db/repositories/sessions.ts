@@ -60,6 +60,11 @@ function buildSessionExercise(
     /** Global default from the settings. */
     globalDefaultRestSeconds?: number | null;
     targetSets?: number;
+    /** Plan targets frozen at start, so a later plan edit cannot change them. */
+    templateExerciseId?: string;
+    targetRepMin?: number;
+    targetRepMax?: number;
+    targetDurationSeconds?: number;
     /** Superset/circuit grouping carried over from the plan. */
     grouping?: ExerciseGrouping;
   } = {},
@@ -81,6 +86,10 @@ function buildSessionExercise(
       globalDefaultRestSeconds: context.globalDefaultRestSeconds,
     }),
     targetSetsSnapshot: context.targetSets,
+    templateExerciseIdSnapshot: context.templateExerciseId,
+    targetRepMinSnapshot: context.targetRepMin,
+    targetRepMaxSnapshot: context.targetRepMax,
+    targetDurationSecondsSnapshot: context.targetDurationSeconds,
     groupId: context.grouping?.groupId,
     groupType: context.grouping?.groupType,
     groupRestMode: context.grouping?.groupRestMode,
@@ -145,6 +154,10 @@ export async function startSessionFromTemplate(templateId: string): Promise<Work
         templateRestSeconds: row.restSeconds,
         globalDefaultRestSeconds,
         targetSets: row.targetSets,
+        templateExerciseId: row.id,
+        targetRepMin: row.targetRepMin,
+        targetRepMax: row.targetRepMax,
+        targetDurationSeconds: row.targetDurationSeconds,
         grouping: {
           groupId: row.groupId,
           groupType: row.groupType,
