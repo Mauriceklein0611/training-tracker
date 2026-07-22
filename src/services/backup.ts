@@ -7,6 +7,7 @@ import {
   bodyWeightEntrySchema,
   equipmentProfileSchema,
   exerciseSchema,
+  planImportRecordSchema,
   sessionExerciseSchema,
   templateExerciseSchema,
   templateVersionSchema,
@@ -47,6 +48,8 @@ export const backupFileSchema = z.object({
   // Added in schema version 11 (store) / covered here since v15; defaulted so
   // older backups without it still validate and import as an empty list.
   aiExports: z.array(aiExportRecordSchema).default([]),
+  // Added in schema version 16; defaulted so older backups still validate.
+  planImports: z.array(planImportRecordSchema).default([]),
 });
 
 export type BackupFile = z.infer<typeof backupFileSchema>;
@@ -63,6 +66,7 @@ export interface BackupCounts {
   aiAnalyses: number;
   equipmentProfiles: number;
   aiExports: number;
+  planImports: number;
 }
 
 export function countBackupRecords(backup: BackupFile): BackupCounts {
@@ -78,6 +82,7 @@ export function countBackupRecords(backup: BackupFile): BackupCounts {
     aiAnalyses: backup.aiAnalyses.length,
     equipmentProfiles: backup.equipmentProfiles.length,
     aiExports: backup.aiExports.length,
+    planImports: backup.planImports.length,
   };
 }
 
@@ -93,6 +98,7 @@ export const BACKUP_COUNT_LABELS: Record<keyof BackupCounts, string> = {
   aiAnalyses: 'KI-Analysen',
   equipmentProfiles: 'Equipment-Profile',
   aiExports: 'KI-Export-Vermerke',
+  planImports: 'Plan-Import-Vermerke',
 };
 
 /** Reads the whole database into a backup object. */
@@ -110,6 +116,7 @@ export async function createBackup(database: TrainingDatabase = db): Promise<Bac
     aiAnalyses,
     equipmentProfiles,
     aiExports,
+    planImports,
   ] = await Promise.all([
     database.settings.get('app-settings'),
     database.exercises.toArray(),
@@ -123,6 +130,7 @@ export async function createBackup(database: TrainingDatabase = db): Promise<Bac
     database.aiAnalyses.toArray(),
     database.equipmentProfiles.toArray(),
     database.aiExports.toArray(),
+    database.planImports.toArray(),
   ]);
 
   return backupFileSchema.parse({
@@ -142,6 +150,7 @@ export async function createBackup(database: TrainingDatabase = db): Promise<Bac
     aiAnalyses,
     equipmentProfiles,
     aiExports,
+    planImports,
   });
 }
 
@@ -261,6 +270,7 @@ function emptyCounts(): BackupCounts {
     aiAnalyses: 0,
     equipmentProfiles: 0,
     aiExports: 0,
+    planImports: 0,
   };
 }
 
@@ -276,6 +286,7 @@ const TABLE_KEYS = [
   'aiAnalyses',
   'equipmentProfiles',
   'aiExports',
+  'planImports',
 ] as const;
 
 /**
@@ -311,6 +322,7 @@ export async function importBackup(
       database.aiAnalyses,
       database.equipmentProfiles,
       database.aiExports,
+      database.planImports,
       database.settings,
     ],
     async () => {

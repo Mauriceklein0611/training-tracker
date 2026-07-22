@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { ClipboardList, Copy, Pencil, Play, Plus, Trash2 } from 'lucide-react';
+import { ClipboardList, Copy, Pencil, Play, Plus, Share2, Trash2 } from 'lucide-react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Button, IconButton } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/Card';
 import { ConfirmDialog, Dialog } from '@/components/ui/Dialog';
 import { TextAreaField, TextField } from '@/components/ui/Field';
+import { PlanPackageTools } from '@/features/plans/PlanPackageTools';
+import { PlanShareDialog } from '@/features/plans/PlanShareDialog';
 import { db } from '@/db/db';
 import {
   createTemplate,
@@ -42,6 +44,7 @@ export default function TemplatesPage() {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<WorkoutTemplate | null>(null);
+  const [shareTarget, setShareTarget] = useState<WorkoutTemplate | null>(null);
 
   const openCreate = () => {
     setName('');
@@ -148,6 +151,12 @@ export default function TemplatesPage() {
                     <Copy size={18} aria-hidden="true" />
                   </IconButton>
                   <IconButton
+                    label={`${template.name} teilen`}
+                    onClick={() => setShareTarget(template)}
+                  >
+                    <Share2 size={18} aria-hidden="true" />
+                  </IconButton>
+                  <IconButton
                     label={`${template.name} löschen`}
                     onClick={() => setDeleteTarget(template)}
                   >
@@ -169,6 +178,15 @@ export default function TemplatesPage() {
           ))}
         </ul>
       )}
+
+      <div className="mt-4">
+        <PlanPackageTools />
+      </div>
+
+      <PlanShareDialog
+        templateIds={shareTarget ? [shareTarget.id] : null}
+        onClose={() => setShareTarget(null)}
+      />
 
       <Dialog
         open={createOpen || Boolean(editing)}

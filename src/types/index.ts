@@ -284,6 +284,15 @@ export interface AiExportRecord {
   createdAt: ISODateTime;
 }
 
+/** Record of an imported training-plan package, to detect a duplicate import. */
+export interface PlanImportRecord {
+  id: string;
+  /** Content fingerprint of the imported package. */
+  fingerprint: string;
+  packageName: string;
+  importedAt: ISODateTime;
+}
+
 export interface WorkoutSession {
   id: string;
   templateId?: string;

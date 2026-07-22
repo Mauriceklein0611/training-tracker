@@ -15,23 +15,24 @@ General rules:
   only, run in a single Dexie transaction and roll back fully on any error.
 - CSV is export-only; header order and meaning are versioned by test.
 
-| Format | Direction | Name (in content) | Version field | Version | Supported imports |
-|---|---|---|---|---|---|
-| Full backup | export + import | `app: training-tracker` | `exportFormatVersion` / `schemaVersion` | format 1 / schema 15 | schema ≤ 15 |
-| AI analysis export | export | (AI export doc) | `exportVersion` | 1 | — |
-| AI response import | import | `format: training-ai-response` | `schemaVersion` | 1 | exactly 1 |
-| Plan builder kit | export | `format: training-plan-builder-kit` | `version` | 1 | — |
-| Training plan package | export + import + share | `format: training-plan-package` | `schemaVersion` | 1 | 1 |
-| Block comparison export | export | (comparison doc) | — | — | — |
-| CSV (sets/sessions/exercises/body) | export | header row | header (by test) | — | — |
+| Format                             | Direction               | Name (in content)                   | Version field                           | Version              | Supported imports |
+| ---------------------------------- | ----------------------- | ----------------------------------- | --------------------------------------- | -------------------- | ----------------- |
+| Full backup                        | export + import         | `app: training-tracker`             | `exportFormatVersion` / `schemaVersion` | format 1 / schema 16 | schema ≤ 16       |
+| AI analysis export                 | export                  | (AI export doc)                     | `exportVersion`                         | 1                    | —                 |
+| AI response import                 | import                  | `format: training-ai-response`      | `schemaVersion`                         | 1                    | exactly 1         |
+| Plan builder kit                   | export                  | `format: training-plan-builder-kit` | `version`                               | 1                    | —                 |
+| Training plan package              | export + import + share | `format: training-plan-package`     | `schemaVersion`                         | 1                    | 1                 |
+| Block comparison export            | export                  | (comparison doc)                    | —                                       | —                    | —                 |
+| CSV (sets/sessions/exercises/body) | export                  | header row                          | header (by test)                        | —                    | —                 |
 
 ## Full backup — `src/services/backup.ts`
 
 - Schema: `backupFileSchema`; parser/validator `validateBackupJson`; exporter
   `createBackup`; importer `importBackup` (merge/replace, one transaction).
 - Contains every table incl. `templateVersions`, `aiAnalyses`, `equipmentProfiles`,
-  `aiExports`, and settings. New tables/fields are added with a `.default([])`
-  or optional so older backups still validate. Newer `schemaVersion` is rejected.
+  `aiExports`, `planImports`, and settings. New tables/fields are added with a
+  `.default([])` or optional so older backups still validate. Newer `schemaVersion`
+  is rejected.
 - Fixtures/tests: `src/services/backup.test.ts` (roundtrip, legacy per version,
   merge/replace, newer-version rejection).
 
@@ -56,11 +57,28 @@ General rules:
   Exporter `buildPlanPackage`. Import (transactional, conflict-aware)
   `importPlanPackage` with preview `analyzePlanPackageImport`.
 - Excludes all private data: no history, past sets/weights, PRs, body data,
-  check-ins, AI analyses, settings, internal ids.
+  check-ins, AI analyses, settings, internal ids. `includeNotes: false` also
+  strips plan/exercise notes before sharing.
+- Import never overwrites local data: a same-name compatible exercise is reused,
+  an incompatible one is created as a copy, plans are always created new with a
+  de-duplicated name. Everything runs in one Dexie transaction (full rollback).
+- Duplicate detection: `planImports` (schema store, backup + reset wired) records
+  a content `fingerprint`; re-importing the same package is flagged, not blocked.
 - Fallbacks: missing optional fields default as documented; unknown muscle
   groups are kept as custom values with a preview warning; newer version rejected.
-- Fixtures: `src/services/planPackage/fixtures/` (current, previous-supported,
-  invalid, unsupported-future). Roundtrip test: export → import → equal plan.
+- Fixtures: `src/services/planPackage/fixtures.ts` (valid current package,
+  mutated in tests into invalid / future-version shapes). Tests:
+  `planPackage.test.ts` (parse, build roundtrip, analyze, transactional import),
+  `builderKit.test.ts`, and UI `src/features/plans/PlanPackageTools.test.tsx`.
+
+## Plan builder kit — `src/services/planPackage/builderKit.ts`
+
+- Format `training-plan-builder-kit`, version 1. A self-describing, data-free
+  file handed to ChatGPT so it can produce a valid `training-plan-package`: it
+  carries the target contract, the allowed enums (incl. weight-mode-per-tracking
+  rules from `exerciseRules.ts`), the muscle-group catalog and a tiny example.
+- Export/share only; never imported. The example is validated against the real
+  `planPackageSchema` by test so the two can never drift.
 
 ## Block comparison export — `src/services/blockComparison.ts`
 

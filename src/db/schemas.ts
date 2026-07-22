@@ -88,6 +88,13 @@ export const aiExportRecordSchema = z.object({
   createdAt: isoDateTime,
 });
 
+export const planImportRecordSchema = z.object({
+  id,
+  fingerprint: z.string().default(''),
+  packageName: z.string().default(''),
+  importedAt: isoDateTime,
+});
+
 export const equipmentProfileSchema = z.object({
   id,
   name: z.string().min(1, 'Name darf nicht leer sein'),

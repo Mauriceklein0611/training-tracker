@@ -44,6 +44,7 @@ const ALL_DATA_TABLES = [
   'bodyWeightEntries',
   'aiAnalyses',
   'aiExports',
+  'planImports',
   'equipmentProfiles',
   'settings',
 ] as const;

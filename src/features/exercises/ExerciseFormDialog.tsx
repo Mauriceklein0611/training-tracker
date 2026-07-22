@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/Field';
 import { createExercise, updateExercise } from '@/db/repositories/exercises';
 import { validateExerciseForm, parseNumberInput } from '@/services/validation';
+import { allowedWeightModes, defaultWeightModeFor } from '@/services/exerciseRules';
 import { normalizeMuscleQuery } from '@/constants/muscleGroups';
 import { MuscleGroupChips } from '@/features/exercises/MuscleGroupChips';
 import { MuscleGroupPicker } from '@/features/exercises/MuscleGroupPicker';
@@ -23,36 +24,6 @@ import {
   WEIGHT_MODE_LABELS,
 } from '@/utils/format';
 import { useToast } from '@/hooks/useToast';
-
-/** Weight convention that makes sense for a freshly chosen tracking type. */
-function defaultWeightMode(trackingType: TrackingType): WeightMode {
-  switch (trackingType) {
-    case 'weight_reps':
-      return 'total';
-    case 'bodyweight_reps':
-      return 'added_weight';
-    case 'assisted_bodyweight_reps':
-      return 'assistance';
-    case 'reps_only':
-    case 'duration':
-      return 'none';
-  }
-}
-
-/** Weight conventions that are valid for a tracking type. */
-function allowedWeightModes(trackingType: TrackingType): WeightMode[] {
-  switch (trackingType) {
-    case 'weight_reps':
-      return ['total', 'per_hand'];
-    case 'bodyweight_reps':
-      return ['added_weight', 'none'];
-    case 'assisted_bodyweight_reps':
-      return ['assistance', 'none'];
-    case 'reps_only':
-    case 'duration':
-      return ['none'];
-  }
-}
 
 interface FormState {
   name: string;
@@ -194,7 +165,7 @@ export function ExerciseFormDialog({
         // Keep the current convention if it still applies, otherwise fall back.
         weightMode: allowed.includes(current.weightMode)
           ? current.weightMode
-          : defaultWeightMode(trackingType),
+          : defaultWeightModeFor(trackingType),
       };
     });
   };

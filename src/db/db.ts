@@ -2,6 +2,7 @@ import Dexie, { type Table } from 'dexie';
 import type {
   AiAnalysis,
   AiExportRecord,
+  PlanImportRecord,
   AppSettings,
   BodyWeightEntry,
   EquipmentProfile,
@@ -21,7 +22,7 @@ import { nowIso } from '@/utils/id';
  * Bump this together with a new `.version()` block below and record the change
  * in MIGRATIONS so the settings screen can show what the database went through.
  */
-export const SCHEMA_VERSION = 15;
+export const SCHEMA_VERSION = 16;
 
 export const MIGRATIONS: { version: number; description: string }[] = [
   { version: 1, description: 'Initiales Schema: Übungen, Pläne, Einheiten, Sätze.' },
@@ -117,6 +118,12 @@ export const MIGRATIONS: { version: number; description: string }[] = [
       'Wiederholungen, Zieldauer und die Planübungs-ID als Snapshot ein, damit ' +
       'Änderungen am Plan ein laufendes Training nicht mehr verändern.',
   },
+  {
+    version: 16,
+    description:
+      'Importierte Trainingsplan-Pakete werden vermerkt, um einen doppelten ' +
+      'Import derselben Datei erkennen und davor warnen zu können.',
+  },
 ];
 
 export class TrainingDatabase extends Dexie {
@@ -130,6 +137,7 @@ export class TrainingDatabase extends Dexie {
   bodyWeightEntries!: Table<BodyWeightEntry, string>;
   aiAnalyses!: Table<AiAnalysis, string>;
   aiExports!: Table<AiExportRecord, string>;
+  planImports!: Table<PlanImportRecord, string>;
   equipmentProfiles!: Table<EquipmentProfile, string>;
   settings!: Table<AppSettings, string>;
 
@@ -382,6 +390,21 @@ export class TrainingDatabase extends Dexie {
           settings.schemaVersion = 15;
         });
     });
+
+    // ---- v16 ------------------------------------------------------------
+    // New planImports store: a small record of imported training-plan packages,
+    // used to warn on a duplicate import. Additive — existing rows are
+    // untouched and only the recorded schema version is advanced.
+    this.version(16)
+      .stores({ planImports: 'id, fingerprint, importedAt' })
+      .upgrade(async (tx) => {
+        await tx
+          .table<AppSettings>('settings')
+          .toCollection()
+          .modify((settings) => {
+            settings.schemaVersion = 16;
+          });
+      });
   }
 }
 
