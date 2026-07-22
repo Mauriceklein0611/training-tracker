@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ClipboardCopy, Download, FileJson, Share2, Upload } from 'lucide-react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/Button';
@@ -16,6 +17,7 @@ import { markBackupCreated } from '@/db/repositories/settings';
 import { listBodyWeightEntries } from '@/db/repositories/bodyWeight';
 import { listTemplatesWithExercises } from '@/db/repositories/templates';
 import { recordAiExport } from '@/db/repositories/aiAnalyses';
+import { deleteTrainingHistory, resetAllData } from '@/db/repositories/maintenance';
 import { uuid } from '@/utils/id';
 import { useSettings } from '@/hooks/useSettings';
 import { useToast } from '@/hooks/useToast';
@@ -59,6 +61,7 @@ interface PendingImport {
 
 export default function DataPage() {
   const toast = useToast();
+  const navigate = useNavigate();
   const { settings, update } = useSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -66,6 +69,9 @@ export default function DataPage() {
   const [importErrors, setImportErrors] = useState<string[]>([]);
   const [pending, setPending] = useState<PendingImport | null>(null);
   const [replaceConfirm, setReplaceConfirm] = useState(false);
+  const [historyConfirm, setHistoryConfirm] = useState(false);
+  const [resetOpen, setResetOpen] = useState(false);
+  const [resetInput, setResetInput] = useState('');
   const [aiOptions, setAiOptions] = useState<AiExportOptions>(DEFAULT_AI_EXPORT_OPTIONS);
   // Only shown after a failed attempt, so the form does not scold while typing.
   const [periodErrors, setPeriodErrors] = useState<ExportPeriodErrors>({});
@@ -126,6 +132,36 @@ export default function DataPage() {
     } finally {
       // Allow selecting the same file again after a failed attempt.
       if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const RESET_KEYWORD = 'ZURÜCKSETZEN';
+
+  const handleDeleteHistory = async () => {
+    setBusy('reset');
+    try {
+      await deleteTrainingHistory();
+      setHistoryConfirm(false);
+      toast.show('Trainingshistorie gelöscht.', 'success');
+    } catch {
+      toast.show('Löschen fehlgeschlagen.', 'error');
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const handleResetAll = async () => {
+    setBusy('reset');
+    try {
+      await resetAllData();
+      setResetOpen(false);
+      setResetInput('');
+      toast.show('App zurückgesetzt. Alle lokalen Daten wurden gelöscht.', 'success');
+      navigate('/', { replace: true });
+    } catch {
+      toast.show('Zurücksetzen fehlgeschlagen.', 'error');
+    } finally {
+      setBusy(null);
     }
   };
 
@@ -590,6 +626,39 @@ export default function DataPage() {
             </Button>
           </div>
         </Card>
+
+        <Card className="border-danger/40">
+          <CardHeader
+            title="Gefahrenzone"
+            subtitle="Diese Aktionen können nicht rückgängig gemacht werden. Erstelle vorher eine Sicherung."
+            as="h2"
+          />
+          <div className="grid gap-2">
+            <Button
+              variant="secondary"
+              disabled={busy !== null}
+              onClick={() => setHistoryConfirm(true)}
+            >
+              Trainingshistorie löschen
+            </Button>
+            <p className="text-xs leading-relaxed text-muted">
+              Löscht alle Trainingseinheiten, Sätze, Pausen und aktive Entwürfe. Übungen,
+              Trainingspläne und Körperdaten bleiben erhalten.
+            </p>
+            <Button
+              variant="danger"
+              className="mt-2"
+              disabled={busy !== null}
+              onClick={() => setResetOpen(true)}
+            >
+              App vollständig zurücksetzen
+            </Button>
+            <p className="text-xs leading-relaxed text-muted">
+              Löscht alle lokalen Daten: Übungen, Pläne, Trainings, Körperdaten, Equipment-Profile,
+              KI-Analysen und Einstellungen. Die App startet danach wie frisch installiert.
+            </p>
+          </div>
+        </Card>
       </div>
 
       {/* Import preview: the user sees exactly what the file contains first. */}
@@ -669,6 +738,57 @@ export default function DataPage() {
         onCancel={() => setReplaceConfirm(false)}
         onConfirm={() => void runImport('replace')}
       />
+
+      <ConfirmDialog
+        open={historyConfirm}
+        title="Trainingshistorie löschen?"
+        description="Alle Trainingseinheiten, Sätze, Pausen und aktive Entwürfe werden endgültig gelöscht. Übungen, Trainingspläne und Körperdaten bleiben erhalten. Dieser Schritt kann nicht rückgängig gemacht werden."
+        confirmLabel="Historie endgültig löschen"
+        cancelLabel="Abbrechen"
+        destructive
+        onCancel={() => setHistoryConfirm(false)}
+        onConfirm={() => void handleDeleteHistory()}
+      />
+
+      {/* Full reset requires typing a keyword, so it can never happen by accident. */}
+      <Dialog
+        open={resetOpen}
+        onClose={() => {
+          setResetOpen(false);
+          setResetInput('');
+        }}
+        title="App vollständig zurücksetzen?"
+        description="Alle lokalen Daten werden unwiderruflich gelöscht — Übungen, Pläne, Trainings, Körperdaten, Equipment-Profile, KI-Analysen und Einstellungen. Erstelle vorher unbedingt eine Sicherung, falls du die Daten behalten möchtest."
+        footer={
+          <>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setResetOpen(false);
+                setResetInput('');
+              }}
+            >
+              Abbrechen
+            </Button>
+            <Button
+              variant="danger"
+              disabled={busy !== null || resetInput.trim().toUpperCase() !== RESET_KEYWORD}
+              onClick={() => void handleResetAll()}
+            >
+              Alles löschen
+            </Button>
+          </>
+        }
+      >
+        <TextField
+          label={`Zum Bestätigen „${RESET_KEYWORD}" eingeben`}
+          value={resetInput}
+          autoCapitalize="characters"
+          autoCorrect="off"
+          placeholder={RESET_KEYWORD}
+          onChange={(event) => setResetInput(event.target.value)}
+        />
+      </Dialog>
     </>
   );
 }
