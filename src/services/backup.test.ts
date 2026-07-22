@@ -9,6 +9,8 @@ import {
   validateBackupJson,
 } from '@/services/backup';
 import { createExercise } from '@/db/repositories/exercises';
+import { addExerciseToTemplate, createTemplate } from '@/db/repositories/templates';
+import { createTemplateVersion } from '@/db/repositories/templateVersions';
 import { upsertBodyWeightEntry } from '@/db/repositories/bodyWeight';
 import {
   addSet,
@@ -363,6 +365,35 @@ describe('weekly goals round trip', () => {
     await importBackup(result.backup, 'replace');
     const restored = await db.settings.get('app-settings');
     expect(restored?.weeklyGoals).toBeUndefined();
+  });
+});
+
+describe('plan version round trip', () => {
+  it('preserves plan versions through backup and restore', async () => {
+    const { exercise } = await seedDatabase();
+    const template = await createTemplate('Push');
+    await addExerciseToTemplate(template.id, exercise);
+    const version = await createTemplateVersion(template.id, { label: 'Start' });
+
+    const backup = await createBackup();
+    expect(backup.templateVersions).toHaveLength(1);
+    expect(backup.templateVersions[0].id).toBe(version.id);
+
+    await resetDatabase();
+    await importBackup(backup, 'replace');
+    const restored = await db.templateVersions.get(version.id);
+    expect(restored?.snapshot.exercises).toHaveLength(1);
+    expect(restored?.label).toBe('Start');
+  });
+
+  it('accepts a backup written before plan versions existed', async () => {
+    await seedDatabase();
+    const raw = JSON.parse(JSON.stringify(await createBackup()));
+    delete raw.templateVersions;
+    raw.schemaVersion = 9;
+    const result = validateBackupJson(raw);
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.backup.templateVersions).toEqual([]);
   });
 });
 

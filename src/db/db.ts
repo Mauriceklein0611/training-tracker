@@ -5,6 +5,7 @@ import type {
   Exercise,
   SessionExercise,
   TemplateExercise,
+  TemplateVersion,
   WorkoutSession,
   WorkoutSet,
   WorkoutTemplate,
@@ -17,7 +18,7 @@ import { nowIso } from '@/utils/id';
  * Bump this together with a new `.version()` block below and record the change
  * in MIGRATIONS so the settings screen can show what the database went through.
  */
-export const SCHEMA_VERSION = 9;
+export const SCHEMA_VERSION = 10;
 
 export const MIGRATIONS: { version: number; description: string }[] = [
   { version: 1, description: 'Initiales Schema: Übungen, Pläne, Einheiten, Sätze.' },
@@ -73,12 +74,20 @@ export const MIGRATIONS: { version: number; description: string }[] = [
       'Motivation, Muskelkater, wahrgenommene Qualität usw.). Rein subjektiv ' +
       'und freiwillig; ohne diese Angaben bleibt alles unverändert.',
   },
+  {
+    version: 10,
+    description:
+      'Trainingspläne können versioniert werden: gespeicherte, unveränderliche ' +
+      'Planversionen zum Ansehen, Vergleichen und Wiederherstellen. Der aktive ' +
+      'Plan bleibt in den bestehenden Tabellen unverändert.',
+  },
 ];
 
 export class TrainingDatabase extends Dexie {
   exercises!: Table<Exercise, string>;
   workoutTemplates!: Table<WorkoutTemplate, string>;
   templateExercises!: Table<TemplateExercise, string>;
+  templateVersions!: Table<TemplateVersion, string>;
   workoutSessions!: Table<WorkoutSession, string>;
   sessionExercises!: Table<SessionExercise, string>;
   workoutSets!: Table<WorkoutSet, string>;
@@ -243,6 +252,22 @@ export class TrainingDatabase extends Dexie {
           settings.schemaVersion = 9;
         });
     });
+
+    // ---- v10 ------------------------------------------------------------
+    // New templateVersions store for immutable plan snapshots. Adding a store
+    // leaves every existing row untouched; nothing is migrated or rebuilt.
+    this.version(10)
+      .stores({
+        templateVersions: 'id, templateId, [templateId+versionNumber], createdAt',
+      })
+      .upgrade(async (tx) => {
+        await tx
+          .table<AppSettings>('settings')
+          .toCollection()
+          .modify((settings) => {
+            settings.schemaVersion = 10;
+          });
+      });
   }
 }
 

@@ -148,6 +148,55 @@ export interface PostWorkoutCheckIn {
   note?: string;
 }
 
+/**
+ * Immutable snapshot of one exercise row inside a plan version.
+ *
+ * Carries the exercise name at snapshot time so a version stays readable even
+ * if the underlying exercise is later renamed or deleted, mirroring how
+ * sessions snapshot their exercises.
+ */
+export interface TemplateExerciseSnapshot extends ExerciseGrouping {
+  exerciseId: string;
+  exerciseNameSnapshot: string;
+  order: number;
+  targetSets: number;
+  targetRepMin?: number;
+  targetRepMax?: number;
+  targetDurationSeconds?: number;
+  restSeconds: number;
+  notes: string;
+}
+
+/** The full, immutable content of a plan at one point in time. */
+export interface TemplateVersionSnapshot {
+  name: string;
+  description: string;
+  exercises: TemplateExerciseSnapshot[];
+}
+
+/** How a plan version came to exist. */
+export type TemplateVersionSource = 'manual' | 'ai-import' | 'auto';
+
+/**
+ * A saved, immutable version of a plan.
+ *
+ * Editing a plan never overwrites history: a version freezes the plan so it can
+ * be viewed, compared and reactivated later. The live, editable plan stays in
+ * the ordinary template tables; versions are read-only copies beside it.
+ */
+export interface TemplateVersion {
+  id: string;
+  templateId: string;
+  /** Incrementing per template, 1-based. */
+  versionNumber: number;
+  label: string;
+  source: TemplateVersionSource;
+  note?: string;
+  archived?: boolean;
+  snapshot: TemplateVersionSnapshot;
+  createdAt: ISODateTime;
+}
+
 export interface WorkoutSession {
   id: string;
   templateId?: string;

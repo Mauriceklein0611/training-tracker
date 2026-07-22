@@ -6,6 +6,7 @@ import {
   exerciseSchema,
   sessionExerciseSchema,
   templateExerciseSchema,
+  templateVersionSchema,
   workoutSessionSchema,
   workoutSetSchema,
   workoutTemplateSchema,
@@ -30,6 +31,8 @@ export const backupFileSchema = z.object({
   exercises: z.array(exerciseSchema),
   workoutTemplates: z.array(workoutTemplateSchema),
   templateExercises: z.array(templateExerciseSchema),
+  // Added in schema version 10; defaulted so older backups without it still validate.
+  templateVersions: z.array(templateVersionSchema).default([]),
   workoutSessions: z.array(workoutSessionSchema),
   sessionExercises: z.array(sessionExerciseSchema),
   workoutSets: z.array(workoutSetSchema),
@@ -42,6 +45,7 @@ export interface BackupCounts {
   exercises: number;
   workoutTemplates: number;
   templateExercises: number;
+  templateVersions: number;
   workoutSessions: number;
   sessionExercises: number;
   workoutSets: number;
@@ -53,6 +57,7 @@ export function countBackupRecords(backup: BackupFile): BackupCounts {
     exercises: backup.exercises.length,
     workoutTemplates: backup.workoutTemplates.length,
     templateExercises: backup.templateExercises.length,
+    templateVersions: backup.templateVersions.length,
     workoutSessions: backup.workoutSessions.length,
     sessionExercises: backup.sessionExercises.length,
     workoutSets: backup.workoutSets.length,
@@ -64,6 +69,7 @@ export const BACKUP_COUNT_LABELS: Record<keyof BackupCounts, string> = {
   exercises: 'Übungen',
   workoutTemplates: 'Trainingspläne',
   templateExercises: 'Planübungen',
+  templateVersions: 'Planversionen',
   workoutSessions: 'Trainingseinheiten',
   sessionExercises: 'Übungen in Einheiten',
   workoutSets: 'Sätze',
@@ -81,6 +87,7 @@ export async function createBackup(database: TrainingDatabase = db): Promise<Bac
     sessionExercises,
     workoutSets,
     bodyWeightEntries,
+    templateVersions,
   ] = await Promise.all([
     database.settings.get('app-settings'),
     database.exercises.toArray(),
@@ -90,6 +97,7 @@ export async function createBackup(database: TrainingDatabase = db): Promise<Bac
     database.sessionExercises.toArray(),
     database.workoutSets.toArray(),
     database.bodyWeightEntries.toArray(),
+    database.templateVersions.toArray(),
   ]);
 
   return backupFileSchema.parse({
@@ -101,6 +109,7 @@ export async function createBackup(database: TrainingDatabase = db): Promise<Bac
     exercises,
     workoutTemplates,
     templateExercises,
+    templateVersions,
     workoutSessions,
     sessionExercises,
     workoutSets,
@@ -207,6 +216,7 @@ function emptyCounts(): BackupCounts {
     exercises: 0,
     workoutTemplates: 0,
     templateExercises: 0,
+    templateVersions: 0,
     workoutSessions: 0,
     sessionExercises: 0,
     workoutSets: 0,
@@ -218,6 +228,7 @@ const TABLE_KEYS = [
   'exercises',
   'workoutTemplates',
   'templateExercises',
+  'templateVersions',
   'workoutSessions',
   'sessionExercises',
   'workoutSets',
@@ -249,6 +260,7 @@ export async function importBackup(
       database.exercises,
       database.workoutTemplates,
       database.templateExercises,
+      database.templateVersions,
       database.workoutSessions,
       database.sessionExercises,
       database.workoutSets,

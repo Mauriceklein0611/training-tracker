@@ -12,6 +12,7 @@ import HomePage from '@/pages/HomePage';
  */
 const TemplatesPage = lazy(() => import('@/pages/TemplatesPage'));
 const TemplateEditPage = lazy(() => import('@/pages/TemplateEditPage'));
+const TemplateVersionsPage = lazy(() => import('@/pages/TemplateVersionsPage'));
 const HistoryPage = lazy(() => import('@/pages/HistoryPage'));
 const SessionDetailPage = lazy(() => import('@/pages/SessionDetailPage'));
 const AnalyticsPage = lazy(() => import('@/pages/AnalyticsPage'));
@@ -44,6 +45,7 @@ export default function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/plaene" element={<TemplatesPage />} />
           <Route path="/plaene/:templateId" element={<TemplateEditPage />} />
+          <Route path="/plaene/:templateId/versionen" element={<TemplateVersionsPage />} />
           <Route path="/verlauf" element={<HistoryPage />} />
           <Route path="/verlauf/:sessionId" element={<SessionDetailPage />} />
           <Route path="/analyse" element={<AnalyticsPage />} />

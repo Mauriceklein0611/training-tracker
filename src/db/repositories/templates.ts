@@ -52,12 +52,19 @@ export async function updateTemplate(
   await db.workoutTemplates.update(templateId, { ...changes, updatedAt: nowIso() });
 }
 
-/** Deletes a template together with its exercise rows. Sessions are untouched. */
+/** Deletes a template together with its exercise rows and versions. Sessions are untouched. */
 export async function deleteTemplate(templateId: string): Promise<void> {
-  await db.transaction('rw', db.workoutTemplates, db.templateExercises, async () => {
-    await db.templateExercises.where('templateId').equals(templateId).delete();
-    await db.workoutTemplates.delete(templateId);
-  });
+  await db.transaction(
+    'rw',
+    db.workoutTemplates,
+    db.templateExercises,
+    db.templateVersions,
+    async () => {
+      await db.templateExercises.where('templateId').equals(templateId).delete();
+      await db.templateVersions.where('templateId').equals(templateId).delete();
+      await db.workoutTemplates.delete(templateId);
+    },
+  );
 }
 
 export async function duplicateTemplate(templateId: string): Promise<WorkoutTemplate> {

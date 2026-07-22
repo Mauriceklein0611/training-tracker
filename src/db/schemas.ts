@@ -111,6 +111,35 @@ export const postCheckInSchema = z.object({
   note: z.string().max(2000).optional(),
 });
 
+export const templateExerciseSnapshotSchema = z.object({
+  exerciseId: id,
+  exerciseNameSnapshot: z.string().min(1),
+  order: z.number().int().min(0),
+  targetSets: z.number().int().min(1).max(50).default(3),
+  targetRepMin: z.number().int().min(0).max(1000).optional(),
+  targetRepMax: z.number().int().min(0).max(1000).optional(),
+  targetDurationSeconds: z.number().int().min(0).max(36000).optional(),
+  restSeconds: z.number().int().min(0).max(3600).default(120),
+  notes: z.string().default(''),
+  ...groupingFields,
+});
+
+export const templateVersionSchema = z.object({
+  id,
+  templateId: id,
+  versionNumber: z.number().int().min(1),
+  label: z.string().default(''),
+  source: z.enum(['manual', 'ai-import', 'auto']).default('manual'),
+  note: z.string().max(2000).optional(),
+  archived: z.boolean().optional(),
+  snapshot: z.object({
+    name: z.string().default(''),
+    description: z.string().default(''),
+    exercises: z.array(templateExerciseSnapshotSchema),
+  }),
+  createdAt: isoDateTime,
+});
+
 export const workoutSessionSchema = z.object({
   id,
   templateId: id.optional(),

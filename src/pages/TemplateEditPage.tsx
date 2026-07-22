@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { Play, Plus } from 'lucide-react';
+import { History, Play, Plus } from 'lucide-react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/Card';
@@ -103,6 +103,14 @@ export default function TemplateEditPage() {
           </Button>
         }
       />
+
+      <Link
+        to={`/plaene/${template.id}/versionen`}
+        className="mb-4 flex min-h-[48px] items-center gap-2 rounded-2xl border border-border bg-surface px-4 text-sm font-medium active:bg-surface-2"
+      >
+        <History size={18} className="text-accent" aria-hidden="true" />
+        Planversionen
+      </Link>
 
       {exercises.length === 0 ? (
         <EmptyState
