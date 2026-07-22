@@ -54,7 +54,14 @@ describe('exercise management', () => {
 
     const dialog = await screen.findByRole('dialog');
     await user.type(within(dialog).getByLabelText(/^Name$/), 'Klimmzüge');
-    await user.type(within(dialog).getByLabelText(/Primäre Muskelgruppe/), 'Rücken');
+
+    // Pick the primary muscle group through the searchable picker.
+    await user.click(within(dialog).getByRole('button', { name: /Wählen/ }));
+    const dialogs = await screen.findAllByRole('dialog');
+    const picker = dialogs[dialogs.length - 1];
+    await user.type(within(picker).getByLabelText(/^Suchen$/), 'Lat');
+    await user.click(within(picker).getByRole('option', { name: /Latissimus/ }));
+
     await user.selectOptions(
       within(dialog).getByLabelText(/Tracking-Typ/),
       'bodyweight_reps',
@@ -66,6 +73,7 @@ describe('exercise management', () => {
       const exercises = await db.exercises.toArray();
       expect(exercises).toHaveLength(1);
       expect(exercises[0].name).toBe('Klimmzüge');
+      expect(exercises[0].primaryMuscleGroup).toBe('Latissimus');
       expect(exercises[0].trackingType).toBe('bodyweight_reps');
       // Choosing a bodyweight type switches the weight convention along with it.
       expect(exercises[0].weightMode).toBe('added_weight');

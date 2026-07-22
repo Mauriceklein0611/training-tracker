@@ -18,6 +18,7 @@ import { ExerciseFormDialog } from '@/features/exercises/ExerciseFormDialog';
 import { useSettings } from '@/hooks/useSettings';
 import { useToast } from '@/hooks/useToast';
 import type { Exercise } from '@/types';
+import { MuscleGroupChips } from '@/features/exercises/MuscleGroupChips';
 import { TRACKING_TYPE_LABELS, WEIGHT_MODE_LABELS } from '@/utils/format';
 
 export default function ExercisesPage() {
@@ -181,11 +182,18 @@ export default function ExercisesPage() {
                     <span className="truncate">{exercise.name}</span>
                     {exercise.archived ? <Badge tone="warning">Archiviert</Badge> : null}
                   </p>
-                  <p className="mt-0.5 text-sm text-muted">
-                    {[exercise.primaryMuscleGroup, exercise.equipment]
-                      .filter(Boolean)
-                      .join(' · ') || 'Ohne Zuordnung'}
-                  </p>
+                  {exercise.primaryMuscleGroup ||
+                  exercise.secondaryMuscleGroups.length > 0 ? (
+                    <div className="mt-1">
+                      <MuscleGroupChips
+                        primary={exercise.primaryMuscleGroup || undefined}
+                        secondary={exercise.secondaryMuscleGroups}
+                      />
+                    </div>
+                  ) : null}
+                  {exercise.equipment ? (
+                    <p className="mt-1 text-sm text-muted">{exercise.equipment}</p>
+                  ) : null}
                   <p className="mt-1 text-xs text-muted">
                     {TRACKING_TYPE_LABELS[exercise.trackingType]} ·{' '}
                     {WEIGHT_MODE_LABELS[exercise.weightMode]}

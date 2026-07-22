@@ -11,10 +11,12 @@ import {
 } from '@/components/ui/Field';
 import { createExercise, updateExercise } from '@/db/repositories/exercises';
 import { validateExerciseForm, parseNumberInput } from '@/services/validation';
+import { normalizeMuscleQuery } from '@/constants/muscleGroups';
+import { MuscleGroupChips } from '@/features/exercises/MuscleGroupChips';
+import { MuscleGroupPicker } from '@/features/exercises/MuscleGroupPicker';
 import type { Exercise, ProgressionMethod, TrackingType, WeightMode } from '@/types';
 import {
   EQUIPMENT_SUGGESTIONS,
-  MUSCLE_GROUP_SUGGESTIONS,
   TRACKING_TYPE_HELP,
   TRACKING_TYPE_LABELS,
   WEIGHT_MODE_HELP,
@@ -55,7 +57,7 @@ function allowedWeightModes(trackingType: TrackingType): WeightMode[] {
 interface FormState {
   name: string;
   primaryMuscleGroup: string;
-  secondaryMuscleGroups: string;
+  secondaryMuscleGroups: string[];
   equipment: string;
   trackingType: TrackingType;
   weightMode: WeightMode;
@@ -109,7 +111,7 @@ function toFormState(exercise?: Exercise, defaultRest = 120): FormState {
   return {
     name: exercise?.name ?? '',
     primaryMuscleGroup: exercise?.primaryMuscleGroup ?? '',
-    secondaryMuscleGroups: exercise?.secondaryMuscleGroups.join(', ') ?? '',
+    secondaryMuscleGroups: exercise?.secondaryMuscleGroups ?? [],
     equipment: exercise?.equipment ?? '',
     trackingType: exercise?.trackingType ?? 'weight_reps',
     weightMode: exercise?.weightMode ?? 'total',
@@ -154,6 +156,7 @@ export function ExerciseFormDialog({
   );
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  const [pickerMode, setPickerMode] = useState<'primary' | 'secondary' | null>(null);
 
   // Other exercises that can be picked as manual alternatives.
   const otherExercises = useLiveQuery(
@@ -216,13 +219,16 @@ export function ExerciseFormDialog({
       return;
     }
 
+    const primary = form.primaryMuscleGroup.trim();
     const payload = {
       name: form.name.trim(),
-      primaryMuscleGroup: form.primaryMuscleGroup.trim(),
-      secondaryMuscleGroups: form.secondaryMuscleGroups
-        .split(',')
-        .map((value) => value.trim())
-        .filter(Boolean),
+      primaryMuscleGroup: primary,
+      // Defensive: keep non-empty, unique and never the primary group.
+      secondaryMuscleGroups: [
+        ...new Set(form.secondaryMuscleGroups.map((value) => value.trim())),
+      ]
+        .filter(Boolean)
+        .filter((value) => normalizeMuscleQuery(value) !== normalizeMuscleQuery(primary)),
       equipment: form.equipment.trim(),
       trackingType: form.trackingType,
       weightMode: form.weightMode,
@@ -267,219 +273,283 @@ export function ExerciseFormDialog({
   };
 
   return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      title={exercise ? 'Übung bearbeiten' : 'Neue Übung'}
-      footer={
-        <>
-          <Button variant="secondary" onClick={onClose} disabled={saving}>
-            Abbrechen
-          </Button>
-          <Button variant="primary" onClick={() => void handleSubmit()} disabled={saving}>
-            {saving ? 'Speichern …' : 'Speichern'}
-          </Button>
-        </>
-      }
-    >
-      <div className="grid gap-4">
-        <TextField
-          label="Name"
-          value={form.name}
-          error={errors.name}
-          autoComplete="off"
-          placeholder="z. B. Bankdrücken"
-          onChange={(event) => update('name', event.target.value)}
-        />
-
-        <TextField
-          label="Primäre Muskelgruppe"
-          value={form.primaryMuscleGroup}
-          list={`${listId}-muscles`}
-          placeholder="z. B. Brust"
-          onChange={(event) => update('primaryMuscleGroup', event.target.value)}
-        />
-        <datalist id={`${listId}-muscles`}>
-          {MUSCLE_GROUP_SUGGESTIONS.map((group) => (
-            <option key={group} value={group} />
-          ))}
-        </datalist>
-
-        <TextField
-          label="Sekundäre Muskelgruppen"
-          value={form.secondaryMuscleGroups}
-          hint="Mehrere durch Komma trennen, z. B. Trizeps, Schultern"
-          onChange={(event) => update('secondaryMuscleGroups', event.target.value)}
-        />
-
-        <TextField
-          label="Equipment"
-          value={form.equipment}
-          list={`${listId}-equipment`}
-          placeholder="z. B. Langhantel"
-          onChange={(event) => update('equipment', event.target.value)}
-        />
-        <datalist id={`${listId}-equipment`}>
-          {EQUIPMENT_SUGGESTIONS.map((item) => (
-            <option key={item} value={item} />
-          ))}
-        </datalist>
-
-        <SelectField
-          label="Tracking-Typ"
-          value={form.trackingType}
-          hint={TRACKING_TYPE_HELP[form.trackingType]}
-          onChange={(event) =>
-            handleTrackingTypeChange(event.target.value as TrackingType)
-          }
-        >
-          {(Object.keys(TRACKING_TYPE_LABELS) as TrackingType[]).map((type) => (
-            <option key={type} value={type}>
-              {TRACKING_TYPE_LABELS[type]}
-            </option>
-          ))}
-        </SelectField>
-
-        <SelectField
-          label="Gewichtskonvention"
-          value={form.weightMode}
-          hint={WEIGHT_MODE_HELP[form.weightMode]}
-          disabled={weightModes.length <= 1}
-          onChange={(event) => update('weightMode', event.target.value as WeightMode)}
-        >
-          {weightModes.map((mode) => (
-            <option key={mode} value={mode}>
-              {WEIGHT_MODE_LABELS[mode]}
-            </option>
-          ))}
-        </SelectField>
-
-        {showMultiplier ? (
-          <NumberField
-            label="Gewichtsmultiplikator"
-            decimal
-            value={form.weightMultiplier}
-            error={errors.weightMultiplier}
-            hint="Bei zwei Kurzhanteln à 20 kg ergibt der Multiplikator 2 eine Gesamtlast von 40 kg."
-            onChange={(event) => update('weightMultiplier', event.target.value)}
-          />
-        ) : null}
-
-        <NumberField
-          label="Standardpause (Sekunden)"
-          value={form.defaultRestSeconds}
-          error={errors.defaultRestSeconds}
-          onChange={(event) => update('defaultRestSeconds', event.target.value)}
-        />
-
-        {/* Optional throughout — the suggestion simply says so when unset. */}
-        <details className="rounded-xl border border-border bg-surface-2 p-3">
-          <summary className="min-h-[44px] cursor-pointer list-none py-2 text-sm font-medium text-accent">
-            Progression (optional)
-          </summary>
-          <div className="mt-3 grid gap-3">
-            <p className="text-xs leading-relaxed text-muted">
-              Diese Angaben verbessern die lokale Progressionsempfehlung. Ohne sie wird
-              eine Standardsteigerung angenommen — es wird nichts geschätzt oder
-              automatisch geändert.
-            </p>
-
-            <NumberField
-              label="Kleinste Gewichtssteigerung (kg)"
-              decimal
-              value={form.weightIncrementKg}
-              placeholder="Standard: 2,5"
-              onChange={(event) => update('weightIncrementKg', event.target.value)}
-            />
-
-            <TextField
-              label="Verfügbare Gewichte (kg)"
-              value={form.availableWeightsKg}
-              hint="Durch Komma trennen, z. B. 10, 12.5, 15, 17.5. Dann wird nur ein tatsächlich vorhandenes Gewicht vorgeschlagen."
-              onChange={(event) => update('availableWeightsKg', event.target.value)}
-            />
-
-            <SelectField
-              label="Bevorzugte Progression"
-              value={form.progressionMethod}
-              onChange={(event) =>
-                update('progressionMethod', event.target.value as ProgressionMethod)
-              }
+    <>
+      <Dialog
+        open={open}
+        onClose={onClose}
+        title={exercise ? 'Übung bearbeiten' : 'Neue Übung'}
+        footer={
+          <>
+            <Button variant="secondary" onClick={onClose} disabled={saving}>
+              Abbrechen
+            </Button>
+            <Button
+              variant="primary"
+              onClick={() => void handleSubmit()}
+              disabled={saving}
             >
-              <option value="auto">Automatisch (nach Tracking-Typ)</option>
-              <option value="weight">Zuerst Gewicht steigern</option>
-              <option value="reps">Zuerst Wiederholungen steigern</option>
-            </SelectField>
+              {saving ? 'Speichern …' : 'Speichern'}
+            </Button>
+          </>
+        }
+      >
+        <div className="grid gap-4">
+          <TextField
+            label="Name"
+            value={form.name}
+            error={errors.name}
+            autoComplete="off"
+            placeholder="z. B. Bankdrücken"
+            onChange={(event) => update('name', event.target.value)}
+          />
 
-            <NumberField
-              label="Ziel-RIR"
-              decimal
-              value={form.targetRir}
-              hint="Verbleibende Wiederholungen im Tank. Höher heißt leichter. Leer lassen, wenn du RIR nicht nutzt."
-              onChange={(event) => update('targetRir', event.target.value)}
+          <div>
+            <div className="mb-1.5 flex items-center justify-between gap-2">
+              <span className="text-sm font-medium">Primäre Muskelgruppe</span>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setPickerMode('primary')}
+              >
+                {form.primaryMuscleGroup ? 'Ändern' : 'Wählen'}
+              </Button>
+            </div>
+            <MuscleGroupChips
+              primary={form.primaryMuscleGroup || undefined}
+              secondary={[]}
+              onRemovePrimary={() => update('primaryMuscleGroup', '')}
             />
           </div>
-        </details>
 
-        <TextAreaField
-          label="Technik-Hinweise (optional)"
-          value={form.techniqueCues}
-          hint="Ein kurzer Hinweis pro Zeile, z. B. Schulterblätter fixieren. Wird im Training angezeigt."
-          onChange={(event) => update('techniqueCues', event.target.value)}
-        />
+          <div>
+            <div className="mb-1.5 flex items-center justify-between gap-2">
+              <span className="text-sm font-medium">Sekundäre Muskelgruppen</span>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setPickerMode('secondary')}
+              >
+                Hinzufügen
+              </Button>
+            </div>
+            <MuscleGroupChips
+              secondary={form.secondaryMuscleGroups}
+              onRemoveSecondary={(label) =>
+                update(
+                  'secondaryMuscleGroups',
+                  form.secondaryMuscleGroups.filter((value) => value !== label),
+                )
+              }
+            />
+          </div>
 
-        {open && otherExercises.length > 0 ? (
+          <TextField
+            label="Equipment"
+            value={form.equipment}
+            list={`${listId}-equipment`}
+            placeholder="z. B. Langhantel"
+            onChange={(event) => update('equipment', event.target.value)}
+          />
+          <datalist id={`${listId}-equipment`}>
+            {EQUIPMENT_SUGGESTIONS.map((item) => (
+              <option key={item} value={item} />
+            ))}
+          </datalist>
+
+          <SelectField
+            label="Tracking-Typ"
+            value={form.trackingType}
+            hint={TRACKING_TYPE_HELP[form.trackingType]}
+            onChange={(event) =>
+              handleTrackingTypeChange(event.target.value as TrackingType)
+            }
+          >
+            {(Object.keys(TRACKING_TYPE_LABELS) as TrackingType[]).map((type) => (
+              <option key={type} value={type}>
+                {TRACKING_TYPE_LABELS[type]}
+              </option>
+            ))}
+          </SelectField>
+
+          <SelectField
+            label="Gewichtskonvention"
+            value={form.weightMode}
+            hint={WEIGHT_MODE_HELP[form.weightMode]}
+            disabled={weightModes.length <= 1}
+            onChange={(event) => update('weightMode', event.target.value as WeightMode)}
+          >
+            {weightModes.map((mode) => (
+              <option key={mode} value={mode}>
+                {WEIGHT_MODE_LABELS[mode]}
+              </option>
+            ))}
+          </SelectField>
+
+          {showMultiplier ? (
+            <NumberField
+              label="Gewichtsmultiplikator"
+              decimal
+              value={form.weightMultiplier}
+              error={errors.weightMultiplier}
+              hint="Bei zwei Kurzhanteln à 20 kg ergibt der Multiplikator 2 eine Gesamtlast von 40 kg."
+              onChange={(event) => update('weightMultiplier', event.target.value)}
+            />
+          ) : null}
+
+          <NumberField
+            label="Standardpause (Sekunden)"
+            value={form.defaultRestSeconds}
+            error={errors.defaultRestSeconds}
+            onChange={(event) => update('defaultRestSeconds', event.target.value)}
+          />
+
+          {/* Optional throughout — the suggestion simply says so when unset. */}
           <details className="rounded-xl border border-border bg-surface-2 p-3">
             <summary className="min-h-[44px] cursor-pointer list-none py-2 text-sm font-medium text-accent">
-              Alternativübungen (optional)
-              {form.alternativeExerciseIds.length > 0
-                ? ` · ${form.alternativeExerciseIds.length}`
-                : ''}
+              Progression (optional)
             </summary>
-            <p className="mb-2 mt-1 text-xs leading-relaxed text-muted">
-              Manuell gewählte Ersatzübungen — im Training schnell wählbar, z. B. wenn ein
-              Gerät belegt ist.
-            </p>
-            <div className="grid max-h-56 gap-1 overflow-y-auto">
-              {[...otherExercises]
-                .sort((a, b) => a.name.localeCompare(b.name, 'de'))
-                .map((entry) => {
-                  const checked = form.alternativeExerciseIds.includes(entry.id);
-                  return (
-                    <label
-                      key={entry.id}
-                      className="flex items-center gap-2 py-1 text-sm"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        className="h-5 w-5 accent-[var(--accent)]"
-                        onChange={() =>
-                          update(
-                            'alternativeExerciseIds',
-                            checked
-                              ? form.alternativeExerciseIds.filter(
-                                  (id) => id !== entry.id,
-                                )
-                              : [...form.alternativeExerciseIds, entry.id],
-                          )
-                        }
-                      />
-                      <span className="min-w-0 truncate">{entry.name}</span>
-                    </label>
-                  );
-                })}
+            <div className="mt-3 grid gap-3">
+              <p className="text-xs leading-relaxed text-muted">
+                Diese Angaben verbessern die lokale Progressionsempfehlung. Ohne sie wird
+                eine Standardsteigerung angenommen — es wird nichts geschätzt oder
+                automatisch geändert.
+              </p>
+
+              <NumberField
+                label="Kleinste Gewichtssteigerung (kg)"
+                decimal
+                value={form.weightIncrementKg}
+                placeholder="Standard: 2,5"
+                onChange={(event) => update('weightIncrementKg', event.target.value)}
+              />
+
+              <TextField
+                label="Verfügbare Gewichte (kg)"
+                value={form.availableWeightsKg}
+                hint="Durch Komma trennen, z. B. 10, 12.5, 15, 17.5. Dann wird nur ein tatsächlich vorhandenes Gewicht vorgeschlagen."
+                onChange={(event) => update('availableWeightsKg', event.target.value)}
+              />
+
+              <SelectField
+                label="Bevorzugte Progression"
+                value={form.progressionMethod}
+                onChange={(event) =>
+                  update('progressionMethod', event.target.value as ProgressionMethod)
+                }
+              >
+                <option value="auto">Automatisch (nach Tracking-Typ)</option>
+                <option value="weight">Zuerst Gewicht steigern</option>
+                <option value="reps">Zuerst Wiederholungen steigern</option>
+              </SelectField>
+
+              <NumberField
+                label="Ziel-RIR"
+                decimal
+                value={form.targetRir}
+                hint="Verbleibende Wiederholungen im Tank. Höher heißt leichter. Leer lassen, wenn du RIR nicht nutzt."
+                onChange={(event) => update('targetRir', event.target.value)}
+              />
             </div>
           </details>
-        ) : null}
 
-        <TextAreaField
-          label="Notizen"
-          value={form.notes}
-          placeholder="z. B. Griffbreite, Sitzposition"
-          onChange={(event) => update('notes', event.target.value)}
+          <TextAreaField
+            label="Technik-Hinweise (optional)"
+            value={form.techniqueCues}
+            hint="Ein kurzer Hinweis pro Zeile, z. B. Schulterblätter fixieren. Wird im Training angezeigt."
+            onChange={(event) => update('techniqueCues', event.target.value)}
+          />
+
+          {open && otherExercises.length > 0 ? (
+            <details className="rounded-xl border border-border bg-surface-2 p-3">
+              <summary className="min-h-[44px] cursor-pointer list-none py-2 text-sm font-medium text-accent">
+                Alternativübungen (optional)
+                {form.alternativeExerciseIds.length > 0
+                  ? ` · ${form.alternativeExerciseIds.length}`
+                  : ''}
+              </summary>
+              <p className="mb-2 mt-1 text-xs leading-relaxed text-muted">
+                Manuell gewählte Ersatzübungen — im Training schnell wählbar, z. B. wenn
+                ein Gerät belegt ist.
+              </p>
+              <div className="grid max-h-56 gap-1 overflow-y-auto">
+                {[...otherExercises]
+                  .sort((a, b) => a.name.localeCompare(b.name, 'de'))
+                  .map((entry) => {
+                    const checked = form.alternativeExerciseIds.includes(entry.id);
+                    return (
+                      <label
+                        key={entry.id}
+                        className="flex items-center gap-2 py-1 text-sm"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          className="h-5 w-5 accent-[var(--accent)]"
+                          onChange={() =>
+                            update(
+                              'alternativeExerciseIds',
+                              checked
+                                ? form.alternativeExerciseIds.filter(
+                                    (id) => id !== entry.id,
+                                  )
+                                : [...form.alternativeExerciseIds, entry.id],
+                            )
+                          }
+                        />
+                        <span className="min-w-0 truncate">{entry.name}</span>
+                      </label>
+                    );
+                  })}
+              </div>
+            </details>
+          ) : null}
+
+          <TextAreaField
+            label="Notizen"
+            value={form.notes}
+            placeholder="z. B. Griffbreite, Sitzposition"
+            onChange={(event) => update('notes', event.target.value)}
+          />
+        </div>
+      </Dialog>
+
+      {pickerMode ? (
+        <MuscleGroupPicker
+          open
+          mode={pickerMode === 'primary' ? 'single' : 'multiple'}
+          title={
+            pickerMode === 'primary' ? 'Primäre Muskelgruppe' : 'Sekundäre Muskelgruppen'
+          }
+          selected={
+            pickerMode === 'primary'
+              ? form.primaryMuscleGroup
+                ? [form.primaryMuscleGroup]
+                : []
+              : form.secondaryMuscleGroups
+          }
+          excludeLabels={
+            pickerMode === 'secondary' && form.primaryMuscleGroup
+              ? [form.primaryMuscleGroup]
+              : []
+          }
+          onChange={(next) => {
+            if (pickerMode === 'primary') {
+              const label = next[0] ?? '';
+              setForm((current) => ({
+                ...current,
+                primaryMuscleGroup: label,
+                // A new primary can never remain in the secondary selection.
+                secondaryMuscleGroups: current.secondaryMuscleGroups.filter(
+                  (value) => normalizeMuscleQuery(value) !== normalizeMuscleQuery(label),
+                ),
+              }));
+            } else {
+              update('secondaryMuscleGroups', next);
+            }
+          }}
+          onClose={() => setPickerMode(null)}
         />
-      </div>
-    </Dialog>
+      ) : null}
+    </>
   );
 }
