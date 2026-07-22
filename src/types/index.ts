@@ -86,6 +86,10 @@ export interface Exercise {
   progressionMethod?: ProgressionMethod;
   /** Repetitions in reserve aimed for. Higher means easier. */
   targetRir?: number;
+  /** A few short, personal technique reminders shown during the workout. */
+  techniqueCues?: string[];
+  /** Manually chosen substitute exercises, e.g. when equipment is taken. */
+  alternativeExerciseIds?: string[];
   notes: string;
   /** Archived exercises stay available for history but are hidden from pickers. */
   archived: boolean;

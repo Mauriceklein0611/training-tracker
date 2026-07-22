@@ -65,6 +65,9 @@ export const exerciseSchema = z.object({
   availableWeightsKg: z.array(z.number().positive().max(1000)).max(80).optional(),
   progressionMethod: z.enum(['auto', 'weight', 'reps']).optional(),
   targetRir: z.number().min(0).max(10).optional(),
+  // Added in schema version 12; optional, so older backups still validate.
+  techniqueCues: z.array(z.string().max(160)).max(12).optional(),
+  alternativeExerciseIds: z.array(id).max(20).optional(),
   notes: z.string().default(''),
   archived: z.boolean().default(false),
   createdAt: isoDateTime,

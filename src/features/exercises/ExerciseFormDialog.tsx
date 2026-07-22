@@ -1,4 +1,6 @@
 import { useEffect, useId, useMemo, useState } from 'react';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { db } from '@/db/db';
 import { Dialog } from '@/components/ui/Dialog';
 import { Button } from '@/components/ui/Button';
 import { NumberField, SelectField, TextAreaField, TextField } from '@/components/ui/Field';
@@ -58,7 +60,19 @@ interface FormState {
   availableWeightsKg: string;
   progressionMethod: ProgressionMethod;
   targetRir: string;
+  techniqueCues: string;
+  alternativeExerciseIds: string[];
   notes: string;
+}
+
+/** Splits the cues textarea (one per line) into a clean, bounded array. */
+function parseCues(raw: string): string[] | undefined {
+  const cues = raw
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .slice(0, 12);
+  return cues.length > 0 ? cues : undefined;
 }
 
 /** Parses an optional numeric field; out-of-range or empty yields undefined. */
@@ -95,6 +109,8 @@ function toFormState(exercise?: Exercise, defaultRest = 120): FormState {
     availableWeightsKg: exercise?.availableWeightsKg?.join(', ') ?? '',
     progressionMethod: exercise?.progressionMethod ?? 'auto',
     targetRir: exercise?.targetRir == null ? '' : String(exercise.targetRir),
+    techniqueCues: exercise?.techniqueCues?.join('\n') ?? '',
+    alternativeExerciseIds: exercise?.alternativeExerciseIds ?? [],
     notes: exercise?.notes ?? '',
   };
 }
@@ -125,6 +141,13 @@ export function ExerciseFormDialog({
   const [form, setForm] = useState<FormState>(() => toFormState(exercise, defaultRestSeconds));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+
+  // Other exercises that can be picked as manual alternatives.
+  const otherExercises = useLiveQuery(
+    () => db.exercises.filter((entry) => !entry.archived && entry.id !== exercise?.id).toArray(),
+    [exercise?.id],
+    [],
+  );
 
   useEffect(() => {
     if (open) {
@@ -193,6 +216,9 @@ export function ExerciseFormDialog({
       availableWeightsKg: parseWeightList(form.availableWeightsKg),
       progressionMethod: form.progressionMethod === 'auto' ? undefined : form.progressionMethod,
       targetRir: optionalNumber(form.targetRir, { min: 0, max: 10 }),
+      techniqueCues: parseCues(form.techniqueCues),
+      alternativeExerciseIds:
+        form.alternativeExerciseIds.length > 0 ? form.alternativeExerciseIds : undefined,
       notes: form.notes.trim(),
     };
 
@@ -369,6 +395,53 @@ export function ExerciseFormDialog({
             />
           </div>
         </details>
+
+        <TextAreaField
+          label="Technik-Hinweise (optional)"
+          value={form.techniqueCues}
+          hint="Ein kurzer Hinweis pro Zeile, z. B. Schulterblätter fixieren. Wird im Training angezeigt."
+          onChange={(event) => update('techniqueCues', event.target.value)}
+        />
+
+        {open && otherExercises.length > 0 ? (
+          <details className="rounded-xl border border-border bg-surface-2 p-3">
+            <summary className="min-h-[44px] cursor-pointer list-none py-2 text-sm font-medium text-accent">
+              Alternativübungen (optional)
+              {form.alternativeExerciseIds.length > 0
+                ? ` · ${form.alternativeExerciseIds.length}`
+                : ''}
+            </summary>
+            <p className="mb-2 mt-1 text-xs leading-relaxed text-muted">
+              Manuell gewählte Ersatzübungen — im Training schnell wählbar, z. B. wenn ein Gerät
+              belegt ist.
+            </p>
+            <div className="grid max-h-56 gap-1 overflow-y-auto">
+              {[...otherExercises]
+                .sort((a, b) => a.name.localeCompare(b.name, 'de'))
+                .map((entry) => {
+                  const checked = form.alternativeExerciseIds.includes(entry.id);
+                  return (
+                    <label key={entry.id} className="flex items-center gap-2 py-1 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        className="h-5 w-5 accent-[var(--accent)]"
+                        onChange={() =>
+                          update(
+                            'alternativeExerciseIds',
+                            checked
+                              ? form.alternativeExerciseIds.filter((id) => id !== entry.id)
+                              : [...form.alternativeExerciseIds, entry.id],
+                          )
+                        }
+                      />
+                      <span className="min-w-0 truncate">{entry.name}</span>
+                    </label>
+                  );
+                })}
+            </div>
+          </details>
+        ) : null}
 
         <TextAreaField
           label="Notizen"

@@ -12,6 +12,7 @@ import {
   getLastPerformance,
   moveSessionExercise,
   removeSessionExercise,
+  swapSessionExercise,
   updateSessionExercise,
   updateSet,
   type SessionExerciseDetail,
@@ -137,11 +138,19 @@ export function SessionExerciseCard({
     [previousSets, sessionExercise],
   );
 
-  /** The exercise record, for its optional progression settings. */
+  /** The exercise record, for its optional progression settings and cues. */
   const exercise = useLiveQuery(
     () => db.exercises.get(sessionExercise.exerciseId),
     [sessionExercise.exerciseId],
   );
+
+  /** Manually configured alternative exercises, offered before any set is done. */
+  const alternatives = useLiveQuery(async () => {
+    const ids = exercise?.alternativeExerciseIds ?? [];
+    if (ids.length === 0) return [];
+    const rows = await db.exercises.bulkGet(ids);
+    return rows.filter((row): row is NonNullable<typeof row> => row != null && !row.archived);
+  }, [exercise?.alternativeExerciseIds]);
 
   /**
    * Suggestion for next time, derived from the *previous* workout.
@@ -245,6 +254,41 @@ export function SessionExerciseCard({
           </IconButton>
         </div>
       </div>
+
+      {exercise?.techniqueCues && exercise.techniqueCues.length > 0 ? (
+        <ul className="mt-2 grid gap-1 rounded-xl bg-surface-2 p-2 text-xs text-muted">
+          {exercise.techniqueCues.map((cue, index) => (
+            <li key={index} className="flex gap-1.5">
+              <span aria-hidden="true" className="text-accent">
+                •
+              </span>
+              <span>{cue}</span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+
+      {/* Swapping is only offered before any set is recorded — the sets belong
+          to the current exercise and would otherwise be lost. */}
+      {completedSets.length === 0 && (alternatives?.length ?? 0) > 0 ? (
+        <details className="mt-2">
+          <summary className="min-h-[44px] cursor-pointer list-none py-2 text-sm font-medium text-accent">
+            Alternative wählen ({alternatives?.length})
+          </summary>
+          <div className="mt-1 flex flex-wrap gap-2">
+            {alternatives?.map((alternative) => (
+              <Button
+                key={alternative.id}
+                variant="secondary"
+                size="sm"
+                onClick={() => void swapSessionExercise(sessionExercise.id, alternative)}
+              >
+                {alternative.name}
+              </Button>
+            ))}
+          </div>
+        </details>
+      ) : null}
 
       {completedSets.length > 0 ? (
         <ul className="mt-3 grid gap-1">

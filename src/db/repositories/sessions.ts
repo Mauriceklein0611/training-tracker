@@ -279,6 +279,36 @@ export async function updateSessionExercise(
   await db.sessionExercises.update(sessionExerciseId, { ...changes, updatedAt: nowIso() });
 }
 
+/**
+ * Replaces the exercise of a session slot in place (same position and group),
+ * e.g. to pick a manual alternative when equipment is taken. Any sets already
+ * entered are removed, because they belong to the previous exercise — callers
+ * should only offer this before sets are recorded.
+ */
+export async function swapSessionExercise(
+  sessionExerciseId: string,
+  newExercise: Exercise,
+): Promise<void> {
+  const globalDefaultRestSeconds = await readGlobalRestDefault();
+  await db.transaction('rw', db.sessionExercises, db.workoutSets, async () => {
+    const entry = await db.sessionExercises.get(sessionExerciseId);
+    if (!entry) return;
+    await db.workoutSets.where('sessionExerciseId').equals(sessionExerciseId).delete();
+    await db.sessionExercises.update(sessionExerciseId, {
+      exerciseId: newExercise.id,
+      exerciseNameSnapshot: newExercise.name,
+      trackingTypeSnapshot: newExercise.trackingType,
+      weightModeSnapshot: newExercise.weightMode,
+      weightMultiplierSnapshot: newExercise.weightMultiplier,
+      restSecondsSnapshot: resolveRestSeconds({
+        exerciseDefaultRestSeconds: newExercise.defaultRestSeconds,
+        globalDefaultRestSeconds,
+      }),
+      updatedAt: nowIso(),
+    });
+  });
+}
+
 async function orderedSessionExercises(sessionId: string): Promise<SessionExercise[]> {
   const rows = await db.sessionExercises.where('sessionId').equals(sessionId).toArray();
   return rows.sort((a, b) => a.order - b.order);

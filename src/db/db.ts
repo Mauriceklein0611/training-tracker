@@ -20,7 +20,7 @@ import { nowIso } from '@/utils/id';
  * Bump this together with a new `.version()` block below and record the change
  * in MIGRATIONS so the settings screen can show what the database went through.
  */
-export const SCHEMA_VERSION = 11;
+export const SCHEMA_VERSION = 12;
 
 export const MIGRATIONS: { version: number; description: string }[] = [
   { version: 1, description: 'Initiales Schema: Übungen, Pläne, Einheiten, Sätze.' },
@@ -89,6 +89,13 @@ export const MIGRATIONS: { version: number; description: string }[] = [
       'KI-Rundweg: importierte KI-Analysen (Feedback und geprüfte Planvorschläge) ' +
       'werden lokal gespeichert. Zusätzlich werden erzeugte KI-Exporte vermerkt, ' +
       'um eine Antwortdatei ihrem Export zuordnen zu können.',
+  },
+  {
+    version: 12,
+    description:
+      'Übungen können optionale Technik-Hinweise und manuell gewählte ' +
+      'Alternativübungen hinterlegen. Beides ist optional; ohne Angabe bleibt ' +
+      'alles unverändert.',
   },
 ];
 
@@ -296,6 +303,19 @@ export class TrainingDatabase extends Dexie {
             settings.schemaVersion = 11;
           });
       });
+
+    // ---- v12 ------------------------------------------------------------
+    // Exercises gained optional techniqueCues / alternativeExerciseIds. Both are
+    // optional arrays; their absence means "none", so existing rows stay valid
+    // untouched and only the recorded schema version is advanced.
+    this.version(12).upgrade(async (tx) => {
+      await tx
+        .table<AppSettings>('settings')
+        .toCollection()
+        .modify((settings) => {
+          settings.schemaVersion = 12;
+        });
+    });
   }
 }
 
