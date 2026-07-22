@@ -60,6 +60,7 @@ export default function LiveSessionPage() {
   const rest = useActiveRest(detail, {
     soundEnabled: settings.restSoundEnabled,
     vibrationEnabled: settings.restVibrationEnabled,
+    voiceEnabled: settings.voiceAnnouncementsEnabled,
   });
 
   const isActive = detail?.session.status === 'active';

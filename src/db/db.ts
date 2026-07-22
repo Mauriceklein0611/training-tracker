@@ -21,7 +21,7 @@ import { nowIso } from '@/utils/id';
  * Bump this together with a new `.version()` block below and record the change
  * in MIGRATIONS so the settings screen can show what the database went through.
  */
-export const SCHEMA_VERSION = 13;
+export const SCHEMA_VERSION = 14;
 
 export const MIGRATIONS: { version: number; description: string }[] = [
   { version: 1, description: 'Initiales Schema: Übungen, Pläne, Einheiten, Sätze.' },
@@ -103,6 +103,12 @@ export const MIGRATIONS: { version: number; description: string }[] = [
     description:
       'Equipment-Profile (z. B. Zuhause, Fitnessstudio, Hotel) filtern optional ' +
       'die verfügbaren Übungen. Ohne aktives Profil ist alles verfügbar.',
+  },
+  {
+    version: 14,
+    description:
+      'Optionale Sprachansage am Pausenende (Browser-Sprachausgabe, lokal). ' +
+      'Standardmäßig aus; funktioniert nur, wo der Browser es unterstützt.',
   },
 ];
 
@@ -338,6 +344,21 @@ export class TrainingDatabase extends Dexie {
             settings.schemaVersion = 13;
           });
       });
+
+    // ---- v14 ------------------------------------------------------------
+    // Settings gained voiceAnnouncementsEnabled. Backfilled to false so the
+    // opt-in stays off for existing users; no training data is touched.
+    this.version(14).upgrade(async (tx) => {
+      await tx
+        .table<AppSettings>('settings')
+        .toCollection()
+        .modify((settings) => {
+          if (typeof settings.voiceAnnouncementsEnabled !== 'boolean') {
+            settings.voiceAnnouncementsEnabled = false;
+          }
+          settings.schemaVersion = 14;
+        });
+    });
   }
 }
 
@@ -352,6 +373,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   restSoundEnabled: true,
   restVibrationEnabled: true,
   keepScreenAwake: true,
+  voiceAnnouncementsEnabled: false,
   backupReminderDays: 14,
   schemaVersion: SCHEMA_VERSION,
   createdAt: '',

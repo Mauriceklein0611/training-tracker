@@ -274,6 +274,8 @@ export const appSettingsSchema = z.object({
   restVibrationEnabled: z.boolean().default(true),
   // Added in schema version 5; defaulted so older backups still validate.
   keepScreenAwake: z.boolean().default(true),
+  // Added in schema version 14; defaulted so older backups still validate.
+  voiceAnnouncementsEnabled: z.boolean().default(false),
   analysisContext: z
     .object({
       goal: z.string().max(300).optional(),

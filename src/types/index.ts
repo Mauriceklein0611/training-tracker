@@ -454,6 +454,8 @@ export interface AppSettings {
   restVibrationEnabled: boolean;
   /** Keep the display on while a workout is running, where supported. */
   keepScreenAwake: boolean;
+  /** Announce the end of a rest by voice, where the browser supports it. */
+  voiceAnnouncementsEnabled: boolean;
   /** Optional context for the AI export; never used for calculations. */
   analysisContext?: AnalysisContext;
   /** Optional weekly training goals; absent means no goals are set. */

@@ -8,6 +8,7 @@ import { parseNumberInput } from '@/services/validation';
 import { isIos, isStandalone } from '@/services/pwa';
 import { isWakeLockSupported } from '@/hooks/useWakeLock';
 import { playRestFinishedSound, primeAudio, vibrate } from '@/services/sound';
+import { isSpeechSupported, speak } from '@/services/speech';
 import type { AnalyticsRangeKey, AppSettings } from '@/types';
 import { formatDateTime } from '@/utils/date';
 
@@ -59,12 +60,23 @@ export default function SettingsPage() {
               checked={settings.restVibrationEnabled}
               onChange={(checked) => void update({ restVibrationEnabled: checked })}
             />
+            <CheckboxField
+              label="Sprachansage bei Pausenende"
+              hint={
+                isSpeechSupported()
+                  ? 'Kündigt das Pausenende lokal per Sprachausgabe an. Auf dem iPhone muss die App dafür zuvor einmal berührt worden sein.'
+                  : 'Dieser Browser unterstützt die Sprachausgabe nicht — die Einstellung bleibt dann wirkungslos.'
+              }
+              checked={settings.voiceAnnouncementsEnabled}
+              onChange={(checked) => void update({ voiceAnnouncementsEnabled: checked })}
+            />
             <Button
               variant="secondary"
               onClick={() => {
                 primeAudio();
                 if (settings.restSoundEnabled) playRestFinishedSound();
                 if (settings.restVibrationEnabled) vibrate();
+                if (settings.voiceAnnouncementsEnabled) speak('Pause beendet.');
               }}
             >
               Signal testen

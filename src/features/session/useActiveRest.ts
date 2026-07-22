@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import type { SessionDetail } from '@/db/repositories/sessions';
 import { computeRestProgress, type RestProgress } from '@/services/rest';
 import { playRestFinishedSound, vibrate } from '@/services/sound';
+import { speak } from '@/services/speech';
 import { useNow } from '@/hooks/useNow';
 import type { WorkoutSet } from '@/types';
 
@@ -20,7 +21,7 @@ export interface ActiveRest {
  */
 export function useActiveRest(
   detail: SessionDetail | undefined,
-  options: { soundEnabled: boolean; vibrationEnabled: boolean },
+  options: { soundEnabled: boolean; vibrationEnabled: boolean; voiceEnabled?: boolean },
 ): ActiveRest | null {
   const candidate = useMemo(() => {
     if (!detail) return null;
@@ -53,7 +54,14 @@ export function useActiveRest(
 
     if (options.soundEnabled) playRestFinishedSound();
     if (options.vibrationEnabled) vibrate();
-  }, [candidate, progress.targetReached, options.soundEnabled, options.vibrationEnabled]);
+    if (options.voiceEnabled) speak(`Pause beendet. Weiter mit ${candidate.exerciseName}.`);
+  }, [
+    candidate,
+    progress.targetReached,
+    options.soundEnabled,
+    options.vibrationEnabled,
+    options.voiceEnabled,
+  ]);
 
   if (!candidate) return null;
   return { set: candidate.set, exerciseName: candidate.exerciseName, progress };
