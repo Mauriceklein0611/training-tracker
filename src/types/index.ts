@@ -197,6 +197,72 @@ export interface TemplateVersion {
   createdAt: ISODateTime;
 }
 
+/**
+ * Plan changes the app knows how to apply from an AI response. The set is
+ * deliberately tiny and every operation targets only editable plan data — never
+ * completed trainings, sets or body data.
+ */
+export type AiProposalOperation =
+  | 'update_template_exercise_target'
+  | 'update_template_note';
+
+/** A single machine-readable change proposed by the AI. */
+export interface AiProposal {
+  proposalId: string;
+  operation: AiProposalOperation;
+  target: { templateId: string; templateExerciseId?: string };
+  /** Values the AI believed were current, used to detect stale proposals. */
+  expected?: Record<string, number | string>;
+  changes: Record<string, number | string>;
+  reason: string;
+}
+
+export type AiProposalStatus = 'pending' | 'applied' | 'skipped' | 'conflict' | 'invalid';
+
+/** A proposal enriched with the app's validation verdict and, later, its fate. */
+export interface StoredAiProposal extends AiProposal {
+  status: AiProposalStatus;
+  /** Human-readable reason a proposal is a conflict or invalid. */
+  issue?: string;
+  /** Plan/exercise names resolved at import time, for display. */
+  templateName?: string;
+  exerciseName?: string;
+}
+
+export interface AiObservation {
+  title: string;
+  text: string;
+}
+
+/**
+ * A validated, locally stored AI analysis. Feedback is only ever shown as text;
+ * plan changes go through an explicit, previewed confirmation before anything is
+ * applied.
+ */
+export interface AiAnalysis {
+  id: string;
+  importedAt: ISODateTime;
+  exportId?: string;
+  headline?: string;
+  summary: string;
+  strengths: string[];
+  observations: AiObservation[];
+  recommendations: string[];
+  /** ISO date the AI recommends for the next analysis, if given. */
+  nextAnalysisAfter?: ISODate;
+  /** Hash of the imported file, to detect a duplicate import. */
+  importFingerprint: string;
+  proposals: StoredAiProposal[];
+}
+
+/** Lightweight record of a generated AI export, to tie a response back to it. */
+export interface AiExportRecord {
+  /** The exportId embedded in the exported file. */
+  id: string;
+  fingerprint: string;
+  createdAt: ISODateTime;
+}
+
 export interface WorkoutSession {
   id: string;
   templateId?: string;

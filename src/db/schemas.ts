@@ -224,6 +224,35 @@ export const bodyWeightEntrySchema = z.object({
   updatedAt: isoDateTime,
 });
 
+export const storedAiProposalSchema = z.object({
+  proposalId: z.string().min(1),
+  operation: z.enum(['update_template_exercise_target', 'update_template_note']),
+  target: z.object({ templateId: id, templateExerciseId: id.optional() }),
+  expected: z.record(z.union([z.number(), z.string()])).optional(),
+  changes: z.record(z.union([z.number(), z.string()])),
+  reason: z.string().default(''),
+  status: z.enum(['pending', 'applied', 'skipped', 'conflict', 'invalid']),
+  issue: z.string().optional(),
+  templateName: z.string().optional(),
+  exerciseName: z.string().optional(),
+});
+
+export const aiAnalysisSchema = z.object({
+  id,
+  importedAt: isoDateTime,
+  exportId: z.string().optional(),
+  headline: z.string().optional(),
+  summary: z.string().default(''),
+  strengths: z.array(z.string()).default([]),
+  observations: z
+    .array(z.object({ title: z.string().default(''), text: z.string().default('') }))
+    .default([]),
+  recommendations: z.array(z.string()).default([]),
+  nextAnalysisAfter: isoDate.optional(),
+  importFingerprint: z.string().default(''),
+  proposals: z.array(storedAiProposalSchema).default([]),
+});
+
 export const appSettingsSchema = z.object({
   id: z.literal('app-settings'),
   unit: z.literal('kg').default('kg'),

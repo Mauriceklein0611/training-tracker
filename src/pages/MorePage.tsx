@@ -7,6 +7,7 @@ import {
   Scale,
   Settings,
   ShieldCheck,
+  Sparkles,
 } from 'lucide-react';
 import { PageHeader } from '@/components/layout/PageHeader';
 
@@ -28,6 +29,12 @@ const ITEMS = [
     label: 'Daten & Sicherung',
     description: 'Backup, Wiederherstellung, KI- und CSV-Export',
     Icon: Database,
+  },
+  {
+    to: '/mehr/ki-analysen',
+    label: 'KI-Analysen',
+    description: 'Antwortdatei importieren, Feedback und geprüfte Vorschläge',
+    Icon: Sparkles,
   },
   {
     to: '/mehr/einstellungen',

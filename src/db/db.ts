@@ -1,5 +1,7 @@
 import Dexie, { type Table } from 'dexie';
 import type {
+  AiAnalysis,
+  AiExportRecord,
   AppSettings,
   BodyWeightEntry,
   Exercise,
@@ -18,7 +20,7 @@ import { nowIso } from '@/utils/id';
  * Bump this together with a new `.version()` block below and record the change
  * in MIGRATIONS so the settings screen can show what the database went through.
  */
-export const SCHEMA_VERSION = 10;
+export const SCHEMA_VERSION = 11;
 
 export const MIGRATIONS: { version: number; description: string }[] = [
   { version: 1, description: 'Initiales Schema: Übungen, Pläne, Einheiten, Sätze.' },
@@ -81,6 +83,13 @@ export const MIGRATIONS: { version: number; description: string }[] = [
       'Planversionen zum Ansehen, Vergleichen und Wiederherstellen. Der aktive ' +
       'Plan bleibt in den bestehenden Tabellen unverändert.',
   },
+  {
+    version: 11,
+    description:
+      'KI-Rundweg: importierte KI-Analysen (Feedback und geprüfte Planvorschläge) ' +
+      'werden lokal gespeichert. Zusätzlich werden erzeugte KI-Exporte vermerkt, ' +
+      'um eine Antwortdatei ihrem Export zuordnen zu können.',
+  },
 ];
 
 export class TrainingDatabase extends Dexie {
@@ -92,6 +101,8 @@ export class TrainingDatabase extends Dexie {
   sessionExercises!: Table<SessionExercise, string>;
   workoutSets!: Table<WorkoutSet, string>;
   bodyWeightEntries!: Table<BodyWeightEntry, string>;
+  aiAnalyses!: Table<AiAnalysis, string>;
+  aiExports!: Table<AiExportRecord, string>;
   settings!: Table<AppSettings, string>;
 
   constructor(name = 'training-tracker') {
@@ -266,6 +277,23 @@ export class TrainingDatabase extends Dexie {
           .toCollection()
           .modify((settings) => {
             settings.schemaVersion = 10;
+          });
+      });
+
+    // ---- v11 ------------------------------------------------------------
+    // New stores for the AI round-trip: imported analyses and a small record of
+    // generated exports. Both are additive; existing rows are untouched.
+    this.version(11)
+      .stores({
+        aiAnalyses: 'id, importedAt, exportId, importFingerprint',
+        aiExports: 'id, createdAt',
+      })
+      .upgrade(async (tx) => {
+        await tx
+          .table<AppSettings>('settings')
+          .toCollection()
+          .modify((settings) => {
+            settings.schemaVersion = 11;
           });
       });
   }

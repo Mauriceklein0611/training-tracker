@@ -14,6 +14,9 @@ import {
 import { db } from '@/db/db';
 import { markBackupCreated } from '@/db/repositories/settings';
 import { listBodyWeightEntries } from '@/db/repositories/bodyWeight';
+import { listTemplatesWithExercises } from '@/db/repositories/templates';
+import { recordAiExport } from '@/db/repositories/aiAnalyses';
+import { uuid } from '@/utils/id';
 import { useSettings } from '@/hooks/useSettings';
 import { useToast } from '@/hooks/useToast';
 import {
@@ -31,6 +34,7 @@ import {
   aiExportFileName,
   buildAiExport,
   buildContextBlock,
+  buildPlansExport,
   DEFAULT_AI_EXPORT_OPTIONS,
   hasExportPeriodErrors,
   validateExportPeriod,
@@ -170,15 +174,26 @@ export default function DataPage() {
   ];
 
   const buildExportFile = async () => {
-    const [dataset, bodyWeight] = await Promise.all([
+    const [dataset, bodyWeight, templates] = await Promise.all([
       loadAnalyticsDataset(),
       aiOptions.includeBodyWeight ? listBodyWeightEntries() : Promise.resolve([]),
+      listTemplatesWithExercises(),
     ]);
-    return buildAiExport(dataset, bodyWeight, {
-      ...aiOptions,
-      context: settings.analysisContext,
-      weeklyGoals: settings.weeklyGoals,
-    });
+    const file = buildAiExport(
+      dataset,
+      bodyWeight,
+      {
+        ...aiOptions,
+        context: settings.analysisContext,
+        weeklyGoals: settings.weeklyGoals,
+        exportId: uuid(),
+      },
+      new Date(),
+      buildPlansExport(templates),
+    );
+    // Remember this export so a later response file can be tied back to it.
+    await recordAiExport(file.exportId, file.sourceFingerprint);
+    return file;
   };
 
   /**

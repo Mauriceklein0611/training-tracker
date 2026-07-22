@@ -32,6 +32,16 @@ export async function getTemplateWithExercises(
   return { template, exercises };
 }
 
+/** Every plan with its exercises resolved — used by the AI export's plans block. */
+export async function listTemplatesWithExercises(): Promise<TemplateWithExercises[]> {
+  const templates = await listTemplates();
+  return Promise.all(
+    templates.map(
+      async (template) => (await getTemplateWithExercises(template.id)) as TemplateWithExercises,
+    ),
+  );
+}
+
 export async function createTemplate(name: string, description = ''): Promise<WorkoutTemplate> {
   const timestamp = nowIso();
   const template: WorkoutTemplate = {

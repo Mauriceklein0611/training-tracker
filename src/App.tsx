@@ -21,6 +21,7 @@ const MorePage = lazy(() => import('@/pages/MorePage'));
 const ExercisesPage = lazy(() => import('@/pages/ExercisesPage'));
 const BodyWeightPage = lazy(() => import('@/pages/BodyWeightPage'));
 const DataPage = lazy(() => import('@/pages/DataPage'));
+const AiAnalysesPage = lazy(() => import('@/pages/AiAnalysesPage'));
 const SettingsPage = lazy(() => import('@/pages/SettingsPage'));
 const StoragePage = lazy(() => import('@/pages/StoragePage'));
 const PrivacyPage = lazy(() => import('@/pages/PrivacyPage'));
@@ -54,6 +55,7 @@ export default function App() {
           <Route path="/mehr/uebungen" element={<ExercisesPage />} />
           <Route path="/mehr/koerpergewicht" element={<BodyWeightPage />} />
           <Route path="/mehr/daten" element={<DataPage />} />
+          <Route path="/mehr/ki-analysen" element={<AiAnalysesPage />} />
           <Route path="/mehr/einstellungen" element={<SettingsPage />} />
           <Route path="/mehr/speicher" element={<StoragePage />} />
           <Route path="/mehr/datenschutz" element={<PrivacyPage />} />

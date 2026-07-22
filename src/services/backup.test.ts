@@ -368,6 +368,50 @@ describe('weekly goals round trip', () => {
   });
 });
 
+describe('AI analysis round trip', () => {
+  it('preserves imported AI analyses through backup and restore', async () => {
+    await db.aiAnalyses.put({
+      id: 'a1',
+      importedAt: '2026-07-22T10:00:00.000Z',
+      exportId: 'exp-1',
+      summary: 'Solide Basis',
+      strengths: ['Regelmäßig'],
+      observations: [{ title: 'Volumen', text: 'stabil' }],
+      recommendations: ['Pausen verlängern'],
+      importFingerprint: 'fp1',
+      proposals: [
+        {
+          proposalId: 'p1',
+          operation: 'update_template_exercise_target',
+          target: { templateId: 't1', templateExerciseId: 'te1' },
+          changes: { sets: 4 },
+          reason: 'Progression',
+          status: 'applied',
+        },
+      ],
+    });
+
+    const backup = await createBackup();
+    expect(backup.aiAnalyses).toHaveLength(1);
+
+    await resetDatabase();
+    await importBackup(backup, 'replace');
+    const restored = await db.aiAnalyses.get('a1');
+    expect(restored?.summary).toBe('Solide Basis');
+    expect(restored?.proposals[0].status).toBe('applied');
+  });
+
+  it('accepts a backup written before AI analyses existed', async () => {
+    await seedDatabase();
+    const raw = JSON.parse(JSON.stringify(await createBackup()));
+    delete raw.aiAnalyses;
+    raw.schemaVersion = 10;
+    const result = validateBackupJson(raw);
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.backup.aiAnalyses).toEqual([]);
+  });
+});
+
 describe('plan version round trip', () => {
   it('preserves plan versions through backup and restore', async () => {
     const { exercise } = await seedDatabase();

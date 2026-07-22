@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { db, SCHEMA_VERSION, type TrainingDatabase } from '@/db/db';
 import {
+  aiAnalysisSchema,
   appSettingsSchema,
   bodyWeightEntrySchema,
   exerciseSchema,
@@ -37,6 +38,8 @@ export const backupFileSchema = z.object({
   sessionExercises: z.array(sessionExerciseSchema),
   workoutSets: z.array(workoutSetSchema),
   bodyWeightEntries: z.array(bodyWeightEntrySchema),
+  // Added in schema version 11; defaulted so older backups still validate.
+  aiAnalyses: z.array(aiAnalysisSchema).default([]),
 });
 
 export type BackupFile = z.infer<typeof backupFileSchema>;
@@ -50,6 +53,7 @@ export interface BackupCounts {
   sessionExercises: number;
   workoutSets: number;
   bodyWeightEntries: number;
+  aiAnalyses: number;
 }
 
 export function countBackupRecords(backup: BackupFile): BackupCounts {
@@ -62,6 +66,7 @@ export function countBackupRecords(backup: BackupFile): BackupCounts {
     sessionExercises: backup.sessionExercises.length,
     workoutSets: backup.workoutSets.length,
     bodyWeightEntries: backup.bodyWeightEntries.length,
+    aiAnalyses: backup.aiAnalyses.length,
   };
 }
 
@@ -74,6 +79,7 @@ export const BACKUP_COUNT_LABELS: Record<keyof BackupCounts, string> = {
   sessionExercises: 'Übungen in Einheiten',
   workoutSets: 'Sätze',
   bodyWeightEntries: 'Körpergewichtseinträge',
+  aiAnalyses: 'KI-Analysen',
 };
 
 /** Reads the whole database into a backup object. */
@@ -88,6 +94,7 @@ export async function createBackup(database: TrainingDatabase = db): Promise<Bac
     workoutSets,
     bodyWeightEntries,
     templateVersions,
+    aiAnalyses,
   ] = await Promise.all([
     database.settings.get('app-settings'),
     database.exercises.toArray(),
@@ -98,6 +105,7 @@ export async function createBackup(database: TrainingDatabase = db): Promise<Bac
     database.workoutSets.toArray(),
     database.bodyWeightEntries.toArray(),
     database.templateVersions.toArray(),
+    database.aiAnalyses.toArray(),
   ]);
 
   return backupFileSchema.parse({
@@ -114,6 +122,7 @@ export async function createBackup(database: TrainingDatabase = db): Promise<Bac
     sessionExercises,
     workoutSets,
     bodyWeightEntries,
+    aiAnalyses,
   });
 }
 
@@ -221,6 +230,7 @@ function emptyCounts(): BackupCounts {
     sessionExercises: 0,
     workoutSets: 0,
     bodyWeightEntries: 0,
+    aiAnalyses: 0,
   };
 }
 
@@ -233,6 +243,7 @@ const TABLE_KEYS = [
   'sessionExercises',
   'workoutSets',
   'bodyWeightEntries',
+  'aiAnalyses',
 ] as const;
 
 /**
@@ -265,6 +276,7 @@ export async function importBackup(
       database.sessionExercises,
       database.workoutSets,
       database.bodyWeightEntries,
+      database.aiAnalyses,
       database.settings,
     ],
     async () => {
