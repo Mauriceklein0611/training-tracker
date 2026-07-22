@@ -245,8 +245,7 @@ describe('buildRecordBaseline', () => {
         makeSet({ weightKg: 80, reps: 8 }),
         makeSet({ weightKg: 90, reps: 3 }),
         makeSet({ weightKg: 70, reps: 12 }),
-      ],
-      weighted,
+      ].map((set) => ({ set, context: weighted })),
     );
 
     expect(baseline.bestLoadKg).toBe(90);
@@ -259,14 +258,32 @@ describe('buildRecordBaseline', () => {
         makeSet({ weightKg: 200, reps: 1, setType: 'warmup' }),
         makeSet({ weightKg: 150, reps: 1, completedAt: undefined }),
         makeSet({ weightKg: 80, reps: 8 }),
-      ],
-      weighted,
+      ].map((set) => ({ set, context: weighted })),
     );
 
     expect(baseline.bestLoadKg).toBe(80);
   });
 
   it('is empty for an exercise with no history', () => {
-    expect(buildRecordBaseline([], weighted)).toEqual({});
+    expect(buildRecordBaseline([])).toEqual({});
+  });
+
+  it('evaluates each set with its own convention and tracks the estimated 1RM', () => {
+    // The same weight of 40 counts as 40 kg under "total" but 80 kg under
+    // per-hand (multiplier 2) — the record must reflect each set's own context.
+    const totalCtx = makeSessionExercise({
+      weightModeSnapshot: 'total',
+      weightMultiplierSnapshot: 1,
+    });
+    const perHandCtx = makeSessionExercise({
+      weightModeSnapshot: 'per_hand',
+      weightMultiplierSnapshot: 2,
+    });
+    const baseline = buildRecordBaseline([
+      { set: makeSet({ weightKg: 40, reps: 5 }), context: totalCtx },
+      { set: makeSet({ weightKg: 40, reps: 5 }), context: perHandCtx },
+    ]);
+    expect(baseline.bestLoadKg).toBe(80);
+    expect(baseline.bestOneRepMaxKg).not.toBeNull();
   });
 });

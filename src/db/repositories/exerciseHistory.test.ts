@@ -56,7 +56,7 @@ describe('getExerciseHistorySets', () => {
     // Two completed sets from the two finished sessions; the running one excluded.
     expect(history).toHaveLength(2);
 
-    const baseline = buildRecordBaseline(history, currentSe);
+    const baseline = buildRecordBaseline(history);
     // The older 100 kg record stands, even though the last session was only 90.
     expect(baseline.bestLoadKg).toBe(100);
   });

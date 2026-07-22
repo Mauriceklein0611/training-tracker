@@ -21,6 +21,7 @@ import {
 import { primeAudio } from '@/services/sound';
 import { isWorkingSet } from '@/services/metrics';
 import { buildRecordBaseline } from '@/services/comparison';
+import { resolveEffectiveTarget } from '@/services/sessionTargets';
 import { suggestProgression } from '@/services/progression';
 import { ProgressionHint } from '@/features/session/ProgressionHint';
 import { db } from '@/db/db';
@@ -78,27 +79,15 @@ export function SessionExerciseCard({
   const { sessionExercise, sets } = detail;
 
   /*
-   * Targets come first from this session-exercise's own frozen snapshots, so a
-   * later edit of the plan cannot change a running workout and the same exercise
-   * at two plan positions keeps its own targets. Only sessions started before
-   * the snapshots existed fall back to the plan lookup passed in as `target`.
+   * Targets come first from this session-exercise's own frozen snapshots (see
+   * resolveEffectiveTarget), so a later plan edit cannot change a running
+   * workout and the same exercise at two positions keeps its own targets. Older
+   * (v14) active workouts fall back field-wise to the plan lookup.
    */
-  const effectiveTarget: ExerciseTarget | undefined = useMemo(() => {
-    const snapshotHasTargets =
-      sessionExercise.targetSetsSnapshot != null ||
-      sessionExercise.targetRepMinSnapshot != null ||
-      sessionExercise.targetRepMaxSnapshot != null ||
-      sessionExercise.targetDurationSecondsSnapshot != null;
-    return snapshotHasTargets
-      ? {
-          targetSets: sessionExercise.targetSetsSnapshot,
-          targetRepMin: sessionExercise.targetRepMinSnapshot,
-          targetRepMax: sessionExercise.targetRepMaxSnapshot,
-          targetDurationSeconds: sessionExercise.targetDurationSecondsSnapshot,
-          restSeconds: sessionExercise.restSecondsSnapshot,
-        }
-      : target;
-  }, [sessionExercise, target]);
+  const effectiveTarget: ExerciseTarget | undefined = useMemo(
+    () => resolveEffectiveTarget(sessionExercise, target),
+    [sessionExercise, target],
+  );
 
   const [notesOpen, setNotesOpen] = useState(Boolean(sessionExercise.notes));
   const [notes, setNotes] = useState(sessionExercise.notes);
@@ -166,10 +155,7 @@ export function SessionExerciseCard({
     [],
   );
 
-  const recordBaseline = useMemo(
-    () => buildRecordBaseline(historySets, sessionExercise),
-    [historySets, sessionExercise],
-  );
+  const recordBaseline = useMemo(() => buildRecordBaseline(historySets), [historySets]);
 
   /** The exercise record, for its optional progression settings and cues. */
   const exercise = useLiveQuery(

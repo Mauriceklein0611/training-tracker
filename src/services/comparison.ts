@@ -1,5 +1,5 @@
 import type { SessionExercise, SetType, WorkoutSet } from '@/types';
-import { effectiveLoadKg } from '@/services/metrics';
+import { effectiveLoadKg, estimatedOneRepMax } from '@/services/metrics';
 import { formatKg, formatNumber } from '@/utils/format';
 
 /**
@@ -76,8 +76,20 @@ export interface SetComparison {
 /** Best values recorded before this workout, used for the "new best" badge. */
 export interface RecordBaseline {
   bestLoadKg?: number | null;
+  bestOneRepMaxKg?: number | null;
   bestReps?: number | null;
   bestDurationSeconds?: number | null;
+}
+
+/** Context needed to evaluate a historical set with its own conventions. */
+export type RecordContext = Pick<
+  SessionExercise,
+  'trackingTypeSnapshot' | 'weightModeSnapshot' | 'weightMultiplierSnapshot'
+>;
+
+export interface RecordEntry {
+  set: WorkoutSet;
+  context: RecordContext;
 }
 
 export interface ComparableValues {
@@ -216,9 +228,20 @@ export function isNewRecord(
   }
 
   if (type === 'weight_reps') {
+    // A weighted record is beating either the heaviest load or the best
+    // estimated 1RM recorded before — whichever the current set exceeds.
     const load = effectiveLoadKg({ weightKg: current.weightKg }, context);
-    if (load == null || baseline.bestLoadKg == null) return false;
-    return load > baseline.bestLoadKg;
+    const loadRecord =
+      load != null && baseline.bestLoadKg != null && load > baseline.bestLoadKg;
+
+    const oneRm = estimatedOneRepMax(
+      { weightKg: current.weightKg, reps: current.reps } as WorkoutSet,
+      context,
+    );
+    const oneRmRecord =
+      oneRm != null && baseline.bestOneRepMaxKg != null && oneRm > baseline.bestOneRepMaxKg;
+
+    return loadRecord || oneRmRecord;
   }
 
   // Bodyweight, assisted and reps-only progress through repetitions.
@@ -226,19 +249,26 @@ export function isNewRecord(
   return current.reps > baseline.bestReps;
 }
 
-/** Baseline from a list of previously completed sets of one exercise. */
-export function buildRecordBaseline(
-  sets: WorkoutSet[],
-  context: Pick<SessionExercise, 'weightModeSnapshot' | 'weightMultiplierSnapshot'>,
-): RecordBaseline {
+/**
+ * Baseline from previously completed sets of one exercise.
+ *
+ * Each set is evaluated with *its own* recorded convention (weight mode and
+ * multiplier), so a record stays correct even if the exercise was later switched
+ * from e.g. total weight to per-hand. The estimated 1RM is tracked as well.
+ */
+export function buildRecordBaseline(entries: RecordEntry[]): RecordBaseline {
   const baseline: RecordBaseline = {};
 
-  for (const set of sets) {
+  for (const { set, context } of entries) {
     if (!set.completedAt || set.setType === 'warmup') continue;
 
     const load = effectiveLoadKg(set, context);
     if (load != null && (baseline.bestLoadKg == null || load > baseline.bestLoadKg)) {
       baseline.bestLoadKg = load;
+    }
+    const oneRm = estimatedOneRepMax(set, context);
+    if (oneRm != null && (baseline.bestOneRepMaxKg == null || oneRm > baseline.bestOneRepMaxKg)) {
+      baseline.bestOneRepMaxKg = oneRm;
     }
     if (set.reps != null && (baseline.bestReps == null || set.reps > baseline.bestReps)) {
       baseline.bestReps = set.reps;

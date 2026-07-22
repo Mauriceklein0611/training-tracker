@@ -11,8 +11,8 @@ describe('records use the full history baseline', () => {
     const history = [
       makeSet({ weightKg: 100, reps: 5, completedAt: '2026-05-01T10:00:00' }),
       makeSet({ weightKg: 90, reps: 8, completedAt: '2026-06-01T10:00:00' }),
-    ];
-    const baseline = buildRecordBaseline(history, weightContext);
+    ].map((set) => ({ set, context: weightContext }));
+    const baseline = buildRecordBaseline(history);
     expect(baseline.bestLoadKg).toBe(100);
 
     // 95 kg beats the last workout (90) but not the older record (100).
@@ -25,8 +25,8 @@ describe('records use the full history baseline', () => {
     const history = [
       makeSet({ weightKg: 120, reps: 5, setType: 'warmup', completedAt: '2026-05-01T10:00:00' }),
       makeSet({ weightKg: 80, reps: 8, completedAt: '2026-05-01T10:05:00' }),
-    ];
-    expect(buildRecordBaseline(history, weightContext).bestLoadKg).toBe(80);
+    ].map((set) => ({ set, context: weightContext }));
+    expect(buildRecordBaseline(history).bestLoadKg).toBe(80);
   });
 });
 

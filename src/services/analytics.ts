@@ -21,8 +21,12 @@ import { computeRestStatistics, type RestStatistics } from '@/services/rest';
 import {
   currentWeeklyStreak,
   dayKey,
+  daysInRange,
+  endOfDay,
   isWithinRange,
+  parseISO,
   rateWeeks,
+  startOfDay,
   weekKey,
   weeksInRange,
   type DateRange,
@@ -168,7 +172,7 @@ export function computeAnalytics(
   // Calendar weeks drive "share of weeks trained" (consistency); per-week rates
   // use the actual day span / 7 so a 28-day window always divides by 4.
   const calendarWeeks = range ? weeksInRange(range) : weeksSpanned(sessionsInRange);
-  const perWeekDivisor = range ? rateWeeks(range) : weeksSpanned(sessionsInRange);
+  const perWeekDivisor = range ? rateWeeks(range) : spannedRateWeeks(sessionsInRange);
 
   const volume = aggregateVolume(
     countedContexts.map(({ set, sessionExercise }) => ({ set, sessionExercise })),
@@ -210,6 +214,20 @@ function weeksSpanned(sessions: WorkoutSession[]): number {
   const first = new Date(sorted[0].startedAt).getTime();
   const last = new Date(sorted[sorted.length - 1].startedAt).getTime();
   return Math.max(1, Math.ceil((last - first) / (7 * 24 * 3600 * 1000)) + 1);
+}
+
+/**
+ * Per-week rate divisor for the whole history: the inclusive local-day span from
+ * the first to the last workout divided by seven — consistent with fixed ranges
+ * (a 28-day span always divides by 4). Using this instead of `weeksSpanned`
+ * (which rounds whole weeks up) keeps training frequencies from reading too low.
+ */
+function spannedRateWeeks(sessions: WorkoutSession[]): number {
+  if (sessions.length === 0) return 1;
+  const sorted = [...sessions].sort((a, b) => a.startedAt.localeCompare(b.startedAt));
+  const from = startOfDay(parseISO(sorted[0].startedAt));
+  const to = endOfDay(parseISO(sorted[sorted.length - 1].startedAt));
+  return Math.max(1, daysInRange({ from, to }) / 7);
 }
 
 function countTrainingWeeks(sessions: WorkoutSession[]): number {

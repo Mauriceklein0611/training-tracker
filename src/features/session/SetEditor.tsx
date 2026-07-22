@@ -10,6 +10,7 @@ import { restDeviationSeconds } from '@/services/rest';
 import { SET_TYPE_LABELS, describeSet, formatSignedSeconds } from '@/utils/format';
 import { cn } from '@/utils/cn';
 import { useAutosave } from '@/hooks/useAutosave';
+import { useToast } from '@/hooks/useToast';
 import { ExerciseTimer } from '@/features/session/ExerciseTimer';
 import {
   compareSet,
@@ -105,6 +106,7 @@ export function SetEditor({
    * being typed at that moment. The parent remounts this component with a
    * `key` when a different set becomes current, which resets the draft.
    */
+  const toast = useToast();
   const [draft, setDraft] = useState<Draft>(() => toDraft(set));
   const [touched, setTouched] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
@@ -126,7 +128,9 @@ export function SetEditor({
   const autosave = useAutosave(
     draft,
     (current) => onPersist(draftToValues(current)),
-    { delayMs: 400, enabled: !completedRef.current },
+    // Autosave is off once the set is completed and while a completion is in
+    // flight, so a pending debounced write can never race the completion write.
+    { delayMs: 400, enabled: !completedRef.current && !isCompleting },
   );
 
   const trackingType = sessionExercise.trackingTypeSnapshot;
@@ -178,6 +182,10 @@ export function SetEditor({
     if (completingRef.current || completedRef.current) return;
     completingRef.current = true;
     setIsCompleting(true);
+    // Synchronously drop any scheduled autosave *before* awaiting, so a slower
+    // device can never flush an older draft (e.g. a stale duration from the
+    // timer) between here and the completion write.
+    autosave.cancel();
     try {
       await onComplete(values);
       // Success: block any further autosave, so a pending write can never
@@ -185,7 +193,8 @@ export function SetEditor({
       completedRef.current = true;
       autosave.disable();
     } catch {
-      // Allow another attempt; the draft is untouched.
+      // Surface the failure instead of swallowing it, and allow another attempt.
+      toast.show('Der Satz konnte nicht gespeichert werden. Bitte erneut versuchen.', 'error');
     } finally {
       completingRef.current = false;
       setIsCompleting(false);

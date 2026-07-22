@@ -798,22 +798,23 @@ export interface LastPerformance {
 
 /**
  * Every completed set of an exercise across the full history, excluding one
- * session (the running workout). Used to build a true "personal best" baseline
- * that spans all past workouts, not just the previous one.
+ * session (the running workout), each paired with the session-exercise it was
+ * recorded under. Used to build a true "personal best" baseline that spans all
+ * past workouts and evaluates every set with its own recorded convention.
  */
 export async function getExerciseHistorySets(
   exerciseId: string,
   excludeSessionId?: string,
-): Promise<WorkoutSet[]> {
+): Promise<{ set: WorkoutSet; context: SessionExercise }[]> {
   const entries = await db.sessionExercises.where('exerciseId').equals(exerciseId).toArray();
-  const result: WorkoutSet[] = [];
+  const result: { set: WorkoutSet; context: SessionExercise }[] = [];
   for (const entry of entries) {
     if (entry.sessionId === excludeSessionId) continue;
     const session = await db.workoutSessions.get(entry.sessionId);
     if (!session || session.status !== 'completed') continue;
     const sets = await db.workoutSets.where('sessionExerciseId').equals(entry.id).toArray();
     for (const set of sets) {
-      if (set.completedAt) result.push(set);
+      if (set.completedAt) result.push({ set, context: entry });
     }
   }
   return result;

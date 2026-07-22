@@ -117,6 +117,34 @@ describe('buildSetContexts', () => {
   });
 });
 
+describe('per-week rate over the whole history', () => {
+  it('divides by the inclusive day span / 7, not rounded-up whole weeks', () => {
+    // Four workouts spanning exactly 28 inclusive days (01 → 28 July).
+    const exercise = makeExercise({ id: 'ex-1', name: 'Bankdrücken' });
+    const days = ['2026-07-01', '2026-07-10', '2026-07-19', '2026-07-28'];
+    const sessions = days.map((day, index) =>
+      makeSession({ id: `s-${index}`, startedAt: `${day}T10:00:00` }),
+    );
+    const sessionExercises = days.map((_, index) =>
+      makeSessionExercise({ id: `se-${index}`, sessionId: `s-${index}`, exerciseId: 'ex-1' }),
+    );
+    const sets = days.map((_, index) =>
+      makeSet({
+        id: `set-${index}`,
+        sessionExerciseId: `se-${index}`,
+        weightKg: 60,
+        reps: 8,
+        completedAt: `${days[index]}T10:05:00`,
+      }),
+    );
+
+    const analytics = computeAnalytics({ exercises: [exercise], sessions, sessionExercises, sets }, null);
+    expect(analytics.trainingDays).toBe(4);
+    // 28-day span → divisor 4 → exactly 1 training day per week (not 4/5 = 0.8).
+    expect(analytics.trainingDaysPerWeek).toBeCloseTo(1, 5);
+  });
+});
+
 describe('computeAnalytics', () => {
   it('summarises sessions, sets and volume for the whole history', () => {
     const analytics = computeAnalytics(buildDataset(), null);
