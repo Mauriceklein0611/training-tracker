@@ -8,6 +8,7 @@ import {
   Settings,
   ShieldCheck,
   Sparkles,
+  Wrench,
 } from 'lucide-react';
 import { PageHeader } from '@/components/layout/PageHeader';
 
@@ -23,6 +24,12 @@ const ITEMS = [
     label: 'Körperdaten',
     description: 'Gewicht, Körperfett und Umfangsmaße',
     Icon: Scale,
+  },
+  {
+    to: '/mehr/equipment',
+    label: 'Equipment-Profile',
+    description: 'Verfügbares Equipment je Ort — filtert die Übungsauswahl',
+    Icon: Wrench,
   },
   {
     to: '/mehr/daten',

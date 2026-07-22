@@ -4,6 +4,7 @@ import type {
   AiExportRecord,
   AppSettings,
   BodyWeightEntry,
+  EquipmentProfile,
   Exercise,
   SessionExercise,
   TemplateExercise,
@@ -20,7 +21,7 @@ import { nowIso } from '@/utils/id';
  * Bump this together with a new `.version()` block below and record the change
  * in MIGRATIONS so the settings screen can show what the database went through.
  */
-export const SCHEMA_VERSION = 12;
+export const SCHEMA_VERSION = 13;
 
 export const MIGRATIONS: { version: number; description: string }[] = [
   { version: 1, description: 'Initiales Schema: Übungen, Pläne, Einheiten, Sätze.' },
@@ -97,6 +98,12 @@ export const MIGRATIONS: { version: number; description: string }[] = [
       'Alternativübungen hinterlegen. Beides ist optional; ohne Angabe bleibt ' +
       'alles unverändert.',
   },
+  {
+    version: 13,
+    description:
+      'Equipment-Profile (z. B. Zuhause, Fitnessstudio, Hotel) filtern optional ' +
+      'die verfügbaren Übungen. Ohne aktives Profil ist alles verfügbar.',
+  },
 ];
 
 export class TrainingDatabase extends Dexie {
@@ -110,6 +117,7 @@ export class TrainingDatabase extends Dexie {
   bodyWeightEntries!: Table<BodyWeightEntry, string>;
   aiAnalyses!: Table<AiAnalysis, string>;
   aiExports!: Table<AiExportRecord, string>;
+  equipmentProfiles!: Table<EquipmentProfile, string>;
   settings!: Table<AppSettings, string>;
 
   constructor(name = 'training-tracker') {
@@ -316,6 +324,20 @@ export class TrainingDatabase extends Dexie {
           settings.schemaVersion = 12;
         });
     });
+
+    // ---- v13 ------------------------------------------------------------
+    // New equipmentProfiles store; settings gained an optional
+    // activeEquipmentProfileId. Both additive — existing rows are untouched.
+    this.version(13)
+      .stores({ equipmentProfiles: 'id, name' })
+      .upgrade(async (tx) => {
+        await tx
+          .table<AppSettings>('settings')
+          .toCollection()
+          .modify((settings) => {
+            settings.schemaVersion = 13;
+          });
+      });
   }
 }
 

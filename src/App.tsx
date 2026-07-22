@@ -19,6 +19,7 @@ const AnalyticsPage = lazy(() => import('@/pages/AnalyticsPage'));
 const BlockComparePage = lazy(() => import('@/pages/BlockComparePage'));
 const MorePage = lazy(() => import('@/pages/MorePage'));
 const ExercisesPage = lazy(() => import('@/pages/ExercisesPage'));
+const EquipmentProfilesPage = lazy(() => import('@/pages/EquipmentProfilesPage'));
 const BodyWeightPage = lazy(() => import('@/pages/BodyWeightPage'));
 const DataPage = lazy(() => import('@/pages/DataPage'));
 const AiAnalysesPage = lazy(() => import('@/pages/AiAnalysesPage'));
@@ -53,6 +54,7 @@ export default function App() {
           <Route path="/analyse/vergleich" element={<BlockComparePage />} />
           <Route path="/mehr" element={<MorePage />} />
           <Route path="/mehr/uebungen" element={<ExercisesPage />} />
+          <Route path="/mehr/equipment" element={<EquipmentProfilesPage />} />
           <Route path="/mehr/koerpergewicht" element={<BodyWeightPage />} />
           <Route path="/mehr/daten" element={<DataPage />} />
           <Route path="/mehr/ki-analysen" element={<AiAnalysesPage />} />

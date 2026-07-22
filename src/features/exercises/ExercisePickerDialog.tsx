@@ -3,10 +3,13 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { Plus, Search } from 'lucide-react';
 import { Dialog } from '@/components/ui/Dialog';
 import { Button } from '@/components/ui/Button';
-import { TextField } from '@/components/ui/Field';
+import { CheckboxField, TextField } from '@/components/ui/Field';
 import { EmptyState } from '@/components/ui/Card';
+import { db } from '@/db/db';
 import { filterExercises, listExercises } from '@/db/repositories/exercises';
+import { isExerciseAvailable } from '@/db/repositories/equipmentProfiles';
 import { ExerciseFormDialog } from '@/features/exercises/ExerciseFormDialog';
+import { useSettings } from '@/hooks/useSettings';
 import type { Exercise } from '@/types';
 import { TRACKING_TYPE_LABELS } from '@/utils/format';
 
@@ -26,14 +29,22 @@ export function ExercisePickerDialog({
   onSelect: (exercise: Exercise) => void;
   title?: string;
 }) {
+  const { settings } = useSettings();
   const [search, setSearch] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
+  const [onlyAvailable, setOnlyAvailable] = useState(true);
   const exercises = useLiveQuery(() => listExercises(), [], []);
 
-  const visible = useMemo(
-    () => filterExercises(exercises, { search, showArchived: false }),
-    [exercises, search],
-  );
+  const activeProfile = useLiveQuery(async () => {
+    const id = settings.activeEquipmentProfileId;
+    return id ? db.equipmentProfiles.get(id) : undefined;
+  }, [settings.activeEquipmentProfileId]);
+
+  const visible = useMemo(() => {
+    const bySearch = filterExercises(exercises, { search, showArchived: false });
+    if (!activeProfile || !onlyAvailable) return bySearch;
+    return bySearch.filter((exercise) => isExerciseAvailable(exercise, activeProfile));
+  }, [exercises, search, activeProfile, onlyAvailable]);
 
   const existingNames = useMemo(() => exercises.map((exercise) => exercise.name), [exercises]);
 
@@ -62,6 +73,16 @@ export function ExercisePickerDialog({
           placeholder="Name, Muskelgruppe oder Equipment"
           onChange={(event) => setSearch(event.target.value)}
         />
+
+        {activeProfile ? (
+          <div className="mt-3">
+            <CheckboxField
+              label={`Nur verfügbares Equipment (${activeProfile.name})`}
+              checked={onlyAvailable}
+              onChange={setOnlyAvailable}
+            />
+          </div>
+        ) : null}
 
         <div className="mt-3">
           {visible.length === 0 ? (

@@ -105,6 +105,21 @@ export interface WorkoutTemplate {
   updatedAt: ISODateTime;
 }
 
+/**
+ * A named set of available equipment, e.g. "Zuhause", "Fitnessstudio", "Hotel".
+ *
+ * When one is active, the exercise picker can hide exercises whose equipment is
+ * not available. Exercises without any equipment are always available.
+ */
+export interface EquipmentProfile {
+  id: string;
+  name: string;
+  /** Allowed equipment names, matched against Exercise.equipment. */
+  equipment: string[];
+  createdAt: ISODateTime;
+  updatedAt: ISODateTime;
+}
+
 export interface TemplateExercise extends ExerciseGrouping {
   id: string;
   templateId: string;
@@ -443,6 +458,8 @@ export interface AppSettings {
   analysisContext?: AnalysisContext;
   /** Optional weekly training goals; absent means no goals are set. */
   weeklyGoals?: WeeklyGoals;
+  /** Active equipment profile; absent means "all equipment available". */
+  activeEquipmentProfileId?: string;
   /** Days after which a backup reminder is shown; 0 disables the reminder. */
   backupReminderDays: number;
   lastBackupAt?: ISODateTime;

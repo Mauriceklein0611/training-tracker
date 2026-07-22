@@ -82,6 +82,14 @@ export const workoutTemplateSchema = z.object({
   updatedAt: isoDateTime,
 });
 
+export const equipmentProfileSchema = z.object({
+  id,
+  name: z.string().min(1, 'Name darf nicht leer sein'),
+  equipment: z.array(z.string().max(100)).max(100).default([]),
+  createdAt: isoDateTime,
+  updatedAt: isoDateTime,
+});
+
 export const templateExerciseSchema = z.object({
   id,
   templateId: id,
@@ -276,6 +284,8 @@ export const appSettingsSchema = z.object({
       focus: z.string().max(500).optional(),
     })
     .optional(),
+  // Added in schema version 13; optional so older backups still validate.
+  activeEquipmentProfileId: z.string().optional(),
   // Added in schema version 7; optional so older backups still validate.
   weeklyGoals: z
     .object({
