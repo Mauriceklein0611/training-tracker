@@ -91,6 +91,16 @@
     border-radius: 4px;
   }
 
+  /*
+   * A native modal <dialog> is centred by the user-agent's `margin: auto`.
+   * Tailwind v4's Preflight resets `margin: 0` on every element, which overrides
+   * that and pins the dialog to the top-left corner. Restoring `margin: auto`
+   * (higher specificity than the `*` reset) centres every dialog again.
+   */
+  dialog {
+    margin: auto;
+  }
+
   button,
   input,
   select,
