@@ -1,14 +1,23 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { Archive, ArchiveRestore, GitCompareArrows, RotateCcw, Save, Trash2 } from 'lucide-react';
+import {
+  Archive,
+  ArchiveRestore,
+  GitCompareArrows,
+  RotateCcw,
+  Save,
+  Trash2,
+  TrendingDown,
+} from 'lucide-react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Button, IconButton } from '@/components/ui/Button';
 import { Badge, Card, CardHeader, EmptyState } from '@/components/ui/Card';
 import { ConfirmDialog, Dialog } from '@/components/ui/Dialog';
-import { TextField } from '@/components/ui/Field';
+import { Segmented, TextField } from '@/components/ui/Field';
 import { db } from '@/db/db';
 import {
+  activateDeload,
   activateTemplateVersion,
   createTemplateVersion,
   deleteTemplateVersion,
@@ -18,6 +27,12 @@ import {
 } from '@/db/repositories/templateVersions';
 import { TemplateDiffView } from '@/features/templates/TemplateDiffView';
 import { diffTemplateSnapshots, type TemplateDiff } from '@/services/templateDiff';
+import {
+  applyDeloadToSnapshot,
+  DELOAD_INTENSITY_LABELS,
+  DELOAD_PERCENT,
+  type DeloadIntensity,
+} from '@/services/deload';
 import { useToast } from '@/hooks/useToast';
 import type { TemplateVersion, TemplateVersionSource } from '@/types';
 import { formatDateTime } from '@/utils/date';
@@ -43,6 +58,8 @@ export default function TemplateVersionsPage() {
   );
   const [restore, setRestore] = useState<TemplateVersion | null>(null);
   const [remove, setRemove] = useState<TemplateVersion | null>(null);
+  const [deloadIntensity, setDeloadIntensity] = useState<DeloadIntensity>('medium');
+  const [deloadPreview, setDeloadPreview] = useState<TemplateDiff | null>(null);
 
   const visible = versions.filter((version) => showArchived || !version.archived);
   const archivedCount = versions.filter((version) => version.archived).length;
@@ -64,6 +81,19 @@ export default function TemplateVersionsPage() {
     await activateTemplateVersion(restore.id);
     setRestore(null);
     toast.show('Version wiederhergestellt. Der vorherige Stand wurde gesichert.', 'success');
+    navigate(`/plaene/${templateId}`);
+  };
+
+  const openDeloadPreview = async () => {
+    const current = await snapshotTemplate(templateId);
+    const reduced = applyDeloadToSnapshot(current, DELOAD_PERCENT[deloadIntensity]);
+    setDeloadPreview(diffTemplateSnapshots(current, reduced));
+  };
+
+  const handleDeload = async () => {
+    await activateDeload(templateId, deloadIntensity);
+    setDeloadPreview(null);
+    toast.show('Deload aktiviert. Der normale Plan wurde als Version gesichert.', 'success');
     navigate(`/plaene/${templateId}`);
   };
 
@@ -111,6 +141,30 @@ export default function TemplateVersionsPage() {
           <Button variant="primary" onClick={() => void handleSave()}>
             <Save size={18} aria-hidden="true" />
             Version speichern
+          </Button>
+        </div>
+      </Card>
+
+      <Card className="mb-4">
+        <CardHeader
+          title="Deload-Woche"
+          subtitle="Reduziert vorübergehend die Ziel-Sätze aller Übungen. Der normale Plan wird vorher gesichert."
+          as="h2"
+        />
+        <div className="grid gap-2">
+          <Segmented
+            label="Intensität"
+            value={deloadIntensity}
+            onChange={setDeloadIntensity}
+            options={[
+              { value: 'light', label: DELOAD_INTENSITY_LABELS.light },
+              { value: 'medium', label: DELOAD_INTENSITY_LABELS.medium },
+              { value: 'strong', label: DELOAD_INTENSITY_LABELS.strong },
+            ]}
+          />
+          <Button variant="secondary" onClick={() => void openDeloadPreview()}>
+            <TrendingDown size={18} aria-hidden="true" />
+            Vorschau
           </Button>
         </div>
       </Card>
@@ -193,6 +247,25 @@ export default function TemplateVersionsPage() {
         description="Was sich von dieser gespeicherten Version zum aktuellen Plan geändert hat."
       >
         {compare ? <TemplateDiffView diff={compare.diff} /> : null}
+      </Dialog>
+
+      <Dialog
+        open={deloadPreview != null}
+        onClose={() => setDeloadPreview(null)}
+        title={`Deload-Vorschau (${DELOAD_INTENSITY_LABELS[deloadIntensity]})`}
+        description="So ändern sich die Ziel-Sätze. Beim Aktivieren wird der aktuelle Plan zuerst als Version gesichert."
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setDeloadPreview(null)}>
+              Abbrechen
+            </Button>
+            <Button variant="primary" onClick={() => void handleDeload()}>
+              Deload aktivieren
+            </Button>
+          </>
+        }
+      >
+        {deloadPreview ? <TemplateDiffView diff={deloadPreview} /> : null}
       </Dialog>
 
       <ConfirmDialog
