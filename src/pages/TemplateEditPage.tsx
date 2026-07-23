@@ -7,6 +7,7 @@ import {
   ChevronRight,
   Copy,
   History,
+  Layers,
   Pencil,
   Play,
   Plus,
@@ -41,6 +42,7 @@ import {
 } from '@/db/repositories/sessions';
 import { DELOAD_INTENSITY_LABELS } from '@/services/deload';
 import type { DeloadIntensity } from '@/types';
+import { saveTemplateAsWorkoutUnit } from '@/db/repositories/workoutUnits';
 import { ExercisePickerDialog } from '@/features/exercises/ExercisePickerDialog';
 import { PlanDayTabs } from '@/features/plans/PlanDayTabs';
 import { ScheduleEditor } from '@/features/plans/ScheduleEditor';
@@ -142,6 +144,12 @@ export default function TemplateEditPage() {
         'error',
       );
     }
+  };
+
+  const handleSaveAsUnit = async () => {
+    if (!activeDayId) return;
+    await saveTemplateAsWorkoutUnit(activeDayId);
+    toast.show('Als Übungseinheit in der Bibliothek gespeichert.', 'success');
   };
 
   const handleAddDay = async () => {
@@ -338,6 +346,17 @@ export default function TemplateEditPage() {
         <History size={18} className="text-accent" aria-hidden="true" />
         Versionen dieses Tages
       </Link>
+
+      {exercises.length > 0 ? (
+        <button
+          type="button"
+          onClick={() => void handleSaveAsUnit()}
+          className="mt-2 flex min-h-[48px] w-full items-center gap-2 rounded-2xl border border-border bg-surface px-4 text-sm font-medium active:bg-surface-2"
+        >
+          <Layers size={18} className="text-accent" aria-hidden="true" />
+          Als Übungseinheit in Bibliothek speichern
+        </button>
+      ) : null}
 
       {exercises.length > 0 ? (
         <Button

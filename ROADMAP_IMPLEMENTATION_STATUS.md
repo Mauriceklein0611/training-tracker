@@ -43,12 +43,28 @@ auf `planSchedules`; `planId`/`planNameSnapshot`/`dayPositionSnapshot` auf
 `WorkoutSession`) existierten bereits und laufen bereits durch Backup/CSV. Keine
 Enum-, Feld- oder Versionsänderung. Reset betrifft kein Import/Export-Format.
 
+### Phase 1 — Wiederverwendbare Übungseinheiten + Bibliothek
+
+- **1.1 Datenmodell + Repository:** `WorkoutUnitTemplate` +
+  `WorkoutUnitTemplateExercise` (eigene Dexie-Stores, Schema v19). Repo
+  `db/repositories/workoutUnits.ts`: CRUD, Archivieren, Duplizieren, Übungs-/
+  Gruppen-Editing (gleiche Helfer wie Plan-Tage), **Copy-on-add**
+  (`addWorkoutUnitToPlan` → eigenständiger Plan-Tag mit Quell-Snapshot),
+  `saveTemplateAsWorkoutUnit`. **Direktstart** ohne Plan
+  (`startSessionFromWorkoutUnit`, Session-Snapshot Einheit-ID+Name, kein planId).
+  Backup + Reset-Registry (mit `db.tables`-Guard) erweitert.
+- **1.2 UI:** Bereich „Bibliothek" (`/bibliothek`) mit Segment-Navigation
+  Übungseinheiten ⇄ Übungen; Liste mit Zusammenfassung (Übungszahl, Ziel-Sätze,
+  Muskel-Chips) und Aktionen Starten / Zu Plan hinzufügen / Bearbeiten /
+  Duplizieren / Löschen. Editor `/bibliothek/:unitId` (Name/Beschreibung,
+  Übungen mit Zielen + Supersatz/Zirkel-Gruppen). Verlinkt aus „Mehr".
+- **1.3:** „Als Übungseinheit in Bibliothek speichern" in der Plan-Tag-Ansicht.
+
 ## Offen (nächste Schritte, in Roadmap-Reihenfolge)
 
 - **Phase A Rest:** Trainingsplan-Paket (Sharing) trägt den Zeitplan noch nicht
   mit → bräuchte plan-package v3. Home/Templates zeigen Rest-Tage in der Vorschau
-  noch nicht.
-- **Phase 1** — Wiederverwendbare Übungseinheiten + Bibliothek.
+  noch nicht. Übungseinheiten-Paket (Phase 7.6) noch offen.
 - **Phase 2** — Vordefinierter Übungskatalog (System vs. custom, idempotentes
   Seeding).
 - **Phase 3** — Plan-Dashboard, Ziele/Regeln, `PlanUsagePeriod`.
@@ -71,7 +87,8 @@ Enum-, Feld- oder Versionsänderung. Reset betrifft kein Import/Export-Format.
 
 ### Nächster exakter Schritt
 
-Phase 1.1 beginnen: Datenmodell für unabhängige Bibliotheks-Übungseinheiten
-(`WorkoutUnitTemplate` + `WorkoutUnitTemplateExercise`) inkl. Copy-on-add-Semantik
-und `sourceWorkoutUnitTemplateId` auf der planinternen Einheit; neue Dexie-Version
-mit Legacy-Test, bevor die UI folgt.
+Phase 2 beginnen: kuratierter System-Übungskatalog (~80–120 Übungen) mit stabilen
+`catalogKey`s, Herkunft `system`|`custom` auf `Exercise`, idempotentem Seeding
+(kein Duplikat bei App-Update, keine Überschreibung eigener Übungen), Suche/Filter
+nach Herkunft. Erst Datenmodell (`origin` + `catalogKey`, Seeding-Service mit
+Test), dann Katalogdaten, dann Filter-UI in der bestehenden Übungsliste.

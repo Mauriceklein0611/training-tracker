@@ -18,6 +18,8 @@ const SessionDetailPage = lazy(() => import('@/pages/SessionDetailPage'));
 const AnalyticsPage = lazy(() => import('@/pages/AnalyticsPage'));
 const BlockComparePage = lazy(() => import('@/pages/BlockComparePage'));
 const MorePage = lazy(() => import('@/pages/MorePage'));
+const WorkoutUnitsPage = lazy(() => import('@/pages/WorkoutUnitsPage'));
+const WorkoutUnitEditPage = lazy(() => import('@/pages/WorkoutUnitEditPage'));
 const ExercisesPage = lazy(() => import('@/pages/ExercisesPage'));
 const EquipmentProfilesPage = lazy(() => import('@/pages/EquipmentProfilesPage'));
 const BodyWeightPage = lazy(() => import('@/pages/BodyWeightPage'));
@@ -51,6 +53,8 @@ export default function App() {
             path="/plaene/:templateId/versionen"
             element={<TemplateVersionsPage />}
           />
+          <Route path="/bibliothek" element={<WorkoutUnitsPage />} />
+          <Route path="/bibliothek/:unitId" element={<WorkoutUnitEditPage />} />
           <Route path="/verlauf" element={<HistoryPage />} />
           <Route path="/verlauf/:sessionId" element={<SessionDetailPage />} />
           <Route path="/analyse" element={<AnalyticsPage />} />

@@ -4,6 +4,7 @@ import {
   Database,
   Dumbbell,
   HardDrive,
+  Layers,
   Scale,
   Settings,
   ShieldCheck,
@@ -13,6 +14,12 @@ import {
 import { PageHeader } from '@/components/layout/PageHeader';
 
 const ITEMS = [
+  {
+    to: '/bibliothek',
+    label: 'Bibliothek',
+    description: 'Übungseinheiten und Übungen — wiederverwendbar',
+    Icon: Layers,
+  },
   {
     to: '/mehr/uebungen',
     label: 'Übungen',
