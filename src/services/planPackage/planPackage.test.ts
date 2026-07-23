@@ -7,15 +7,29 @@ import {
   getTemplateWithExercises,
   listTemplatesWithExercises,
 } from '@/db/repositories/templates';
+import { getPlanWithDays } from '@/db/repositories/plans';
+import type { TemplateWithExercises } from '@/db/repositories/templates';
+import type { WorkoutTemplate } from '@/types';
 import { parsePlanPackage } from '@/services/planPackage/parse';
-import { buildPlanPackage, planPackageFingerprint } from '@/services/planPackage/build';
+import {
+  buildPlanPackage,
+  planPackageFingerprint,
+  type PlanExportInput,
+} from '@/services/planPackage/build';
 import {
   analyzePlanPackageImport,
   importPlanPackage,
   listImportedFingerprints,
 } from '@/services/planPackage/import';
 import { planPackageSchema } from '@/services/planPackage/schema';
-import { validPlanPackage } from '@/services/planPackage/fixtures';
+import { validPlanPackage, validPlanPackageV1 } from '@/services/planPackage/fixtures';
+
+/** Wraps a single day (template) as a one-plan export input. */
+async function exportInputFor(template: WorkoutTemplate): Promise<PlanExportInput> {
+  const plan = await getPlanWithDays(template.planId);
+  const entry = (await getTemplateWithExercises(template.id)) as TemplateWithExercises;
+  return { plan: plan!.plan, days: [entry] };
+}
 
 beforeEach(async () => {
   await resetDatabase();
@@ -45,7 +59,7 @@ describe('parsePlanPackage', () => {
 
   it('rejects a plan position referencing an unknown exercise', () => {
     const raw = validPlanPackage();
-    raw.plans[0].exercises[0].exerciseKey = 'exercise-404';
+    raw.plans[0].days[0].exercises[0].exerciseKey = 'exercise-404';
     const result = parsePlanPackage(JSON.stringify(raw));
     expect(result.ok).toBe(false);
   });
@@ -70,6 +84,48 @@ describe('parsePlanPackage', () => {
   it('rejects a file that is too large', () => {
     const result = parsePlanPackage(' '.repeat(600 * 1024));
     expect(result.ok).toBe(false);
+  });
+
+  it('upgrades a valid version-1 file and reports the migration', () => {
+    const result = parsePlanPackage(JSON.stringify(validPlanPackageV1()));
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.migratedFromVersion).toBe(1);
+      expect(result.data.schemaVersion).toBe(2);
+      expect(result.data.plans[0].days).toHaveLength(1);
+    }
+  });
+
+  it.each([
+    [
+      'plan without any day',
+      (raw: ReturnType<typeof validPlanPackage>) => (raw.plans[0].days = []),
+    ],
+    [
+      'day without a name',
+      (raw: ReturnType<typeof validPlanPackage>) => (raw.plans[0].days[0].name = ''),
+    ],
+    [
+      'invalid split type',
+      (raw: ReturnType<typeof validPlanPackage>) =>
+        ((raw.plans[0] as { splitType: string }).splitType = '7-day'),
+    ],
+    [
+      'duplicate day position',
+      (raw: ReturnType<typeof validPlanPackage>) =>
+        (raw.plans[0].days[1].position = raw.plans[0].days[0].position),
+    ],
+    [
+      'rep range reversed',
+      (raw: ReturnType<typeof validPlanPackage>) => {
+        raw.plans[0].days[0].exercises[0].targetRepMin = 12;
+        raw.plans[0].days[0].exercises[0].targetRepMax = 5;
+      },
+    ],
+  ])('rejects an invalid v2 package: %s', (_label, mutate) => {
+    const raw = validPlanPackage();
+    mutate(raw);
+    expect(parsePlanPackage(JSON.stringify(raw)).ok).toBe(false);
   });
 });
 
@@ -105,23 +161,23 @@ describe('buildPlanPackage roundtrip', () => {
 
   it('exports a live plan into a schema-valid package', async () => {
     const template = await seedPlan();
-    const entry = await getTemplateWithExercises(template.id);
-    const pkg = buildPlanPackage([entry!], {
+    const pkg = buildPlanPackage([await exportInputFor(template)], {
       packageName: 'Mein Plan',
       source: 'app-export',
     });
     // Already schema-parsed inside buildPlanPackage; re-parse to be sure.
     expect(() => planPackageSchema.parse(pkg)).not.toThrow();
     expect(pkg.plans).toHaveLength(1);
+    expect(pkg.plans[0].days).toHaveLength(1);
     expect(pkg.exercises).toHaveLength(2);
     // No internal ids leak into the package.
     expect(JSON.stringify(pkg)).not.toContain(template.id);
+    expect(JSON.stringify(pkg)).not.toContain(template.planId);
   });
 
   it('drops exercise/plan notes when includeNotes is false', async () => {
     const template = await seedPlan();
-    const entry = await getTemplateWithExercises(template.id);
-    const pkg = buildPlanPackage([entry!], {
+    const pkg = buildPlanPackage([await exportInputFor(template)], {
       packageName: 'Mein Plan',
       source: 'app-export',
       includeNotes: false,
@@ -133,8 +189,7 @@ describe('buildPlanPackage roundtrip', () => {
 
   it('round-trips export → import back to an equivalent plan', async () => {
     const template = await seedPlan();
-    const entry = await getTemplateWithExercises(template.id);
-    const pkg = buildPlanPackage([entry!], {
+    const pkg = buildPlanPackage([await exportInputFor(template)], {
       packageName: 'Mein Plan',
       source: 'app-export',
     });
@@ -144,6 +199,7 @@ describe('buildPlanPackage roundtrip', () => {
     const analysis = analyzePlanPackageImport(pkg, [], []);
     const result = await importPlanPackage(pkg, analysis);
     expect(result.createdPlans).toBe(1);
+    expect(result.createdDays).toBe(1);
     expect(result.createdExercises).toBe(2);
 
     const [imported] = await listTemplatesWithExercises();
@@ -218,24 +274,9 @@ describe('analyzePlanPackageImport', () => {
     expect(bench?.differences.length).toBeGreaterThan(0);
   });
 
-  it('suggests a unique name for a conflicting plan name', async () => {
-    const template = await createTemplate('Oberkörper');
+  it('suggests a unique name for a conflicting plan name', () => {
     const pkg = parsedFixture();
-    const analysis = analyzePlanPackageImport(
-      pkg,
-      [],
-      [
-        {
-          id: template.id,
-          planId: template.planId,
-          name: 'Oberkörper',
-          description: '',
-          position: 0,
-          createdAt: '',
-          updatedAt: '',
-        },
-      ],
-    );
+    const analysis = analyzePlanPackageImport(pkg, [], ['Oberkörper']);
     expect(analysis.plans[0].nameConflict).toBe(true);
     expect(analysis.plans[0].name).not.toBe('Oberkörper');
   });
@@ -250,19 +291,43 @@ describe('analyzePlanPackageImport', () => {
 });
 
 describe('importPlanPackage', () => {
-  it('creates exercises, plans and preserves the superset grouping', async () => {
+  it('creates a plan with its days and preserves the superset grouping', async () => {
     const pkg = parsedFixture();
     const analysis = analyzePlanPackageImport(pkg, [], []);
     const result = await importPlanPackage(pkg, analysis);
     expect(result.createdExercises).toBe(3);
     expect(result.createdPlans).toBe(1);
+    expect(result.createdDays).toBe(2);
     expect(result.createdPlanExercises).toBe(3);
 
-    const [imported] = await listTemplatesWithExercises();
-    const grouped = imported.exercises.filter((row) => row.groupId);
-    // The two superset members share one group id; the standalone has none.
+    const plan = (await getPlanWithDays((await db.trainingPlans.toArray())[0].id))!;
+    expect(plan.plan.splitType).toBe('2-day');
+    expect(plan.days.map((day) => day.name)).toEqual(['Push', 'Pull']);
+
+    // The Push day's two superset members share one group id.
+    const push = (await listTemplatesWithExercises()).find(
+      (entry) => entry.template.name === 'Push',
+    );
+    const grouped = push!.exercises.filter((row) => row.groupId);
     expect(grouped).toHaveLength(2);
     expect(new Set(grouped.map((row) => row.groupId)).size).toBe(1);
+  });
+
+  it('imports a version-1 package as a plan with a single day', async () => {
+    const parsed = parsePlanPackage(JSON.stringify(validPlanPackageV1()));
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    expect(parsed.migratedFromVersion).toBe(1);
+
+    const analysis = analyzePlanPackageImport(parsed.data, [], []);
+    const result = await importPlanPackage(parsed.data, analysis);
+    expect(result.createdPlans).toBe(1);
+    expect(result.createdDays).toBe(1);
+
+    const plan = (await getPlanWithDays((await db.trainingPlans.toArray())[0].id))!;
+    expect(plan.plan.splitType).toBe('single');
+    expect(plan.days).toHaveLength(1);
+    expect(plan.days[0].name).toBe('Tag A');
   });
 
   it('re-points alternative references onto the imported exercises', async () => {

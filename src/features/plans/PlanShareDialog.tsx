@@ -5,55 +5,60 @@ import { Dialog } from '@/components/ui/Dialog';
 import { CheckboxField, TextField } from '@/components/ui/Field';
 import { getTemplateWithExercises } from '@/db/repositories/templates';
 import type { TemplateWithExercises } from '@/db/repositories/templates';
-import { buildPlanPackage, planPackageFileName } from '@/services/planPackage/build';
+import { getPlanWithDays } from '@/db/repositories/plans';
+import {
+  buildPlanPackage,
+  planPackageFileName,
+  type PlanExportInput,
+} from '@/services/planPackage/build';
 import { shareJsonExport } from '@/services/share';
 import { downloadJson } from '@/utils/download';
 import { useToast } from '@/hooks/useToast';
 
 /**
- * Shares one or more plans as a `training-plan-package`. Privacy options are
- * shown *before* anything leaves the device: the package never contains
- * training history, body data or internal ids — only the plans and the exercise
- * definitions they use, and notes only if the user keeps them.
+ * Shares a plan (with all its days) as a `training-plan-package`. Privacy
+ * options are shown *before* anything leaves the device: the package never
+ * contains training history, body data or internal ids — only the plan, its
+ * days and the exercise definitions they use, and notes only if the user keeps
+ * them.
  */
 export function PlanShareDialog({
-  templateIds,
+  planId,
   onClose,
 }: {
-  /** Plans to share; `null` keeps the dialog closed. */
-  templateIds: string[] | null;
+  /** Plan to share; `null` keeps the dialog closed. */
+  planId: string | null;
   onClose: () => void;
 }) {
   const toast = useToast();
-  const [entries, setEntries] = useState<TemplateWithExercises[]>([]);
+  const [input, setInput] = useState<PlanExportInput | null>(null);
   const [packageName, setPackageName] = useState('');
   const [includeNotes, setIncludeNotes] = useState(true);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    if (!templateIds) {
-      setEntries([]);
+    if (!planId) {
+      setInput(null);
       return;
     }
     void (async () => {
-      const loaded = (
-        await Promise.all(templateIds.map((id) => getTemplateWithExercises(id)))
+      const plan = await getPlanWithDays(planId);
+      if (cancelled || !plan) return;
+      const days = (
+        await Promise.all(plan.days.map((day) => getTemplateWithExercises(day.id)))
       ).filter((entry): entry is TemplateWithExercises => entry != null);
-      if (cancelled) return;
-      setEntries(loaded);
-      setPackageName(
-        loaded.length === 1 ? loaded[0].template.name : 'Meine Trainingspläne',
-      );
+      setInput({ plan: plan.plan, days });
+      setPackageName(plan.plan.name);
       setIncludeNotes(true);
     })();
     return () => {
       cancelled = true;
     };
-  }, [templateIds]);
+  }, [planId]);
 
   const build = () =>
-    buildPlanPackage(entries, {
+    buildPlanPackage(input ? [input] : [], {
       packageName: packageName.trim() || 'Trainingsplan',
       source: 'app-export',
       includeNotes,
@@ -101,33 +106,30 @@ export function PlanShareDialog({
     }
   };
 
+  const dayCount = input?.days.length ?? 0;
   const exerciseCount = new Set(
-    entries.flatMap((entry) =>
-      entry.exercises.map((row) => row.exercise?.id).filter(Boolean),
+    (input?.days ?? []).flatMap((day) =>
+      day.exercises.map((row) => row.exercise?.id).filter(Boolean),
     ),
   ).size;
 
   return (
     <Dialog
-      open={Boolean(templateIds)}
+      open={Boolean(planId)}
       onClose={onClose}
-      title={entries.length === 1 ? 'Plan teilen' : 'Pläne teilen'}
+      title="Plan teilen"
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>
             Abbrechen
           </Button>
-          <Button
-            variant="secondary"
-            disabled={busy || entries.length === 0}
-            onClick={handleDownload}
-          >
+          <Button variant="secondary" disabled={busy || !input} onClick={handleDownload}>
             <FileJson size={18} aria-hidden="true" />
             Als Datei
           </Button>
           <Button
             variant="primary"
-            disabled={busy || entries.length === 0}
+            disabled={busy || !input}
             onClick={() => void handleShare()}
           >
             <Share2 size={18} aria-hidden="true" />
@@ -152,7 +154,7 @@ export function PlanShareDialog({
           <p className="text-xs font-semibold">Das Paket enthält:</p>
           <ul className="mt-1 list-disc pl-4 text-xs leading-relaxed text-muted">
             <li>
-              {entries.length} {entries.length === 1 ? 'Plan' : 'Pläne'} mit{' '}
+              {dayCount} {dayCount === 1 ? 'Trainingstag' : 'Trainingstage'} mit{' '}
               {exerciseCount} Übungsdefinitionen
             </li>
             <li>keine Trainingshistorie, keine Körperdaten, keine internen IDs</li>

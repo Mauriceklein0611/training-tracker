@@ -17,11 +17,11 @@ General rules:
 
 | Format                             | Direction               | Name (in content)                   | Version field                           | Version              | Supported imports |
 | ---------------------------------- | ----------------------- | ----------------------------------- | --------------------------------------- | -------------------- | ----------------- |
-| Full backup                        | export + import         | `app: training-tracker`             | `exportFormatVersion` / `schemaVersion` | format 1 / schema 16 | schema ≤ 16       |
+| Full backup                        | export + import         | `app: training-tracker`             | `exportFormatVersion` / `schemaVersion` | format 1 / schema 17 | schema ≤ 17       |
 | AI analysis export                 | export                  | (AI export doc)                     | `exportVersion`                         | 1                    | —                 |
 | AI response import                 | import                  | `format: training-ai-response`      | `schemaVersion`                         | 1                    | exactly 1         |
-| Plan builder kit                   | export                  | `format: training-plan-builder-kit` | `version`                               | 1                    | —                 |
-| Training plan package              | export + import + share | `format: training-plan-package`     | `schemaVersion`                         | 1                    | 1                 |
+| Plan builder kit                   | export                  | `format: training-plan-builder-kit` | `version`                               | 2                    | —                 |
+| Training plan package              | export + import + share | `format: training-plan-package`     | `schemaVersion`                         | 2                    | 1, 2              |
 | Block comparison export            | export                  | (comparison doc)                    | —                                       | —                    | —                 |
 | CSV (sets/sessions/exercises/body) | export                  | header row                          | header (by test)                        | —                    | —                 |
 
@@ -29,12 +29,18 @@ General rules:
 
 - Schema: `backupFileSchema`; parser/validator `validateBackupJson`; exporter
   `createBackup`; importer `importBackup` (merge/replace, one transaction).
-- Contains every table incl. `templateVersions`, `aiAnalyses`, `equipmentProfiles`,
-  `aiExports`, `planImports`, and settings. New tables/fields are added with a
-  `.default([])` or optional so older backups still validate. Newer `schemaVersion`
-  is rejected.
+- Contains every table incl. `trainingPlans`, `templateVersions`, `aiAnalyses`,
+  `equipmentProfiles`, `aiExports`, `planImports`, and settings. New tables/fields
+  are added with a `.default([])` or optional so older backups still validate.
+  Newer `schemaVersion` is rejected.
+- Split system (schema 17): a plan is the parent of one or more days
+  (`workoutTemplates`, each with `planId` + `position`). Restoring a pre-split
+  backup wraps every orphan day into a single-day plan inside the same
+  transaction (`wrapOrphanTemplatesInPlans`, shared with the Dexie v17 upgrade).
+  Sessions keep `templateId` (the day) and gain `planId`/`planNameSnapshot`/
+  `dayPositionSnapshot`; older sessions without them fall back to the day.
 - Fixtures/tests: `src/services/backup.test.ts` (roundtrip, legacy per version,
-  merge/replace, newer-version rejection).
+  merge/replace, newer-version rejection, split round-trip + pre-split restore).
 
 ## AI analysis export & response round-trip — `aiExport.ts` / `aiResponse.ts` / `aiApply.ts`
 
@@ -49,13 +55,19 @@ General rules:
 
 ## Training plan package — `src/services/planPackage/*`
 
-- Format `training-plan-package`, schema version 1
-  (`src/constants/formats.ts`). One package holds one or more plans plus the
-  exercise definitions they reference, using portable keys (`exerciseKey`,
-  `planKey`, `planExerciseKey`, `groupKey`) — never internal Dexie ids.
-- Schema: `planPackageSchema` (strict Zod). Parser `parsePlanPackage`.
-  Exporter `buildPlanPackage`. Import (transactional, conflict-aware)
-  `importPlanPackage` with preview `analyzePlanPackageImport`.
+- Format `training-plan-package`, **schema version 2** (`src/constants/formats.ts`;
+  `SUPPORTED_PLAN_PACKAGE_VERSIONS = [1, 2]`). One package holds one or more
+  plans; each plan has a `splitType` and a list of **days**, each day holding its
+  own plan-exercises. All relationships use portable keys (`exerciseKey`,
+  `planKey`, `dayKey`, `planExerciseKey`, `groupKey`) — never internal Dexie ids.
+- **Version 1** (a single implicit day, `plan.exercises`) is still accepted: it
+  is validated against `planPackageSchemaV1` and upgraded (`upgradeV1`) to a plan
+  with one day named "Tag A"; the parser reports `migratedFromVersion` and the
+  import preview shows a migration note. A newer unknown version is rejected.
+- Schema: `planPackageSchema` (strict Zod, day-based). Parser `parsePlanPackage`.
+  Exporter `buildPlanPackage` (always writes v2). Import (transactional,
+  conflict-aware) `importPlanPackage` with preview `analyzePlanPackageImport`.
+  Each imported plan becomes a `TrainingPlan` with its days.
 - Excludes all private data: no history, past sets/weights, PRs, body data,
   check-ins, AI analyses, settings, internal ids. `includeNotes: false` also
   strips plan/exercise notes before sharing.
@@ -66,19 +78,21 @@ General rules:
   a content `fingerprint`; re-importing the same package is flagged, not blocked.
 - Fallbacks: missing optional fields default as documented; unknown muscle
   groups are kept as custom values with a preview warning; newer version rejected.
-- Fixtures: `src/services/planPackage/fixtures.ts` (valid current package,
-  mutated in tests into invalid / future-version shapes). Tests:
-  `planPackage.test.ts` (parse, build roundtrip, analyze, transactional import),
-  `builderKit.test.ts`, and UI `src/features/plans/PlanPackageTools.test.tsx`.
+- Fixtures: `src/services/planPackage/fixtures.ts` (`validPlanPackage` v2 +
+  `validPlanPackageV1`, mutated in tests into invalid / future-version shapes).
+  Tests: `planPackage.test.ts` (parse, v1 upgrade, invalid v2 cases, build
+  roundtrip, analyze, transactional multi-day import), `builderKit.test.ts`, and
+  UI `src/features/plans/PlanPackageTools.test.tsx`.
 
 ## Plan builder kit — `src/services/planPackage/builderKit.ts`
 
-- Format `training-plan-builder-kit`, version 1. A self-describing, data-free
-  file handed to ChatGPT so it can produce a valid `training-plan-package`: it
-  carries the target contract, the allowed enums (incl. weight-mode-per-tracking
-  rules from `exerciseRules.ts`), the muscle-group catalog and a tiny example.
+- Format `training-plan-builder-kit`, **version 2** (multi-day). A
+  self-describing, data-free file handed to ChatGPT so it can produce a valid
+  `training-plan-package` v2: it carries the target contract, the allowed enums
+  (`splitType`, plus weight-mode-per-tracking rules from `exerciseRules.ts`), the
+  muscle-group catalog and a two-day example.
 - Export/share only; never imported. The example is validated against the real
-  `planPackageSchema` by test so the two can never drift.
+  `planPackageSchema` (v2) by test so the two can never drift.
 
 ## Block comparison export — `src/services/blockComparison.ts`
 

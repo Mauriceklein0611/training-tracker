@@ -5,7 +5,7 @@ import {
   trackingTypeSchema,
   weightModeSchema,
 } from '@/db/schemas';
-import { PLAN_PACKAGE_FORMAT, PLAN_PACKAGE_SCHEMA_VERSION } from '@/constants/formats';
+import { PLAN_PACKAGE_FORMAT } from '@/constants/formats';
 import { isWeightModeAllowed } from '@/services/exerciseRules';
 
 /**
@@ -13,6 +13,9 @@ import { isWeightModeAllowed } from '@/services/exerciseRules';
  * AI-created plans, plan export and sharing. It carries one or more plans plus
  * the exercise definitions they reference, using portable keys only (never
  * internal database ids). Strict Zod: unknown fields are rejected, not dropped.
+ *
+ * Version 2 makes a plan a list of training days (splits). Version 1 (a single
+ * implicit day) is still accepted and converted to a one-day plan on import.
  *
  * See docs/FORMAT_COMPATIBILITY.md.
  */
@@ -24,6 +27,8 @@ const portableKey = z
   .regex(/^[\w:\-.]+$/, { message: 'Ungültiger Schlüssel' });
 
 const progressionMethodSchema = z.enum(['auto', 'weight', 'reps']);
+
+const splitTypeSchema = z.enum(['single', '2-day', '3-day', '4-day', '5-day', 'custom']);
 
 export const packageGroupSchema = z
   .object({
@@ -69,91 +74,111 @@ export const packagePlanExerciseSchema = z
   })
   .strict();
 
+/** A single training day (split day) within a plan. May be empty. */
+export const packageDaySchema = z
+  .object({
+    dayKey: portableKey,
+    name: z.string().min(1).max(200),
+    description: z.string().max(2000).default(''),
+    position: z.number().int().min(0).max(500),
+    exercises: z.array(packagePlanExerciseSchema).max(100).default([]),
+  })
+  .strict();
+
 export const packagePlanSchema = z
   .object({
     planKey: portableKey,
     name: z.string().min(1).max(200),
     description: z.string().max(2000).default(''),
-    exercises: z.array(packagePlanExerciseSchema).min(1).max(100),
+    splitType: splitTypeSchema.default('single'),
+    days: z.array(packageDaySchema).min(1).max(20),
   })
   .strict();
 
-export const planPackageSchema = z
-  .object({
-    format: z.literal(PLAN_PACKAGE_FORMAT),
-    schemaVersion: z.literal(PLAN_PACKAGE_SCHEMA_VERSION),
-    packageId: portableKey,
-    createdAt: z.string(),
-    source: z
-      .object({
-        kind: z.enum(['ai-generated', 'app-export']),
-        label: z.string().max(120).optional(),
-      })
-      .strict(),
-    packageName: z.string().min(1).max(200),
-    programNotes: z.string().max(4000).default(''),
-    exercises: z.array(packageExerciseSchema).min(1).max(300),
-    plans: z.array(packagePlanSchema).min(1).max(50),
-  })
-  .strict()
-  .superRefine((data, ctx) => {
-    // Unique exercise keys.
-    const exerciseKeys = new Set<string>();
-    for (const [index, exercise] of data.exercises.entries()) {
-      if (exerciseKeys.has(exercise.exerciseKey)) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: `Doppelter exerciseKey: ${exercise.exerciseKey}`,
-          path: ['exercises', index, 'exerciseKey'],
-        });
-      }
-      exerciseKeys.add(exercise.exerciseKey);
+/** Shared cross-field validation over the exercise pool and the plans/days. */
+function refinePackage(
+  data: {
+    exercises: z.infer<typeof packageExerciseSchema>[];
+    plans: z.infer<typeof packagePlanSchema>[];
+  },
+  ctx: z.RefinementCtx,
+): void {
+  // Unique exercise keys + weight-mode validity for the tracking type.
+  const exerciseKeys = new Set<string>();
+  for (const [index, exercise] of data.exercises.entries()) {
+    if (exerciseKeys.has(exercise.exerciseKey)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Doppelter exerciseKey: ${exercise.exerciseKey}`,
+        path: ['exercises', index, 'exerciseKey'],
+      });
+    }
+    exerciseKeys.add(exercise.exerciseKey);
 
-      // Weight convention must be valid for the tracking type.
-      if (!isWeightModeAllowed(exercise.trackingType, exercise.weightMode)) {
+    if (!isWeightModeAllowed(exercise.trackingType, exercise.weightMode)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `weightMode „${exercise.weightMode}" ist für trackingType „${exercise.trackingType}" nicht erlaubt`,
+        path: ['exercises', index, 'weightMode'],
+      });
+    }
+  }
+
+  // Alternatives must reference defined exercises.
+  for (const [index, exercise] of data.exercises.entries()) {
+    for (const [altIndex, altKey] of (exercise.alternativeExerciseKeys ?? []).entries()) {
+      if (!exerciseKeys.has(altKey)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: `weightMode „${exercise.weightMode}" ist für trackingType „${exercise.trackingType}" nicht erlaubt`,
-          path: ['exercises', index, 'weightMode'],
+          message: `Alternativübung verweist auf unbekannten exerciseKey: ${altKey}`,
+          path: ['exercises', index, 'alternativeExerciseKeys', altIndex],
         });
       }
     }
+  }
 
-    // Alternatives must reference defined exercises.
-    for (const [index, exercise] of data.exercises.entries()) {
-      for (const [altIndex, altKey] of (
-        exercise.alternativeExerciseKeys ?? []
-      ).entries()) {
-        if (!exerciseKeys.has(altKey)) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: `Alternativübung verweist auf unbekannten exerciseKey: ${altKey}`,
-            path: ['exercises', index, 'alternativeExerciseKeys', altIndex],
-          });
-        }
-      }
+  const planKeys = new Set<string>();
+  const dayKeys = new Set<string>();
+  // Plan-exercise keys are unique across the whole package.
+  const planExerciseKeys = new Set<string>();
+
+  for (const [planIndex, plan] of data.plans.entries()) {
+    if (planKeys.has(plan.planKey)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Doppelter planKey: ${plan.planKey}`,
+        path: ['plans', planIndex, 'planKey'],
+      });
     }
+    planKeys.add(plan.planKey);
 
-    // Unique plan keys.
-    const planKeys = new Set<string>();
-    // Plan-exercise keys are unique across the whole package.
-    const planExerciseKeys = new Set<string>();
+    const dayPositions = new Set<number>();
+    for (const [dayIndex, day] of plan.days.entries()) {
+      const dayAt = ['plans', planIndex, 'days', dayIndex] as const;
 
-    for (const [planIndex, plan] of data.plans.entries()) {
-      if (planKeys.has(plan.planKey)) {
+      if (dayKeys.has(day.dayKey)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: `Doppelter planKey: ${plan.planKey}`,
-          path: ['plans', planIndex, 'planKey'],
+          message: `Doppelter dayKey: ${day.dayKey}`,
+          path: [...dayAt, 'dayKey'],
         });
       }
-      planKeys.add(plan.planKey);
+      dayKeys.add(day.dayKey);
+
+      if (dayPositions.has(day.position)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Doppelte Tag-Position (position ${day.position}) im Plan`,
+          path: [...dayAt, 'position'],
+        });
+      }
+      dayPositions.add(day.position);
 
       const orders = new Set<number>();
       const groupSettings = new Map<string, string>();
 
-      for (const [exIndex, planExercise] of plan.exercises.entries()) {
-        const at = ['plans', planIndex, 'exercises', exIndex] as const;
+      for (const [exIndex, planExercise] of day.exercises.entries()) {
+        const at = [...dayAt, 'exercises', exIndex] as const;
 
         if (planExerciseKeys.has(planExercise.planExerciseKey)) {
           ctx.addIssue({
@@ -164,7 +189,6 @@ export const planPackageSchema = z
         }
         planExerciseKeys.add(planExercise.planExerciseKey);
 
-        // Reference an exercise that exists.
         if (!exerciseKeys.has(planExercise.exerciseKey)) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
@@ -173,17 +197,15 @@ export const planPackageSchema = z
           });
         }
 
-        // Unique order within the plan.
         if (orders.has(planExercise.order)) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
-            message: `Doppelte Reihenfolge (order ${planExercise.order}) im Plan`,
+            message: `Doppelte Reihenfolge (order ${planExercise.order}) am Tag`,
             path: [...at, 'order'],
           });
         }
         orders.add(planExercise.order);
 
-        // Rep range must stay logical.
         const { targetRepMin, targetRepMax } = planExercise;
         if (targetRepMin != null && targetRepMax != null && targetRepMin > targetRepMax) {
           ctx.addIssue({
@@ -193,7 +215,6 @@ export const planPackageSchema = z
           });
         }
 
-        // A group key must describe one consistent group (same type + rest mode).
         if (planExercise.group) {
           const signature = `${planExercise.group.type}:${planExercise.group.restMode}`;
           const existing = groupSettings.get(planExercise.group.groupKey);
@@ -208,10 +229,92 @@ export const planPackageSchema = z
         }
       }
     }
-  });
+  }
+}
+
+export const planPackageSchema = z
+  .object({
+    format: z.literal(PLAN_PACKAGE_FORMAT),
+    schemaVersion: z.literal(2),
+    packageId: portableKey,
+    createdAt: z.string(),
+    source: z
+      .object({
+        kind: z.enum(['ai-generated', 'app-export']),
+        label: z.string().max(120).optional(),
+      })
+      .strict(),
+    packageName: z.string().min(1).max(200),
+    programNotes: z.string().max(4000).default(''),
+    exercises: z.array(packageExerciseSchema).max(300).default([]),
+    plans: z.array(packagePlanSchema).min(1).max(50),
+  })
+  .strict()
+  .superRefine(refinePackage);
+
+// ---- version 1 (single implicit day) — accepted for import only ----------
+
+const packagePlanSchemaV1 = z
+  .object({
+    planKey: portableKey,
+    name: z.string().min(1).max(200),
+    description: z.string().max(2000).default(''),
+    exercises: z.array(packagePlanExerciseSchema).min(1).max(100),
+  })
+  .strict();
+
+export const planPackageSchemaV1 = z
+  .object({
+    format: z.literal(PLAN_PACKAGE_FORMAT),
+    schemaVersion: z.literal(1),
+    packageId: portableKey,
+    createdAt: z.string(),
+    source: z
+      .object({
+        kind: z.enum(['ai-generated', 'app-export']),
+        label: z.string().max(120).optional(),
+      })
+      .strict(),
+    packageName: z.string().min(1).max(200),
+    programNotes: z.string().max(4000).default(''),
+    exercises: z.array(packageExerciseSchema).min(1).max(300),
+    plans: z.array(packagePlanSchemaV1).min(1).max(50),
+  })
+  .strict();
 
 export type PlanPackage = z.infer<typeof planPackageSchema>;
+export type PlanPackageV1 = z.infer<typeof planPackageSchemaV1>;
 export type PackageExercise = z.infer<typeof packageExerciseSchema>;
 export type PackagePlan = z.infer<typeof packagePlanSchema>;
+export type PackageDay = z.infer<typeof packageDaySchema>;
 export type PackagePlanExercise = z.infer<typeof packagePlanExerciseSchema>;
 export type PackageGroup = z.infer<typeof packageGroupSchema>;
+
+/** Converts a validated v1 package into the current (v2) day-based shape. */
+export function upgradeV1(pkg: PlanPackageV1): PlanPackage {
+  return {
+    format: pkg.format,
+    schemaVersion: 2,
+    packageId: pkg.packageId,
+    createdAt: pkg.createdAt,
+    source: pkg.source,
+    packageName: pkg.packageName,
+    programNotes: pkg.programNotes,
+    exercises: pkg.exercises,
+    plans: pkg.plans.map((plan) => ({
+      planKey: plan.planKey,
+      name: plan.name,
+      description: plan.description,
+      splitType: 'single' as const,
+      days: [
+        {
+          dayKey: `${plan.planKey}-day-1`,
+          name: 'Tag A',
+          description: '',
+          position: 0,
+          exercises: plan.exercises,
+        },
+      ],
+    })),
+  };
+}

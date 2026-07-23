@@ -5,7 +5,7 @@ import { Card, CardHeader } from '@/components/ui/Card';
 import { Dialog } from '@/components/ui/Dialog';
 import { SelectField, TextField } from '@/components/ui/Field';
 import { listExercises } from '@/db/repositories/exercises';
-import { listTemplates } from '@/db/repositories/templates';
+import { listPlans } from '@/db/repositories/plans';
 import { parsePlanPackage } from '@/services/planPackage/parse';
 import type { PlanPackage } from '@/services/planPackage/schema';
 import {
@@ -78,15 +78,24 @@ export function PlanPackageTools() {
         setImportErrors(result.errors);
         return;
       }
-      const [exercises, templates, fingerprints] = await Promise.all([
+      const [exercises, plans, fingerprints] = await Promise.all([
         listExercises(),
-        listTemplates(),
+        listPlans(),
         listImportedFingerprints(),
       ]);
-      setPkg(result.data);
-      setAnalysis(
-        analyzePlanPackageImport(result.data, exercises, templates, fingerprints),
+      const analysisResult = analyzePlanPackageImport(
+        result.data,
+        exercises,
+        plans.map((plan) => plan.name),
+        fingerprints,
       );
+      if (result.migratedFromVersion) {
+        analysisResult.warnings.unshift(
+          `Ältere Paketversion (v${result.migratedFromVersion}) erkannt — sie wird als Plan mit einem Tag übernommen.`,
+        );
+      }
+      setPkg(result.data);
+      setAnalysis(analysisResult);
     } catch (error) {
       setImportErrors([
         error instanceof Error ? error.message : 'Die Datei konnte nicht gelesen werden.',
@@ -326,7 +335,10 @@ export function PlanPackageTools() {
                         angepasst.
                       </p>
                     ) : null}
-                    <p className="text-xs text-muted">{plan.exerciseCount} Übungen</p>
+                    <p className="text-xs text-muted">
+                      {plan.dayCount} {plan.dayCount === 1 ? 'Tag' : 'Tage'} ·{' '}
+                      {plan.exerciseCount} Übungen
+                    </p>
                   </div>
                 ))}
               </div>

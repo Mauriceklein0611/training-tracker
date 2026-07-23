@@ -38,6 +38,7 @@ export interface PlanBuilderKit {
   allowedValues: {
     trackingType: TrackingType[];
     weightModeByTrackingType: Record<TrackingType, string[]>;
+    splitType: string[];
     groupType: string[];
     groupRestMode: string[];
     progressionMethod: string[];
@@ -53,14 +54,14 @@ function buildExample(): unknown {
     packageId: 'example-package',
     createdAt: '2026-01-01T00:00:00.000Z',
     source: { kind: 'ai-generated', label: 'ChatGPT' },
-    packageName: 'Beispiel: Ganzkörper 2x/Woche',
+    packageName: 'Beispiel: Push/Pull',
     programNotes: '',
     exercises: [
       {
         exerciseKey: 'exercise-1',
-        name: 'Kniebeuge',
-        primaryMuscleGroup: 'Quadrizeps',
-        secondaryMuscleGroups: ['Gesäß'],
+        name: 'Bankdrücken',
+        primaryMuscleGroup: 'Brust',
+        secondaryMuscleGroups: ['Trizeps'],
         equipment: 'Langhantel',
         trackingType: 'weight_reps',
         weightMode: 'total',
@@ -68,24 +69,65 @@ function buildExample(): unknown {
         defaultRestSeconds: 180,
         notes: '',
       },
+      {
+        exerciseKey: 'exercise-2',
+        name: 'Klimmzug',
+        primaryMuscleGroup: 'Latissimus',
+        secondaryMuscleGroups: ['Bizeps'],
+        equipment: 'Klimmzugstange',
+        trackingType: 'bodyweight_reps',
+        weightMode: 'none',
+        weightMultiplier: 1,
+        defaultRestSeconds: 150,
+        notes: '',
+      },
     ],
     plans: [
       {
         planKey: 'plan-1',
-        name: 'Tag A',
+        name: 'Push/Pull',
         description: '',
-        exercises: [
+        splitType: '2-day',
+        days: [
           {
-            planExerciseKey: 'pe-1',
-            exerciseKey: 'exercise-1',
-            order: 0,
-            targetSets: 3,
-            targetRepMin: 5,
-            targetRepMax: 8,
-            targetDurationSeconds: null,
-            restSeconds: 180,
-            notes: '',
-            group: null,
+            dayKey: 'day-1',
+            name: 'Push',
+            description: '',
+            position: 0,
+            exercises: [
+              {
+                planExerciseKey: 'pe-1',
+                exerciseKey: 'exercise-1',
+                order: 0,
+                targetSets: 3,
+                targetRepMin: 5,
+                targetRepMax: 8,
+                targetDurationSeconds: null,
+                restSeconds: 180,
+                notes: '',
+                group: null,
+              },
+            ],
+          },
+          {
+            dayKey: 'day-2',
+            name: 'Pull',
+            description: '',
+            position: 1,
+            exercises: [
+              {
+                planExerciseKey: 'pe-2',
+                exerciseKey: 'exercise-2',
+                order: 0,
+                targetSets: 3,
+                targetRepMin: 6,
+                targetRepMax: 10,
+                targetDurationSeconds: null,
+                restSeconds: 150,
+                notes: '',
+                group: null,
+              },
+            ],
           },
         ],
       },
@@ -102,9 +144,10 @@ export function buildPlanBuilderKit(): PlanBuilderKit {
     format: PLAN_BUILDER_KIT_FORMAT,
     version: PLAN_BUILDER_KIT_VERSION,
     description:
-      'Bauanleitung für einen Trainingsplan im Format „training-plan-package". ' +
-      'Frage mich zuerst nach Zielen, Erfahrung, Trainingstagen und Ausrüstung. ' +
-      'Erzeuge die Datei erst am Ende, wenn ich sie ausdrücklich anfordere.',
+      'Bauanleitung für einen mehrtägigen Trainingsplan im Format ' +
+      '„training-plan-package" (Version 2, Plan mit Trainingstagen). Frage mich ' +
+      'zuerst nach Zielen, Erfahrung, Trainingstagen und Ausrüstung. Erzeuge die ' +
+      'Datei erst am Ende, wenn ich sie ausdrücklich anfordere.',
     target: {
       format: PLAN_PACKAGE_FORMAT,
       schemaVersion: PLAN_PACKAGE_SCHEMA_VERSION,
@@ -112,18 +155,25 @@ export function buildPlanBuilderKit(): PlanBuilderKit {
     rules: [
       'Antworte während der Planung normal auf Deutsch; erzeuge noch keine Datei.',
       'Erzeuge die Datei erst, wenn ich ausdrücklich darum bitte, und dann als reines JSON ohne Markdown.',
-      'Verwende ausschließlich die aufgeführten Werte für trackingType, weightMode, groupType, groupRestMode und progressionMethod.',
+      'Ein Plan besteht aus einem oder mehreren Trainingstagen im Feld „days". Ein Einzeltraining hat genau einen Tag.',
+      'Jeder Tag hat einen nichtleeren „name", eine eindeutige „position" (0,1,2, …) und ein Array „exercises" (darf leer sein).',
+      'Wähle „splitType" passend zur Tagesanzahl: 1→single, 2→2-day, 3→3-day, 4→4-day, 5→5-day, sonst custom. Die Tagesnamen bestimme ich, nicht der splitType.',
+      'Ordne jede Übung genau einem Tag zu. Übungen stehen niemals außerhalb eines Tages.',
+      'Verwende ausschließlich die aufgeführten Werte für trackingType, weightMode, groupType, groupRestMode, splitType und progressionMethod.',
       'weightMode muss zum trackingType passen (siehe weightModeByTrackingType).',
+      'Zeitbasierte Übungen: trackingType „duration", weightMode „none", targetDurationSeconds gesetzt, targetRepMin/targetRepMax null.',
       'Nutze für Muskelgruppen bevorzugt die Bezeichnungen aus „muscleGroups"; unbekannte Bezeichnungen sind erlaubt, aber sparsam.',
-      'Verwende nur die Schlüssel exerciseKey, planKey, planExerciseKey und groupKey zur Verknüpfung — niemals interne IDs.',
-      'Jeder exerciseKey und planExerciseKey ist eindeutig; jede Planposition verweist auf einen vorhandenen exerciseKey.',
-      'order beginnt bei 0 und ist je Plan eindeutig. targetRepMin darf nicht größer als targetRepMax sein.',
-      'Übungen einer Gruppe verwenden denselben groupKey mit identischem type und restMode und stehen direkt hintereinander.',
+      'Verwende nur die Schlüssel exerciseKey, planKey, dayKey, planExerciseKey und groupKey zur Verknüpfung — niemals interne IDs.',
+      'exerciseKey, dayKey und planExerciseKey sind jeweils eindeutig; jede Planposition verweist auf einen vorhandenen exerciseKey.',
+      'order beginnt bei 0 und ist je Tag eindeutig. targetRepMin darf nicht größer als targetRepMax sein.',
+      'Übungen einer Gruppe verwenden denselben groupKey mit identischem type und restMode und stehen am selben Tag direkt hintereinander.',
+      'Pflichtfelder: format, schemaVersion, packageId, createdAt, source, packageName, plans (mit planKey, name, days). Optionale Felder können entfallen.',
       'Erfinde keine persönlichen Daten. Das Paket enthält nur Pläne und Übungsdefinitionen, keine Trainingshistorie.',
     ],
     allowedValues: {
       trackingType: TRACKING_TYPES,
       weightModeByTrackingType,
+      splitType: ['single', '2-day', '3-day', '4-day', '5-day', 'custom'],
       groupType: ['superset', 'circuit'],
       groupRestMode: ['each', 'round'],
       progressionMethod: ['auto', 'weight', 'reps'],

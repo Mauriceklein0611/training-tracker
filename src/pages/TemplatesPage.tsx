@@ -190,7 +190,7 @@ export default function TemplatesPage() {
       />
 
       <PlanShareDialog
-        templateIds={shareTarget ? shareTarget.days.map((day) => day.id) : null}
+        planId={shareTarget ? shareTarget.plan.id : null}
         onClose={() => setShareTarget(null)}
       />
 

@@ -43,8 +43,10 @@ describe('PlanPackageTools import', () => {
     await user.click(within(dialog).getByRole('button', { name: /^Importieren$/ }));
 
     await waitFor(async () => {
-      expect(await db.workoutTemplates.count()).toBe(1);
+      expect(await db.trainingPlans.count()).toBe(1);
     });
+    // One plan with two days (Push, Pull) and three exercise definitions.
+    expect(await db.workoutTemplates.count()).toBe(2);
     expect(await db.exercises.count()).toBe(3);
     expect(await db.planImports.count()).toBe(1);
   });
@@ -87,7 +89,7 @@ describe('PlanPackageTools import', () => {
     await user.click(within(dialog).getByRole('button', { name: /^Importieren$/ }));
 
     await waitFor(async () => {
-      expect(await db.workoutTemplates.count()).toBe(1);
+      expect(await db.trainingPlans.count()).toBe(1);
     });
     // Default resolution for a metadata diff is reuse → no duplicate created.
     const benches = (await db.exercises.toArray()).filter(

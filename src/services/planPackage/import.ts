@@ -32,6 +32,7 @@ export interface PlanImportItem {
   /** Resolved, unique plan name (editable before applying). */
   name: string;
   nameConflict: boolean;
+  dayCount: number;
   exerciseCount: number;
 }
 
@@ -52,6 +53,7 @@ export interface PlanPackageImportResult {
   createdExercises: number;
   reusedExercises: number;
   createdPlans: number;
+  createdDays: number;
   createdPlanExercises: number;
 }
 
@@ -103,7 +105,7 @@ function uniqueName(desired: string, taken: Set<string>): string {
 export function analyzePlanPackageImport(
   pkg: PlanPackage,
   existingExercises: Exercise[],
-  existingTemplates: WorkoutTemplate[],
+  existingPlanNames: string[],
   importedFingerprints: string[] = [],
 ): PlanPackageImportAnalysis {
   const byName = new Map<string, Exercise>();
@@ -144,7 +146,7 @@ export function analyzePlanPackageImport(
     };
   });
 
-  const takenPlanNames = new Set(existingTemplates.map((t) => normalizeName(t.name)));
+  const takenPlanNames = new Set(existingPlanNames.map((name) => normalizeName(name)));
   const plans: PlanImportItem[] = pkg.plans.map((plan) => {
     const conflict = takenPlanNames.has(normalizeName(plan.name));
     const name = conflict
@@ -156,7 +158,8 @@ export function analyzePlanPackageImport(
       originalName: plan.name,
       name,
       nameConflict: conflict,
-      exerciseCount: plan.exercises.length,
+      dayCount: plan.days.length,
+      exerciseCount: plan.days.reduce((sum, day) => sum + day.exercises.length, 0),
     };
   });
 
@@ -250,6 +253,7 @@ export async function importPlanPackage(
     createdExercises: 0,
     reusedExercises: 0,
     createdPlans: 0,
+    createdDays: 0,
     createdPlanExercises: 0,
   };
 
@@ -312,73 +316,75 @@ export async function importPlanPackage(
       }
       if (created.length > 0) await database.exercises.bulkAdd(created);
 
-      // 3) Create each plan and its exercise rows, then normalize grouping.
-      // A schema-v1 package plan maps to a plan with a single day ("Tag A").
+      // 3) Create each plan, its days, their exercise rows and grouping.
       for (const plan of pkg.plans) {
-        const planName = nameByPlanKey.get(plan.planKey) ?? plan.name;
         const trainingPlan: TrainingPlan = {
           id: uuid(),
-          name: planName,
+          name: nameByPlanKey.get(plan.planKey) ?? plan.name,
           description: plan.description,
-          splitType: 'single',
+          splitType: plan.splitType,
           createdAt: timestamp,
           updatedAt: timestamp,
         };
         await database.trainingPlans.add(trainingPlan);
-
-        const template: WorkoutTemplate = {
-          id: uuid(),
-          planId: trainingPlan.id,
-          name: planName,
-          description: plan.description,
-          position: 0,
-          createdAt: timestamp,
-          updatedAt: timestamp,
-        };
-        await database.workoutTemplates.add(template);
         result.createdPlans += 1;
 
-        const groupIdByKey = new Map<string, string>();
-        const rows: TemplateExercise[] = [...plan.exercises]
-          .sort((a, b) => a.order - b.order)
-          .map((planExercise, index) => {
-            let groupId: string | undefined;
-            let groupType: TemplateExercise['groupType'];
-            let groupRestMode: TemplateExercise['groupRestMode'];
-            if (planExercise.group) {
-              const key = planExercise.group.groupKey;
-              if (!groupIdByKey.has(key)) groupIdByKey.set(key, uuid());
-              groupId = groupIdByKey.get(key);
-              groupType = planExercise.group.type;
-              groupRestMode = planExercise.group.restMode;
-            }
-            return {
-              id: uuid(),
-              templateId: template.id,
-              exerciseId: idByExerciseKey.get(planExercise.exerciseKey) as string,
-              order: index,
-              targetSets: planExercise.targetSets,
-              targetRepMin: planExercise.targetRepMin ?? undefined,
-              targetRepMax: planExercise.targetRepMax ?? undefined,
-              targetDurationSeconds: planExercise.targetDurationSeconds ?? undefined,
-              restSeconds: planExercise.restSeconds,
-              notes: planExercise.notes,
-              groupId,
-              groupType,
-              groupRestMode,
-            };
-          });
+        const sortedDays = [...plan.days].sort((a, b) => a.position - b.position);
+        for (const [dayIndex, day] of sortedDays.entries()) {
+          const template: WorkoutTemplate = {
+            id: uuid(),
+            planId: trainingPlan.id,
+            name: day.name,
+            description: day.description,
+            position: dayIndex,
+            createdAt: timestamp,
+            updatedAt: timestamp,
+          };
+          await database.workoutTemplates.add(template);
+          result.createdDays += 1;
 
-        // Enforce the grouping invariants (contiguous runs, no singletons).
-        const normalized = planGroupNormalization(rows, uuid);
-        for (const row of rows) {
-          const fields = normalized.get(row.id) ?? {};
-          row.groupId = fields.groupId;
-          row.groupType = fields.groupType;
-          row.groupRestMode = fields.groupRestMode;
+          const groupIdByKey = new Map<string, string>();
+          const rows: TemplateExercise[] = [...day.exercises]
+            .sort((a, b) => a.order - b.order)
+            .map((planExercise, index) => {
+              let groupId: string | undefined;
+              let groupType: TemplateExercise['groupType'];
+              let groupRestMode: TemplateExercise['groupRestMode'];
+              if (planExercise.group) {
+                const key = planExercise.group.groupKey;
+                if (!groupIdByKey.has(key)) groupIdByKey.set(key, uuid());
+                groupId = groupIdByKey.get(key);
+                groupType = planExercise.group.type;
+                groupRestMode = planExercise.group.restMode;
+              }
+              return {
+                id: uuid(),
+                templateId: template.id,
+                exerciseId: idByExerciseKey.get(planExercise.exerciseKey) as string,
+                order: index,
+                targetSets: planExercise.targetSets,
+                targetRepMin: planExercise.targetRepMin ?? undefined,
+                targetRepMax: planExercise.targetRepMax ?? undefined,
+                targetDurationSeconds: planExercise.targetDurationSeconds ?? undefined,
+                restSeconds: planExercise.restSeconds,
+                notes: planExercise.notes,
+                groupId,
+                groupType,
+                groupRestMode,
+              };
+            });
+
+          // Enforce the grouping invariants (contiguous runs, no singletons).
+          const normalized = planGroupNormalization(rows, uuid);
+          for (const row of rows) {
+            const fields = normalized.get(row.id) ?? {};
+            row.groupId = fields.groupId;
+            row.groupType = fields.groupType;
+            row.groupRestMode = fields.groupRestMode;
+          }
+          if (rows.length > 0) await database.templateExercises.bulkAdd(rows);
+          result.createdPlanExercises += rows.length;
         }
-        await database.templateExercises.bulkAdd(rows);
-        result.createdPlanExercises += rows.length;
       }
 
       // 4) Record the import so a later identical import can be flagged.
