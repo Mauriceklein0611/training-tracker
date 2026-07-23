@@ -1,4 +1,6 @@
-import type { TemplateVersionSnapshot } from '@/types';
+import type { DeloadIntensity, TemplateVersionSnapshot } from '@/types';
+
+export type { DeloadIntensity };
 
 /**
  * Deload calculation.
@@ -8,8 +10,6 @@ import type { TemplateVersionSnapshot } from '@/types';
  * one set so no exercise disappears. Pure and testable; applying it to the live
  * plan (with a restore point) lives in the repository.
  */
-
-export type DeloadIntensity = 'light' | 'medium' | 'strong';
 
 export const DELOAD_PERCENT: Record<DeloadIntensity, number> = {
   light: 0.3,

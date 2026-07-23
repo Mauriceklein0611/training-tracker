@@ -35,6 +35,7 @@ export async function deleteTrainingHistory(): Promise<void> {
 /** Every table that holds user data — the full reset clears all of them. */
 const ALL_DATA_TABLES = [
   'exercises',
+  'trainingPlans',
   'workoutTemplates',
   'templateExercises',
   'templateVersions',

@@ -10,11 +10,13 @@ import type {
   SessionExercise,
   TemplateExercise,
   TemplateVersion,
+  TrainingPlan,
   WorkoutSession,
   WorkoutSet,
   WorkoutTemplate,
 } from '@/types';
 import { nowIso } from '@/utils/id';
+import { wrapOrphanTemplatesInPlans } from '@/db/planMigration';
 
 /**
  * Current database schema version.
@@ -22,7 +24,7 @@ import { nowIso } from '@/utils/id';
  * Bump this together with a new `.version()` block below and record the change
  * in MIGRATIONS so the settings screen can show what the database went through.
  */
-export const SCHEMA_VERSION = 16;
+export const SCHEMA_VERSION = 17;
 
 export const MIGRATIONS: { version: number; description: string }[] = [
   { version: 1, description: 'Initiales Schema: Übungen, Pläne, Einheiten, Sätze.' },
@@ -124,10 +126,19 @@ export const MIGRATIONS: { version: number; description: string }[] = [
       'Importierte Trainingsplan-Pakete werden vermerkt, um einen doppelten ' +
       'Import derselben Datei erkennen und davor warnen zu können.',
   },
+  {
+    version: 17,
+    description:
+      'Split-System: neue trainingPlans-Tabelle als Elternebene über den ' +
+      'Trainingstagen. Jeder bestehende Plan wird verlustfrei in einen Plan mit ' +
+      'genau einem Tag („Tag A“) überführt; Übungen, Reihenfolge, Ziele, ' +
+      'Versionen und Historie bleiben unverändert.',
+  },
 ];
 
 export class TrainingDatabase extends Dexie {
   exercises!: Table<Exercise, string>;
+  trainingPlans!: Table<TrainingPlan, string>;
   workoutTemplates!: Table<WorkoutTemplate, string>;
   templateExercises!: Table<TemplateExercise, string>;
   templateVersions!: Table<TemplateVersion, string>;
@@ -403,6 +414,29 @@ export class TrainingDatabase extends Dexie {
           .toCollection()
           .modify((settings) => {
             settings.schemaVersion = 16;
+          });
+      });
+
+    // ---- v17 ------------------------------------------------------------
+    // Split system: a new trainingPlans store becomes the parent of the
+    // training days (workoutTemplates, which gain planId + position). Every
+    // existing day is wrapped into its own single-day plan, losing nothing;
+    // sessions and versions still reference the day by templateId.
+    this.version(17)
+      .stores({
+        trainingPlans: 'id, name',
+        workoutTemplates: 'id, name, updatedAt, planId, [planId+position]',
+      })
+      .upgrade(async (tx) => {
+        await wrapOrphanTemplatesInPlans(
+          tx.table<TrainingPlan, string>('trainingPlans'),
+          tx.table<WorkoutTemplate, string>('workoutTemplates'),
+        );
+        await tx
+          .table<AppSettings>('settings')
+          .toCollection()
+          .modify((settings) => {
+            settings.schemaVersion = 17;
           });
       });
   }

@@ -227,8 +227,10 @@ describe('analyzePlanPackageImport', () => {
       [
         {
           id: template.id,
+          planId: template.planId,
           name: 'Oberkörper',
           description: '',
+          position: 0,
           createdAt: '',
           updatedAt: '',
         },

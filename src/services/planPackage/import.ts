@@ -1,5 +1,5 @@
 import { db, type TrainingDatabase } from '@/db/db';
-import type { Exercise, TemplateExercise, WorkoutTemplate } from '@/types';
+import type { Exercise, TemplateExercise, TrainingPlan, WorkoutTemplate } from '@/types';
 import { nowIso, uuid } from '@/utils/id';
 import { planGroupNormalization } from '@/services/grouping';
 import { isKnownMuscleGroup } from '@/constants/muscleGroups';
@@ -262,6 +262,7 @@ export async function importPlanPackage(
     'rw',
     [
       database.exercises,
+      database.trainingPlans,
       database.workoutTemplates,
       database.templateExercises,
       database.planImports,
@@ -312,11 +313,25 @@ export async function importPlanPackage(
       if (created.length > 0) await database.exercises.bulkAdd(created);
 
       // 3) Create each plan and its exercise rows, then normalize grouping.
+      // A schema-v1 package plan maps to a plan with a single day ("Tag A").
       for (const plan of pkg.plans) {
+        const planName = nameByPlanKey.get(plan.planKey) ?? plan.name;
+        const trainingPlan: TrainingPlan = {
+          id: uuid(),
+          name: planName,
+          description: plan.description,
+          splitType: 'single',
+          createdAt: timestamp,
+          updatedAt: timestamp,
+        };
+        await database.trainingPlans.add(trainingPlan);
+
         const template: WorkoutTemplate = {
           id: uuid(),
-          name: nameByPlanKey.get(plan.planKey) ?? plan.name,
+          planId: trainingPlan.id,
+          name: planName,
           description: plan.description,
+          position: 0,
           createdAt: timestamp,
           updatedAt: timestamp,
         };

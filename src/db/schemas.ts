@@ -74,8 +74,25 @@ export const exerciseSchema = z.object({
   updatedAt: isoDateTime,
 });
 
+/** Added in schema version 17; the parent of one or more training days. */
+export const trainingPlanSchema = z.object({
+  id,
+  name: z.string().min(1, 'Name darf nicht leer sein'),
+  description: z.string().default(''),
+  splitType: z
+    .enum(['single', '2-day', '3-day', '4-day', '5-day', 'custom'])
+    .default('single'),
+  deloadIntensity: z.enum(['light', 'medium', 'strong']).optional(),
+  createdAt: isoDateTime,
+  updatedAt: isoDateTime,
+});
+
 export const workoutTemplateSchema = z.object({
   id,
+  // Added in schema version 17; optional so backups written before the split
+  // system still validate and are wrapped into a plan on restore.
+  planId: id.optional(),
+  position: z.number().int().min(0).optional(),
   name: z.string().min(1, 'Name darf nicht leer sein'),
   description: z.string().default(''),
   createdAt: isoDateTime,
@@ -167,6 +184,11 @@ export const templateVersionSchema = z.object({
 export const workoutSessionSchema = z.object({
   id,
   templateId: id.optional(),
+  // Added in schema version 17; optional so older sessions still validate and
+  // fall back to their template/day where these snapshots are absent.
+  planId: id.optional(),
+  planNameSnapshot: z.string().optional(),
+  dayPositionSnapshot: z.number().int().min(0).optional(),
   name: z.string().default('Training'),
   status: z.enum(['active', 'completed']),
   startedAt: isoDateTime,

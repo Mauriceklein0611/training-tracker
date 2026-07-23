@@ -12,6 +12,7 @@ import type {
 import { nowIso, uuid } from '@/utils/id';
 import { getTemplateWithExercises } from '@/db/repositories/templates';
 import { resolveRestSeconds } from '@/services/rest';
+import { DELOAD_PERCENT, deloadSets } from '@/services/deload';
 import { isWorkingSet, WORKING_SET_TYPES } from '@/services/metrics';
 import {
   DEFAULT_GROUP_REST_MODE,
@@ -136,6 +137,14 @@ export async function startSessionFromTemplate(
   const template = await getTemplateWithExercises(templateId);
   if (!template) throw new Error('Der Trainingsplan wurde nicht gefunden.');
   const globalDefaultRestSeconds = await readGlobalRestDefault();
+  // Snapshot the owning plan so later plan edits never rewrite this workout.
+  const plan = template.template.planId
+    ? await db.trainingPlans.get(template.template.planId)
+    : undefined;
+  // A plan-level deload reduces target sets non-destructively, only at start.
+  const deloadPercent = plan?.deloadIntensity
+    ? DELOAD_PERCENT[plan.deloadIntensity]
+    : undefined;
 
   return db.transaction(
     'rw',
@@ -148,6 +157,9 @@ export async function startSessionFromTemplate(
       const session: WorkoutSession = {
         id: uuid(),
         templateId,
+        planId: plan?.id,
+        planNameSnapshot: plan?.name,
+        dayPositionSnapshot: template.template.position,
         name: template.template.name,
         status: 'active',
         startedAt: timestamp,
@@ -162,7 +174,10 @@ export async function startSessionFromTemplate(
         const sessionExercise = buildSessionExercise(session.id, row.exercise, index, {
           templateRestSeconds: row.restSeconds,
           globalDefaultRestSeconds,
-          targetSets: row.targetSets,
+          targetSets:
+            deloadPercent != null
+              ? deloadSets(row.targetSets, deloadPercent)
+              : row.targetSets,
           templateExerciseId: row.id,
           targetRepMin: row.targetRepMin,
           targetRepMax: row.targetRepMax,

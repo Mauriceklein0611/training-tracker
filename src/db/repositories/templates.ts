@@ -4,6 +4,7 @@ import type {
   GroupRestMode,
   GroupType,
   TemplateExercise,
+  TrainingPlan,
   WorkoutTemplate,
 } from '@/types';
 import { nowIso, uuid } from '@/utils/id';
@@ -55,20 +56,42 @@ export async function listTemplatesWithExercises(): Promise<TemplateWithExercise
   );
 }
 
+/**
+ * Creates a plan that holds a single training day, and returns that day.
+ *
+ * This keeps the "one plan = one workout" flow intact: a plan always has at
+ * least one day, so creating a plan means creating its first day too. Richer
+ * multi-day creation lives in the plans repository (`createPlan`).
+ */
 export async function createTemplate(
   name: string,
   description = '',
 ): Promise<WorkoutTemplate> {
-  const timestamp = nowIso();
-  const template: WorkoutTemplate = {
-    id: uuid(),
-    name,
-    description,
-    createdAt: timestamp,
-    updatedAt: timestamp,
-  };
-  await db.workoutTemplates.add(template);
-  return template;
+  return db.transaction('rw', db.trainingPlans, db.workoutTemplates, async () => {
+    const timestamp = nowIso();
+    const trimmedName = name.trim();
+    const trimmedDescription = description.trim();
+    const plan: TrainingPlan = {
+      id: uuid(),
+      name: trimmedName,
+      description: trimmedDescription,
+      splitType: 'single',
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    };
+    await db.trainingPlans.add(plan);
+    const template: WorkoutTemplate = {
+      id: uuid(),
+      planId: plan.id,
+      name: trimmedName,
+      description: trimmedDescription,
+      position: 0,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    };
+    await db.workoutTemplates.add(template);
+    return template;
+  });
 }
 
 export async function updateTemplate(
@@ -93,16 +116,22 @@ export async function deleteTemplate(templateId: string): Promise<void> {
   );
 }
 
+/** Duplicates a single training day within its plan, appended at the end. */
 export async function duplicateTemplate(templateId: string): Promise<WorkoutTemplate> {
   return db.transaction('rw', db.workoutTemplates, db.templateExercises, async () => {
     const source = await db.workoutTemplates.get(templateId);
-    if (!source) throw new Error('Der Trainingsplan wurde nicht gefunden.');
+    if (!source) throw new Error('Der Trainingstag wurde nicht gefunden.');
 
+    const position = await db.workoutTemplates
+      .where('planId')
+      .equals(source.planId)
+      .count();
     const timestamp = nowIso();
     const copy: WorkoutTemplate = {
       ...source,
       id: uuid(),
       name: `${source.name} (Kopie)`,
+      position,
       createdAt: timestamp,
       updatedAt: timestamp,
     };

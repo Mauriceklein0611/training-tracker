@@ -36,7 +36,7 @@ async function createVersion1Database(): Promise<Dexie> {
 describe('schema migrations', () => {
   it('documents every version that exists', () => {
     expect(MIGRATIONS.map((migration) => migration.version)).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17,
     ]);
     expect(MIGRATIONS[MIGRATIONS.length - 1].version).toBe(SCHEMA_VERSION);
   });
@@ -242,6 +242,61 @@ describe('schema migrations', () => {
     expect((await upgraded.sessionExercises.get('se-orphan'))?.restSecondsSnapshot).toBe(
       175,
     );
+    upgraded.close();
+  });
+
+  it('wraps every pre-split plan into a single-day plan without losing data', async () => {
+    const legacy = await createVersion1Database();
+    // A plan (day) with two exercise rows, in the pre-split shape (no planId).
+    await legacy.table('workoutTemplates').add({
+      id: 't-1',
+      name: 'Ganzkörper',
+      description: 'Mein Plan',
+      createdAt: '2026-02-01T00:00:00.000Z',
+      updatedAt: '2026-02-02T00:00:00.000Z',
+    });
+    await legacy.table('templateExercises').bulkAdd([
+      {
+        id: 'te-1',
+        templateId: 't-1',
+        exerciseId: 'ex-1',
+        order: 0,
+        targetSets: 3,
+        restSeconds: 120,
+        notes: '',
+      },
+      {
+        id: 'te-2',
+        templateId: 't-1',
+        exerciseId: 'ex-2',
+        order: 1,
+        targetSets: 4,
+        restSeconds: 90,
+        notes: '',
+      },
+    ]);
+    legacy.close();
+
+    const upgraded = new TrainingDatabase(NAME);
+    await upgraded.open();
+
+    // Exactly one plan was created, owning the migrated day.
+    expect(await upgraded.trainingPlans.count()).toBe(1);
+    const plan = (await upgraded.trainingPlans.toArray())[0];
+    expect(plan.splitType).toBe('single');
+    expect(plan.name).toBe('Ganzkörper');
+    // Dates are carried over, not regenerated.
+    expect(plan.createdAt).toBe('2026-02-01T00:00:00.000Z');
+
+    const day = await upgraded.workoutTemplates.get('t-1');
+    expect(day?.planId).toBe(plan.id);
+    expect(day?.position).toBe(0);
+    // The exercise rows and their order/targets are untouched.
+    const rows = (
+      await upgraded.templateExercises.where('templateId').equals('t-1').toArray()
+    ).sort((a, b) => a.order - b.order);
+    expect(rows.map((row) => row.id)).toEqual(['te-1', 'te-2']);
+    expect(rows[1].targetSets).toBe(4);
     upgraded.close();
   });
 

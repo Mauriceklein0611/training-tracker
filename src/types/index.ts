@@ -97,10 +97,45 @@ export interface Exercise {
   updatedAt: ISODateTime;
 }
 
-export interface WorkoutTemplate {
+/** How many training days a plan starts with; only "single"/"custom" are open-ended. */
+export type PlanSplitType = 'single' | '2-day' | '3-day' | '4-day' | '5-day' | 'custom';
+
+/** Deload intensity, shared by the plan-level toggle and the deload service. */
+export type DeloadIntensity = 'light' | 'medium' | 'strong';
+
+/**
+ * A training plan: the parent of one or more training days ({@link WorkoutTemplate},
+ * each holding its own exercises). A plan with a single day behaves exactly like
+ * the old one-plan-equals-one-workout model.
+ */
+export interface TrainingPlan {
   id: string;
   name: string;
   description: string;
+  splitType: PlanSplitType;
+  /**
+   * When set, a deload of this intensity applies to every day of the plan until
+   * it is cleared. Non-destructive: the day's stored target sets are untouched
+   * and only reduced when a workout is started.
+   */
+  deloadIntensity?: DeloadIntensity;
+  createdAt: ISODateTime;
+  updatedAt: ISODateTime;
+}
+
+/**
+ * A single training day within a {@link TrainingPlan} — historically the whole
+ * "plan". It owns its exercises via {@link TemplateExercise} and is what a
+ * workout session is started from and snapshotted against.
+ */
+export interface WorkoutTemplate {
+  id: string;
+  /** Owning plan. Every day belongs to exactly one plan. */
+  planId: string;
+  name: string;
+  description: string;
+  /** Stable order of this day within its plan; never derived from the name. */
+  position: number;
   createdAt: ISODateTime;
   updatedAt: ISODateTime;
 }
@@ -295,7 +330,14 @@ export interface PlanImportRecord {
 
 export interface WorkoutSession {
   id: string;
+  /** The training day (template) this workout was started from, if any. */
   templateId?: string;
+  /** The plan the day belonged to at start; snapshotted so later plan edits
+   * (rename, move, delete) never rewrite this workout's history. */
+  planId?: string;
+  planNameSnapshot?: string;
+  /** The day's position within its plan at start, for stable historical order. */
+  dayPositionSnapshot?: number;
   name: string;
   status: SessionStatus;
   startedAt: ISODateTime;

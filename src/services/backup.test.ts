@@ -10,6 +10,7 @@ import {
 } from '@/services/backup';
 import { createExercise } from '@/db/repositories/exercises';
 import { addExerciseToTemplate, createTemplate } from '@/db/repositories/templates';
+import { createPlan, getPlanWithDays } from '@/db/repositories/plans';
 import { createTemplateVersion } from '@/db/repositories/templateVersions';
 import { upsertBodyWeightEntry } from '@/db/repositories/bodyWeight';
 import {
@@ -396,6 +397,52 @@ describe('AI export records round trip', () => {
     const result = validateBackupJson(raw);
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.backup.aiExports).toEqual([]);
+  });
+});
+
+describe('split system (training plans) round trip', () => {
+  it('includes plans and their days and restores them into an empty database', async () => {
+    const plan = await createPlan({
+      name: 'PPL',
+      splitType: '3-day',
+      dayNames: ['Push', 'Pull', 'Beine'],
+    });
+    const backup = await createBackup();
+    expect(backup.trainingPlans).toHaveLength(1);
+    expect(backup.workoutTemplates.filter((t) => t.planId === plan.id)).toHaveLength(3);
+
+    await resetDatabase();
+    await importBackup(backup, 'replace');
+
+    const restored = await getPlanWithDays(plan.id);
+    expect(restored?.plan.name).toBe('PPL');
+    expect(restored?.days.map((day) => day.name)).toEqual(['Push', 'Pull', 'Beine']);
+  });
+
+  it('wraps a pre-split backup (days without a plan) into single-day plans', async () => {
+    await seedDatabase();
+    const raw = JSON.parse(JSON.stringify(await createBackup()));
+    // Simulate an old backup: strip the plans and the day's plan links.
+    delete raw.trainingPlans;
+    raw.schemaVersion = 16;
+    for (const template of raw.workoutTemplates) {
+      delete template.planId;
+      delete template.position;
+    }
+    const result = validateBackupJson(raw);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    await resetDatabase();
+    await importBackup(result.backup, 'replace');
+
+    // Every restored day now belongs to a plan, and there is one plan per day.
+    const days = await db.workoutTemplates.toArray();
+    const plans = await db.trainingPlans.toArray();
+    expect(plans.length).toBe(days.length);
+    expect(
+      days.every((day) => day.planId && plans.some((p) => p.id === day.planId)),
+    ).toBe(true);
   });
 });
 

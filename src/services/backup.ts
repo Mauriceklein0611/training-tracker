@@ -9,6 +9,7 @@ import {
   exerciseSchema,
   planImportRecordSchema,
   sessionExerciseSchema,
+  trainingPlanSchema,
   templateExerciseSchema,
   templateVersionSchema,
   workoutSessionSchema,
@@ -17,6 +18,7 @@ import {
 } from '@/db/schemas';
 import { nowIso } from '@/utils/id';
 import { dayKey } from '@/utils/date';
+import { wrapOrphanTemplatesInPlans } from '@/db/planMigration';
 
 /**
  * Full technical backup: a lossless dump of every table that can be restored
@@ -33,6 +35,9 @@ export const backupFileSchema = z.object({
   app: z.string().optional(),
   settings: appSettingsSchema.nullable().optional(),
   exercises: z.array(exerciseSchema),
+  // Added in schema version 17; defaulted so older backups (which have no plans,
+  // only templates) still validate and are wrapped into plans on restore.
+  trainingPlans: z.array(trainingPlanSchema).default([]),
   workoutTemplates: z.array(workoutTemplateSchema),
   templateExercises: z.array(templateExerciseSchema),
   // Added in schema version 10; defaulted so older backups without it still validate.
@@ -56,6 +61,7 @@ export type BackupFile = z.infer<typeof backupFileSchema>;
 
 export interface BackupCounts {
   exercises: number;
+  trainingPlans: number;
   workoutTemplates: number;
   templateExercises: number;
   templateVersions: number;
@@ -72,6 +78,7 @@ export interface BackupCounts {
 export function countBackupRecords(backup: BackupFile): BackupCounts {
   return {
     exercises: backup.exercises.length,
+    trainingPlans: backup.trainingPlans.length,
     workoutTemplates: backup.workoutTemplates.length,
     templateExercises: backup.templateExercises.length,
     templateVersions: backup.templateVersions.length,
@@ -88,7 +95,8 @@ export function countBackupRecords(backup: BackupFile): BackupCounts {
 
 export const BACKUP_COUNT_LABELS: Record<keyof BackupCounts, string> = {
   exercises: 'Übungen',
-  workoutTemplates: 'Trainingspläne',
+  trainingPlans: 'Trainingspläne',
+  workoutTemplates: 'Trainingstage',
   templateExercises: 'Planübungen',
   templateVersions: 'Planversionen',
   workoutSessions: 'Trainingseinheiten',
@@ -106,6 +114,7 @@ export async function createBackup(database: TrainingDatabase = db): Promise<Bac
   const [
     settings,
     exercises,
+    trainingPlans,
     workoutTemplates,
     templateExercises,
     workoutSessions,
@@ -120,6 +129,7 @@ export async function createBackup(database: TrainingDatabase = db): Promise<Bac
   ] = await Promise.all([
     database.settings.get('app-settings'),
     database.exercises.toArray(),
+    database.trainingPlans.toArray(),
     database.workoutTemplates.toArray(),
     database.templateExercises.toArray(),
     database.workoutSessions.toArray(),
@@ -140,6 +150,7 @@ export async function createBackup(database: TrainingDatabase = db): Promise<Bac
     app: 'training-tracker',
     settings: settings ?? null,
     exercises,
+    trainingPlans,
     workoutTemplates,
     templateExercises,
     templateVersions,
@@ -260,6 +271,7 @@ export interface ImportResult {
 function emptyCounts(): BackupCounts {
   return {
     exercises: 0,
+    trainingPlans: 0,
     workoutTemplates: 0,
     templateExercises: 0,
     templateVersions: 0,
@@ -276,6 +288,7 @@ function emptyCounts(): BackupCounts {
 
 const TABLE_KEYS = [
   'exercises',
+  'trainingPlans',
   'workoutTemplates',
   'templateExercises',
   'templateVersions',
@@ -312,6 +325,7 @@ export async function importBackup(
     'rw',
     [
       database.exercises,
+      database.trainingPlans,
       database.workoutTemplates,
       database.templateExercises,
       database.templateVersions,
@@ -368,6 +382,10 @@ export async function importBackup(
           updatedAt: nowIso(),
         });
       }
+
+      // A backup written before the split system (schema < 17) carries days
+      // without an owning plan; wrap them so every day belongs to a plan.
+      await wrapOrphanTemplatesInPlans(database.trainingPlans, database.workoutTemplates);
 
       // Enforce the "at most one active session" invariant after any import.
       const active = await database.workoutSessions
