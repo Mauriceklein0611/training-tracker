@@ -14,7 +14,11 @@ import { createEquipmentProfile } from '@/db/repositories/equipmentProfiles';
 import { createPlan } from '@/db/repositories/plans';
 import { addCycleEntry, setScheduleMode } from '@/db/repositories/schedules';
 import { updateSettings } from '@/db/repositories/settings';
-import { deleteTrainingHistory, resetAllData } from '@/db/repositories/maintenance';
+import {
+  ALL_DATA_TABLES,
+  deleteTrainingHistory,
+  resetAllData,
+} from '@/db/repositories/maintenance';
 import { resetDatabase } from '@/tests/dbTestUtils';
 import type { Exercise } from '@/types';
 
@@ -106,6 +110,13 @@ describe('resetAllData', () => {
     expect(settings).toBeDefined();
     expect(settings?.darkMode).toBe('dark');
     expect(settings?.voiceAnnouncementsEnabled).toBe(false);
+  });
+
+  it('reset table registry lists every store the database defines', () => {
+    // Structural guard: a newly added store must be added to ALL_DATA_TABLES, or
+    // the full reset would silently skip it even when it holds no rows yet.
+    const defined = db.tables.map((table) => table.name).sort();
+    expect([...ALL_DATA_TABLES].sort()).toEqual(defined);
   });
 
   it('clears every store the database defines, guarding against a forgotten table', async () => {

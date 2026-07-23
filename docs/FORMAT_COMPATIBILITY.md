@@ -30,9 +30,17 @@ General rules:
 - Schema: `backupFileSchema`; parser/validator `validateBackupJson`; exporter
   `createBackup`; importer `importBackup` (merge/replace, one transaction).
 - Contains every table incl. `trainingPlans`, `templateVersions`, `aiAnalyses`,
-  `equipmentProfiles`, `planSchedules`, `scheduleEntries`, `aiExports`,
-  `planImports`, and settings. New tables/fields are added with a `.default([])`
-  or optional so older backups still validate. Newer `schemaVersion` is rejected.
+  `equipmentProfiles`, `planSchedules`, `scheduleEntries`, `workoutUnitTemplates`,
+  `workoutUnitTemplateExercises`, `aiExports`, `planImports`, and settings. New
+  tables/fields are added with a `.default([])` or optional so older backups
+  still validate. Newer `schemaVersion` is rejected.
+- Workout unit library (schema 19): reusable library units
+  (`workoutUnitTemplates`) and their exercises (`workoutUnitTemplateExercises`)
+  are their own tables. Plan days gain optional `sourceWorkoutUnitTemplateId` +
+  `sourceWorkoutUnitNameSnapshot` (copy-on-add provenance) and sessions optional
+  `workoutUnitTemplateId` + `workoutUnitNameSnapshot` (direct start without a
+  plan). All optional/defaulted, so a pre-library backup restores with an empty
+  library and no migration of existing rows.
 - Schedule system (schema 18): every plan owns one `PlanSchedule`
   (`free-rotation` | `repeating-cycle` | `weekly`) with `ScheduleEntry` rows for
   the cycle/weekly modes (workout or rest days). Restoring a pre-schedule backup

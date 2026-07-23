@@ -41,7 +41,7 @@ export async function deleteTrainingHistory(): Promise<void> {
  * never silently forgotten by the reset (as `planSchedules`/`scheduleEntries`
  * once were).
  */
-const ALL_DATA_TABLES = [
+export const ALL_DATA_TABLES = [
   'exercises',
   'trainingPlans',
   'workoutTemplates',
@@ -57,6 +57,8 @@ const ALL_DATA_TABLES = [
   'equipmentProfiles',
   'planSchedules',
   'scheduleEntries',
+  'workoutUnitTemplates',
+  'workoutUnitTemplateExercises',
   'settings',
 ] as const;
 

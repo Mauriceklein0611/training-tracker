@@ -95,8 +95,36 @@ export const workoutTemplateSchema = z.object({
   position: z.number().int().min(0).optional(),
   name: z.string().min(1, 'Name darf nicht leer sein'),
   description: z.string().default(''),
+  // Added in schema version 19; the library unit a day was copied from, if any.
+  sourceWorkoutUnitTemplateId: id.optional(),
+  sourceWorkoutUnitNameSnapshot: z.string().optional(),
   createdAt: isoDateTime,
   updatedAt: isoDateTime,
+});
+
+/** Added in schema version 19; a reusable library workout unit ("Übungseinheit"). */
+export const workoutUnitTemplateSchema = z.object({
+  id,
+  name: z.string().min(1, 'Name darf nicht leer sein'),
+  description: z.string().default(''),
+  archived: z.boolean().default(false),
+  createdAt: isoDateTime,
+  updatedAt: isoDateTime,
+});
+
+/** Added in schema version 19; an exercise inside a library workout unit. */
+export const workoutUnitTemplateExerciseSchema = z.object({
+  id,
+  unitTemplateId: id,
+  exerciseId: id,
+  order: z.number().int().min(0),
+  targetSets: z.number().int().min(1).max(50).default(3),
+  targetRepMin: z.number().int().min(0).max(1000).optional(),
+  targetRepMax: z.number().int().min(0).max(1000).optional(),
+  targetDurationSeconds: z.number().int().min(0).max(36000).optional(),
+  restSeconds: z.number().int().min(0).max(3600).default(120),
+  notes: z.string().default(''),
+  ...groupingFields,
 });
 
 /** Added in schema version 18; the time layout of a plan. One per plan. */
@@ -211,6 +239,9 @@ export const workoutSessionSchema = z.object({
   planId: id.optional(),
   planNameSnapshot: z.string().optional(),
   dayPositionSnapshot: z.number().int().min(0).optional(),
+  // Added in schema version 19; set when started directly from a library unit.
+  workoutUnitTemplateId: id.optional(),
+  workoutUnitNameSnapshot: z.string().optional(),
   name: z.string().default('Training'),
   status: z.enum(['active', 'completed']),
   startedAt: isoDateTime,

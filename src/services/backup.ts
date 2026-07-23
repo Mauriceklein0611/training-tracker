@@ -17,6 +17,8 @@ import {
   workoutSessionSchema,
   workoutSetSchema,
   workoutTemplateSchema,
+  workoutUnitTemplateSchema,
+  workoutUnitTemplateExerciseSchema,
 } from '@/db/schemas';
 import { nowIso } from '@/utils/id';
 import { dayKey } from '@/utils/date';
@@ -58,6 +60,10 @@ export const backupFileSchema = z.object({
   // restore (see ensureSchedulesForPlans below).
   planSchedules: z.array(planScheduleSchema).default([]),
   scheduleEntries: z.array(scheduleEntrySchema).default([]),
+  // Added in schema version 19; defaulted so older backups still validate and
+  // restore with an empty library.
+  workoutUnitTemplates: z.array(workoutUnitTemplateSchema).default([]),
+  workoutUnitTemplateExercises: z.array(workoutUnitTemplateExerciseSchema).default([]),
   // Added in schema version 11 (store) / covered here since v15; defaulted so
   // older backups without it still validate and import as an empty list.
   aiExports: z.array(aiExportRecordSchema).default([]),
@@ -81,6 +87,8 @@ export interface BackupCounts {
   equipmentProfiles: number;
   planSchedules: number;
   scheduleEntries: number;
+  workoutUnitTemplates: number;
+  workoutUnitTemplateExercises: number;
   aiExports: number;
   planImports: number;
 }
@@ -100,6 +108,8 @@ export function countBackupRecords(backup: BackupFile): BackupCounts {
     equipmentProfiles: backup.equipmentProfiles.length,
     planSchedules: backup.planSchedules.length,
     scheduleEntries: backup.scheduleEntries.length,
+    workoutUnitTemplates: backup.workoutUnitTemplates.length,
+    workoutUnitTemplateExercises: backup.workoutUnitTemplateExercises.length,
     aiExports: backup.aiExports.length,
     planImports: backup.planImports.length,
   };
@@ -119,6 +129,8 @@ export const BACKUP_COUNT_LABELS: Record<keyof BackupCounts, string> = {
   equipmentProfiles: 'Equipment-Profile',
   planSchedules: 'Zeitpläne',
   scheduleEntries: 'Zeitplan-Einträge',
+  workoutUnitTemplates: 'Übungseinheiten (Bibliothek)',
+  workoutUnitTemplateExercises: 'Übungen in Bibliothekseinheiten',
   aiExports: 'KI-Export-Vermerke',
   planImports: 'Plan-Import-Vermerke',
 };
@@ -140,6 +152,8 @@ export async function createBackup(database: TrainingDatabase = db): Promise<Bac
     equipmentProfiles,
     planSchedules,
     scheduleEntries,
+    workoutUnitTemplates,
+    workoutUnitTemplateExercises,
     aiExports,
     planImports,
   ] = await Promise.all([
@@ -157,6 +171,8 @@ export async function createBackup(database: TrainingDatabase = db): Promise<Bac
     database.equipmentProfiles.toArray(),
     database.planSchedules.toArray(),
     database.scheduleEntries.toArray(),
+    database.workoutUnitTemplates.toArray(),
+    database.workoutUnitTemplateExercises.toArray(),
     database.aiExports.toArray(),
     database.planImports.toArray(),
   ]);
@@ -180,6 +196,8 @@ export async function createBackup(database: TrainingDatabase = db): Promise<Bac
     equipmentProfiles,
     planSchedules,
     scheduleEntries,
+    workoutUnitTemplates,
+    workoutUnitTemplateExercises,
     aiExports,
     planImports,
   });
@@ -303,6 +321,8 @@ function emptyCounts(): BackupCounts {
     equipmentProfiles: 0,
     planSchedules: 0,
     scheduleEntries: 0,
+    workoutUnitTemplates: 0,
+    workoutUnitTemplateExercises: 0,
     aiExports: 0,
     planImports: 0,
   };
@@ -322,6 +342,8 @@ const TABLE_KEYS = [
   'equipmentProfiles',
   'planSchedules',
   'scheduleEntries',
+  'workoutUnitTemplates',
+  'workoutUnitTemplateExercises',
   'aiExports',
   'planImports',
 ] as const;
@@ -361,6 +383,8 @@ export async function importBackup(
       database.equipmentProfiles,
       database.planSchedules,
       database.scheduleEntries,
+      database.workoutUnitTemplates,
+      database.workoutUnitTemplateExercises,
       database.aiExports,
       database.planImports,
       database.settings,

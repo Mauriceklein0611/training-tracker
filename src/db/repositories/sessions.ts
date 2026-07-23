@@ -21,6 +21,7 @@ import {
   roundBoundaryReached,
 } from '@/services/grouping';
 import { advanceScheduleAfterWorkout } from '@/db/repositories/schedules';
+import { getWorkoutUnitWithExercises } from '@/db/repositories/workoutUnits';
 
 export interface SessionExerciseDetail {
   sessionExercise: SessionExercise;
@@ -129,6 +130,62 @@ export async function startFreeSession(
     await db.workoutSessions.add(session);
     return session;
   });
+}
+
+/**
+ * Starts a one-off workout directly from a library workout unit, without a plan.
+ * `planId` stays empty; the unit's id and name are snapshotted so the workout
+ * remains attributable to the unit in analysis.
+ */
+export async function startSessionFromWorkoutUnit(
+  unitId: string,
+): Promise<WorkoutSession> {
+  const unit = await getWorkoutUnitWithExercises(unitId);
+  if (!unit) throw new Error('Die Übungseinheit wurde nicht gefunden.');
+  const globalDefaultRestSeconds = await readGlobalRestDefault();
+
+  return db.transaction(
+    'rw',
+    db.workoutSessions,
+    db.sessionExercises,
+    db.workoutSets,
+    async () => {
+      await assertNoActiveSession();
+      const timestamp = nowIso();
+      const session: WorkoutSession = {
+        id: uuid(),
+        workoutUnitTemplateId: unit.unit.id,
+        workoutUnitNameSnapshot: unit.unit.name,
+        name: unit.unit.name,
+        status: 'active',
+        startedAt: timestamp,
+        notes: '',
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      };
+      await db.workoutSessions.add(session);
+
+      for (const [index, row] of unit.exercises.entries()) {
+        if (!row.exercise) continue; // exercise was deleted — skip rather than fail
+        const sessionExercise = buildSessionExercise(session.id, row.exercise, index, {
+          templateRestSeconds: row.restSeconds,
+          globalDefaultRestSeconds,
+          targetSets: row.targetSets,
+          targetRepMin: row.targetRepMin,
+          targetRepMax: row.targetRepMax,
+          targetDurationSeconds: row.targetDurationSeconds,
+          grouping: {
+            groupId: row.groupId,
+            groupType: row.groupType,
+            groupRestMode: row.groupRestMode,
+          },
+        });
+        sessionExercise.notes = row.notes;
+        await db.sessionExercises.add(sessionExercise);
+      }
+      return session;
+    },
+  );
 }
 
 /** Starts a workout pre-filled with the template's exercises and target rest times. */

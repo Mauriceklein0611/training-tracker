@@ -12,6 +12,8 @@ import type {
   SessionExercise,
   TemplateExercise,
   TemplateVersion,
+  WorkoutUnitTemplate,
+  WorkoutUnitTemplateExercise,
   TrainingPlan,
   WorkoutSession,
   WorkoutSet,
@@ -27,7 +29,7 @@ import { ensureSchedulesForPlans } from '@/db/scheduleMigration';
  * Bump this together with a new `.version()` block below and record the change
  * in MIGRATIONS so the settings screen can show what the database went through.
  */
-export const SCHEMA_VERSION = 18;
+export const SCHEMA_VERSION = 19;
 
 export const MIGRATIONS: { version: number; description: string }[] = [
   { version: 1, description: 'Initiales Schema: Übungen, Pläne, Einheiten, Sätze.' },
@@ -146,6 +148,13 @@ export const MIGRATIONS: { version: number; description: string }[] = [
       'Tagen in bisheriger Reihenfolge; die vorgeschlagene Rotation bleibt damit ' +
       'unverändert.',
   },
+  {
+    version: 19,
+    description:
+      'Bibliothek der Übungseinheiten: wiederverwendbare Einheiten und ihre ' +
+      'Übungen als eigene Tabellen. Bestehende Pläne und Trainings bleiben ' +
+      'unverändert; neue Herkunfts- und Direktstart-Snapshots sind optional.',
+  },
 ];
 
 export class TrainingDatabase extends Dexie {
@@ -164,6 +173,8 @@ export class TrainingDatabase extends Dexie {
   equipmentProfiles!: Table<EquipmentProfile, string>;
   planSchedules!: Table<PlanSchedule, string>;
   scheduleEntries!: Table<ScheduleEntry, string>;
+  workoutUnitTemplates!: Table<WorkoutUnitTemplate, string>;
+  workoutUnitTemplateExercises!: Table<WorkoutUnitTemplateExercise, string>;
   settings!: Table<AppSettings, string>;
 
   constructor(name = 'training-tracker') {
@@ -474,6 +485,26 @@ export class TrainingDatabase extends Dexie {
           .toCollection()
           .modify((settings) => {
             settings.schemaVersion = 18;
+          });
+      });
+
+    // ---- v19 ------------------------------------------------------------
+    // Workout unit library: two new, initially empty stores for reusable units
+    // and their exercises. Plan days gain optional source-unit snapshot fields
+    // and sessions an optional started-from-unit snapshot; both default to
+    // absent, so no data migration is needed for existing rows.
+    this.version(19)
+      .stores({
+        workoutUnitTemplates: 'id, name, archived',
+        workoutUnitTemplateExercises:
+          'id, unitTemplateId, exerciseId, [unitTemplateId+order]',
+      })
+      .upgrade(async (tx) => {
+        await tx
+          .table<AppSettings>('settings')
+          .toCollection()
+          .modify((settings) => {
+            settings.schemaVersion = 19;
           });
       });
   }

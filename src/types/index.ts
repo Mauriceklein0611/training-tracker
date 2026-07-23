@@ -136,8 +136,52 @@ export interface WorkoutTemplate {
   description: string;
   /** Stable order of this day within its plan; never derived from the name. */
   position: number;
+  /**
+   * When this day was created by copying a library workout unit
+   * ({@link WorkoutUnitTemplate}), the source unit's id and its name at copy
+   * time. Copy-on-add: this day is an independent copy, so later edits to the
+   * library unit never change it silently. Absent for days created directly.
+   */
+  sourceWorkoutUnitTemplateId?: string;
+  sourceWorkoutUnitNameSnapshot?: string;
   createdAt: ISODateTime;
   updatedAt: ISODateTime;
+}
+
+/**
+ * A reusable workout unit ("Übungseinheit") in the library — e.g. "Push",
+ * "Pull", "Ganzkörper A" — that exists independently of any plan (Phase 1). It
+ * owns an ordered list of exercises with target values via
+ * {@link WorkoutUnitTemplateExercise}. Adding it to a plan copies it into a
+ * plan-internal {@link WorkoutTemplate} (copy-on-add); it can also be started
+ * directly as a one-off workout without a plan.
+ */
+export interface WorkoutUnitTemplate {
+  id: string;
+  name: string;
+  description: string;
+  /** Archived units stay available for history/reference but hide from pickers. */
+  archived: boolean;
+  createdAt: ISODateTime;
+  updatedAt: ISODateTime;
+}
+
+/**
+ * An exercise inside a library {@link WorkoutUnitTemplate}. Mirrors
+ * {@link TemplateExercise} field for field (minus the owning id) so a unit and a
+ * plan day carry the exact same target/grouping shape and copy losslessly.
+ */
+export interface WorkoutUnitTemplateExercise extends ExerciseGrouping {
+  id: string;
+  unitTemplateId: string;
+  exerciseId: string;
+  order: number;
+  targetSets: number;
+  targetRepMin?: number;
+  targetRepMax?: number;
+  targetDurationSeconds?: number;
+  restSeconds: number;
+  notes: string;
 }
 
 /**
@@ -396,6 +440,13 @@ export interface WorkoutSession {
   planNameSnapshot?: string;
   /** The day's position within its plan at start, for stable historical order. */
   dayPositionSnapshot?: number;
+  /**
+   * When this workout was started directly from a library workout unit without a
+   * plan, the source unit's id and its name at start. Keeps the workout
+   * attributable to the unit in analysis even though `planId` is absent.
+   */
+  workoutUnitTemplateId?: string;
+  workoutUnitNameSnapshot?: string;
   name: string;
   status: SessionStatus;
   startedAt: ISODateTime;

@@ -199,6 +199,35 @@ describe('importBackup — replace', () => {
     expect(after.workoutSets).toEqual(before.workoutSets);
     expect(after.workoutSessions).toEqual(before.workoutSessions);
   });
+
+  it('backs up and restores the workout unit library', async () => {
+    const exercise = await createExercise({
+      name: 'Klimmzüge',
+      primaryMuscleGroup: 'Rücken',
+      secondaryMuscleGroups: [],
+      equipment: 'Klimmzugstange',
+      trackingType: 'bodyweight_reps',
+      weightMode: 'added_weight',
+      weightMultiplier: 1,
+      defaultRestSeconds: 120,
+      notes: '',
+    });
+    const { createWorkoutUnit, addExerciseToWorkoutUnit } =
+      await import('@/db/repositories/workoutUnits');
+    const unit = await createWorkoutUnit({ name: 'Pull' });
+    await addExerciseToWorkoutUnit(unit.id, exercise);
+
+    const before = await createBackup();
+    expect(before.workoutUnitTemplates).toHaveLength(1);
+    expect(before.workoutUnitTemplateExercises).toHaveLength(1);
+
+    await importBackup(before, 'replace');
+    const after = await createBackup();
+    expect(after.workoutUnitTemplates).toEqual(before.workoutUnitTemplates);
+    expect(after.workoutUnitTemplateExercises).toEqual(
+      before.workoutUnitTemplateExercises,
+    );
+  });
 });
 
 describe('importBackup — merge', () => {
