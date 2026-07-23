@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import {
+  CalendarDays,
   CalendarRange,
   ChevronLeft,
   ChevronRight,
@@ -45,6 +46,7 @@ import { DELOAD_INTENSITY_LABELS } from '@/services/deload';
 import type { DeloadIntensity } from '@/types';
 import { saveTemplateAsWorkoutUnit } from '@/db/repositories/workoutUnits';
 import { ExercisePickerDialog } from '@/features/exercises/ExercisePickerDialog';
+import { PlanCalendarView } from '@/features/plans/PlanCalendarView';
 import { PlanDayTabs } from '@/features/plans/PlanDayTabs';
 import { PlanGoalsDialog } from '@/features/plans/PlanGoalsDialog';
 import { PlanOverviewCard } from '@/features/plans/PlanOverviewCard';
@@ -76,6 +78,7 @@ export default function TemplateEditPage() {
   const [deleteDayOpen, setDeleteDayOpen] = useState(false);
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [goalsOpen, setGoalsOpen] = useState(false);
+  const [calendarOpen, setCalendarOpen] = useState(false);
 
   const days = plan?.days ?? [];
   // Keep a valid active day even as days are added/removed.
@@ -220,6 +223,17 @@ export default function TemplateEditPage() {
       >
         <CalendarRange size={18} className="text-accent" aria-hidden="true" />
         Zeitplan &amp; Pausentage
+      </Button>
+
+      <Button
+        variant="secondary"
+        size="sm"
+        fullWidth
+        className="mb-2 justify-start"
+        onClick={() => setCalendarOpen(true)}
+      >
+        <CalendarDays size={18} className="text-accent" aria-hidden="true" />
+        Kalender
       </Button>
 
       <Button
@@ -422,6 +436,15 @@ export default function TemplateEditPage() {
         open={goalsOpen}
         onClose={() => setGoalsOpen(false)}
       />
+
+      <Dialog
+        open={calendarOpen}
+        onClose={() => setCalendarOpen(false)}
+        title="Kalender"
+        size="lg"
+      >
+        <PlanCalendarView plan={plan.plan} />
+      </Dialog>
 
       <Dialog
         open={renameDayOpen}

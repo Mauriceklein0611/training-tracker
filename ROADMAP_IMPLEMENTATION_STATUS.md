@@ -94,6 +94,21 @@ Enum-, Feld- oder Versionsänderung. Reset betrifft kein Import/Export-Format.
   Muskelverteilung/Volumen im Dashboard (nutzt später Analytics aus Phase 6),
   eigener Plan-Kalender = Phase 4.
 
+### Phase 4 — Plan-Kalender (geplant vs. tatsächlich)
+
+- **Reine Ableitung (`services/planCalendar.ts`):** geplante Tage deterministisch
+  aus Zeitplan + Datum, KEINE unbounded Vorab-Erzeugung. repeating-cycle aus
+  Anker (`schedule.startDate` bzw. `plan.startDate`), weekly aus Wochentag,
+  free-rotation ohne Planüberlagerung. Actual-Ebene aus abgeschlossenen Sessions.
+  Status: abgeschlossen/geplant/verpasst/Pause/frei; lokale Kalendertage (kein
+  UTC-Slice). Voll getestet.
+- **UI (`features/plans/PlanCalendarView.tsx`):** Monatsansicht mit Vor/Zurück,
+  farbcodierten Zellen (verpasst nicht strafend), Legende; „Kalender"-Button im
+  Plan-Editor.
+- **Offen in Phase 4:** Ausnahmen (verschoben/übersprungen/zusätzliche Pause) als
+  eigenes Modell + Aktionen mit Vorschau/Bestätigung; Session-Snapshots
+  `scheduleEntryId`/`plannedDate`/`scheduleMode` (4.4) für volle Historientreue.
+
 ## Offen (nächste Schritte, in Roadmap-Reihenfolge)
 
 - **Phase A Rest:** Trainingsplan-Paket (Sharing) trägt den Zeitplan noch nicht
@@ -118,9 +133,11 @@ Enum-, Feld- oder Versionsänderung. Reset betrifft kein Import/Export-Format.
 
 ### Nächster exakter Schritt
 
-Phase 4 beginnen: eigener Plan-Kalender (geplant vs. tatsächlich). Geplante Tage
-aus Zeitplan + Datum ableiten (keine unbounded Vorab-Erzeugung), nur Ausnahmen
-(verschoben/übersprungen/zusätzliche Pause) persistieren, Sessions mit geplantem
-Datum + Zeitplaneintrag verknüpfen. Erst Ausnahmen-Datenmodell (Dexie v22) + reine
-Kalender-Ableitung mit Tests, dann Monats-/Vorschau-UI und Session-Snapshots
-(`scheduleEntryId`, geplantes Datum) aus Phase 4.4.
+Phase 5 beginnen: zeitboxierter 7-Tage-Deload (ersetzt den heutigen
+`deloadIntensity`-Toggle). `PlanDeloadPeriod` (Start/Ende, Intensität, konkrete
+Einstellungs-Snapshots), automatisches Ende nach 7 lokalen Tagen, vorzeitiges
+Beenden, nur ein aktiver Deload/Plan. Session-Snapshots original/effective (Sätze,
+Wdh./Dauer, Gewichtsempfehlung nur aus vorhandenem Ausgangswert, gerundet).
+Analyse-Filter „Deload separat/ausblenden". Erst Modell (Dexie v22) + reiner
+Deload-Rechner mit Tests, dann Start-Integration + UI. Alternativ vorher die
+offenen Phase-4-Ausnahmen nachziehen.
