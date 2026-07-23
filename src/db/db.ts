@@ -8,6 +8,7 @@ import type {
   EquipmentProfile,
   Exercise,
   PlanSchedule,
+  PlanUsagePeriod,
   ScheduleEntry,
   SessionExercise,
   TemplateExercise,
@@ -29,7 +30,7 @@ import { ensureSchedulesForPlans } from '@/db/scheduleMigration';
  * Bump this together with a new `.version()` block below and record the change
  * in MIGRATIONS so the settings screen can show what the database went through.
  */
-export const SCHEMA_VERSION = 20;
+export const SCHEMA_VERSION = 21;
 
 export const MIGRATIONS: { version: number; description: string }[] = [
   { version: 1, description: 'Initiales Schema: Übungen, Pläne, Einheiten, Sätze.' },
@@ -162,6 +163,13 @@ export const MIGRATIONS: { version: number; description: string }[] = [
       'einen stabilen Katalogschlüssel. Bestehende Übungen werden als „Eigene" ' +
       'markiert; der kuratierte Katalog wird beim Start idempotent ergänzt.',
   },
+  {
+    version: 21,
+    description:
+      'Plan-Metadaten, Ziele und Nutzungszeiträume: Pläne erhalten optionale ' +
+      'Ziel-/Fokusangaben; ein neuer Store hält die Zeiträume, in denen ein Plan ' +
+      'der aktive Hauptplan war. Bestehende Daten bleiben unverändert.',
+  },
 ];
 
 export class TrainingDatabase extends Dexie {
@@ -182,6 +190,7 @@ export class TrainingDatabase extends Dexie {
   scheduleEntries!: Table<ScheduleEntry, string>;
   workoutUnitTemplates!: Table<WorkoutUnitTemplate, string>;
   workoutUnitTemplateExercises!: Table<WorkoutUnitTemplateExercise, string>;
+  planUsagePeriods!: Table<PlanUsagePeriod, string>;
   settings!: Table<AppSettings, string>;
 
   constructor(name = 'training-tracker') {
@@ -537,6 +546,22 @@ export class TrainingDatabase extends Dexie {
           .toCollection()
           .modify((settings) => {
             settings.schemaVersion = 20;
+          });
+      });
+
+    // ---- v21 ------------------------------------------------------------
+    // Plan metadata/goals (new optional fields on trainingPlans, no backfill)
+    // plus a new planUsagePeriods store for the active-plan history.
+    this.version(21)
+      .stores({
+        planUsagePeriods: 'id, planId, startDate',
+      })
+      .upgrade(async (tx) => {
+        await tx
+          .table<AppSettings>('settings')
+          .toCollection()
+          .modify((settings) => {
+            settings.schemaVersion = 21;
           });
       });
   }

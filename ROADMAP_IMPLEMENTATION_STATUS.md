@@ -73,12 +73,32 @@ Enum-, Feld- oder Versionsänderung. Reset betrifft kein Import/Export-Format.
 - **2.3 Suche/Filter:** `filterExercises` durchsucht auch `searchTerms` und
   filtert nach Herkunft; ExercisesPage hat Herkunft-Filter + „System"-Badge.
 
+### Phase 3 — Plan-Metadaten, Ziele, Nutzungszeiträume, Dashboard
+
+- **Modell (Dexie v21):** `TrainingPlan` um optionale Metadaten/Ziele erweitert
+  (Zieltyp, Zieltext, Fokusnotiz, Erfahrungsniveau, Einheiten/Woche,
+  Arbeitssätze/Woche, Startdatum, geplante Wochen, Fokus-Muskelgruppen,
+  Einschränkungen, Zielgewicht/-KFA). Neuer Store `planUsagePeriods`;
+  `settings.activePlanId`. Backup + Reset + Format-Doc.
+- **Nutzungszeiträume (`db/repositories/planUsage.ts`):** genau ein aktiver
+  Plan; `activatePlan` (idempotent, schließt den offenen Zeitraum des
+  vorherigen Plans, öffnet neuen), `deactivatePlan`, manuelle Korrektur.
+  `deletePlan` schließt den offenen Zeitraum + löscht die Aktiv-Markierung,
+  **erhält** aber die Zeiträume (Name-Snapshot). Tests grün.
+- **Übersicht (`services/planMetrics.ts`, rein):** Einheiten gesamt, diese Woche
+  vs. Ziel, Ø/Woche, Zeitspanne — nur aus abgeschlossenen Sessions abgeleitet,
+  nichts erfunden. Kein zweiter Analytics-Motor.
+- **UI:** `PlanOverviewCard` (Aktivieren/Deaktivieren + Kennzahlen) und
+  `PlanGoalsDialog` (Ziele & Fokus) im Plan-Editor.
+- **Offen in Phase 3:** Ziele je Übung + strukturierte Zielerreichung, volle
+  Muskelverteilung/Volumen im Dashboard (nutzt später Analytics aus Phase 6),
+  eigener Plan-Kalender = Phase 4.
+
 ## Offen (nächste Schritte, in Roadmap-Reihenfolge)
 
 - **Phase A Rest:** Trainingsplan-Paket (Sharing) trägt den Zeitplan noch nicht
   mit → bräuchte plan-package v3. Home/Templates zeigen Rest-Tage in der Vorschau
   noch nicht. Übungseinheiten-Paket (Phase 7.6) noch offen.
-- **Phase 3** — Plan-Dashboard, Ziele/Regeln, `PlanUsagePeriod`.
 - **Phase 4** — Zeitplan-Kalender (geplant vs. tatsächlich, Ausnahmen,
   Session-Snapshots `scheduleEntryId`/geplantes Datum).
 - **Phase 5** — Zeitboxierter 7-Tage-Deload (ersetzt heutigen
@@ -98,9 +118,9 @@ Enum-, Feld- oder Versionsänderung. Reset betrifft kein Import/Export-Format.
 
 ### Nächster exakter Schritt
 
-Phase 3 beginnen: Plan-Metadaten + Ziele/Regeln + `PlanUsagePeriod`
-(genau ein aktiver Plan, Nutzungszeiträume für die spätere Analysezuordnung).
-Erst `TrainingPlan` um validierte optionale Felder erweitern (Zieltyp, Fokus,
-Einheiten/Woche, Start/Ende) + `PlanUsagePeriod`-Tabelle (Dexie v21, Backup,
-Reset, Format-Doc) mit Tests, dann Plan-Dashboard-UI (Übersichtskennzahlen aus
-Rohdaten abgeleitet, nichts erfinden).
+Phase 4 beginnen: eigener Plan-Kalender (geplant vs. tatsächlich). Geplante Tage
+aus Zeitplan + Datum ableiten (keine unbounded Vorab-Erzeugung), nur Ausnahmen
+(verschoben/übersprungen/zusätzliche Pause) persistieren, Sessions mit geplantem
+Datum + Zeitplaneintrag verknüpfen. Erst Ausnahmen-Datenmodell (Dexie v22) + reine
+Kalender-Ableitung mit Tests, dann Monats-/Vorschau-UI und Session-Snapshots
+(`scheduleEntryId`, geplantes Datum) aus Phase 4.4.

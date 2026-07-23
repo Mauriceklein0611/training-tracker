@@ -47,6 +47,13 @@ General rules:
   catalog is not part of the backup — it is re-seeded idempotently by
   `seedSystemExercises` (keyed by `catalogKey`) on app start and after a reset,
   so importing a backup never duplicates system exercises.
+- Plan metadata + usage periods (schema 21): plans gain optional goal/metadata
+  fields (goalType, goalText, focusNote, experienceLevel, sessionsPerWeekTarget,
+  workingSetsPerWeekTarget, startDate, plannedWeeks, focusMuscleGroups,
+  restrictions, targetBodyWeightKg, targetBodyFatPercent). A new
+  `planUsagePeriods` store records the spans a plan was active; `settings`
+  gains optional `activePlanId`. All optional/defaulted, so older backups
+  restore unchanged with no active plan and no usage history.
 - Schedule system (schema 18): every plan owns one `PlanSchedule`
   (`free-rotation` | `repeating-cycle` | `weekly`) with `ScheduleEntry` rows for
   the cycle/weekly modes (workout or rest days). Restoring a pre-schedule backup

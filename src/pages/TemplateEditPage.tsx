@@ -12,6 +12,7 @@ import {
   Play,
   Plus,
   Settings2,
+  Target,
   Trash2,
 } from 'lucide-react';
 import { PageHeader } from '@/components/layout/PageHeader';
@@ -45,6 +46,8 @@ import type { DeloadIntensity } from '@/types';
 import { saveTemplateAsWorkoutUnit } from '@/db/repositories/workoutUnits';
 import { ExercisePickerDialog } from '@/features/exercises/ExercisePickerDialog';
 import { PlanDayTabs } from '@/features/plans/PlanDayTabs';
+import { PlanGoalsDialog } from '@/features/plans/PlanGoalsDialog';
+import { PlanOverviewCard } from '@/features/plans/PlanOverviewCard';
 import { ScheduleEditor } from '@/features/plans/ScheduleEditor';
 import { TemplateExerciseRow } from '@/features/templates/TemplateExerciseRow';
 import { TemplateGroupHeader } from '@/features/templates/TemplateGroupHeader';
@@ -72,6 +75,7 @@ export default function TemplateEditPage() {
   const [dayName, setDayName] = useState('');
   const [deleteDayOpen, setDeleteDayOpen] = useState(false);
   const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [goalsOpen, setGoalsOpen] = useState(false);
 
   const days = plan?.days ?? [];
   // Keep a valid active day even as days are added/removed.
@@ -203,16 +207,30 @@ export default function TemplateEditPage() {
         </p>
       ) : null}
 
+      {/* Plan dashboard: activate + light overview derived from completed sessions. */}
+      <PlanOverviewCard plan={plan.plan} />
+
       {/* Schedule: how the plan's units are laid out over time (rotation, cycle, week). */}
       <Button
         variant="secondary"
         size="sm"
         fullWidth
-        className="mb-4 justify-start"
+        className="mb-2 justify-start"
         onClick={() => setScheduleOpen(true)}
       >
         <CalendarRange size={18} className="text-accent" aria-hidden="true" />
         Zeitplan &amp; Pausentage
+      </Button>
+
+      <Button
+        variant="secondary"
+        size="sm"
+        fullWidth
+        className="mb-4 justify-start"
+        onClick={() => setGoalsOpen(true)}
+      >
+        <Target size={18} className="text-accent" aria-hidden="true" />
+        Ziele &amp; Fokus
       </Button>
 
       {/* Day navigation — hidden for a single-day plan to stay simple. */}
@@ -398,6 +416,12 @@ export default function TemplateEditPage() {
       >
         <ScheduleEditor planId={plan.plan.id} />
       </Dialog>
+
+      <PlanGoalsDialog
+        plan={plan.plan}
+        open={goalsOpen}
+        onClose={() => setGoalsOpen(false)}
+      />
 
       <Dialog
         open={renameDayOpen}

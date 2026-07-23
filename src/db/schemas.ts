@@ -88,6 +88,33 @@ export const trainingPlanSchema = z.object({
     .enum(['single', '2-day', '3-day', '4-day', '5-day', 'custom'])
     .default('single'),
   deloadIntensity: z.enum(['light', 'medium', 'strong']).optional(),
+  // Added in schema version 21; all optional plan metadata/goals.
+  goalType: z
+    .enum(['muscle', 'strength', 'fitness', 'fatloss', 'maintenance', 'custom'])
+    .optional(),
+  goalText: z.string().max(2000).optional(),
+  focusNote: z.string().max(4000).optional(),
+  experienceLevel: z.enum(['beginner', 'intermediate', 'advanced']).optional(),
+  sessionsPerWeekTarget: z.number().int().min(1).max(14).optional(),
+  workingSetsPerWeekTarget: z.number().int().min(1).max(500).optional(),
+  startDate: isoDate.optional(),
+  plannedWeeks: z.number().int().min(1).max(520).optional(),
+  focusMuscleGroups: z.array(z.string().max(80)).max(30).optional(),
+  restrictions: z.string().max(2000).optional(),
+  targetBodyWeightKg: z.number().min(0).max(1000).optional(),
+  targetBodyFatPercent: z.number().min(0).max(100).optional(),
+  createdAt: isoDateTime,
+  updatedAt: isoDateTime,
+});
+
+/** Added in schema version 21; a span during which a plan was the active plan. */
+export const planUsagePeriodSchema = z.object({
+  id,
+  planId: id,
+  planNameSnapshot: z.string().default(''),
+  startDate: isoDate,
+  endDate: isoDate.optional(),
+  note: z.string().max(2000).optional(),
   createdAt: isoDateTime,
   updatedAt: isoDateTime,
 });
@@ -399,6 +426,8 @@ export const appSettingsSchema = z.object({
     .optional(),
   // Added in schema version 13; optional so older backups still validate.
   activeEquipmentProfileId: z.string().optional(),
+  // Added in schema version 21; the active main plan, optional.
+  activePlanId: z.string().optional(),
   // Added in schema version 7; optional so older backups still validate.
   weeklyGoals: z
     .object({

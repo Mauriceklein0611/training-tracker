@@ -7,6 +7,7 @@ import type {
   WorkoutTemplate,
 } from '@/types';
 import { nowIso, uuid } from '@/utils/id';
+import { dayKey } from '@/utils/date';
 import { planGroupNormalization } from '@/services/grouping';
 import {
   createDefaultSchedule,
@@ -191,9 +192,31 @@ export async function createPlan(input: {
   );
 }
 
+/** Fields of a plan that the editor may change (metadata and goals included). */
+export type PlanEditableFields = Partial<
+  Pick<
+    TrainingPlan,
+    | 'name'
+    | 'description'
+    | 'splitType'
+    | 'goalType'
+    | 'goalText'
+    | 'focusNote'
+    | 'experienceLevel'
+    | 'sessionsPerWeekTarget'
+    | 'workingSetsPerWeekTarget'
+    | 'startDate'
+    | 'plannedWeeks'
+    | 'focusMuscleGroups'
+    | 'restrictions'
+    | 'targetBodyWeightKg'
+    | 'targetBodyFatPercent'
+  >
+>;
+
 export async function updatePlan(
   planId: string,
-  changes: Partial<Pick<TrainingPlan, 'name' | 'description' | 'splitType'>>,
+  changes: PlanEditableFields,
 ): Promise<void> {
   const patch = { ...changes };
   if (patch.name != null) patch.name = patch.name.trim();
@@ -225,6 +248,8 @@ export async function deletePlan(planId: string): Promise<void> {
       db.templateVersions,
       db.planSchedules,
       db.scheduleEntries,
+      db.planUsagePeriods,
+      db.settings,
     ],
     async () => {
       const days = await db.workoutTemplates.where('planId').equals(planId).toArray();
@@ -234,6 +259,31 @@ export async function deletePlan(planId: string): Promise<void> {
       }
       await db.workoutTemplates.where('planId').equals(planId).delete();
       await deleteScheduleForPlan(planId);
+
+      // Usage periods are kept — the name snapshot keeps them readable for the
+      // analysis — but an open period is closed and, if this was the active
+      // plan, the active-plan pointer is cleared.
+      const settings = await db.settings.get('app-settings');
+      if (settings?.activePlanId === planId) {
+        const today = dayKey(new Date());
+        const periods = await db.planUsagePeriods
+          .where('planId')
+          .equals(planId)
+          .toArray();
+        for (const period of periods) {
+          if (!period.endDate) {
+            await db.planUsagePeriods.update(period.id, {
+              endDate: today < period.startDate ? period.startDate : today,
+              updatedAt: nowIso(),
+            });
+          }
+        }
+        await db.settings.update('app-settings', {
+          activePlanId: undefined,
+          updatedAt: nowIso(),
+        });
+      }
+
       await db.trainingPlans.delete(planId);
     },
   );

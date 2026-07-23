@@ -120,6 +120,13 @@ export type PlanSplitType = 'single' | '2-day' | '3-day' | '4-day' | '5-day' | '
 /** Deload intensity, shared by the plan-level toggle and the deload service. */
 export type DeloadIntensity = 'light' | 'medium' | 'strong';
 
+/** The overarching aim of a training plan. `custom` pairs with a free text. */
+export type PlanGoalType =
+  'muscle' | 'strength' | 'fitness' | 'fatloss' | 'maintenance' | 'custom';
+
+/** Self-assessed training experience, used only for display and AI context. */
+export type ExperienceLevel = 'beginner' | 'intermediate' | 'advanced';
+
 /**
  * A training plan: the parent of one or more training days ({@link WorkoutTemplate},
  * each holding its own exercises). A plan with a single day behaves exactly like
@@ -136,6 +143,53 @@ export interface TrainingPlan {
    * and only reduced when a workout is started.
    */
   deloadIntensity?: DeloadIntensity;
+  /**
+   * Optional plan metadata and goals (Phase 3). All fields are optional and are
+   * only ever shown, never used to fabricate an analysis. Goals are target
+   * values, never treated as measurements.
+   */
+  goalType?: PlanGoalType;
+  /** Free goal text; the sole detail for `goalType: 'custom'`, optional otherwise. */
+  goalText?: string;
+  /** Longer focus/notes for the plan. */
+  focusNote?: string;
+  experienceLevel?: ExperienceLevel;
+  /** Intended sessions per week. */
+  sessionsPerWeekTarget?: number;
+  /** Target number of working sets per week across the plan. */
+  workingSetsPerWeekTarget?: number;
+  /** Local start day of the plan. */
+  startDate?: ISODate;
+  /** Intended duration in weeks, if planned. */
+  plannedWeeks?: number;
+  /** Muscle-group labels the plan focuses on. */
+  focusMuscleGroups?: string[];
+  /** Free text: injuries, equipment limits, other constraints. */
+  restrictions?: string;
+  /** Optional body targets — target values only, never a measurement. */
+  targetBodyWeightKg?: number;
+  targetBodyFatPercent?: number;
+  createdAt: ISODateTime;
+  updatedAt: ISODateTime;
+}
+
+/**
+ * A period during which a plan was the actively used main plan (Phase 3).
+ *
+ * At most one plan is active at a time; activating another closes the previous
+ * plan's open period and opens a new one. Usage periods let the analysis
+ * attribute body-data change to a plan only over clearly overlapping spans, and
+ * survive a plan deletion via the name snapshot.
+ */
+export interface PlanUsagePeriod {
+  id: string;
+  planId: string;
+  planNameSnapshot: string;
+  /** Local start day. */
+  startDate: ISODate;
+  /** Local end day; absent while this is the open (current) period. */
+  endDate?: ISODate;
+  note?: string;
   createdAt: ISODateTime;
   updatedAt: ISODateTime;
 }
@@ -652,6 +706,8 @@ export interface AppSettings {
   weeklyGoals?: WeeklyGoals;
   /** Active equipment profile; absent means "all equipment available". */
   activeEquipmentProfileId?: string;
+  /** The currently active main plan (Phase 3); absent means none is active. */
+  activePlanId?: string;
   /** Days after which a backup reminder is shown; 0 disables the reminder. */
   backupReminderDays: number;
   lastBackupAt?: ISODateTime;
