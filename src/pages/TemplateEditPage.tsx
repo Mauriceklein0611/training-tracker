@@ -1,20 +1,47 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { History, Play, Plus } from 'lucide-react';
+import {
+  ChevronLeft,
+  ChevronRight,
+  Copy,
+  History,
+  Pencil,
+  Play,
+  Plus,
+  Settings2,
+  Trash2,
+} from 'lucide-react';
 import { PageHeader } from '@/components/layout/PageHeader';
-import { Button } from '@/components/ui/Button';
+import { Button, IconButton } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/Card';
+import { ConfirmDialog, Dialog } from '@/components/ui/Dialog';
+import { SelectField, TextAreaField, TextField } from '@/components/ui/Field';
 import {
   addExerciseToTemplate,
   getTemplateWithExercises,
   reorderTemplateExercises,
+  updateTemplate,
 } from '@/db/repositories/templates';
+import {
+  addDay,
+  deleteDay,
+  duplicateDay,
+  getPlanWithDays,
+  LastDayError,
+  moveDay,
+  setPlanDeload,
+  SPLIT_TYPE_LABELS,
+  updatePlan,
+} from '@/db/repositories/plans';
 import {
   ActiveSessionExistsError,
   startSessionFromTemplate,
 } from '@/db/repositories/sessions';
+import { DELOAD_INTENSITY_LABELS } from '@/services/deload';
+import type { DeloadIntensity } from '@/types';
 import { ExercisePickerDialog } from '@/features/exercises/ExercisePickerDialog';
+import { PlanDayTabs } from '@/features/plans/PlanDayTabs';
 import { TemplateExerciseRow } from '@/features/templates/TemplateExerciseRow';
 import { TemplateGroupHeader } from '@/features/templates/TemplateGroupHeader';
 import { useActiveSession } from '@/hooks/useActiveSession';
@@ -27,16 +54,33 @@ import {
 } from '@/services/grouping';
 
 export default function TemplateEditPage() {
-  const { templateId = '' } = useParams();
+  const { planId = '' } = useParams();
   const navigate = useNavigate();
   const toast = useToast();
   const activeSession = useActiveSession();
 
-  const data = useLiveQuery(() => getTemplateWithExercises(templateId), [templateId]);
+  const plan = useLiveQuery(() => getPlanWithDays(planId), [planId]);
+  const [selectedDayId, setSelectedDayId] = useState('');
   const [pickerOpen, setPickerOpen] = useState(false);
   const [dragId, setDragId] = useState<string | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [renameDayOpen, setRenameDayOpen] = useState(false);
+  const [dayName, setDayName] = useState('');
+  const [deleteDayOpen, setDeleteDayOpen] = useState(false);
 
-  if (data === undefined) {
+  const days = plan?.days ?? [];
+  // Keep a valid active day even as days are added/removed.
+  const activeDayId = days.some((day) => day.id === selectedDayId)
+    ? selectedDayId
+    : (days[0]?.id ?? '');
+  const activeDay = days.find((day) => day.id === activeDayId);
+
+  const dayData = useLiveQuery(
+    () => (activeDayId ? getTemplateWithExercises(activeDayId) : undefined),
+    [activeDayId],
+  );
+
+  if (plan === undefined) {
     return (
       <>
         <PageHeader title="Plan" backTo="/plaene" />
@@ -47,7 +91,7 @@ export default function TemplateEditPage() {
     );
   }
 
-  if (!data) {
+  if (!plan) {
     return (
       <>
         <PageHeader title="Plan" backTo="/plaene" />
@@ -64,25 +108,26 @@ export default function TemplateEditPage() {
     );
   }
 
-  const { template, exercises } = data;
+  const exercises = dayData?.exercises ?? [];
   const blocks = groupItems(exercises);
   const indexById = new Map(exercises.map((entry, index) => [entry.id, index]));
+  const dayIndex = days.findIndex((day) => day.id === activeDayId);
 
-  /** Drop handler for the pointer-based reordering path. */
   const handleDrop = async (targetId: string) => {
-    if (!dragId || dragId === targetId) return;
+    if (!dragId || dragId === targetId || !activeDayId) return;
     const ids = exercises.map((entry) => entry.id);
     const from = ids.indexOf(dragId);
     const to = ids.indexOf(targetId);
     if (from < 0 || to < 0) return;
     ids.splice(to, 0, ...ids.splice(from, 1));
-    await reorderTemplateExercises(template.id, ids);
+    await reorderTemplateExercises(activeDayId, ids);
     setDragId(null);
   };
 
   const handleStart = async () => {
+    if (!activeDayId) return;
     try {
-      const session = await startSessionFromTemplate(template.id);
+      const session = await startSessionFromTemplate(activeDayId);
       navigate(`/training/${session.id}`);
     } catch (error) {
       if (error instanceof ActiveSessionExistsError) {
@@ -96,38 +141,132 @@ export default function TemplateEditPage() {
     }
   };
 
+  const handleAddDay = async () => {
+    const day = await addDay(plan.plan.id);
+    setSelectedDayId(day.id);
+    toast.show('Trainingstag hinzugefügt.', 'success');
+  };
+
+  const handleDeleteDay = async () => {
+    try {
+      await deleteDay(activeDayId);
+      setSelectedDayId('');
+      setDeleteDayOpen(false);
+      toast.show('Trainingstag gelöscht.', 'success');
+    } catch (error) {
+      setDeleteDayOpen(false);
+      toast.show(
+        error instanceof LastDayError ? error.message : 'Löschen fehlgeschlagen.',
+        'error',
+      );
+    }
+  };
+
+  const isSingleDay = days.length === 1;
+
   return (
     <>
       <PageHeader
-        title={template.name}
-        subtitle={`${exercises.length} ${exercises.length === 1 ? 'Übung' : 'Übungen'}`}
+        title={plan.plan.name}
+        subtitle={`${SPLIT_TYPE_LABELS[plan.plan.splitType]} · ${days.length} ${
+          days.length === 1 ? 'Tag' : 'Tage'
+        }`}
         backTo="/plaene"
         action={
-          <Button variant="secondary" size="sm" onClick={() => setPickerOpen(true)}>
-            <Plus size={18} aria-hidden="true" />
-            Übung
-          </Button>
+          <IconButton label="Plan-Einstellungen" onClick={() => setSettingsOpen(true)}>
+            <Settings2 size={20} aria-hidden="true" />
+          </IconButton>
         }
       />
 
-      {template.description ? (
-        <p className="mb-4 whitespace-pre-line break-words rounded-2xl border border-border bg-surface p-3 text-sm leading-relaxed text-muted">
-          {template.description}
+      {plan.plan.deloadIntensity ? (
+        <p className="mb-3 rounded-xl border border-warning/50 bg-surface-2 p-2 text-xs text-warning">
+          Deload aktiv ({DELOAD_INTENSITY_LABELS[plan.plan.deloadIntensity]}) — die
+          Ziel-Sätze werden beim Start reduziert.
         </p>
       ) : null}
 
-      <Link
-        to={`/plaene/${template.id}/versionen`}
-        className="mb-4 flex min-h-[48px] items-center gap-2 rounded-2xl border border-border bg-surface px-4 text-sm font-medium active:bg-surface-2"
-      >
-        <History size={18} className="text-accent" aria-hidden="true" />
-        Planversionen
-      </Link>
+      {plan.plan.description ? (
+        <p className="mb-4 whitespace-pre-line break-words rounded-2xl border border-border bg-surface p-3 text-sm leading-relaxed text-muted">
+          {plan.plan.description}
+        </p>
+      ) : null}
+
+      {/* Day navigation — hidden for a single-day plan to stay simple. */}
+      {isSingleDay ? null : (
+        <PlanDayTabs
+          days={days}
+          activeDayId={activeDayId}
+          onSelect={setSelectedDayId}
+          onAdd={() => void handleAddDay()}
+        />
+      )}
+
+      {/* Day toolbar: rename / reorder / duplicate / delete the active day. */}
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => {
+              setDayName(activeDay?.name ?? '');
+              setRenameDayOpen(true);
+            }}
+          >
+            <Pencil size={16} aria-hidden="true" />
+            {activeDay?.name}
+          </Button>
+        </div>
+        <div className="flex items-center gap-1">
+          {!isSingleDay ? (
+            <>
+              <IconButton
+                label="Tag nach links"
+                onClick={() => void moveDay(activeDayId, -1)}
+                {...(dayIndex <= 0 ? { disabled: true } : {})}
+              >
+                <ChevronLeft size={18} aria-hidden="true" />
+              </IconButton>
+              <IconButton
+                label="Tag nach rechts"
+                onClick={() => void moveDay(activeDayId, 1)}
+                {...(dayIndex >= days.length - 1 ? { disabled: true } : {})}
+              >
+                <ChevronRight size={18} aria-hidden="true" />
+              </IconButton>
+            </>
+          ) : null}
+          <IconButton
+            label="Tag duplizieren"
+            onClick={async () => {
+              const copy = await duplicateDay(activeDayId);
+              setSelectedDayId(copy.id);
+              toast.show('Trainingstag dupliziert.', 'success');
+            }}
+          >
+            <Copy size={18} aria-hidden="true" />
+          </IconButton>
+          <IconButton
+            label="Tag löschen"
+            onClick={() => setDeleteDayOpen(true)}
+            {...(isSingleDay ? { disabled: true } : {})}
+          >
+            <Trash2 size={18} aria-hidden="true" />
+          </IconButton>
+        </div>
+      </div>
+
+      <div className="mb-3 flex justify-end">
+        <Button variant="secondary" size="sm" onClick={() => setPickerOpen(true)}>
+          <Plus size={18} aria-hidden="true" />
+          Übung
+        </Button>
+      </div>
 
       {exercises.length === 0 ? (
         <EmptyState
-          title="Noch keine Übungen im Plan"
-          description="Füge Übungen hinzu und lege Ziel-Sätze, Ziel-Wiederholungen und die Pausenzeit fest. Die Reihenfolge kannst du jederzeit mit den Pfeiltasten oder per Ziehen ändern."
+          title="Noch keine Übungen an diesem Tag"
+          description="Füge Übungen hinzu und lege Ziel-Sätze, Ziel-Wiederholungen und die Pausenzeit fest. Die Reihenfolge kannst du jederzeit ändern."
           action={
             <Button variant="primary" onClick={() => setPickerOpen(true)}>
               <Plus size={18} aria-hidden="true" />
@@ -163,7 +302,7 @@ export default function TemplateEditPage() {
                 className="rounded-2xl border border-accent/40 bg-surface-2/40 p-2"
               >
                 <TemplateGroupHeader
-                  templateId={template.id}
+                  templateId={activeDayId}
                   groupId={block.groupId}
                   letter={block.letter}
                   groupType={block.groupType ?? DEFAULT_GROUP_TYPE}
@@ -177,6 +316,14 @@ export default function TemplateEditPage() {
         </div>
       )}
 
+      <Link
+        to={`/plaene/${activeDayId}/versionen`}
+        className="mt-4 flex min-h-[48px] items-center gap-2 rounded-2xl border border-border bg-surface px-4 text-sm font-medium active:bg-surface-2"
+      >
+        <History size={18} className="text-accent" aria-hidden="true" />
+        Versionen dieses Tages
+      </Link>
+
       {exercises.length > 0 ? (
         <Button
           variant="primary"
@@ -187,7 +334,7 @@ export default function TemplateEditPage() {
           onClick={() => void handleStart()}
         >
           <Play size={20} aria-hidden="true" />
-          {activeSession ? 'Training läuft bereits' : 'Als Training starten'}
+          {activeSession ? 'Training läuft bereits' : `„${activeDay?.name}“ starten`}
         </Button>
       ) : null}
 
@@ -195,10 +342,153 @@ export default function TemplateEditPage() {
         open={pickerOpen}
         onClose={() => setPickerOpen(false)}
         onSelect={async (exercise) => {
-          await addExerciseToTemplate(template.id, exercise);
+          if (activeDayId) await addExerciseToTemplate(activeDayId, exercise);
           setPickerOpen(false);
         }}
       />
+
+      <PlanSettingsDialog
+        open={settingsOpen}
+        planId={plan.plan.id}
+        name={plan.plan.name}
+        description={plan.plan.description}
+        deloadIntensity={plan.plan.deloadIntensity}
+        onClose={() => setSettingsOpen(false)}
+      />
+
+      <Dialog
+        open={renameDayOpen}
+        onClose={() => setRenameDayOpen(false)}
+        title="Trainingstag umbenennen"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setRenameDayOpen(false)}>
+              Abbrechen
+            </Button>
+            <Button
+              variant="primary"
+              onClick={async () => {
+                const trimmed = dayName.trim();
+                if (!trimmed) {
+                  toast.show('Bitte gib einen Namen ein.', 'error');
+                  return;
+                }
+                await updateTemplate(activeDayId, { name: trimmed });
+                setRenameDayOpen(false);
+              }}
+            >
+              Speichern
+            </Button>
+          </>
+        }
+      >
+        <TextField
+          label="Name des Trainingstags"
+          value={dayName}
+          onChange={(event) => setDayName(event.target.value)}
+        />
+      </Dialog>
+
+      <ConfirmDialog
+        open={deleteDayOpen}
+        title="Trainingstag löschen?"
+        description={`„${activeDay?.name ?? ''}“ mit ${exercises.length} ${
+          exercises.length === 1 ? 'Übung' : 'Übungen'
+        } wird entfernt. Bereits absolvierte Trainings bleiben vollständig erhalten.`}
+        confirmLabel="Tag löschen"
+        destructive
+        onCancel={() => setDeleteDayOpen(false)}
+        onConfirm={() => void handleDeleteDay()}
+      />
     </>
+  );
+}
+
+/** Plan-level settings: name, description and the non-destructive deload toggle. */
+function PlanSettingsDialog({
+  open,
+  planId,
+  name,
+  description,
+  deloadIntensity,
+  onClose,
+}: {
+  open: boolean;
+  planId: string;
+  name: string;
+  description: string;
+  deloadIntensity?: DeloadIntensity;
+  onClose: () => void;
+}) {
+  const toast = useToast();
+  const [draftName, setDraftName] = useState(name);
+  const [draftDescription, setDraftDescription] = useState(description);
+  const [draftDeload, setDraftDeload] = useState<string>(deloadIntensity ?? '');
+
+  // Re-seed the fields whenever the dialog is (re)opened for the current plan.
+  const [seededFor, setSeededFor] = useState('');
+  if (open && seededFor !== `${planId}:${name}:${description}:${deloadIntensity ?? ''}`) {
+    setDraftName(name);
+    setDraftDescription(description);
+    setDraftDeload(deloadIntensity ?? '');
+    setSeededFor(`${planId}:${name}:${description}:${deloadIntensity ?? ''}`);
+  }
+
+  const handleSave = async () => {
+    const trimmed = draftName.trim();
+    if (!trimmed) {
+      toast.show('Bitte gib einen Namen ein.', 'error');
+      return;
+    }
+    await updatePlan(planId, { name: trimmed, description: draftDescription });
+    await setPlanDeload(
+      planId,
+      (draftDeload || undefined) as DeloadIntensity | undefined,
+    );
+    onClose();
+    toast.show('Plan gespeichert.', 'success');
+  };
+
+  return (
+    <Dialog
+      open={open}
+      onClose={onClose}
+      title="Plan-Einstellungen"
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose}>
+            Abbrechen
+          </Button>
+          <Button variant="primary" onClick={() => void handleSave()}>
+            Speichern
+          </Button>
+        </>
+      }
+    >
+      <div className="grid gap-4">
+        <TextField
+          label="Planname"
+          value={draftName}
+          onChange={(event) => setDraftName(event.target.value)}
+        />
+        <TextAreaField
+          label="Beschreibung"
+          value={draftDescription}
+          placeholder="Optional"
+          onChange={(event) => setDraftDescription(event.target.value)}
+        />
+        <SelectField
+          label="Deload"
+          hint="Reduziert die Ziel-Sätze aller Tage beim Trainingsstart. Ausschalten stellt die vollen Werte sofort wieder her."
+          value={draftDeload}
+          onChange={(event) => setDraftDeload(event.target.value)}
+        >
+          <option value="">Aus</option>
+          <option value="light">{DELOAD_INTENSITY_LABELS.light}</option>
+          <option value="medium">{DELOAD_INTENSITY_LABELS.medium}</option>
+          <option value="strong">{DELOAD_INTENSITY_LABELS.strong}</option>
+        </SelectField>
+      </div>
+    </Dialog>
   );
 }

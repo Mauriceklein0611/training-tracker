@@ -46,7 +46,7 @@ export default function App() {
         <Route element={<AppLayout />}>
           <Route path="/" element={<HomePage />} />
           <Route path="/plaene" element={<TemplatesPage />} />
-          <Route path="/plaene/:templateId" element={<TemplateEditPage />} />
+          <Route path="/plaene/:planId" element={<TemplateEditPage />} />
           <Route
             path="/plaene/:templateId/versionen"
             element={<TemplateVersionsPage />}

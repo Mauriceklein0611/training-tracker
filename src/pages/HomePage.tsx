@@ -4,6 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { AlertTriangle, ClipboardList, Play, Plus, RotateCcw, Zap } from 'lucide-react';
 import { db } from '@/db/db';
 import { listTemplates } from '@/db/repositories/templates';
+import { listPlansWithDays, nextDayForPlan } from '@/db/repositories/plans';
 import {
   ActiveSessionExistsError,
   startFreeSession,
@@ -35,6 +36,25 @@ export default function HomePage() {
   const { settings } = useSettings();
 
   const templates = useLiveQuery(() => listTemplates(), [], []);
+
+  const plans = useLiveQuery(
+    async () => {
+      const withDays = await listPlansWithDays();
+      return Promise.all(
+        withDays.map(async (entry) => {
+          const next = await nextDayForPlan(entry.plan.id);
+          return {
+            plan: entry.plan,
+            dayCount: entry.days.length,
+            nextDayId: next?.id,
+            nextDayName: next?.name,
+          };
+        }),
+      );
+    },
+    [],
+    [],
+  );
 
   const overview = useLiveQuery(async () => {
     const dataset = await loadAnalyticsDataset();
@@ -210,7 +230,7 @@ export default function HomePage() {
           </Link>
         </div>
 
-        {templates.length === 0 ? (
+        {plans.length === 0 ? (
           <EmptyState
             icon={<ClipboardList size={28} aria-hidden="true" />}
             title="Noch keine Trainingspläne"
@@ -224,25 +244,35 @@ export default function HomePage() {
           />
         ) : (
           <ul className="grid gap-2">
-            {templates.slice(0, 5).map((template) => (
-              <li key={template.id} className="min-w-0">
-                <div className="flex items-center gap-2 rounded-2xl border border-border bg-surface p-3">
-                  <Link to={`/plaene/${template.id}`} className="min-w-0 flex-1">
-                    <p className="truncate font-medium">{template.name}</p>
-                  </Link>
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    className="shrink-0"
-                    disabled={Boolean(activeSession)}
-                    onClick={() => void startTemplate(template.id)}
-                  >
-                    <Play size={16} aria-hidden="true" />
-                    Starten
-                  </Button>
-                </div>
-              </li>
-            ))}
+            {plans.slice(0, 5).map((entry) => {
+              const multiDay = entry.dayCount > 1;
+              return (
+                <li key={entry.plan.id} className="min-w-0">
+                  <div className="flex items-center gap-2 rounded-2xl border border-border bg-surface p-3">
+                    <Link to={`/plaene/${entry.plan.id}`} className="min-w-0 flex-1">
+                      <p className="truncate font-medium">{entry.plan.name}</p>
+                      {multiDay && entry.nextDayName ? (
+                        <p className="truncate text-xs text-accent">
+                          Als Nächstes: {entry.nextDayName}
+                        </p>
+                      ) : null}
+                    </Link>
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      className="shrink-0"
+                      disabled={Boolean(activeSession) || !entry.nextDayId}
+                      onClick={() =>
+                        entry.nextDayId && void startTemplate(entry.nextDayId)
+                      }
+                    >
+                      <Play size={16} aria-hidden="true" />
+                      Starten
+                    </Button>
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>
