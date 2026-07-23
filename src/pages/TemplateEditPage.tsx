@@ -100,7 +100,7 @@ export default function TemplateEditPage() {
     <>
       <PageHeader
         title={template.name}
-        subtitle={template.description || `${exercises.length} Übungen`}
+        subtitle={`${exercises.length} ${exercises.length === 1 ? 'Übung' : 'Übungen'}`}
         backTo="/plaene"
         action={
           <Button variant="secondary" size="sm" onClick={() => setPickerOpen(true)}>
@@ -109,6 +109,12 @@ export default function TemplateEditPage() {
           </Button>
         }
       />
+
+      {template.description ? (
+        <p className="mb-4 whitespace-pre-line break-words rounded-2xl border border-border bg-surface p-3 text-sm leading-relaxed text-muted">
+          {template.description}
+        </p>
+      ) : null}
 
       <Link
         to={`/plaene/${template.id}/versionen`}

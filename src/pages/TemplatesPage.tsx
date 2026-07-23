@@ -124,14 +124,13 @@ export default function TemplatesPage() {
           {templates.map((template) => (
             <li
               key={template.id}
-              className="rounded-2xl border border-border bg-surface p-3"
+              className="min-w-0 rounded-2xl border border-border bg-surface p-3"
             >
               <div className="flex items-start justify-between gap-2">
                 <Link to={`/plaene/${template.id}`} className="min-w-0 flex-1">
                   <p className="truncate font-medium">{template.name}</p>
                   <p className="truncate text-sm text-muted">
                     {exerciseCounts?.get(template.id) ?? 0} Übungen
-                    {template.description ? ` · ${template.description}` : ''}
                   </p>
                 </Link>
                 <div className="flex shrink-0 gap-1">
