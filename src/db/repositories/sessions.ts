@@ -20,6 +20,7 @@ import {
   planGroupNormalization,
   roundBoundaryReached,
 } from '@/services/grouping';
+import { advanceScheduleAfterWorkout } from '@/db/repositories/schedules';
 
 export interface SessionExerciseDetail {
   sessionExercise: SessionExercise;
@@ -203,12 +204,24 @@ export async function startSessionFromPreviousSession(
   const source = await getSessionDetail(sourceSessionId);
   if (!source) throw new Error('Die Trainingseinheit wurde nicht gefunden.');
 
+  // Carry the plan attribution so a repeated workout stays analysable under the
+  // plan it came from. The live `planId` link is kept only while that plan still
+  // exists; the name and day position stay as historical snapshots regardless,
+  // and never a stale schedule entry — the current schedule is only advanced
+  // later, from `finishSession`, and only when the completed unit still matches.
+  const sourcePlan = source.session.planId
+    ? await db.trainingPlans.get(source.session.planId)
+    : undefined;
+
   return db.transaction('rw', db.workoutSessions, db.sessionExercises, async () => {
     await assertNoActiveSession();
     const timestamp = nowIso();
     const session: WorkoutSession = {
       id: uuid(),
       templateId: source.session.templateId,
+      planId: sourcePlan?.id,
+      planNameSnapshot: sourcePlan?.name ?? source.session.planNameSnapshot,
+      dayPositionSnapshot: source.session.dayPositionSnapshot,
       name: source.session.name,
       status: 'active',
       startedAt: timestamp,
@@ -746,7 +759,15 @@ export async function finishSession(sessionId: string): Promise<void> {
     db.workoutSessions,
     db.sessionExercises,
     db.workoutSets,
+    db.planSchedules,
+    db.scheduleEntries,
     async () => {
+      // Only the active→completed transition may act. A second or parallel call
+      // (already completed, discarded, or missing) is a no-op, so the set
+      // cleanup never runs twice and the plan schedule never advances twice.
+      const session = await db.workoutSessions.get(sessionId);
+      if (!session || session.status !== 'active') return;
+
       // The rest still running when the workout ends is not a real between-set
       // rest — no further set follows it. End it, but do not record its duration,
       // so it never counts as a met or missed rest in the statistics. Rests
@@ -787,6 +808,14 @@ export async function finishSession(sessionId: string): Promise<void> {
         finishedAt: timestamp,
         updatedAt: timestamp,
       });
+
+      // A workout started from a plan moves that plan's schedule forward exactly
+      // once, here, bound to the completion above. Free workouts (no planId)
+      // never touch a schedule; the call itself is a no-op for the cursor-less
+      // free-rotation and weekly modes and for off-cycle units.
+      if (session.planId) {
+        await advanceScheduleAfterWorkout(session.planId, session.templateId);
+      }
     },
   );
 }

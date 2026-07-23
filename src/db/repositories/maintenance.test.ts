@@ -11,6 +11,8 @@ import {
 } from '@/db/repositories/sessions';
 import { upsertBodyWeightEntry } from '@/db/repositories/bodyWeight';
 import { createEquipmentProfile } from '@/db/repositories/equipmentProfiles';
+import { createPlan } from '@/db/repositories/plans';
+import { addCycleEntry, setScheduleMode } from '@/db/repositories/schedules';
 import { updateSettings } from '@/db/repositories/settings';
 import { deleteTrainingHistory, resetAllData } from '@/db/repositories/maintenance';
 import { resetDatabase } from '@/tests/dbTestUtils';
@@ -38,6 +40,11 @@ async function seedEverything() {
   await upsertBodyWeightEntry({ date: '2026-07-20', weightKg: 80 });
   await createEquipmentProfile('Zuhause', ['Kurzhantel']);
 
+  // A plan with a repeating cycle so both schedule stores hold rows.
+  const plan = await createPlan({ name: 'PPL', splitType: '2-day' });
+  await setScheduleMode(plan.id, 'repeating-cycle');
+  await addCycleEntry(plan.id, { type: 'rest' });
+
   const finished = await startFreeSession('Fertig');
   const se = await addExerciseToSession(finished.id, exercise);
   const set = await addSet(se.id, { restTargetSeconds: 120 });
@@ -64,10 +71,16 @@ describe('deleteTrainingHistory', () => {
 
     // Everything else stays.
     expect(await db.exercises.count()).toBe(1);
-    expect(await db.workoutTemplates.count()).toBe(1);
+    // The orphan "Push" template plus the two days of the 2-day plan.
+    expect(await db.workoutTemplates.count()).toBe(3);
     expect(await db.templateExercises.count()).toBe(1);
     expect(await db.bodyWeightEntries.count()).toBe(1);
     expect(await db.equipmentProfiles.count()).toBe(1);
+    // Plans and their schedules are not training history — they stay. Two plans
+    // exist: the single-day "Push" (from createTemplate) and the 2-day cycle.
+    expect(await db.trainingPlans.count()).toBe(2);
+    expect(await db.planSchedules.count()).toBe(1);
+    expect(await db.scheduleEntries.count()).toBe(3);
   });
 });
 
@@ -83,12 +96,34 @@ describe('resetAllData', () => {
     expect(await db.workoutSessions.count()).toBe(0);
     expect(await db.bodyWeightEntries.count()).toBe(0);
     expect(await db.equipmentProfiles.count()).toBe(0);
+    // The schedule stores are user data too and must be wiped (they were once
+    // forgotten by the reset — 0.2).
+    expect(await db.planSchedules.count()).toBe(0);
+    expect(await db.scheduleEntries.count()).toBe(0);
 
     // Settings exist again, back at their defaults.
     const settings = await db.settings.get('app-settings');
     expect(settings).toBeDefined();
     expect(settings?.darkMode).toBe('dark');
     expect(settings?.voiceAnnouncementsEnabled).toBe(false);
+  });
+
+  it('clears every store the database defines, guarding against a forgotten table', async () => {
+    await seedEverything();
+    await updateSettings({ darkMode: 'light' });
+
+    await resetAllData();
+
+    // A store missing from the reset's table list would still hold rows here.
+    // Settings is the one store that is deliberately recreated with defaults.
+    for (const table of db.tables) {
+      const count = await table.count();
+      if (table.name === 'settings') {
+        expect(count, 'settings is recreated as a single defaults row').toBe(1);
+      } else {
+        expect(count, `store "${table.name}" was not cleared by resetAllData`).toBe(0);
+      }
+    }
   });
 });
 

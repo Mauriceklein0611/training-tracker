@@ -32,7 +32,15 @@ export async function deleteTrainingHistory(): Promise<void> {
   clearTransientAppState('timers');
 }
 
-/** Every table that holds user data — the full reset clears all of them. */
+/**
+ * Every table that holds user data — the full reset clears all of them.
+ *
+ * This must list every store the database defines (`settings` included, it is
+ * recreated with defaults afterwards). A guard test in `maintenance.test.ts`
+ * asserts `db.tables` and this array stay in sync, so a newly added store is
+ * never silently forgotten by the reset (as `planSchedules`/`scheduleEntries`
+ * once were).
+ */
 const ALL_DATA_TABLES = [
   'exercises',
   'trainingPlans',
@@ -47,6 +55,8 @@ const ALL_DATA_TABLES = [
   'aiExports',
   'planImports',
   'equipmentProfiles',
+  'planSchedules',
+  'scheduleEntries',
   'settings',
 ] as const;
 
