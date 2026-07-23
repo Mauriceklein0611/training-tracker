@@ -8,6 +8,13 @@ import type {
 } from '@/types';
 import { nowIso, uuid } from '@/utils/id';
 import { planGroupNormalization } from '@/services/grouping';
+import {
+  createDefaultSchedule,
+  deleteScheduleForPlan,
+  duplicateScheduleForPlan,
+  getPlanScheduleState,
+  removeUnitFromSchedules,
+} from '@/db/repositories/schedules';
 
 /**
  * Training plans and their training days.
@@ -158,22 +165,30 @@ export async function createPlan(input: {
       (input.dayNames?.[index] ?? defaultDayName(index)).trim() || defaultDayName(index),
   );
 
-  return db.transaction('rw', db.trainingPlans, db.workoutTemplates, async () => {
-    const timestamp = nowIso();
-    const plan: TrainingPlan = {
-      id: uuid(),
-      name,
-      description: input.description?.trim() ?? '',
-      splitType: input.splitType,
-      createdAt: timestamp,
-      updatedAt: timestamp,
-    };
-    await db.trainingPlans.add(plan);
-    await db.workoutTemplates.bulkAdd(
-      names.map((dayName, index) => makeDay(plan.id, dayName, index, timestamp)),
-    );
-    return plan;
-  });
+  return db.transaction(
+    'rw',
+    db.trainingPlans,
+    db.workoutTemplates,
+    db.planSchedules,
+    async () => {
+      const timestamp = nowIso();
+      const plan: TrainingPlan = {
+        id: uuid(),
+        name,
+        description: input.description?.trim() ?? '',
+        splitType: input.splitType,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      };
+      await db.trainingPlans.add(plan);
+      await db.workoutTemplates.bulkAdd(
+        names.map((dayName, index) => makeDay(plan.id, dayName, index, timestamp)),
+      );
+      // Every plan starts on a free-rotation schedule (order derived from days).
+      await createDefaultSchedule(plan.id);
+      return plan;
+    },
+  );
 }
 
 export async function updatePlan(
@@ -203,10 +218,14 @@ export async function setPlanDeload(
 export async function deletePlan(planId: string): Promise<void> {
   await db.transaction(
     'rw',
-    db.trainingPlans,
-    db.workoutTemplates,
-    db.templateExercises,
-    db.templateVersions,
+    [
+      db.trainingPlans,
+      db.workoutTemplates,
+      db.templateExercises,
+      db.templateVersions,
+      db.planSchedules,
+      db.scheduleEntries,
+    ],
     async () => {
       const days = await db.workoutTemplates.where('planId').equals(planId).toArray();
       for (const day of days) {
@@ -214,6 +233,7 @@ export async function deletePlan(planId: string): Promise<void> {
         await db.templateVersions.where('templateId').equals(day.id).delete();
       }
       await db.workoutTemplates.where('planId').equals(planId).delete();
+      await deleteScheduleForPlan(planId);
       await db.trainingPlans.delete(planId);
     },
   );
@@ -223,9 +243,13 @@ export async function deletePlan(planId: string): Promise<void> {
 export async function duplicatePlan(planId: string): Promise<TrainingPlan> {
   return db.transaction(
     'rw',
-    db.trainingPlans,
-    db.workoutTemplates,
-    db.templateExercises,
+    [
+      db.trainingPlans,
+      db.workoutTemplates,
+      db.templateExercises,
+      db.planSchedules,
+      db.scheduleEntries,
+    ],
     async () => {
       const source = await db.trainingPlans.get(planId);
       if (!source) throw new Error('Der Trainingsplan wurde nicht gefunden.');
@@ -241,8 +265,10 @@ export async function duplicatePlan(planId: string): Promise<TrainingPlan> {
       };
       await db.trainingPlans.add(copy);
 
+      const dayIdMap = new Map<string, string>();
       for (const day of days) {
         const newDayId = uuid();
+        dayIdMap.set(day.id, newDayId);
         await db.workoutTemplates.add({
           ...day,
           id: newDayId,
@@ -258,6 +284,8 @@ export async function duplicatePlan(planId: string): Promise<TrainingPlan> {
           rows.map((row) => ({ ...row, id: uuid(), templateId: newDayId })),
         );
       }
+      // Copy the schedule (mode, cursor, entries) with unit references remapped.
+      await duplicateScheduleForPlan(planId, copy.id, dayIdMap);
       return copy;
     },
   );
@@ -266,47 +294,23 @@ export async function duplicatePlan(planId: string): Promise<TrainingPlan> {
 // ---- rotation ---------------------------------------------------------
 
 /**
- * The training day to suggest next for a plan, derived from the last *completed*
- * workout of this plan and the current day order.
+ * The training day (workout unit) to suggest next for a plan.
  *
- * - No completed workout yet → the first day.
- * - Otherwise the day after the last completed one, wrapping around to the first.
- * - Active or discarded workouts never advance the rotation (only completed
- *   sessions are considered), so an aborted or running session leaves it be.
- * - If the last trained day was since deleted, the day now at its former
- *   position is used, so a changed order or a removed day still resolves.
+ * This now goes through the plan's {@link PlanSchedule}: the schedule mode
+ * decides how "next" is derived — the day after the last completed unit (free
+ * rotation), the next workout at/after the cycle cursor (repeating cycle), or
+ * the next assigned weekday (weekly). Rest days are skipped for the *start*
+ * suggestion. A plan migrated from before the schedule system is on free
+ * rotation, so its suggestion is unchanged.
  *
- * Older sessions without plan snapshots are matched by their day (templateId).
+ * Returns undefined when the plan has no units or no upcoming workout at all.
  */
 export async function nextDayForPlan(
   planId: string,
+  today: Date = new Date(),
 ): Promise<WorkoutTemplate | undefined> {
-  const days = await daysOfPlan(planId);
-  if (days.length === 0) return undefined;
-  const dayIds = new Set(days.map((day) => day.id));
-
-  const completed = (
-    await db.workoutSessions.where('status').equals('completed').toArray()
-  )
-    .filter(
-      (session) =>
-        session.planId === planId ||
-        (session.templateId != null && dayIds.has(session.templateId)),
-    )
-    .sort((a, b) =>
-      (b.finishedAt ?? b.startedAt).localeCompare(a.finishedAt ?? a.startedAt),
-    );
-
-  const last = completed[0];
-  if (!last) return days[0];
-
-  const lastIndex = days.findIndex((day) => day.id === last.templateId);
-  if (lastIndex < 0) {
-    // The trained day was deleted; resume at whatever now holds its position.
-    const position = Math.min(last.dayPositionSnapshot ?? 0, days.length - 1);
-    return days[Math.max(0, position)];
-  }
-  return days[(lastIndex + 1) % days.length];
+  const state = await getPlanScheduleState(planId, today);
+  return state.nextWorkout?.template;
 }
 
 // ---- day management ---------------------------------------------------
@@ -344,10 +348,14 @@ export class LastDayError extends Error {
 export async function deleteDay(dayId: string): Promise<void> {
   await db.transaction(
     'rw',
-    db.trainingPlans,
-    db.workoutTemplates,
-    db.templateExercises,
-    db.templateVersions,
+    [
+      db.trainingPlans,
+      db.workoutTemplates,
+      db.templateExercises,
+      db.templateVersions,
+      db.planSchedules,
+      db.scheduleEntries,
+    ],
     async () => {
       const day = await db.workoutTemplates.get(dayId);
       if (!day) return;
@@ -357,6 +365,8 @@ export async function deleteDay(dayId: string): Promise<void> {
       await db.templateExercises.where('templateId').equals(dayId).delete();
       await db.templateVersions.where('templateId').equals(dayId).delete();
       await db.workoutTemplates.delete(dayId);
+      // Drop any schedule entries that referenced this unit (cycle/weekly).
+      await removeUnitFromSchedules(dayId);
       await renumberDays(day.planId);
       await db.trainingPlans.update(day.planId, { updatedAt: nowIso() });
     },

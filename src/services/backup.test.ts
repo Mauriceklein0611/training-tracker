@@ -11,6 +11,7 @@ import {
 import { createExercise } from '@/db/repositories/exercises';
 import { addExerciseToTemplate, createTemplate } from '@/db/repositories/templates';
 import { createPlan, getPlanWithDays } from '@/db/repositories/plans';
+import { addCycleEntry, setScheduleMode } from '@/db/repositories/schedules';
 import { createTemplateVersion } from '@/db/repositories/templateVersions';
 import { upsertBodyWeightEntry } from '@/db/repositories/bodyWeight';
 import {
@@ -443,6 +444,60 @@ describe('split system (training plans) round trip', () => {
     expect(
       days.every((day) => day.planId && plans.some((p) => p.id === day.planId)),
     ).toBe(true);
+  });
+});
+
+describe('schedule system round trip', () => {
+  it('includes a default schedule per plan and restores it', async () => {
+    const plan = await createPlan({ name: 'PPL', splitType: '3-day' });
+    const backup = await createBackup();
+    expect(backup.planSchedules.filter((s) => s.planId === plan.id)).toHaveLength(1);
+
+    await resetDatabase();
+    await importBackup(backup, 'replace');
+
+    const schedule = await db.planSchedules.where('planId').equals(plan.id).first();
+    expect(schedule?.mode).toBe('free-rotation');
+  });
+
+  it('preserves a repeating cycle with a rest day across a round trip', async () => {
+    const plan = await createPlan({ name: 'Zyklus', splitType: '2-day' });
+    const [push] = (await getPlanWithDays(plan.id))!.days;
+    await setScheduleMode(plan.id, 'repeating-cycle');
+    await addCycleEntry(plan.id, { type: 'rest', label: 'Erholung' });
+
+    const backup = await createBackup();
+    await resetDatabase();
+    await importBackup(backup, 'replace');
+
+    const schedule = await db.planSchedules.where('planId').equals(plan.id).first();
+    expect(schedule?.mode).toBe('repeating-cycle');
+    const entries = (
+      await db.scheduleEntries.where('scheduleId').equals(schedule!.id).toArray()
+    ).sort((a, b) => a.position - b.position);
+    // Two workout entries (from the reseed) plus the appended rest day.
+    expect(entries).toHaveLength(3);
+    expect(entries[0].templateId).toBe(push.id);
+    expect(entries[2].type).toBe('rest');
+    expect(entries[2].label).toBe('Erholung');
+  });
+
+  it('gives a pre-schedule backup a default free-rotation schedule on restore', async () => {
+    const plan = await createPlan({ name: 'Alt', splitType: 'single' });
+    const raw = JSON.parse(JSON.stringify(await createBackup()));
+    // Simulate a backup written before the schedule system.
+    delete raw.planSchedules;
+    delete raw.scheduleEntries;
+    raw.schemaVersion = 17;
+    const result = validateBackupJson(raw);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    await resetDatabase();
+    await importBackup(result.backup, 'replace');
+
+    const schedule = await db.planSchedules.where('planId').equals(plan.id).first();
+    expect(schedule?.mode).toBe('free-rotation');
   });
 });
 

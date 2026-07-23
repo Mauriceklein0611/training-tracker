@@ -99,6 +99,28 @@ export const workoutTemplateSchema = z.object({
   updatedAt: isoDateTime,
 });
 
+/** Added in schema version 18; the time layout of a plan. One per plan. */
+export const planScheduleSchema = z.object({
+  id,
+  planId: id,
+  mode: z.enum(['free-rotation', 'repeating-cycle', 'weekly']).default('free-rotation'),
+  startDate: isoDate.optional(),
+  cyclePosition: z.number().int().min(0).optional(),
+  createdAt: isoDateTime,
+  updatedAt: isoDateTime,
+});
+
+/** Added in schema version 18; one day within a {@link planScheduleSchema}. */
+export const scheduleEntrySchema = z.object({
+  id,
+  scheduleId: id,
+  position: z.number().int().min(0),
+  type: z.enum(['workout', 'rest']),
+  templateId: id.optional(),
+  weekday: z.number().int().min(0).max(6).optional(),
+  label: z.string().max(120).optional(),
+});
+
 export const aiExportRecordSchema = z.object({
   id,
   fingerprint: z.string().default(''),

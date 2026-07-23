@@ -17,7 +17,7 @@ General rules:
 
 | Format                             | Direction               | Name (in content)                   | Version field                           | Version              | Supported imports |
 | ---------------------------------- | ----------------------- | ----------------------------------- | --------------------------------------- | -------------------- | ----------------- |
-| Full backup                        | export + import         | `app: training-tracker`             | `exportFormatVersion` / `schemaVersion` | format 1 / schema 17 | schema ≤ 17       |
+| Full backup                        | export + import         | `app: training-tracker`             | `exportFormatVersion` / `schemaVersion` | format 1 / schema 18 | schema ≤ 18       |
 | AI analysis export                 | export                  | (AI export doc)                     | `exportVersion`                         | 1                    | —                 |
 | AI response import                 | import                  | `format: training-ai-response`      | `schemaVersion`                         | 1                    | exactly 1         |
 | Plan builder kit                   | export                  | `format: training-plan-builder-kit` | `version`                               | 2                    | —                 |
@@ -30,9 +30,16 @@ General rules:
 - Schema: `backupFileSchema`; parser/validator `validateBackupJson`; exporter
   `createBackup`; importer `importBackup` (merge/replace, one transaction).
 - Contains every table incl. `trainingPlans`, `templateVersions`, `aiAnalyses`,
-  `equipmentProfiles`, `aiExports`, `planImports`, and settings. New tables/fields
-  are added with a `.default([])` or optional so older backups still validate.
-  Newer `schemaVersion` is rejected.
+  `equipmentProfiles`, `planSchedules`, `scheduleEntries`, `aiExports`,
+  `planImports`, and settings. New tables/fields are added with a `.default([])`
+  or optional so older backups still validate. Newer `schemaVersion` is rejected.
+- Schedule system (schema 18): every plan owns one `PlanSchedule`
+  (`free-rotation` | `repeating-cycle` | `weekly`) with `ScheduleEntry` rows for
+  the cycle/weekly modes (workout or rest days). Restoring a pre-schedule backup
+  gives every plan a default free-rotation schedule inside the same transaction
+  (`ensureSchedulesForPlans`, shared with the Dexie v18 upgrade), so the
+  suggested rotation is unchanged. Free-rotation stores no entries — its order is
+  derived from the plan's days.
 - Split system (schema 17): a plan is the parent of one or more days
   (`workoutTemplates`, each with `planId` + `position`). Restoring a pre-split
   backup wraps every orphan day into a single-day plan inside the same
@@ -78,6 +85,11 @@ General rules:
   a content `fingerprint`; re-importing the same package is flagged, not blocked.
 - Fallbacks: missing optional fields default as documented; unknown muscle
   groups are kept as custom values with a preview warning; newer version rejected.
+- **Schedule (schema 18) not yet included:** the package still carries only
+  plans + days + plan-exercises, not the new `PlanSchedule`/`ScheduleEntry`. An
+  imported/shared plan therefore lands on the default free-rotation schedule
+  (same as migration), never a shared repeating cycle or weekly plan. Carrying
+  the schedule in the package is a follow-up (would bump the package to v3).
 - Fixtures: `src/services/planPackage/fixtures.ts` (`validPlanPackage` v2 +
   `validPlanPackageV1`, mutated in tests into invalid / future-version shapes).
   Tests: `planPackage.test.ts` (parse, v1 upgrade, invalid v2 cases, build

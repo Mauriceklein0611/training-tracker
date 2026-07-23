@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import {
+  CalendarRange,
   ChevronLeft,
   ChevronRight,
   Copy,
@@ -42,6 +43,7 @@ import { DELOAD_INTENSITY_LABELS } from '@/services/deload';
 import type { DeloadIntensity } from '@/types';
 import { ExercisePickerDialog } from '@/features/exercises/ExercisePickerDialog';
 import { PlanDayTabs } from '@/features/plans/PlanDayTabs';
+import { ScheduleEditor } from '@/features/plans/ScheduleEditor';
 import { TemplateExerciseRow } from '@/features/templates/TemplateExerciseRow';
 import { TemplateGroupHeader } from '@/features/templates/TemplateGroupHeader';
 import { useActiveSession } from '@/hooks/useActiveSession';
@@ -67,6 +69,7 @@ export default function TemplateEditPage() {
   const [renameDayOpen, setRenameDayOpen] = useState(false);
   const [dayName, setDayName] = useState('');
   const [deleteDayOpen, setDeleteDayOpen] = useState(false);
+  const [scheduleOpen, setScheduleOpen] = useState(false);
 
   const days = plan?.days ?? [];
   // Keep a valid active day even as days are added/removed.
@@ -191,6 +194,18 @@ export default function TemplateEditPage() {
           {plan.plan.description}
         </p>
       ) : null}
+
+      {/* Schedule: how the plan's units are laid out over time (rotation, cycle, week). */}
+      <Button
+        variant="secondary"
+        size="sm"
+        fullWidth
+        className="mb-4 justify-start"
+        onClick={() => setScheduleOpen(true)}
+      >
+        <CalendarRange size={18} className="text-accent" aria-hidden="true" />
+        Zeitplan &amp; Pausentage
+      </Button>
 
       {/* Day navigation — hidden for a single-day plan to stay simple. */}
       {isSingleDay ? null : (
@@ -355,6 +370,15 @@ export default function TemplateEditPage() {
         deloadIntensity={plan.plan.deloadIntensity}
         onClose={() => setSettingsOpen(false)}
       />
+
+      <Dialog
+        open={scheduleOpen}
+        onClose={() => setScheduleOpen(false)}
+        title="Zeitplan"
+        size="lg"
+      >
+        <ScheduleEditor planId={plan.plan.id} />
+      </Dialog>
 
       <Dialog
         open={renameDayOpen}

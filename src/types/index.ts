@@ -141,6 +141,64 @@ export interface WorkoutTemplate {
 }
 
 /**
+ * How the training days of a plan are laid out over time.
+ *
+ * - `free-rotation`: the plan's workout units are cycled in a fixed order; a rest
+ *   day is simply a day the user does not train, never a stored entry.
+ * - `repeating-cycle`: an explicit, ordered list of days — each a workout unit or
+ *   a rest day — that repeats from the start once the last day is reached.
+ * - `weekly`: workout units (or rest) are pinned to fixed weekdays (Mon–Sun).
+ */
+export type ScheduleMode = 'free-rotation' | 'repeating-cycle' | 'weekly';
+
+/**
+ * The time layout of a {@link TrainingPlan}. Exactly one per plan; created
+ * lazily and by migration. Decouples *when* a unit is trained from *what* the
+ * unit is: a {@link WorkoutTemplate} ("Übungseinheit") is a reusable template,
+ * a schedule entry places it (or a rest day) into a rotation, cycle or week.
+ */
+export interface PlanSchedule {
+  id: string;
+  /** Owning plan; one schedule per plan. */
+  planId: string;
+  mode: ScheduleMode;
+  /** Optional anchor date, e.g. the first day of a repeating cycle. */
+  startDate?: ISODate;
+  /**
+   * Cursor into the ordered entries, used only by `repeating-cycle`: the index
+   * of the day that is "up next". Completing that day or skipping a rest day
+   * advances it; it wraps around. Absent/ignored for the other two modes, whose
+   * next day is derived (from completed sessions or the weekday).
+   */
+  cyclePosition?: number;
+  createdAt: ISODateTime;
+  updatedAt: ISODateTime;
+}
+
+/** Whether a schedule day is a training day or a deliberate rest day. */
+export type ScheduleEntryType = 'workout' | 'rest';
+
+/**
+ * One day inside a {@link PlanSchedule}. A `workout` entry references a reusable
+ * workout unit by its stable id ({@link WorkoutTemplate.id}); the same unit may
+ * appear more than once in a cycle. A `rest` entry is a planned pause and
+ * references no unit.
+ */
+export interface ScheduleEntry {
+  id: string;
+  scheduleId: string;
+  /** Stable order within the schedule. In `weekly` mode this equals `weekday`. */
+  position: number;
+  type: ScheduleEntryType;
+  /** The workout unit for a `workout` entry; absent for a `rest` entry. */
+  templateId?: string;
+  /** Weekday 0–6 (Mon–Sun) for `weekly` mode; absent otherwise. */
+  weekday?: number;
+  /** Optional free label, e.g. a custom name for a rest day. */
+  label?: string;
+}
+
+/**
  * A named set of available equipment, e.g. "Zuhause", "Fitnessstudio", "Hotel".
  *
  * When one is active, the exercise picker can hide exercises whose equipment is

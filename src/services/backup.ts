@@ -8,6 +8,8 @@ import {
   equipmentProfileSchema,
   exerciseSchema,
   planImportRecordSchema,
+  planScheduleSchema,
+  scheduleEntrySchema,
   sessionExerciseSchema,
   trainingPlanSchema,
   templateExerciseSchema,
@@ -19,6 +21,7 @@ import {
 import { nowIso } from '@/utils/id';
 import { dayKey } from '@/utils/date';
 import { wrapOrphanTemplatesInPlans } from '@/db/planMigration';
+import { ensureSchedulesForPlans } from '@/db/scheduleMigration';
 
 /**
  * Full technical backup: a lossless dump of every table that can be restored
@@ -50,6 +53,11 @@ export const backupFileSchema = z.object({
   aiAnalyses: z.array(aiAnalysisSchema).default([]),
   // Added in schema version 13.
   equipmentProfiles: z.array(equipmentProfileSchema).default([]),
+  // Added in schema version 18; defaulted so older backups still validate. A
+  // pre-schedule backup is given a default free-rotation schedule per plan on
+  // restore (see ensureSchedulesForPlans below).
+  planSchedules: z.array(planScheduleSchema).default([]),
+  scheduleEntries: z.array(scheduleEntrySchema).default([]),
   // Added in schema version 11 (store) / covered here since v15; defaulted so
   // older backups without it still validate and import as an empty list.
   aiExports: z.array(aiExportRecordSchema).default([]),
@@ -71,6 +79,8 @@ export interface BackupCounts {
   bodyWeightEntries: number;
   aiAnalyses: number;
   equipmentProfiles: number;
+  planSchedules: number;
+  scheduleEntries: number;
   aiExports: number;
   planImports: number;
 }
@@ -88,6 +98,8 @@ export function countBackupRecords(backup: BackupFile): BackupCounts {
     bodyWeightEntries: backup.bodyWeightEntries.length,
     aiAnalyses: backup.aiAnalyses.length,
     equipmentProfiles: backup.equipmentProfiles.length,
+    planSchedules: backup.planSchedules.length,
+    scheduleEntries: backup.scheduleEntries.length,
     aiExports: backup.aiExports.length,
     planImports: backup.planImports.length,
   };
@@ -105,6 +117,8 @@ export const BACKUP_COUNT_LABELS: Record<keyof BackupCounts, string> = {
   bodyWeightEntries: 'Körpergewichtseinträge',
   aiAnalyses: 'KI-Analysen',
   equipmentProfiles: 'Equipment-Profile',
+  planSchedules: 'Zeitpläne',
+  scheduleEntries: 'Zeitplan-Einträge',
   aiExports: 'KI-Export-Vermerke',
   planImports: 'Plan-Import-Vermerke',
 };
@@ -124,6 +138,8 @@ export async function createBackup(database: TrainingDatabase = db): Promise<Bac
     templateVersions,
     aiAnalyses,
     equipmentProfiles,
+    planSchedules,
+    scheduleEntries,
     aiExports,
     planImports,
   ] = await Promise.all([
@@ -139,6 +155,8 @@ export async function createBackup(database: TrainingDatabase = db): Promise<Bac
     database.templateVersions.toArray(),
     database.aiAnalyses.toArray(),
     database.equipmentProfiles.toArray(),
+    database.planSchedules.toArray(),
+    database.scheduleEntries.toArray(),
     database.aiExports.toArray(),
     database.planImports.toArray(),
   ]);
@@ -160,6 +178,8 @@ export async function createBackup(database: TrainingDatabase = db): Promise<Bac
     bodyWeightEntries,
     aiAnalyses,
     equipmentProfiles,
+    planSchedules,
+    scheduleEntries,
     aiExports,
     planImports,
   });
@@ -281,6 +301,8 @@ function emptyCounts(): BackupCounts {
     bodyWeightEntries: 0,
     aiAnalyses: 0,
     equipmentProfiles: 0,
+    planSchedules: 0,
+    scheduleEntries: 0,
     aiExports: 0,
     planImports: 0,
   };
@@ -298,6 +320,8 @@ const TABLE_KEYS = [
   'bodyWeightEntries',
   'aiAnalyses',
   'equipmentProfiles',
+  'planSchedules',
+  'scheduleEntries',
   'aiExports',
   'planImports',
 ] as const;
@@ -335,6 +359,8 @@ export async function importBackup(
       database.bodyWeightEntries,
       database.aiAnalyses,
       database.equipmentProfiles,
+      database.planSchedules,
+      database.scheduleEntries,
       database.aiExports,
       database.planImports,
       database.settings,
@@ -386,6 +412,11 @@ export async function importBackup(
       // A backup written before the split system (schema < 17) carries days
       // without an owning plan; wrap them so every day belongs to a plan.
       await wrapOrphanTemplatesInPlans(database.trainingPlans, database.workoutTemplates);
+
+      // A backup written before the schedule system (schema < 18) has no
+      // schedules; give every plan a default free-rotation schedule so the
+      // restored plans behave exactly as they did before.
+      await ensureSchedulesForPlans(database.trainingPlans, database.planSchedules);
 
       // Enforce the "at most one active session" invariant after any import.
       const active = await database.workoutSessions

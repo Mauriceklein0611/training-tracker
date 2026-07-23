@@ -7,6 +7,8 @@ import type {
   BodyWeightEntry,
   EquipmentProfile,
   Exercise,
+  PlanSchedule,
+  ScheduleEntry,
   SessionExercise,
   TemplateExercise,
   TemplateVersion,
@@ -17,6 +19,7 @@ import type {
 } from '@/types';
 import { nowIso } from '@/utils/id';
 import { wrapOrphanTemplatesInPlans } from '@/db/planMigration';
+import { ensureSchedulesForPlans } from '@/db/scheduleMigration';
 
 /**
  * Current database schema version.
@@ -24,7 +27,7 @@ import { wrapOrphanTemplatesInPlans } from '@/db/planMigration';
  * Bump this together with a new `.version()` block below and record the change
  * in MIGRATIONS so the settings screen can show what the database went through.
  */
-export const SCHEMA_VERSION = 17;
+export const SCHEMA_VERSION = 18;
 
 export const MIGRATIONS: { version: number; description: string }[] = [
   { version: 1, description: 'Initiales Schema: Übungen, Pläne, Einheiten, Sätze.' },
@@ -134,6 +137,15 @@ export const MIGRATIONS: { version: number; description: string }[] = [
       'genau einem Tag („Tag A“) überführt; Übungen, Reihenfolge, Ziele, ' +
       'Versionen und Historie bleiben unverändert.',
   },
+  {
+    version: 18,
+    description:
+      'Zeitplan-System: jeder Plan erhält einen Zeitplan (freie Rotation, ' +
+      'wiederholender Zyklus oder Wochenplan) mit Einträgen für Trainings- und ' +
+      'Pausentage. Bestehende Pläne bekommen eine freie Rotation aus ihren ' +
+      'Tagen in bisheriger Reihenfolge; die vorgeschlagene Rotation bleibt damit ' +
+      'unverändert.',
+  },
 ];
 
 export class TrainingDatabase extends Dexie {
@@ -150,6 +162,8 @@ export class TrainingDatabase extends Dexie {
   aiExports!: Table<AiExportRecord, string>;
   planImports!: Table<PlanImportRecord, string>;
   equipmentProfiles!: Table<EquipmentProfile, string>;
+  planSchedules!: Table<PlanSchedule, string>;
+  scheduleEntries!: Table<ScheduleEntry, string>;
   settings!: Table<AppSettings, string>;
 
   constructor(name = 'training-tracker') {
@@ -437,6 +451,29 @@ export class TrainingDatabase extends Dexie {
           .toCollection()
           .modify((settings) => {
             settings.schemaVersion = 17;
+          });
+      });
+
+    // ---- v18 ------------------------------------------------------------
+    // Schedule system: new planSchedules + scheduleEntries stores. Every plan
+    // gains a free-rotation schedule built from its days in their existing
+    // order, so the suggested rotation is unchanged; rest days and the other
+    // modes only ever come from a later user edit.
+    this.version(18)
+      .stores({
+        planSchedules: 'id, planId',
+        scheduleEntries: 'id, scheduleId, templateId, [scheduleId+position]',
+      })
+      .upgrade(async (tx) => {
+        await ensureSchedulesForPlans(
+          tx.table<TrainingPlan, string>('trainingPlans'),
+          tx.table<PlanSchedule, string>('planSchedules'),
+        );
+        await tx
+          .table<AppSettings>('settings')
+          .toCollection()
+          .modify((settings) => {
+            settings.schemaVersion = 18;
           });
       });
   }
