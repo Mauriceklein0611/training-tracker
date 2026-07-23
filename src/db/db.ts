@@ -29,7 +29,7 @@ import { ensureSchedulesForPlans } from '@/db/scheduleMigration';
  * Bump this together with a new `.version()` block below and record the change
  * in MIGRATIONS so the settings screen can show what the database went through.
  */
-export const SCHEMA_VERSION = 19;
+export const SCHEMA_VERSION = 20;
 
 export const MIGRATIONS: { version: number; description: string }[] = [
   { version: 1, description: 'Initiales Schema: Übungen, Pläne, Einheiten, Sätze.' },
@@ -154,6 +154,13 @@ export const MIGRATIONS: { version: number; description: string }[] = [
       'Bibliothek der Übungseinheiten: wiederverwendbare Einheiten und ihre ' +
       'Übungen als eigene Tabellen. Bestehende Pläne und Trainings bleiben ' +
       'unverändert; neue Herkunfts- und Direktstart-Snapshots sind optional.',
+  },
+  {
+    version: 20,
+    description:
+      'System-Übungskatalog: Übungen erhalten eine Herkunft (System/Eigene) und ' +
+      'einen stabilen Katalogschlüssel. Bestehende Übungen werden als „Eigene" ' +
+      'markiert; der kuratierte Katalog wird beim Start idempotent ergänzt.',
   },
 ];
 
@@ -505,6 +512,31 @@ export class TrainingDatabase extends Dexie {
           .toCollection()
           .modify((settings) => {
             settings.schemaVersion = 19;
+          });
+      });
+
+    // ---- v20 ------------------------------------------------------------
+    // Exercise origin + catalog key. Every existing exercise is a user creation,
+    // so it becomes `custom`; the curated system catalog is seeded separately at
+    // app start (idempotent, keyed by catalogKey) so it is not baked into this
+    // migration. New indexes let the origin filter and the seeder query quickly.
+    this.version(20)
+      .stores({
+        exercises:
+          'id, name, primaryMuscleGroup, equipment, archived, origin, catalogKey',
+      })
+      .upgrade(async (tx) => {
+        await tx
+          .table<Exercise, string>('exercises')
+          .toCollection()
+          .modify((exercise) => {
+            if (!exercise.origin) exercise.origin = 'custom';
+          });
+        await tx
+          .table<AppSettings>('settings')
+          .toCollection()
+          .modify((settings) => {
+            settings.schemaVersion = 20;
           });
       });
   }

@@ -1,5 +1,5 @@
 import { db } from '@/db/db';
-import type { Exercise } from '@/types';
+import type { Exercise, ExerciseOrigin } from '@/types';
 import { nowIso, uuid } from '@/utils/id';
 
 export type ExerciseDraft = Omit<
@@ -25,6 +25,10 @@ export async function createExercise(draft: ExerciseDraft): Promise<Exercise> {
   const timestamp = nowIso();
   const exercise: Exercise = {
     ...draft,
+    // A user-created exercise is custom and never carries a catalog key, so the
+    // system seeder can never adopt or overwrite it.
+    origin: draft.origin ?? 'custom',
+    catalogKey: undefined,
     archived: draft.archived ?? false,
     id: uuid(),
     createdAt: timestamp,
@@ -98,19 +102,22 @@ export function collectFilterValues(exercises: Exercise[]): {
   };
 }
 
-/** Case-insensitive search over name, muscle groups and equipment. */
+/** Case-insensitive search over name, synonyms, muscle groups and equipment. */
 export function filterExercises(
   exercises: Exercise[],
   options: {
     search?: string;
     muscleGroup?: string;
     equipment?: string;
+    /** 'system' or 'custom' to restrict by provenance; absent origin is custom. */
+    origin?: ExerciseOrigin;
     showArchived?: boolean;
   },
 ): Exercise[] {
   const search = options.search?.trim().toLowerCase() ?? '';
   return exercises.filter((exercise) => {
     if (!options.showArchived && exercise.archived) return false;
+    if (options.origin && (exercise.origin ?? 'custom') !== options.origin) return false;
     if (options.muscleGroup && options.muscleGroup !== exercise.primaryMuscleGroup) {
       if (!exercise.secondaryMuscleGroups.includes(options.muscleGroup)) return false;
     }
@@ -121,6 +128,7 @@ export function filterExercises(
       exercise.primaryMuscleGroup,
       exercise.equipment,
       ...exercise.secondaryMuscleGroups,
+      ...(exercise.searchTerms ?? []),
     ]
       .join(' ')
       .toLowerCase();

@@ -64,9 +64,26 @@ export interface ExerciseGrouping {
   groupRestMode?: GroupRestMode;
 }
 
+/** Where an exercise came from: the curated system catalog or the user. */
+export type ExerciseOrigin = 'system' | 'custom';
+
 export interface Exercise {
   id: string;
   name: string;
+  /**
+   * Provenance. `system` exercises come from the curated catalog and carry a
+   * stable {@link Exercise.catalogKey}; `custom` ones are user-created. Absent on
+   * exercises written before the catalog existed — treated as `custom`.
+   */
+  origin?: ExerciseOrigin;
+  /**
+   * Stable, version-independent key for a system exercise, used to seed
+   * idempotently (never duplicate on update, never overwrite a user edit).
+   * Absent for custom exercises.
+   */
+  catalogKey?: string;
+  /** Extra search terms (German/English synonyms), matched by the exercise search. */
+  searchTerms?: string[];
   primaryMuscleGroup: string;
   secondaryMuscleGroups: string[];
   equipment: string;

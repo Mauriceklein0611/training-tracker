@@ -60,13 +60,24 @@ Enum-, Feld- oder Versionsänderung. Reset betrifft kein Import/Export-Format.
   Übungen mit Zielen + Supersatz/Zirkel-Gruppen). Verlinkt aus „Mehr".
 - **1.3:** „Als Übungseinheit in Bibliothek speichern" in der Plan-Tag-Ansicht.
 
+### Phase 2 — System-Übungskatalog
+
+- **2.1/2.2 Modell + Seeding:** `Exercise` erhält `origin` (`system`|`custom`,
+  fehlend = custom), stabilen `catalogKey` und `searchTerms`. Katalog
+  `constants/exerciseCatalog.ts` (~93 Übungen, alle Muskelgruppen, keine
+  Bilder/medizinischen Aussagen). Idempotenter Seeder
+  `services/exerciseSeed.ts` (Schlüssel = `catalogKey`: fügt nur Fehlendes
+  hinzu, überschreibt nie Nutzeredits, keine Duplikate). Dexie v20 (Indizes
+  `origin`/`catalogKey`, bestehende Übungen → `custom`). Seeding beim App-Start
+  (`DatabaseGate`, nicht-fatal) und nach vollem Reset (Fresh-Install-Parität).
+- **2.3 Suche/Filter:** `filterExercises` durchsucht auch `searchTerms` und
+  filtert nach Herkunft; ExercisesPage hat Herkunft-Filter + „System"-Badge.
+
 ## Offen (nächste Schritte, in Roadmap-Reihenfolge)
 
 - **Phase A Rest:** Trainingsplan-Paket (Sharing) trägt den Zeitplan noch nicht
   mit → bräuchte plan-package v3. Home/Templates zeigen Rest-Tage in der Vorschau
   noch nicht. Übungseinheiten-Paket (Phase 7.6) noch offen.
-- **Phase 2** — Vordefinierter Übungskatalog (System vs. custom, idempotentes
-  Seeding).
 - **Phase 3** — Plan-Dashboard, Ziele/Regeln, `PlanUsagePeriod`.
 - **Phase 4** — Zeitplan-Kalender (geplant vs. tatsächlich, Ausnahmen,
   Session-Snapshots `scheduleEntryId`/geplantes Datum).
@@ -87,8 +98,9 @@ Enum-, Feld- oder Versionsänderung. Reset betrifft kein Import/Export-Format.
 
 ### Nächster exakter Schritt
 
-Phase 2 beginnen: kuratierter System-Übungskatalog (~80–120 Übungen) mit stabilen
-`catalogKey`s, Herkunft `system`|`custom` auf `Exercise`, idempotentem Seeding
-(kein Duplikat bei App-Update, keine Überschreibung eigener Übungen), Suche/Filter
-nach Herkunft. Erst Datenmodell (`origin` + `catalogKey`, Seeding-Service mit
-Test), dann Katalogdaten, dann Filter-UI in der bestehenden Übungsliste.
+Phase 3 beginnen: Plan-Metadaten + Ziele/Regeln + `PlanUsagePeriod`
+(genau ein aktiver Plan, Nutzungszeiträume für die spätere Analysezuordnung).
+Erst `TrainingPlan` um validierte optionale Felder erweitern (Zieltyp, Fokus,
+Einheiten/Woche, Start/Ende) + `PlanUsagePeriod`-Tabelle (Dexie v21, Backup,
+Reset, Format-Doc) mit Tests, dann Plan-Dashboard-UI (Übersichtskennzahlen aus
+Rohdaten abgeleitet, nichts erfinden).

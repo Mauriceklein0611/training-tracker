@@ -41,6 +41,12 @@ General rules:
   `workoutUnitTemplateId` + `workoutUnitNameSnapshot` (direct start without a
   plan). All optional/defaulted, so a pre-library backup restores with an empty
   library and no migration of existing rows.
+- Exercise catalog (schema 20): exercises gain optional `origin`
+  (`system`/`custom`), `catalogKey` and `searchTerms`. Absent `origin` is treated
+  as `custom`, so pre-catalog backups restore unchanged. The curated system
+  catalog is not part of the backup — it is re-seeded idempotently by
+  `seedSystemExercises` (keyed by `catalogKey`) on app start and after a reset,
+  so importing a backup never duplicates system exercises.
 - Schedule system (schema 18): every plan owns one `PlanSchedule`
   (`free-rotation` | `repeating-cycle` | `weekly`) with `ScheduleEntry` rows for
   the cycle/weekly modes (workout or rest days). Restoring a pre-schedule backup

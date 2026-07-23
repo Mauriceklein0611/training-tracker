@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { openDatabase } from '@/db/db';
+import { seedSystemExercises } from '@/services/exerciseSeed';
 import { requestPersistentStorage } from '@/services/storage';
 import { Button } from '@/components/ui/Button';
 
@@ -22,6 +23,13 @@ export function DatabaseGate({ children }: { children: ReactNode }) {
     void (async () => {
       try {
         await openDatabase();
+        // Top up the curated system exercise catalog (idempotent). A failure
+        // here must not keep the app from opening — it is only reference data.
+        try {
+          await seedSystemExercises();
+        } catch {
+          /* ignore — the app works without the extra catalog entries */
+        }
         if (cancelled) return;
         setState({ status: 'ready' });
         // Ask the browser to keep the data. Declined or unsupported is fine —

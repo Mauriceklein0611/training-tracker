@@ -1,5 +1,6 @@
 import { db, ensureSettings } from '@/db/db';
 import { clearTransientAppState } from '@/services/appState';
+import { seedSystemExercises } from '@/services/exerciseSeed';
 
 /**
  * Destructive maintenance actions.
@@ -77,6 +78,9 @@ export async function resetAllData(): Promise<void> {
   );
   // Drop transient state kept outside the database (timer, theme) too.
   clearTransientAppState('all');
-  // Recreate the settings singleton with fresh defaults.
+  // Recreate the settings singleton with fresh defaults and re-seed the curated
+  // system exercise catalog, so a reset lands on the same state as a fresh
+  // install rather than an empty exercise list.
   await ensureSettings();
+  await seedSystemExercises();
 }

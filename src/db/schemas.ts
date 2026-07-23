@@ -53,6 +53,11 @@ const groupingFields = {
 export const exerciseSchema = z.object({
   id,
   name: z.string().min(1, 'Name darf nicht leer sein'),
+  // Added in schema version 20; optional so older backups still validate and
+  // import as custom exercises (absent origin is treated as custom).
+  origin: z.enum(['system', 'custom']).optional(),
+  catalogKey: z.string().max(80).optional(),
+  searchTerms: z.array(z.string().max(60)).max(40).optional(),
   primaryMuscleGroup: z.string().default(''),
   secondaryMuscleGroups: z.array(z.string()).default([]),
   equipment: z.string().default(''),

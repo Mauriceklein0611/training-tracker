@@ -19,6 +19,7 @@ import {
   deleteTrainingHistory,
   resetAllData,
 } from '@/db/repositories/maintenance';
+import { SYSTEM_EXERCISES } from '@/constants/exerciseCatalog';
 import { resetDatabase } from '@/tests/dbTestUtils';
 import type { Exercise } from '@/types';
 
@@ -95,7 +96,11 @@ describe('resetAllData', () => {
 
     await resetAllData();
 
-    expect(await db.exercises.count()).toBe(0);
+    // Exercises are wiped and then re-seeded with the system catalog, so the
+    // user's custom exercise is gone and only system entries remain.
+    const exercises = await db.exercises.toArray();
+    expect(exercises).toHaveLength(SYSTEM_EXERCISES.length);
+    expect(exercises.every((exercise) => exercise.origin === 'system')).toBe(true);
     expect(await db.workoutTemplates.count()).toBe(0);
     expect(await db.workoutSessions.count()).toBe(0);
     expect(await db.bodyWeightEntries.count()).toBe(0);
@@ -126,11 +131,16 @@ describe('resetAllData', () => {
     await resetAllData();
 
     // A store missing from the reset's table list would still hold rows here.
-    // Settings is the one store that is deliberately recreated with defaults.
+    // Two stores are deliberately repopulated to match a fresh install: settings
+    // (one defaults row) and exercises (the re-seeded system catalog).
     for (const table of db.tables) {
       const count = await table.count();
       if (table.name === 'settings') {
         expect(count, 'settings is recreated as a single defaults row').toBe(1);
+      } else if (table.name === 'exercises') {
+        expect(count, 'exercises are re-seeded with the system catalog').toBe(
+          SYSTEM_EXERCISES.length,
+        );
       } else {
         expect(count, `store "${table.name}" was not cleared by resetAllData`).toBe(0);
       }

@@ -17,7 +17,7 @@ import {
 import { ExerciseFormDialog } from '@/features/exercises/ExerciseFormDialog';
 import { useSettings } from '@/hooks/useSettings';
 import { useToast } from '@/hooks/useToast';
-import type { Exercise } from '@/types';
+import type { Exercise, ExerciseOrigin } from '@/types';
 import { MuscleGroupChips } from '@/features/exercises/MuscleGroupChips';
 import { TRACKING_TYPE_LABELS, WEIGHT_MODE_LABELS } from '@/utils/format';
 
@@ -29,6 +29,7 @@ export default function ExercisesPage() {
   const [search, setSearch] = useState('');
   const [muscleGroup, setMuscleGroup] = useState('');
   const [equipment, setEquipment] = useState('');
+  const [origin, setOrigin] = useState<'' | ExerciseOrigin>('');
   const [showArchived, setShowArchived] = useState(false);
   const [editing, setEditing] = useState<Exercise | undefined>();
   const [formOpen, setFormOpen] = useState(false);
@@ -36,8 +37,15 @@ export default function ExercisesPage() {
 
   const filters = useMemo(() => collectFilterValues(exercises), [exercises]);
   const visible = useMemo(
-    () => filterExercises(exercises, { search, muscleGroup, equipment, showArchived }),
-    [exercises, search, muscleGroup, equipment, showArchived],
+    () =>
+      filterExercises(exercises, {
+        search,
+        muscleGroup,
+        equipment,
+        origin: origin || undefined,
+        showArchived,
+      }),
+    [exercises, search, muscleGroup, equipment, origin, showArchived],
   );
   const existingNames = useMemo(
     () => exercises.map((exercise) => exercise.name),
@@ -108,9 +116,18 @@ export default function ExercisesPage() {
           label="Suchen"
           type="search"
           value={search}
-          placeholder="Name, Muskelgruppe, Equipment"
+          placeholder="Name, Synonym, Muskelgruppe, Equipment"
           onChange={(event) => setSearch(event.target.value)}
         />
+        <SelectField
+          label="Herkunft"
+          value={origin}
+          onChange={(event) => setOrigin(event.target.value as '' | ExerciseOrigin)}
+        >
+          <option value="">Alle</option>
+          <option value="system">Systemübungen</option>
+          <option value="custom">Eigene Übungen</option>
+        </SelectField>
         <div className="grid grid-cols-2 gap-3">
           <SelectField
             label="Muskelgruppe"
@@ -151,7 +168,7 @@ export default function ExercisesPage() {
           title={exercises.length === 0 ? 'Noch keine Übungen' : 'Keine Treffer'}
           description={
             exercises.length === 0
-              ? 'Lege deine Übungen selbst an — die App bringt bewusst keine vorgefertigten Daten mit. Für jede Übung legst du fest, wie sie erfasst wird und wie das Gewicht zu verstehen ist.'
+              ? 'Die App bringt einen Katalog klassischer Übungen mit. Lege zusätzlich eigene Übungen an und bestimme, wie sie erfasst werden und wie das Gewicht zu verstehen ist.'
               : 'Passe Suche oder Filter an.'
           }
           action={
@@ -180,6 +197,9 @@ export default function ExercisesPage() {
                 <div className="min-w-0">
                   <p className="flex flex-wrap items-center gap-2 font-medium">
                     <span className="truncate">{exercise.name}</span>
+                    {exercise.origin === 'system' ? (
+                      <Badge tone="accent">System</Badge>
+                    ) : null}
                     {exercise.archived ? <Badge tone="warning">Archiviert</Badge> : null}
                   </p>
                   {exercise.primaryMuscleGroup ||
