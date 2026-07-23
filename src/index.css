@@ -72,6 +72,9 @@
     background-color: var(--bg);
     /* Prevent iOS from enlarging text in landscape. */
     -webkit-text-size-adjust: 100%;
+    /* Always reserve the scrollbar gutter so switching between a scrolling and
+     * a non-scrolling tab does not shift the centred column sideways. */
+    scrollbar-gutter: stable;
   }
 
   body {

@@ -225,19 +225,15 @@ export default function HomePage() {
         ) : (
           <ul className="grid gap-2">
             {templates.slice(0, 5).map((template) => (
-              <li key={template.id}>
+              <li key={template.id} className="min-w-0">
                 <div className="flex items-center gap-2 rounded-2xl border border-border bg-surface p-3">
                   <Link to={`/plaene/${template.id}`} className="min-w-0 flex-1">
                     <p className="truncate font-medium">{template.name}</p>
-                    {template.description ? (
-                      <p className="truncate text-sm text-muted">
-                        {template.description}
-                      </p>
-                    ) : null}
                   </Link>
                   <Button
                     variant="primary"
                     size="sm"
+                    className="shrink-0"
                     disabled={Boolean(activeSession)}
                     onClick={() => void startTemplate(template.id)}
                   >

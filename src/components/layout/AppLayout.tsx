@@ -23,7 +23,10 @@ export function AppLayout() {
       <main
         id="main"
         className={cn(
-          'mx-auto w-full max-w-2xl px-4',
+          // overflow-x: clip stops a single too-wide child from spawning a
+          // horizontal scrollbar (the "jitter") without turning the column into
+          // a scroll container, so the sticky header keeps working.
+          'mx-auto w-full max-w-2xl overflow-x-clip px-4',
           isLiveSession ? 'pb-8' : 'pb-[calc(72px+env(safe-area-inset-bottom,0px))]',
         )}
       >
