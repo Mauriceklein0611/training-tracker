@@ -107,6 +107,21 @@ export const trainingPlanSchema = z.object({
   updatedAt: isoDateTime,
 });
 
+/** Added in schema version 22; a time-boxed 7-day deload for a plan. */
+export const planDeloadPeriodSchema = z.object({
+  id,
+  planId: id,
+  intensity: z.enum(['light', 'medium', 'strong']),
+  startDate: isoDate,
+  endDate: isoDate,
+  setReductionPercent: z.number().min(0).max(1).default(0.4),
+  durationReductionPercent: z.number().min(0).max(1).default(0.3),
+  addedRir: z.number().int().min(0).max(10).default(2),
+  endedEarlyAt: isoDateTime.optional(),
+  createdAt: isoDateTime,
+  updatedAt: isoDateTime,
+});
+
 /** Added in schema version 21; a span during which a plan was the active plan. */
 export const planUsagePeriodSchema = z.object({
   id,
@@ -274,6 +289,8 @@ export const workoutSessionSchema = z.object({
   // Added in schema version 19; set when started directly from a library unit.
   workoutUnitTemplateId: id.optional(),
   workoutUnitNameSnapshot: z.string().optional(),
+  // Added in schema version 22; marks a session started during a plan deload.
+  deloadIntensity: z.enum(['light', 'medium', 'strong']).optional(),
   name: z.string().default('Training'),
   status: z.enum(['active', 'completed']),
   startedAt: isoDateTime,

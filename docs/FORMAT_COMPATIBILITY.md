@@ -54,6 +54,11 @@ General rules:
   `planUsagePeriods` store records the spans a plan was active; `settings`
   gains optional `activePlanId`. All optional/defaulted, so older backups
   restore unchanged with no active plan and no usage history.
+- Time-boxed deload (schema 22): a new `planDeloadPeriods` store holds 7-day
+  deload windows per plan with snapshotted reductions; sessions gain an optional
+  `deloadIntensity` marker. Optional/defaulted, so older backups restore with no
+  deload history. The legacy plan-level `deloadIntensity` toggle still validates
+  and is applied as a set-only fallback when no period is active.
 - Schedule system (schema 18): every plan owns one `PlanSchedule`
   (`free-rotation` | `repeating-cycle` | `weekly`) with `ScheduleEntry` rows for
   the cycle/weekly modes (workout or rest days). Restoring a pre-schedule backup

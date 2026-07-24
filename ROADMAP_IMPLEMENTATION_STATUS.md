@@ -109,6 +109,26 @@ Enum-, Feld- oder Versionsänderung. Reset betrifft kein Import/Export-Format.
   eigenes Modell + Aktionen mit Vorschau/Bestätigung; Session-Snapshots
   `scheduleEntryId`/`plannedDate`/`scheduleMode` (4.4) für volle Historientreue.
 
+### Phase 5 — Zeitboxierter 7-Tage-Deload
+
+- **Modell (Dexie v22):** `PlanDeloadPeriod` (Start/Ende = 7 lokale Tage inkl.
+  Starttag, Intensität, gesnapshottete Reduktionen Sätze/Dauer/RIR,
+  `endedEarlyAt`). `WorkoutSession.deloadIntensity` markiert Deload-Trainings.
+  Backup + Reset + Format-Doc.
+- **Rechner (`services/deload.ts`, rein):** `DELOAD_DEFAULTS`, `deloadDuration`,
+  `deloadEndDate`, `isDeloadActiveOn`, `deloadRemainingDays` — lokale
+  Kalendertage, kein Überschreiben der Planwerte.
+- **Repo (`db/repositories/planDeload.ts`):** `startDeload` (nur ein aktiver,
+  Snapshots), `endDeloadEarly` (Ende auf heute), `getActiveDeload`,
+  automatisches Ende durch Datumsablauf.
+- **Integration:** `startSessionFromTemplate` nutzt aktiven Deload (Sätze +
+  Zieldauer reduziert, Session markiert); alter `deloadIntensity`-Toggle bleibt
+  als reiner Satz-Fallback. UI `PlanDeloadCard` (starten/aktiv+Resttage/beenden).
+- **Offen in Phase 5:** Gewichtsempfehlungs-Reduktion (es gibt keinen
+  gespeicherten Gewichts-Zielwert → nichts erfinden; käme mit Progressions-
+  Empfehlung), per-Übung original/effective-Snapshots, Deload-Filter in der
+  Analyse (kommt mit Phase 6), Ablösen des Legacy-Toggles (Phase 8).
+
 ## Offen (nächste Schritte, in Roadmap-Reihenfolge)
 
 - **Phase A Rest:** Trainingsplan-Paket (Sharing) trägt den Zeitplan noch nicht
@@ -133,11 +153,10 @@ Enum-, Feld- oder Versionsänderung. Reset betrifft kein Import/Export-Format.
 
 ### Nächster exakter Schritt
 
-Phase 5 beginnen: zeitboxierter 7-Tage-Deload (ersetzt den heutigen
-`deloadIntensity`-Toggle). `PlanDeloadPeriod` (Start/Ende, Intensität, konkrete
-Einstellungs-Snapshots), automatisches Ende nach 7 lokalen Tagen, vorzeitiges
-Beenden, nur ein aktiver Deload/Plan. Session-Snapshots original/effective (Sätze,
-Wdh./Dauer, Gewichtsempfehlung nur aus vorhandenem Ausgangswert, gerundet).
-Analyse-Filter „Deload separat/ausblenden". Erst Modell (Dexie v22) + reiner
-Deload-Rechner mit Tests, dann Start-Integration + UI. Alternativ vorher die
-offenen Phase-4-Ausnahmen nachziehen.
+Phase 6 beginnen: Analyse auf vier Ebenen (Zeitraum, Trainingsplan-Vergleich,
+Übungseinheiten-Vergleich, Übungshistorie). Vorhandene Berechnungslogik
+wiederverwenden (kein zweiter Analytics-Motor), um Filter/Gruppierung erweitern —
+u. a. **Deload-Filter** (einbeziehen/ausblenden/separat) über den neuen
+`session.deloadIntensity`-Marker, Normalisierung pro Woche, Zuordnung über
+`PlanUsagePeriod` mit Unsicherheitsanzeige bei Überlappung. Erst reine
+Vergleichs-/Filterfunktionen mit Tests, dann die Analyse-Modus-UI.

@@ -8,6 +8,7 @@ import {
   equipmentProfileSchema,
   exerciseSchema,
   planImportRecordSchema,
+  planDeloadPeriodSchema,
   planScheduleSchema,
   planUsagePeriodSchema,
   scheduleEntrySchema,
@@ -67,6 +68,8 @@ export const backupFileSchema = z.object({
   workoutUnitTemplateExercises: z.array(workoutUnitTemplateExerciseSchema).default([]),
   // Added in schema version 21; defaulted so older backups still validate.
   planUsagePeriods: z.array(planUsagePeriodSchema).default([]),
+  // Added in schema version 22; defaulted so older backups still validate.
+  planDeloadPeriods: z.array(planDeloadPeriodSchema).default([]),
   // Added in schema version 11 (store) / covered here since v15; defaulted so
   // older backups without it still validate and import as an empty list.
   aiExports: z.array(aiExportRecordSchema).default([]),
@@ -93,6 +96,7 @@ export interface BackupCounts {
   workoutUnitTemplates: number;
   workoutUnitTemplateExercises: number;
   planUsagePeriods: number;
+  planDeloadPeriods: number;
   aiExports: number;
   planImports: number;
 }
@@ -115,6 +119,7 @@ export function countBackupRecords(backup: BackupFile): BackupCounts {
     workoutUnitTemplates: backup.workoutUnitTemplates.length,
     workoutUnitTemplateExercises: backup.workoutUnitTemplateExercises.length,
     planUsagePeriods: backup.planUsagePeriods.length,
+    planDeloadPeriods: backup.planDeloadPeriods.length,
     aiExports: backup.aiExports.length,
     planImports: backup.planImports.length,
   };
@@ -137,6 +142,7 @@ export const BACKUP_COUNT_LABELS: Record<keyof BackupCounts, string> = {
   workoutUnitTemplates: 'Übungseinheiten (Bibliothek)',
   workoutUnitTemplateExercises: 'Übungen in Bibliothekseinheiten',
   planUsagePeriods: 'Plan-Nutzungszeiträume',
+  planDeloadPeriods: 'Deload-Zeiträume',
   aiExports: 'KI-Export-Vermerke',
   planImports: 'Plan-Import-Vermerke',
 };
@@ -161,6 +167,7 @@ export async function createBackup(database: TrainingDatabase = db): Promise<Bac
     workoutUnitTemplates,
     workoutUnitTemplateExercises,
     planUsagePeriods,
+    planDeloadPeriods,
     aiExports,
     planImports,
   ] = await Promise.all([
@@ -181,6 +188,7 @@ export async function createBackup(database: TrainingDatabase = db): Promise<Bac
     database.workoutUnitTemplates.toArray(),
     database.workoutUnitTemplateExercises.toArray(),
     database.planUsagePeriods.toArray(),
+    database.planDeloadPeriods.toArray(),
     database.aiExports.toArray(),
     database.planImports.toArray(),
   ]);
@@ -207,6 +215,7 @@ export async function createBackup(database: TrainingDatabase = db): Promise<Bac
     workoutUnitTemplates,
     workoutUnitTemplateExercises,
     planUsagePeriods,
+    planDeloadPeriods,
     aiExports,
     planImports,
   });
@@ -333,6 +342,7 @@ function emptyCounts(): BackupCounts {
     workoutUnitTemplates: 0,
     workoutUnitTemplateExercises: 0,
     planUsagePeriods: 0,
+    planDeloadPeriods: 0,
     aiExports: 0,
     planImports: 0,
   };
@@ -355,6 +365,7 @@ const TABLE_KEYS = [
   'workoutUnitTemplates',
   'workoutUnitTemplateExercises',
   'planUsagePeriods',
+  'planDeloadPeriods',
   'aiExports',
   'planImports',
 ] as const;
@@ -397,6 +408,7 @@ export async function importBackup(
       database.workoutUnitTemplates,
       database.workoutUnitTemplateExercises,
       database.planUsagePeriods,
+      database.planDeloadPeriods,
       database.aiExports,
       database.planImports,
       database.settings,

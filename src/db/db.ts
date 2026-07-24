@@ -7,6 +7,7 @@ import type {
   BodyWeightEntry,
   EquipmentProfile,
   Exercise,
+  PlanDeloadPeriod,
   PlanSchedule,
   PlanUsagePeriod,
   ScheduleEntry,
@@ -30,7 +31,7 @@ import { ensureSchedulesForPlans } from '@/db/scheduleMigration';
  * Bump this together with a new `.version()` block below and record the change
  * in MIGRATIONS so the settings screen can show what the database went through.
  */
-export const SCHEMA_VERSION = 21;
+export const SCHEMA_VERSION = 22;
 
 export const MIGRATIONS: { version: number; description: string }[] = [
   { version: 1, description: 'Initiales Schema: Übungen, Pläne, Einheiten, Sätze.' },
@@ -170,6 +171,13 @@ export const MIGRATIONS: { version: number; description: string }[] = [
       'Ziel-/Fokusangaben; ein neuer Store hält die Zeiträume, in denen ein Plan ' +
       'der aktive Hauptplan war. Bestehende Daten bleiben unverändert.',
   },
+  {
+    version: 22,
+    description:
+      'Zeitboxierter Deload: ein neuer Store hält 7-Tage-Deload-Zeiträume je ' +
+      'Plan mit gesnapshotteten Reduktionen. Trainings während eines Deloads ' +
+      'werden markiert. Bestehende Daten bleiben unverändert.',
+  },
 ];
 
 export class TrainingDatabase extends Dexie {
@@ -191,6 +199,7 @@ export class TrainingDatabase extends Dexie {
   workoutUnitTemplates!: Table<WorkoutUnitTemplate, string>;
   workoutUnitTemplateExercises!: Table<WorkoutUnitTemplateExercise, string>;
   planUsagePeriods!: Table<PlanUsagePeriod, string>;
+  planDeloadPeriods!: Table<PlanDeloadPeriod, string>;
   settings!: Table<AppSettings, string>;
 
   constructor(name = 'training-tracker') {
@@ -562,6 +571,22 @@ export class TrainingDatabase extends Dexie {
           .toCollection()
           .modify((settings) => {
             settings.schemaVersion = 21;
+          });
+      });
+
+    // ---- v22 ------------------------------------------------------------
+    // Time-boxed deload: a new planDeloadPeriods store; sessions gain an optional
+    // deloadIntensity marker (no backfill).
+    this.version(22)
+      .stores({
+        planDeloadPeriods: 'id, planId, startDate',
+      })
+      .upgrade(async (tx) => {
+        await tx
+          .table<AppSettings>('settings')
+          .toCollection()
+          .modify((settings) => {
+            settings.schemaVersion = 22;
           });
       });
   }

@@ -128,6 +128,30 @@ export type PlanGoalType =
 export type ExperienceLevel = 'beginner' | 'intermediate' | 'advanced';
 
 /**
+ * A time-boxed deload for a plan (Phase 5): a fixed 7-local-day window during
+ * which start-time targets are reduced, without ever overwriting the plan's
+ * stored values. At most one active period per plan. The concrete reductions are
+ * snapshotted so a later change to the defaults never reinterprets a past deload.
+ */
+export interface PlanDeloadPeriod {
+  id: string;
+  planId: string;
+  intensity: DeloadIntensity;
+  /** Local start day (inclusive). */
+  startDate: ISODate;
+  /** Local end day (inclusive); startDate + 6, or earlier if ended early. */
+  endDate: ISODate;
+  /** Snapshotted reductions (0..1) and RIR bump applied while active. */
+  setReductionPercent: number;
+  durationReductionPercent: number;
+  addedRir: number;
+  /** Set when the user ended the deload before its planned end. */
+  endedEarlyAt?: ISODateTime;
+  createdAt: ISODateTime;
+  updatedAt: ISODateTime;
+}
+
+/**
  * A training plan: the parent of one or more training days ({@link WorkoutTemplate},
  * each holding its own exercises). A plan with a single day behaves exactly like
  * the old one-plan-equals-one-workout model.
@@ -518,6 +542,12 @@ export interface WorkoutSession {
    */
   workoutUnitTemplateId?: string;
   workoutUnitNameSnapshot?: string;
+  /**
+   * Set when this workout was started during an active plan deload (Phase 5).
+   * Marks the session as a deload so the analysis can include, exclude or show
+   * it separately; the effective reduced targets live on the session exercises.
+   */
+  deloadIntensity?: DeloadIntensity;
   name: string;
   status: SessionStatus;
   startedAt: ISODateTime;

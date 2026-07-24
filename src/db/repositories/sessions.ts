@@ -12,7 +12,8 @@ import type {
 import { nowIso, uuid } from '@/utils/id';
 import { getTemplateWithExercises } from '@/db/repositories/templates';
 import { resolveRestSeconds } from '@/services/rest';
-import { DELOAD_PERCENT, deloadSets } from '@/services/deload';
+import { DELOAD_PERCENT, deloadDuration, deloadSets } from '@/services/deload';
+import { getActiveDeload } from '@/db/repositories/planDeload';
 import { isWorkingSet, WORKING_SET_TYPES } from '@/services/metrics';
 import {
   DEFAULT_GROUP_REST_MODE,
@@ -199,10 +200,27 @@ export async function startSessionFromTemplate(
   const plan = template.template.planId
     ? await db.trainingPlans.get(template.template.planId)
     : undefined;
-  // A plan-level deload reduces target sets non-destructively, only at start.
-  const deloadPercent = plan?.deloadIntensity
-    ? DELOAD_PERCENT[plan.deloadIntensity]
-    : undefined;
+  // Deload reduces start-time targets non-destructively. A time-boxed
+  // PlanDeloadPeriod (Phase 5) takes precedence; the legacy plan-level toggle
+  // still reduces sets when no period is active, so both keep working.
+  const activeDeload = plan ? await getActiveDeload(plan.id) : undefined;
+  const legacySetPercent =
+    !activeDeload && plan?.deloadIntensity
+      ? DELOAD_PERCENT[plan.deloadIntensity]
+      : undefined;
+  const sessionDeloadIntensity = activeDeload?.intensity ?? plan?.deloadIntensity;
+
+  const effectiveSets = (sets: number): number => {
+    if (activeDeload) return deloadSets(sets, activeDeload.setReductionPercent);
+    if (legacySetPercent != null) return deloadSets(sets, legacySetPercent);
+    return sets;
+  };
+  const effectiveDuration = (seconds: number | undefined): number | undefined => {
+    if (seconds == null) return undefined;
+    if (activeDeload)
+      return deloadDuration(seconds, activeDeload.durationReductionPercent);
+    return seconds;
+  };
 
   return db.transaction(
     'rw',
@@ -222,6 +240,7 @@ export async function startSessionFromTemplate(
         status: 'active',
         startedAt: timestamp,
         notes: '',
+        deloadIntensity: sessionDeloadIntensity,
         createdAt: timestamp,
         updatedAt: timestamp,
       };
@@ -232,14 +251,11 @@ export async function startSessionFromTemplate(
         const sessionExercise = buildSessionExercise(session.id, row.exercise, index, {
           templateRestSeconds: row.restSeconds,
           globalDefaultRestSeconds,
-          targetSets:
-            deloadPercent != null
-              ? deloadSets(row.targetSets, deloadPercent)
-              : row.targetSets,
+          targetSets: effectiveSets(row.targetSets),
           templateExerciseId: row.id,
           targetRepMin: row.targetRepMin,
           targetRepMax: row.targetRepMax,
-          targetDurationSeconds: row.targetDurationSeconds,
+          targetDurationSeconds: effectiveDuration(row.targetDurationSeconds),
           grouping: {
             groupId: row.groupId,
             groupType: row.groupType,

@@ -48,6 +48,7 @@ import { saveTemplateAsWorkoutUnit } from '@/db/repositories/workoutUnits';
 import { ExercisePickerDialog } from '@/features/exercises/ExercisePickerDialog';
 import { PlanCalendarView } from '@/features/plans/PlanCalendarView';
 import { PlanDayTabs } from '@/features/plans/PlanDayTabs';
+import { PlanDeloadCard } from '@/features/plans/PlanDeloadCard';
 import { PlanGoalsDialog } from '@/features/plans/PlanGoalsDialog';
 import { PlanOverviewCard } from '@/features/plans/PlanOverviewCard';
 import { ScheduleEditor } from '@/features/plans/ScheduleEditor';
@@ -212,6 +213,9 @@ export default function TemplateEditPage() {
 
       {/* Plan dashboard: activate + light overview derived from completed sessions. */}
       <PlanOverviewCard plan={plan.plan} />
+
+      {/* Time-boxed 7-day deload (Phase 5). */}
+      <PlanDeloadCard planId={plan.plan.id} />
 
       {/* Schedule: how the plan's units are laid out over time (rotation, cycle, week). */}
       <Button
