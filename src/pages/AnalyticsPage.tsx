@@ -14,6 +14,11 @@ import {
 } from '@/features/analytics/Charts';
 import { loadAnalyticsDataset } from '@/services/dataset';
 import {
+  DELOAD_FILTER_LABELS,
+  filterDatasetByDeload,
+  type DeloadFilter,
+} from '@/services/analysisFilters';
+import {
   computeAnalytics,
   computeExerciseSeries,
   listTrackedExercises,
@@ -68,6 +73,7 @@ export default function AnalyticsPage() {
   const [customTo, setCustomTo] = useState(() => todayKey());
   const [exerciseId, setExerciseId] = useState('');
   const [metric, setMetric] = useState<Metric>('volume');
+  const [deloadFilter, setDeloadFilter] = useState<DeloadFilter>('include');
 
   const range = useMemo(() => {
     switch (rangeKey) {
@@ -85,7 +91,9 @@ export default function AnalyticsPage() {
   }, [rangeKey, customFrom, customTo]);
 
   const data = useLiveQuery(async () => {
-    const dataset = await loadAnalyticsDataset();
+    // A deliberate deload must not read as a plateau; let the user include,
+    // exclude or isolate deload sessions before anything is computed.
+    const dataset = filterDatasetByDeload(await loadAnalyticsDataset(), deloadFilter);
     const exercises = listTrackedExercises(dataset);
     const selected = exercises.find((entry) => entry.id === exerciseId);
     return {
@@ -102,7 +110,7 @@ export default function AnalyticsPage() {
             )
           : null,
     };
-  }, [range, exerciseId]);
+  }, [range, exerciseId, deloadFilter]);
 
   const analytics = data?.analytics;
   const trackedExercises = data?.exercises ?? [];
@@ -194,6 +202,19 @@ export default function AnalyticsPage() {
           />
         </div>
       ) : null}
+
+      <SelectField
+        label="Deload"
+        className="mb-4"
+        value={deloadFilter}
+        onChange={(event) => setDeloadFilter(event.target.value as DeloadFilter)}
+      >
+        {(Object.keys(DELOAD_FILTER_LABELS) as DeloadFilter[]).map((key) => (
+          <option key={key} value={key}>
+            {DELOAD_FILTER_LABELS[key]}
+          </option>
+        ))}
+      </SelectField>
 
       {!analytics ? (
         <p className="text-sm text-muted" role="status">

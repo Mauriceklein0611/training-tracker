@@ -129,6 +129,21 @@ Enum-, Feld- oder Versionsänderung. Reset betrifft kein Import/Export-Format.
   Empfehlung), per-Übung original/effective-Snapshots, Deload-Filter in der
   Analyse (kommt mit Phase 6), Ablösen des Legacy-Toggles (Phase 8).
 
+### Phase 6 — Analyse (Filter-/Vergleichsschicht)
+
+- **Reine Schicht (`services/analysisFilters.ts`):** `DeloadFilter`
+  (einbeziehen/ausblenden/nur), `isDeloadSession`, `filterDatasetByDeload`,
+  `filterDatasetByPlan`, `restrictDatasetToSessions`, `comparePlans` — alles
+  verengt nur das Dataset und ruft die bestehende Engine
+  (`computeBlockMetrics`/`computeAnalytics`) auf, KEIN zweiter Motor. Voll
+  getestet.
+- **UI:** Deload-Filter in AnalyticsPage verdrahtet (bewusster Deload wird nicht
+  als Plateau gewertet).
+- **Offen in Phase 6:** eigene Analyse-Modus-UI (Plan-Vergleich, Einheiten-
+  Vergleich als Screens), Übungseinheiten-Scoping (Session↔Einheit über
+  `sourceWorkoutUnitTemplateId`/`workoutUnitTemplateId`), Unsicherheitsanzeige
+  bei überlappenden `PlanUsagePeriod`s im Vergleich.
+
 ## Offen (nächste Schritte, in Roadmap-Reihenfolge)
 
 - **Phase A Rest:** Trainingsplan-Paket (Sharing) trägt den Zeitplan noch nicht
@@ -153,10 +168,10 @@ Enum-, Feld- oder Versionsänderung. Reset betrifft kein Import/Export-Format.
 
 ### Nächster exakter Schritt
 
-Phase 6 beginnen: Analyse auf vier Ebenen (Zeitraum, Trainingsplan-Vergleich,
-Übungseinheiten-Vergleich, Übungshistorie). Vorhandene Berechnungslogik
-wiederverwenden (kein zweiter Analytics-Motor), um Filter/Gruppierung erweitern —
-u. a. **Deload-Filter** (einbeziehen/ausblenden/separat) über den neuen
-`session.deloadIntensity`-Marker, Normalisierung pro Woche, Zuordnung über
-`PlanUsagePeriod` mit Unsicherheitsanzeige bei Überlappung. Erst reine
-Vergleichs-/Filterfunktionen mit Tests, dann die Analyse-Modus-UI.
+Phase 7 beginnen: KI-Formate der nächsten Version. Export um Plan-/Einheiten-/
+Zeitplan-/Deload-/Nutzungszeitraum-Kontext erweitern; Builder-Kit + Trainingsplan-
+Paket (plan-package v3, trägt Zeitplan) auf die neue Struktur; strikte Zod-
+`.strict()`-Importschemas, Allowlist der KI-Änderungen, begrenzter Ein-Punkt-Undo
+je Plan. Danach Phase 8 (sichtbare Planversions-/Archiv-UI entfernen; Legacy-
+Deload-Toggle ablösen). Alternativ vorher offene Reste aus Phase 4/6 (Ausnahmen,
+Plan-Vergleich-UI) nachziehen.
