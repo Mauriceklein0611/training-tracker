@@ -85,6 +85,27 @@ export const packageDaySchema = z
   })
   .strict();
 
+/** One day of a portable schedule (added in package version 3). */
+export const packageScheduleEntrySchema = z
+  .object({
+    type: z.enum(['workout', 'rest']),
+    /** References a day of the same plan by its `dayKey` (workout entries). */
+    dayKey: portableKey.optional(),
+    /** 0 (Monday) – 6 (Sunday), for weekly schedules. */
+    weekday: z.number().int().min(0).max(6).optional(),
+    label: z.string().max(120).optional(),
+    position: z.number().int().min(0).max(500),
+  })
+  .strict();
+
+/** A plan's portable schedule (added in package version 3). */
+export const packageScheduleSchema = z
+  .object({
+    mode: z.enum(['free-rotation', 'repeating-cycle', 'weekly']),
+    entries: z.array(packageScheduleEntrySchema).max(60).default([]),
+  })
+  .strict();
+
 export const packagePlanSchema = z
   .object({
     planKey: portableKey,
@@ -92,6 +113,8 @@ export const packagePlanSchema = z
     description: z.string().max(2000).default(''),
     splitType: splitTypeSchema.default('single'),
     days: z.array(packageDaySchema).min(1).max(20),
+    // Added in package version 3; absent means a default free-rotation.
+    schedule: packageScheduleSchema.optional(),
   })
   .strict();
 
@@ -229,13 +252,52 @@ function refinePackage(
         }
       }
     }
+
+    // Schedule (package v3): entries must reference days of THIS plan; weekly
+    // entries need a weekday, workout entries a dayKey.
+    if (plan.schedule) {
+      const planDayKeys = new Set(plan.days.map((day) => day.dayKey));
+      const usedWeekdays = new Set<number>();
+      for (const [entryIndex, entry] of plan.schedule.entries.entries()) {
+        const entryAt = ['plans', planIndex, 'schedule', 'entries', entryIndex] as const;
+        if (
+          entry.type === 'workout' &&
+          (!entry.dayKey || !planDayKeys.has(entry.dayKey))
+        ) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `Zeitplan verweist auf unbekannten dayKey: ${entry.dayKey ?? '—'}`,
+            path: [...entryAt, 'dayKey'],
+          });
+        }
+        if (plan.schedule.mode === 'weekly') {
+          if (entry.weekday == null) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: 'Wochenplan-Eintrag braucht einen weekday (0–6)',
+              path: [...entryAt, 'weekday'],
+            });
+          } else if (usedWeekdays.has(entry.weekday)) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: `Wochentag ${entry.weekday} ist doppelt belegt`,
+              path: [...entryAt, 'weekday'],
+            });
+          } else {
+            usedWeekdays.add(entry.weekday);
+          }
+        }
+      }
+    }
   }
 }
 
 export const planPackageSchema = z
   .object({
     format: z.literal(PLAN_PACKAGE_FORMAT),
-    schemaVersion: z.literal(2),
+    // Both 2 (no schedule) and 3 (schedule) share this schema; schedule is
+    // optional, so a version-2 file still validates and imports as free-rotation.
+    schemaVersion: z.union([z.literal(2), z.literal(3)]),
     packageId: portableKey,
     createdAt: z.string(),
     source: z

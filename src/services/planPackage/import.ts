@@ -1,5 +1,11 @@
 import { db, type TrainingDatabase } from '@/db/db';
-import type { Exercise, TemplateExercise, TrainingPlan, WorkoutTemplate } from '@/types';
+import type {
+  Exercise,
+  ScheduleEntry,
+  TemplateExercise,
+  TrainingPlan,
+  WorkoutTemplate,
+} from '@/types';
 import { nowIso, uuid } from '@/utils/id';
 import { planGroupNormalization } from '@/services/grouping';
 import { isKnownMuscleGroup } from '@/constants/muscleGroups';
@@ -269,6 +275,8 @@ export async function importPlanPackage(
       database.trainingPlans,
       database.workoutTemplates,
       database.templateExercises,
+      database.planSchedules,
+      database.scheduleEntries,
       database.planImports,
     ],
     async () => {
@@ -329,6 +337,7 @@ export async function importPlanPackage(
         await database.trainingPlans.add(trainingPlan);
         result.createdPlans += 1;
 
+        const templateIdByDayKey = new Map<string, string>();
         const sortedDays = [...plan.days].sort((a, b) => a.position - b.position);
         for (const [dayIndex, day] of sortedDays.entries()) {
           const template: WorkoutTemplate = {
@@ -341,6 +350,7 @@ export async function importPlanPackage(
             updatedAt: timestamp,
           };
           await database.workoutTemplates.add(template);
+          templateIdByDayKey.set(day.dayKey, template.id);
           result.createdDays += 1;
 
           const groupIdByKey = new Map<string, string>();
@@ -384,6 +394,44 @@ export async function importPlanPackage(
           }
           if (rows.length > 0) await database.templateExercises.bulkAdd(rows);
           result.createdPlanExercises += rows.length;
+        }
+
+        // 3b) Recreate the plan's schedule (package v3). A v2 file has no
+        // schedule, so the plan gets a default free-rotation. Workout entries are
+        // re-pointed onto the new day ids; a reference that could not be mapped
+        // is dropped rather than left dangling.
+        const mode = plan.schedule?.mode ?? 'free-rotation';
+        const scheduleId = uuid();
+        await database.planSchedules.add({
+          id: scheduleId,
+          planId: trainingPlan.id,
+          mode,
+          cyclePosition: mode === 'repeating-cycle' ? 0 : undefined,
+          createdAt: timestamp,
+          updatedAt: timestamp,
+        });
+        if (plan.schedule && mode !== 'free-rotation') {
+          const ordered = [...plan.schedule.entries].sort(
+            (a, b) => a.position - b.position,
+          );
+          const entryRows: ScheduleEntry[] = [];
+          let position = 0;
+          for (const entry of ordered) {
+            const templateId = entry.dayKey
+              ? templateIdByDayKey.get(entry.dayKey)
+              : undefined;
+            if (entry.type === 'workout' && !templateId) continue; // drop dangling
+            entryRows.push({
+              id: uuid(),
+              scheduleId,
+              position: position++,
+              type: entry.type,
+              templateId: entry.type === 'workout' ? templateId : undefined,
+              weekday: entry.weekday,
+              label: entry.label,
+            });
+          }
+          if (entryRows.length > 0) await database.scheduleEntries.bulkAdd(entryRows);
         }
       }
 

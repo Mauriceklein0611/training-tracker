@@ -1,15 +1,52 @@
 import type { TemplateWithExercises } from '@/db/repositories/templates';
-import type { Exercise, TrainingPlan } from '@/types';
+import type { Exercise, PlanSchedule, ScheduleEntry, TrainingPlan } from '@/types';
 import { PLAN_PACKAGE_FORMAT, PLAN_PACKAGE_SCHEMA_VERSION } from '@/constants/formats';
 import { planPackageSchema, type PlanPackage } from '@/services/planPackage/schema';
 import { fingerprint, stableStringify } from '@/utils/fingerprint';
 import { dayKey } from '@/utils/date';
 import { uuid } from '@/utils/id';
 
-/** One plan to export, together with its resolved training days. */
+/** One plan to export, together with its resolved training days and schedule. */
 export interface PlanExportInput {
   plan: TrainingPlan;
   days: TemplateWithExercises[];
+  /** The plan's schedule; omitted exports as a default free-rotation. */
+  schedule?: { schedule: PlanSchedule; entries: ScheduleEntry[] };
+}
+
+type PackageSchedule = NonNullable<PlanPackage['plans'][number]['schedule']>;
+
+/**
+ * Portable schedule for a plan. free-rotation carries no entries (order comes
+ * from the day positions); repeating-cycle and weekly carry entries that
+ * reference days by their portable `dayKey`. A missing schedule → free-rotation.
+ */
+function buildPackageSchedule(
+  input: PlanExportInput,
+  dayKeyByTemplateId: Map<string, string>,
+): PackageSchedule {
+  const mode = input.schedule?.schedule.mode ?? 'free-rotation';
+  if (!input.schedule || mode === 'free-rotation') {
+    return { mode: 'free-rotation', entries: [] };
+  }
+  const ordered = [...input.schedule.entries].sort((a, b) => a.position - b.position);
+  const entries: PackageSchedule['entries'] = [];
+  for (const [index, entry] of ordered.entries()) {
+    const portableDayKey = entry.templateId
+      ? dayKeyByTemplateId.get(entry.templateId)
+      : undefined;
+    // A workout entry whose day is not part of this export is dropped rather
+    // than exported as a dangling reference.
+    if (entry.type === 'workout' && !portableDayKey) continue;
+    entries.push({
+      type: entry.type,
+      position: index,
+      ...(portableDayKey ? { dayKey: portableDayKey } : {}),
+      ...(entry.weekday != null ? { weekday: entry.weekday } : {}),
+      ...(entry.label ? { label: entry.label } : {}),
+    });
+  }
+  return { mode, entries };
 }
 
 export interface BuildPlanPackageOptions {
@@ -101,18 +138,25 @@ export function buildPlanPackage(
       (a, b) => a.template.position - b.template.position,
     );
 
+    // Assign each day its portable key up front so the schedule can reference it.
+    const dayKeyByTemplateId = new Map<string, string>();
+    for (const day of sortedDays) {
+      dayKeyByTemplateId.set(day.template.id, `day-${(dayCounter += 1)}`);
+    }
+
     return {
       planKey,
       name: input.plan.name,
       description: note(input.plan.description),
       splitType: input.plan.splitType,
+      schedule: buildPackageSchedule(input, dayKeyByTemplateId),
       days: sortedDays.map((day, dayIndex) => {
         const rows = [...day.exercises]
           .filter((row) => row.exercise && exerciseKeyById.has(row.exercise.id))
           .sort((a, b) => a.order - b.order);
 
         return {
-          dayKey: `day-${(dayCounter += 1)}`,
+          dayKey: dayKeyByTemplateId.get(day.template.id) as string,
           name: day.template.name,
           description: note(day.template.description),
           position: dayIndex,

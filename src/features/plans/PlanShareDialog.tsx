@@ -6,6 +6,7 @@ import { CheckboxField, TextField } from '@/components/ui/Field';
 import { getTemplateWithExercises } from '@/db/repositories/templates';
 import type { TemplateWithExercises } from '@/db/repositories/templates';
 import { getPlanWithDays } from '@/db/repositories/plans';
+import { getPlanScheduleView } from '@/db/repositories/schedules';
 import {
   buildPlanPackage,
   planPackageFileName,
@@ -48,7 +49,13 @@ export function PlanShareDialog({
       const days = (
         await Promise.all(plan.days.map((day) => getTemplateWithExercises(day.id)))
       ).filter((entry): entry is TemplateWithExercises => entry != null);
-      setInput({ plan: plan.plan, days });
+      const view = await getPlanScheduleView(planId);
+      if (cancelled) return;
+      setInput({
+        plan: plan.plan,
+        days,
+        schedule: { schedule: view.schedule, entries: view.entries },
+      });
       setPackageName(plan.plan.name);
       setIncludeNotes(true);
     })();

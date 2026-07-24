@@ -144,11 +144,25 @@ Enum-, Feld- oder Versionsänderung. Reset betrifft kein Import/Export-Format.
   `sourceWorkoutUnitTemplateId`/`workoutUnitTemplateId`), Unsicherheitsanzeige
   bei überlappenden `PlanUsagePeriod`s im Vergleich.
 
+### Phase 7 — Formate (teilweise)
+
+- **7.4 plan-package v3 (Zeitplan) — ERLEDIGT:** Paket trägt jetzt den Zeitplan
+  (`plan.schedule`: Modus + Einträge; Workout-Einträge referenzieren `dayKey`,
+  weekly `weekday`, Pausen mit Label; free-rotation ohne Einträge). Strikte
+  Zod-Validierung (unbekannter dayKey/fehlender weekday → Ablehnung),
+  transaktionaler Import (Einträge auf neue Tag-IDs umgemappt, nicht auflösbare
+  fallen weg). v2-Dateien importieren als free-rotation, v1 unverändert. Export
+  schreibt immer v3; Share-Dialog gibt den Zeitplan mit. Konstanten/Doc/Tests
+  aktualisiert (`SUPPORTED_PLAN_PACKAGE_VERSIONS=[1,2,3]`). **Damit ist der
+  Phase-A-Rest „Zeitplan im Paket" erledigt.**
+- **Offen in Phase 7:** KI-Analyse-Export um Plan-/Einheiten-/Deload-/
+  Nutzungszeitraum-Kontext erweitern (7.1); Allowlist-Erweiterungen + begrenzter
+  Ein-Punkt-Undo je Plan (7.2); Builder-Kit um Zeitplan-Beispiel ergänzen (7.3);
+  Übungseinheiten-Paket `training-workout-unit-package` (7.6).
+
 ## Offen (nächste Schritte, in Roadmap-Reihenfolge)
 
-- **Phase A Rest:** Trainingsplan-Paket (Sharing) trägt den Zeitplan noch nicht
-  mit → bräuchte plan-package v3. Home/Templates zeigen Rest-Tage in der Vorschau
-  noch nicht. Übungseinheiten-Paket (Phase 7.6) noch offen.
+- **Phase A Rest:** Home/Templates zeigen Rest-Tage in der Vorschau noch nicht.
 - **Phase 4** — Zeitplan-Kalender (geplant vs. tatsächlich, Ausnahmen,
   Session-Snapshots `scheduleEntryId`/geplantes Datum).
 - **Phase 5** — Zeitboxierter 7-Tage-Deload (ersetzt heutigen
@@ -168,10 +182,9 @@ Enum-, Feld- oder Versionsänderung. Reset betrifft kein Import/Export-Format.
 
 ### Nächster exakter Schritt
 
-Phase 7 beginnen: KI-Formate der nächsten Version. Export um Plan-/Einheiten-/
-Zeitplan-/Deload-/Nutzungszeitraum-Kontext erweitern; Builder-Kit + Trainingsplan-
-Paket (plan-package v3, trägt Zeitplan) auf die neue Struktur; strikte Zod-
-`.strict()`-Importschemas, Allowlist der KI-Änderungen, begrenzter Ein-Punkt-Undo
-je Plan. Danach Phase 8 (sichtbare Planversions-/Archiv-UI entfernen; Legacy-
-Deload-Toggle ablösen). Alternativ vorher offene Reste aus Phase 4/6 (Ausnahmen,
-Plan-Vergleich-UI) nachziehen.
+Phase 7 fortsetzen: `training-workout-unit-package` (7.6) als kleines, strikt
+versioniertes Format für einzelne Übungseinheiten (Export/Preview/Konflikt/
+transaktionaler Import/Share-Fallback/Tests), analog zum plan-package. Danach
+KI-Export-Kontext (7.1) + begrenzter Ein-Punkt-Undo (7.2). Alternativ Phase 8
+(sichtbare Planversions-/Archiv-UI entfernen, Legacy-Deload-Toggle ablösen — mit
+getesteter Legacy-Migration) oder offene Reste aus Phase 4/6.

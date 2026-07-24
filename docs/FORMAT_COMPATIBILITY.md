@@ -21,7 +21,7 @@ General rules:
 | AI analysis export                 | export                  | (AI export doc)                     | `exportVersion`                         | 1                    | —                 |
 | AI response import                 | import                  | `format: training-ai-response`      | `schemaVersion`                         | 1                    | exactly 1         |
 | Plan builder kit                   | export                  | `format: training-plan-builder-kit` | `version`                               | 2                    | —                 |
-| Training plan package              | export + import + share | `format: training-plan-package`     | `schemaVersion`                         | 2                    | 1, 2              |
+| Training plan package              | export + import + share | `format: training-plan-package`     | `schemaVersion`                         | 3                    | 1, 2, 3           |
 | Block comparison export            | export                  | (comparison doc)                    | —                                       | —                    | —                 |
 | CSV (sets/sessions/exercises/body) | export                  | header row                          | header (by test)                        | —                    | —                 |
 
@@ -88,19 +88,29 @@ General rules:
 
 ## Training plan package — `src/services/planPackage/*`
 
-- Format `training-plan-package`, **schema version 2** (`src/constants/formats.ts`;
-  `SUPPORTED_PLAN_PACKAGE_VERSIONS = [1, 2]`). One package holds one or more
-  plans; each plan has a `splitType` and a list of **days**, each day holding its
-  own plan-exercises. All relationships use portable keys (`exerciseKey`,
-  `planKey`, `dayKey`, `planExerciseKey`, `groupKey`) — never internal Dexie ids.
-- **Version 1** (a single implicit day, `plan.exercises`) is still accepted: it
-  is validated against `planPackageSchemaV1` and upgraded (`upgradeV1`) to a plan
+- Format `training-plan-package`, **schema version 3** (`src/constants/formats.ts`;
+  `SUPPORTED_PLAN_PACKAGE_VERSIONS = [1, 2, 3]`). One package holds one or more
+  plans; each plan has a `splitType`, a list of **days** (each holding its own
+  plan-exercises) and, since v3, an optional **schedule**. All relationships use
+  portable keys (`exerciseKey`, `planKey`, `dayKey`, `planExerciseKey`,
+  `groupKey`) — never internal Dexie ids.
+- **Schedule (schema version 3):** `plan.schedule` carries the mode
+  (`free-rotation` | `repeating-cycle` | `weekly`) and ordered `entries`
+  (workout entries reference a `dayKey` of the same plan; weekly entries carry a
+  `weekday` 0–6; rest entries carry an optional label). free-rotation stores no
+  entries. On import the schedule is recreated and entries are re-pointed onto
+  the new day ids; a reference that cannot be mapped is dropped, never dangling.
+- **Version 2** (no schedule) is still accepted and imports with a default
+  free-rotation. **Version 1** (a single implicit day, `plan.exercises`) is
+  validated against `planPackageSchemaV1` and upgraded (`upgradeV1`) to a plan
   with one day named "Tag A"; the parser reports `migratedFromVersion` and the
   import preview shows a migration note. A newer unknown version is rejected.
-- Schema: `planPackageSchema` (strict Zod, day-based). Parser `parsePlanPackage`.
-  Exporter `buildPlanPackage` (always writes v2). Import (transactional,
-  conflict-aware) `importPlanPackage` with preview `analyzePlanPackageImport`.
-  Each imported plan becomes a `TrainingPlan` with its days.
+- Schema: `planPackageSchema` (strict Zod; `schemaVersion` accepts 2 or 3, both
+  share the schema since `schedule` is optional). Parser `parsePlanPackage`.
+  Exporter `buildPlanPackage` (always writes v3, carrying the live schedule).
+  Import (transactional, conflict-aware) `importPlanPackage` with preview
+  `analyzePlanPackageImport`. Each imported plan becomes a `TrainingPlan` with
+  its days and schedule.
 - Excludes all private data: no history, past sets/weights, PRs, body data,
   check-ins, AI analyses, settings, internal ids. `includeNotes: false` also
   strips plan/exercise notes before sharing.
@@ -111,11 +121,8 @@ General rules:
   a content `fingerprint`; re-importing the same package is flagged, not blocked.
 - Fallbacks: missing optional fields default as documented; unknown muscle
   groups are kept as custom values with a preview warning; newer version rejected.
-- **Schedule (schema 18) not yet included:** the package still carries only
-  plans + days + plan-exercises, not the new `PlanSchedule`/`ScheduleEntry`. An
-  imported/shared plan therefore lands on the default free-rotation schedule
-  (same as migration), never a shared repeating cycle or weekly plan. Carrying
-  the schedule in the package is a follow-up (would bump the package to v3).
+  A v3 schedule with an unknown `dayKey` (or a weekly entry without a `weekday`)
+  is rejected by the strict schema before import.
 - Fixtures: `src/services/planPackage/fixtures.ts` (`validPlanPackage` v2 +
   `validPlanPackageV1`, mutated in tests into invalid / future-version shapes).
   Tests: `planPackage.test.ts` (parse, v1 upgrade, invalid v2 cases, build
@@ -126,9 +133,11 @@ General rules:
 
 - Format `training-plan-builder-kit`, **version 2** (multi-day). A
   self-describing, data-free file handed to ChatGPT so it can produce a valid
-  `training-plan-package` v2: it carries the target contract, the allowed enums
-  (`splitType`, plus weight-mode-per-tracking rules from `exerciseRules.ts`), the
-  muscle-group catalog and a two-day example.
+  `training-plan-package` (schema version 3): it carries the target contract, the
+  allowed enums (`splitType`, plus weight-mode-per-tracking rules from
+  `exerciseRules.ts`), the muscle-group catalog and a two-day example. The
+  example omits the optional schedule, so a kit-built plan imports as
+  free-rotation; adding a schedule example to the kit is a follow-up.
 - Export/share only; never imported. The example is validated against the real
   `planPackageSchema` (v2) by test so the two can never drift.
 
