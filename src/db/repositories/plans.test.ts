@@ -198,23 +198,24 @@ describe('nextDayForPlan rotation', () => {
   });
 });
 
-describe('plan-level deload', () => {
-  it('reduces target sets at start without changing the stored plan', async () => {
+describe('legacy plan-level deload (removed in Phase 8)', () => {
+  it('is inert — the old deloadIntensity field no longer affects a session start', async () => {
     const plan = await createPlan({ name: 'P', splitType: 'single' });
     const [day] = (await getPlanWithDays(plan.id))!.days;
     const row = await addExerciseToTemplate(day.id, await anExercise('Bank'));
     await updateTemplateExercise(row.id, { targetSets: 4 });
 
-    await setPlanDeload(plan.id, 'medium'); // −40 % → 4 → 2
+    // Setting the legacy field must have no effect: the time-boxed
+    // PlanDeloadPeriod (Phase 5) is the only deload path now.
+    await setPlanDeload(plan.id, 'medium');
     const session = await startSessionFromTemplate(day.id);
     const sessionExercises = await db.sessionExercises
       .where('sessionId')
       .equals(session.id)
       .toArray();
-    expect(sessionExercises[0].targetSetsSnapshot).toBe(2);
-
-    // The stored plan row is untouched — clearing deload restores the full volume.
-    const stored = await db.templateExercises.get(row.id);
-    expect(stored?.targetSets).toBe(4);
+    expect(sessionExercises[0].targetSetsSnapshot).toBe(4); // unchanged
+    expect(session.deloadIntensity).toBeUndefined();
+    // The stored plan row is untouched either way.
+    expect((await db.templateExercises.get(row.id))?.targetSets).toBe(4);
   });
 });

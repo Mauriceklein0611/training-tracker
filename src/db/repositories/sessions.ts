@@ -12,7 +12,7 @@ import type {
 import { nowIso, uuid } from '@/utils/id';
 import { getTemplateWithExercises } from '@/db/repositories/templates';
 import { resolveRestSeconds } from '@/services/rest';
-import { DELOAD_PERCENT, deloadDuration, deloadSets } from '@/services/deload';
+import { deloadDuration, deloadSets } from '@/services/deload';
 import { getActiveDeload } from '@/db/repositories/planDeload';
 import { isWorkingSet, WORKING_SET_TYPES } from '@/services/metrics';
 import {
@@ -200,26 +200,20 @@ export async function startSessionFromTemplate(
   const plan = template.template.planId
     ? await db.trainingPlans.get(template.template.planId)
     : undefined;
-  // Deload reduces start-time targets non-destructively. A time-boxed
-  // PlanDeloadPeriod (Phase 5) takes precedence; the legacy plan-level toggle
-  // still reduces sets when no period is active, so both keep working.
+  // A time-boxed PlanDeloadPeriod (Phase 5) reduces start-time targets
+  // non-destructively; the plan's stored values are never touched. The old
+  // plan-level deloadIntensity toggle was removed in Phase 8 and no longer has
+  // any effect.
   const activeDeload = plan ? await getActiveDeload(plan.id) : undefined;
-  const legacySetPercent =
-    !activeDeload && plan?.deloadIntensity
-      ? DELOAD_PERCENT[plan.deloadIntensity]
-      : undefined;
-  const sessionDeloadIntensity = activeDeload?.intensity ?? plan?.deloadIntensity;
+  const sessionDeloadIntensity = activeDeload?.intensity;
 
-  const effectiveSets = (sets: number): number => {
-    if (activeDeload) return deloadSets(sets, activeDeload.setReductionPercent);
-    if (legacySetPercent != null) return deloadSets(sets, legacySetPercent);
-    return sets;
-  };
+  const effectiveSets = (sets: number): number =>
+    activeDeload ? deloadSets(sets, activeDeload.setReductionPercent) : sets;
   const effectiveDuration = (seconds: number | undefined): number | undefined => {
     if (seconds == null) return undefined;
-    if (activeDeload)
-      return deloadDuration(seconds, activeDeload.durationReductionPercent);
-    return seconds;
+    return activeDeload
+      ? deloadDuration(seconds, activeDeload.durationReductionPercent)
+      : seconds;
   };
 
   return db.transaction(

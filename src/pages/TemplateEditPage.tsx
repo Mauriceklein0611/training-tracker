@@ -19,7 +19,7 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { Button, IconButton } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/Card';
 import { ConfirmDialog, Dialog } from '@/components/ui/Dialog';
-import { SelectField, TextAreaField, TextField } from '@/components/ui/Field';
+import { TextAreaField, TextField } from '@/components/ui/Field';
 import {
   addExerciseToTemplate,
   getTemplateWithExercises,
@@ -33,7 +33,6 @@ import {
   getPlanWithDays,
   LastDayError,
   moveDay,
-  setPlanDeload,
   SPLIT_TYPE_LABELS,
   updatePlan,
 } from '@/db/repositories/plans';
@@ -41,8 +40,6 @@ import {
   ActiveSessionExistsError,
   startSessionFromTemplate,
 } from '@/db/repositories/sessions';
-import { DELOAD_INTENSITY_LABELS } from '@/services/deload';
-import type { DeloadIntensity } from '@/types';
 import { saveTemplateAsWorkoutUnit } from '@/db/repositories/workoutUnits';
 import { ExercisePickerDialog } from '@/features/exercises/ExercisePickerDialog';
 import { PlanCalendarView } from '@/features/plans/PlanCalendarView';
@@ -196,13 +193,6 @@ export default function TemplateEditPage() {
           </IconButton>
         }
       />
-
-      {plan.plan.deloadIntensity ? (
-        <p className="mb-3 rounded-xl border border-warning/50 bg-surface-2 p-2 text-xs text-warning">
-          Deload aktiv ({DELOAD_INTENSITY_LABELS[plan.plan.deloadIntensity]}) — die
-          Ziel-Sätze werden beim Start reduziert.
-        </p>
-      ) : null}
 
       {plan.plan.description ? (
         <p className="mb-4 whitespace-pre-line break-words rounded-2xl border border-border bg-surface p-3 text-sm leading-relaxed text-muted">
@@ -413,7 +403,6 @@ export default function TemplateEditPage() {
         planId={plan.plan.id}
         name={plan.plan.name}
         description={plan.plan.description}
-        deloadIntensity={plan.plan.deloadIntensity}
         onClose={() => setSettingsOpen(false)}
       />
 
@@ -495,28 +484,24 @@ function PlanSettingsDialog({
   planId,
   name,
   description,
-  deloadIntensity,
   onClose,
 }: {
   open: boolean;
   planId: string;
   name: string;
   description: string;
-  deloadIntensity?: DeloadIntensity;
   onClose: () => void;
 }) {
   const toast = useToast();
   const [draftName, setDraftName] = useState(name);
   const [draftDescription, setDraftDescription] = useState(description);
-  const [draftDeload, setDraftDeload] = useState<string>(deloadIntensity ?? '');
 
   // Re-seed the fields whenever the dialog is (re)opened for the current plan.
   const [seededFor, setSeededFor] = useState('');
-  if (open && seededFor !== `${planId}:${name}:${description}:${deloadIntensity ?? ''}`) {
+  if (open && seededFor !== `${planId}:${name}:${description}`) {
     setDraftName(name);
     setDraftDescription(description);
-    setDraftDeload(deloadIntensity ?? '');
-    setSeededFor(`${planId}:${name}:${description}:${deloadIntensity ?? ''}`);
+    setSeededFor(`${planId}:${name}:${description}`);
   }
 
   const handleSave = async () => {
@@ -526,10 +511,6 @@ function PlanSettingsDialog({
       return;
     }
     await updatePlan(planId, { name: trimmed, description: draftDescription });
-    await setPlanDeload(
-      planId,
-      (draftDeload || undefined) as DeloadIntensity | undefined,
-    );
     onClose();
     toast.show('Plan gespeichert.', 'success');
   };
@@ -562,17 +543,10 @@ function PlanSettingsDialog({
           placeholder="Optional"
           onChange={(event) => setDraftDescription(event.target.value)}
         />
-        <SelectField
-          label="Deload"
-          hint="Reduziert die Ziel-Sätze aller Tage beim Trainingsstart. Ausschalten stellt die vollen Werte sofort wieder her."
-          value={draftDeload}
-          onChange={(event) => setDraftDeload(event.target.value)}
-        >
-          <option value="">Aus</option>
-          <option value="light">{DELOAD_INTENSITY_LABELS.light}</option>
-          <option value="medium">{DELOAD_INTENSITY_LABELS.medium}</option>
-          <option value="strong">{DELOAD_INTENSITY_LABELS.strong}</option>
-        </SelectField>
+        <p className="text-xs text-muted">
+          Einen Deload startest du unten in der Plan-Ansicht („Deload") — als zeitlich
+          begrenzte Woche, ohne die Planwerte zu überschreiben.
+        </p>
       </div>
     </Dialog>
   );
