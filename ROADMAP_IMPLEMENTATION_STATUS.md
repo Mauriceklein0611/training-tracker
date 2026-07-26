@@ -163,6 +163,22 @@ Enum-, Feld- oder Versionsänderung. Reset betrifft kein Import/Export-Format.
   Nutzungszeitraum-Kontext erweitern (7.1); Allowlist-Erweiterungen + begrenzter
   Ein-Punkt-Undo je Plan (7.2); Builder-Kit um Zeitplan-Beispiel ergänzen (7.3).
 
+### Phase 8 — Sichtbare Planversionen/Archiv entfernen (teilweise)
+
+- **ERLEDIGT:** Route `/plaene/:templateId/versionen`, Lazy-Import und die Seite
+  `TemplateVersionsPage` entfernt; Link „Versionen dieses Tages" aus dem
+  Plan-Editor raus. Alter destruktiver Deload-über-Planversionen
+  (`activateDeload` + Test) entfernt (durch Phase 5 abgelöst). Keine sichtbare
+  Planversions-/Archivhistorie mehr.
+- **Bewusst behalten (Übergang, Roadmap erlaubt):** der `templateVersions`-Store
+  - `createTemplateVersionWithinTransaction`/`listTemplateVersions` bleiben
+    **intern** als KI-Wiederherstellungspunkt (aiApply) und im Backup; nicht mehr
+    in der UI. Abgeschlossene Sessions/Snapshots unangetastet.
+- **Offen in Phase 8:** ungenutzte Repo-Funktionen (restore/archive/delete
+  version) + deren Tests aufräumen; KI-UI-Texte prüfen, die Änderungen als „neue
+  Planversion" beschreiben; endgültiges Ablösen des Legacy-`deloadIntensity`-
+  Toggles im Plan-Einstellungen-Dialog.
+
 ## Offen (nächste Schritte, in Roadmap-Reihenfolge)
 
 - **Phase A Rest:** Home/Templates zeigen Rest-Tage in der Vorschau noch nicht.
@@ -185,9 +201,9 @@ Enum-, Feld- oder Versionsänderung. Reset betrifft kein Import/Export-Format.
 
 ### Nächster exakter Schritt
 
-Phase 7 fortsetzen: `training-workout-unit-package` (7.6) als kleines, strikt
-versioniertes Format für einzelne Übungseinheiten (Export/Preview/Konflikt/
-transaktionaler Import/Share-Fallback/Tests), analog zum plan-package. Danach
-KI-Export-Kontext (7.1) + begrenzter Ein-Punkt-Undo (7.2). Alternativ Phase 8
-(sichtbare Planversions-/Archiv-UI entfernen, Legacy-Deload-Toggle ablösen — mit
-getesteter Legacy-Migration) oder offene Reste aus Phase 4/6.
+Phase 8 abschließen oder Phase 9/10/11 angehen. Konkret als Nächstes gut machbar:
+KI-UI-Texte von „Planversion" auf „Wiederherstellungspunkt/rückgängig" umstellen
+(7.2) und den Legacy-`deloadIntensity`-Toggle aus dem Plan-Einstellungen-Dialog
+entfernen (durch Phase 5 abgelöst; `startSessionFromTemplate`-Fallback dann auch
+entfernen). Danach Phase 9 (CSV-Spalten Plan/Einheit/Deload/geplantes Datum;
+Format-Impact-Matrix-Durchlauf) und offene Reste aus Phase 4/6/7.

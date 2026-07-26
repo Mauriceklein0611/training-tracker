@@ -7,7 +7,6 @@ import {
   updateTemplateExercise,
 } from '@/db/repositories/templates';
 import {
-  activateDeload,
   activateTemplateVersion,
   createTemplateVersion,
   listTemplateVersions,
@@ -95,20 +94,5 @@ describe('activateTemplateVersion', () => {
     const versions = await listTemplateVersions(templateId);
     const auto = versions.find((version) => version.source === 'auto');
     expect(auto?.snapshot.exercises[0].targetSets).toBe(8);
-  });
-});
-
-describe('activateDeload', () => {
-  it('reduces target sets and saves the normal plan as a restore point', async () => {
-    const { templateId, benchRowId } = await buildTemplate();
-    await updateTemplateExercise(benchRowId, { targetSets: 4 });
-
-    await activateDeload(templateId, 'medium'); // −40 %: 4 → 2
-
-    expect((await getTemplateWithExercises(templateId))?.exercises[0].targetSets).toBe(2);
-    // The pre-deload state (4 sets) is recoverable.
-    const versions = await listTemplateVersions(templateId);
-    const restorePoint = versions.find((version) => version.label.includes('Vor Deload'));
-    expect(restorePoint?.snapshot.exercises[0].targetSets).toBe(4);
   });
 });

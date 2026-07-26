@@ -7,12 +7,6 @@ import type {
   TemplateVersionSource,
 } from '@/types';
 import { nowIso, uuid } from '@/utils/id';
-import {
-  deloadSets,
-  DELOAD_INTENSITY_LABELS,
-  DELOAD_PERCENT,
-  type DeloadIntensity,
-} from '@/services/deload';
 
 /**
  * Plan versioning.
@@ -194,36 +188,6 @@ export async function activateTemplateVersion(versionId: string): Promise<void> 
       });
     },
   );
-}
-
-/**
- * Applies a deload to the live plan: reduces every exercise's target sets after
- * freezing the current plan as a restore point, so the normal week can be
- * reactivated afterwards from the versions list.
- */
-export async function activateDeload(
-  templateId: string,
-  intensity: DeloadIntensity,
-): Promise<void> {
-  const percent = DELOAD_PERCENT[intensity];
-  await createTemplateVersion(templateId, {
-    source: 'manual',
-    label: `Vor Deload (${DELOAD_INTENSITY_LABELS[intensity]})`,
-  });
-  await db.transaction('rw', db.templateExercises, db.workoutTemplates, async () => {
-    const rows = await db.templateExercises
-      .where('templateId')
-      .equals(templateId)
-      .toArray();
-    await Promise.all(
-      rows.map((row) =>
-        db.templateExercises.update(row.id, {
-          targetSets: deloadSets(row.targetSets, percent),
-        }),
-      ),
-    );
-    await db.workoutTemplates.update(templateId, { updatedAt: nowIso() });
-  });
 }
 
 export async function setTemplateVersionArchived(
