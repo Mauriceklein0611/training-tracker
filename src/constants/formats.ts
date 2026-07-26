@@ -32,3 +32,8 @@ export const SUPPORTED_PLAN_PACKAGE_VERSIONS = [1, 2, 3] as const;
 /** Self-describing kit handed to ChatGPT so it can build a plan package. */
 export const PLAN_BUILDER_KIT_FORMAT = 'training-plan-builder-kit';
 export const PLAN_BUILDER_KIT_VERSION = 2;
+
+/** Portable package for sharing one or more library workout units (Phase 7.6). */
+export const WORKOUT_UNIT_PACKAGE_FORMAT = 'training-workout-unit-package';
+export const WORKOUT_UNIT_PACKAGE_SCHEMA_VERSION = 1;
+export const SUPPORTED_WORKOUT_UNIT_PACKAGE_VERSIONS = [1] as const;

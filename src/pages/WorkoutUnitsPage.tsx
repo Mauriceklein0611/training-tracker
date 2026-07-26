@@ -1,7 +1,17 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { Copy, Dumbbell, Layers, Pencil, Play, Plus, Trash2 } from 'lucide-react';
+import {
+  Copy,
+  Dumbbell,
+  Layers,
+  Pencil,
+  Play,
+  Plus,
+  Share2,
+  Trash2,
+  Upload,
+} from 'lucide-react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Button, IconButton } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/Card';
@@ -15,11 +25,22 @@ import {
   listWorkoutUnitsWithExercises,
 } from '@/db/repositories/workoutUnits';
 import { listPlans } from '@/db/repositories/plans';
+import { listExercises } from '@/db/repositories/exercises';
+import { listImportedFingerprints } from '@/services/planPackage/import';
 import {
   ActiveSessionExistsError,
   startSessionFromWorkoutUnit,
 } from '@/db/repositories/sessions';
+import {
+  analyzeUnitPackageImport,
+  importWorkoutUnitPackage,
+  parseWorkoutUnitPackage,
+  type UnitPackageImportPreview,
+  type WorkoutUnitPackage,
+} from '@/services/unitPackage';
 import { summariseWorkoutUnit } from '@/services/workoutUnitSummary';
+import { WorkoutUnitShareDialog } from '@/features/templates/WorkoutUnitShareDialog';
+import { readFileAsText } from '@/utils/download';
 import { useActiveSession } from '@/hooks/useActiveSession';
 import { useToast } from '@/hooks/useToast';
 
@@ -60,6 +81,13 @@ export default function WorkoutUnitsPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   /** Unit currently being added to a plan (opens the plan picker). */
   const [addToPlanId, setAddToPlanId] = useState<string | null>(null);
+  const [shareUnitId, setShareUnitId] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [importErrors, setImportErrors] = useState<string[]>([]);
+  const [importPkg, setImportPkg] = useState<WorkoutUnitPackage | null>(null);
+  const [importPreview, setImportPreview] = useState<UnitPackageImportPreview | null>(
+    null,
+  );
 
   const handleCreate = async () => {
     const unit = await createWorkoutUnit({ name: newName, description: newDescription });
@@ -93,15 +121,68 @@ export default function WorkoutUnitsPage() {
     toast.show(`Zu „${plan?.name ?? 'Plan'}“ hinzugefügt.`, 'success');
   };
 
+  const handleImportFile = async (file: File | undefined) => {
+    if (!file) return;
+    setImportErrors([]);
+    setImportPkg(null);
+    setImportPreview(null);
+    try {
+      const result = parseWorkoutUnitPackage(await readFileAsText(file));
+      if (!result.ok) {
+        setImportErrors(result.errors);
+        return;
+      }
+      const [exercises, fingerprints] = await Promise.all([
+        listExercises(),
+        listImportedFingerprints(),
+      ]);
+      setImportPkg(result.data);
+      setImportPreview(analyzeUnitPackageImport(result.data, exercises, fingerprints));
+    } catch (error) {
+      setImportErrors([
+        error instanceof Error ? error.message : 'Die Datei konnte nicht gelesen werden.',
+      ]);
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleConfirmImport = async () => {
+    if (!importPkg) return;
+    const result = await importWorkoutUnitPackage(importPkg);
+    setImportPkg(null);
+    setImportPreview(null);
+    toast.show(
+      `${result.createdUnits} Einheit(en) importiert, ${result.createdExercises} neue Übungen.`,
+      'success',
+    );
+  };
+
   return (
     <>
       <PageHeader
         title="Bibliothek"
         action={
-          <IconButton label="Neue Übungseinheit" onClick={() => setCreateOpen(true)}>
-            <Plus size={22} aria-hidden="true" />
-          </IconButton>
+          <div className="flex gap-1">
+            <IconButton
+              label="Übungseinheit importieren"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <Upload size={22} aria-hidden="true" />
+            </IconButton>
+            <IconButton label="Neue Übungseinheit" onClick={() => setCreateOpen(true)}>
+              <Plus size={22} aria-hidden="true" />
+            </IconButton>
+          </div>
         }
+      />
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="application/json,.json"
+        className="hidden"
+        onChange={(event) => void handleImportFile(event.target.files?.[0])}
       />
 
       <LibraryTabs active="units" />
@@ -163,6 +244,12 @@ export default function WorkoutUnitsPage() {
                       }}
                     >
                       <Copy size={18} aria-hidden="true" />
+                    </IconButton>
+                    <IconButton
+                      label={`„${unit.name}“ teilen`}
+                      onClick={() => setShareUnitId(unit.id)}
+                    >
+                      <Share2 size={18} aria-hidden="true" />
                     </IconButton>
                     <IconButton
                       label={`„${unit.name}“ löschen`}
@@ -245,6 +332,55 @@ export default function WorkoutUnitsPage() {
             ))}
           </ul>
         )}
+      </Dialog>
+
+      <WorkoutUnitShareDialog unitId={shareUnitId} onClose={() => setShareUnitId(null)} />
+
+      <Dialog
+        open={importErrors.length > 0}
+        onClose={() => setImportErrors([])}
+        title="Import nicht möglich"
+      >
+        <ul className="list-disc space-y-1 pl-5 text-sm text-danger">
+          {importErrors.map((error, index) => (
+            <li key={index}>{error}</li>
+          ))}
+        </ul>
+      </Dialog>
+
+      <Dialog
+        open={importPreview !== null}
+        onClose={() => {
+          setImportPkg(null);
+          setImportPreview(null);
+        }}
+        title="Übungseinheiten importieren?"
+      >
+        {importPreview ? (
+          <div className="grid gap-3">
+            <p className="text-sm">
+              {importPreview.unitNames.length} Einheit(en):{' '}
+              <span className="text-muted">{importPreview.unitNames.join(', ')}</span>
+            </p>
+            <p className="text-sm text-muted">
+              {importPreview.newExercises} neue Übungen, {importPreview.reusedExercises}{' '}
+              werden wiederverwendet. Bestehende Einheiten und deine Historie bleiben
+              unverändert.
+            </p>
+            {importPreview.alreadyImported ? (
+              <p className="rounded-xl border border-warning/50 bg-surface-2 p-2 text-xs text-warning">
+                Diese Datei wurde bereits importiert. Ein erneuter Import legt Kopien an.
+              </p>
+            ) : null}
+            <Button
+              variant="primary"
+              fullWidth
+              onClick={() => void handleConfirmImport()}
+            >
+              Jetzt importieren
+            </Button>
+          </div>
+        ) : null}
       </Dialog>
 
       <ConfirmDialog

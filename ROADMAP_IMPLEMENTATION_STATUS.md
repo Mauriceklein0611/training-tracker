@@ -155,10 +155,13 @@ Enum-, Feld- oder Versionsänderung. Reset betrifft kein Import/Export-Format.
   schreibt immer v3; Share-Dialog gibt den Zeitplan mit. Konstanten/Doc/Tests
   aktualisiert (`SUPPORTED_PLAN_PACKAGE_VERSIONS=[1,2,3]`). **Damit ist der
   Phase-A-Rest „Zeitplan im Paket" erledigt.**
+- **7.6 Übungseinheiten-Paket — ERLEDIGT:** `training-workout-unit-package`
+  (schema 1) in `services/unitPackage.ts` — Build/Parse/Import (strikte Zod,
+  Übungs-Reuse-oder-Kopie, transaktional, Dedup über `planImports`-Fingerprint),
+  Share/Download-Fallback + Import-Vorschau in der Bibliothek-UI. Tests grün.
 - **Offen in Phase 7:** KI-Analyse-Export um Plan-/Einheiten-/Deload-/
   Nutzungszeitraum-Kontext erweitern (7.1); Allowlist-Erweiterungen + begrenzter
-  Ein-Punkt-Undo je Plan (7.2); Builder-Kit um Zeitplan-Beispiel ergänzen (7.3);
-  Übungseinheiten-Paket `training-workout-unit-package` (7.6).
+  Ein-Punkt-Undo je Plan (7.2); Builder-Kit um Zeitplan-Beispiel ergänzen (7.3).
 
 ## Offen (nächste Schritte, in Roadmap-Reihenfolge)
 

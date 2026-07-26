@@ -15,15 +15,16 @@ General rules:
   only, run in a single Dexie transaction and roll back fully on any error.
 - CSV is export-only; header order and meaning are versioned by test.
 
-| Format                             | Direction               | Name (in content)                   | Version field                           | Version              | Supported imports |
-| ---------------------------------- | ----------------------- | ----------------------------------- | --------------------------------------- | -------------------- | ----------------- |
-| Full backup                        | export + import         | `app: training-tracker`             | `exportFormatVersion` / `schemaVersion` | format 1 / schema 18 | schema ≤ 18       |
-| AI analysis export                 | export                  | (AI export doc)                     | `exportVersion`                         | 1                    | —                 |
-| AI response import                 | import                  | `format: training-ai-response`      | `schemaVersion`                         | 1                    | exactly 1         |
-| Plan builder kit                   | export                  | `format: training-plan-builder-kit` | `version`                               | 2                    | —                 |
-| Training plan package              | export + import + share | `format: training-plan-package`     | `schemaVersion`                         | 3                    | 1, 2, 3           |
-| Block comparison export            | export                  | (comparison doc)                    | —                                       | —                    | —                 |
-| CSV (sets/sessions/exercises/body) | export                  | header row                          | header (by test)                        | —                    | —                 |
+| Format                             | Direction               | Name (in content)                       | Version field                           | Version              | Supported imports |
+| ---------------------------------- | ----------------------- | --------------------------------------- | --------------------------------------- | -------------------- | ----------------- |
+| Full backup                        | export + import         | `app: training-tracker`                 | `exportFormatVersion` / `schemaVersion` | format 1 / schema 18 | schema ≤ 18       |
+| AI analysis export                 | export                  | (AI export doc)                         | `exportVersion`                         | 1                    | —                 |
+| AI response import                 | import                  | `format: training-ai-response`          | `schemaVersion`                         | 1                    | exactly 1         |
+| Plan builder kit                   | export                  | `format: training-plan-builder-kit`     | `version`                               | 2                    | —                 |
+| Training plan package              | export + import + share | `format: training-plan-package`         | `schemaVersion`                         | 3                    | 1, 2, 3           |
+| Workout unit package               | export + import + share | `format: training-workout-unit-package` | `schemaVersion`                         | 1                    | 1                 |
+| Block comparison export            | export                  | (comparison doc)                        | —                                       | —                    | —                 |
+| CSV (sets/sessions/exercises/body) | export                  | header row                              | header (by test)                        | —                    | —                 |
 
 ## Full backup — `src/services/backup.ts`
 
@@ -126,8 +127,28 @@ General rules:
 - Fixtures: `src/services/planPackage/fixtures.ts` (`validPlanPackage` v2 +
   `validPlanPackageV1`, mutated in tests into invalid / future-version shapes).
   Tests: `planPackage.test.ts` (parse, v1 upgrade, invalid v2 cases, build
-  roundtrip, analyze, transactional multi-day import), `builderKit.test.ts`, and
-  UI `src/features/plans/PlanPackageTools.test.tsx`.
+  roundtrip, analyze, transactional multi-day import), `planSchedulePackage.test.ts`
+  (v3 schedule export/roundtrip/rejection), `builderKit.test.ts`, and UI
+  `src/features/plans/PlanPackageTools.test.tsx`.
+
+## Workout unit package — `src/services/unitPackage.ts`
+
+- Format `training-workout-unit-package`, **schema version 1**
+  (`src/constants/formats.ts`; `SUPPORTED_WORKOUT_UNIT_PACKAGE_VERSIONS = [1]`).
+  Carries one or more library workout units, their exercises and target
+  values/groups — no plans, history, sets, body data or internal ids. Reuses the
+  plan-package exercise/plan-exercise schemas (portable keys only), strict Zod.
+- Build `buildWorkoutUnitPackage` (always v1; `includeNotes: false` strips
+  exercise/unit notes). Parse `parseWorkoutUnitPackage` (size limit, newer
+  version rejected, unknown fields rejected, positions must reference a defined
+  `exerciseKey`). Import `importWorkoutUnitPackage` in one Dexie transaction: a
+  same-name compatible exercise is reused, an incompatible one is created as a
+  de-duplicated copy; units and their exercises are created new. Existing units,
+  plans, sessions and history are never touched.
+- Duplicate detection reuses the `planImports` fingerprint ledger
+  (`analyzeUnitPackageImport` flags a re-import). Share/download via the same
+  `shareJsonExport` fallback as plans. Tests: `src/services/unitPackage.test.ts`
+  (build, parse rejection, roundtrip, exercise reuse, duplicate flag).
 
 ## Plan builder kit — `src/services/planPackage/builderKit.ts`
 
