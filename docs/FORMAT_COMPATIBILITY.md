@@ -17,7 +17,7 @@ General rules:
 
 | Format                             | Direction               | Name (in content)                       | Version field                           | Version              | Supported imports |
 | ---------------------------------- | ----------------------- | --------------------------------------- | --------------------------------------- | -------------------- | ----------------- |
-| Full backup                        | export + import         | `app: training-tracker`                 | `exportFormatVersion` / `schemaVersion` | format 1 / schema 18 | schema ≤ 18       |
+| Full backup                        | export + import         | `app: training-tracker`                 | `exportFormatVersion` / `schemaVersion` | format 1 / schema 22 | schema ≤ 22       |
 | AI analysis export                 | export                  | (AI export doc)                         | `exportVersion`                         | 1                    | —                 |
 | AI response import                 | import                  | `format: training-ai-response`          | `schemaVersion`                         | 1                    | exactly 1         |
 | Plan builder kit                   | export                  | `format: training-plan-builder-kit`     | `version`                               | 2                    | —                 |
