@@ -17,6 +17,7 @@ const SessionDetailPage = lazy(() => import('@/pages/SessionDetailPage'));
 const AnalyticsPage = lazy(() => import('@/pages/AnalyticsPage'));
 const BlockComparePage = lazy(() => import('@/pages/BlockComparePage'));
 const PlanComparePage = lazy(() => import('@/pages/PlanComparePage'));
+const WorkoutUnitComparePage = lazy(() => import('@/pages/WorkoutUnitComparePage'));
 const MorePage = lazy(() => import('@/pages/MorePage'));
 const WorkoutUnitsPage = lazy(() => import('@/pages/WorkoutUnitsPage'));
 const WorkoutUnitEditPage = lazy(() => import('@/pages/WorkoutUnitEditPage'));
@@ -56,6 +57,10 @@ export default function App() {
           <Route path="/analyse" element={<AnalyticsPage />} />
           <Route path="/analyse/vergleich" element={<BlockComparePage />} />
           <Route path="/analyse/plaene-vergleich" element={<PlanComparePage />} />
+          <Route
+            path="/analyse/einheiten-vergleich"
+            element={<WorkoutUnitComparePage />}
+          />
           <Route path="/mehr" element={<MorePage />} />
           <Route path="/mehr/uebungen" element={<ExercisesPage />} />
           <Route path="/mehr/equipment" element={<EquipmentProfilesPage />} />

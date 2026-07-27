@@ -64,6 +64,35 @@ export function filterDatasetByPlan(
   return restrictDatasetToSessions(dataset, keptSessionIds);
 }
 
+/**
+ * The library workout unit a session is attributed to: the unit it was started
+ * from directly, or — for a plan-day workout — the unit that day was copied from
+ * ({@link WorkoutTemplate.sourceWorkoutUnitTemplateId}, passed in as a map so
+ * this stays a pure function of the dataset).
+ */
+export function sessionWorkoutUnitId(
+  session: WorkoutSession,
+  dayToUnitId: Map<string, string>,
+): string | undefined {
+  if (session.workoutUnitTemplateId) return session.workoutUnitTemplateId;
+  if (session.templateId) return dayToUnitId.get(session.templateId);
+  return undefined;
+}
+
+/** Dataset scoped to the sessions attributed to one library workout unit. */
+export function filterDatasetByWorkoutUnit(
+  dataset: AnalyticsDataset,
+  unitId: string,
+  dayToUnitId: Map<string, string>,
+): AnalyticsDataset {
+  const keptSessionIds = new Set(
+    dataset.sessions
+      .filter((session) => sessionWorkoutUnitId(session, dayToUnitId) === unitId)
+      .map((session) => session.id),
+  );
+  return restrictDatasetToSessions(dataset, keptSessionIds);
+}
+
 /** Dataset filtered by how deload sessions should be treated. */
 export function filterDatasetByDeload(
   dataset: AnalyticsDataset,
@@ -164,6 +193,44 @@ export function comparePlans(
       range: input.range,
       metrics: computeBlockMetrics(scoped, bodyEntries, input.range, input.label, now),
       usageUncertain: input.usageUncertain ?? false,
+    };
+  };
+  return { a: side(a), b: side(b) };
+}
+
+export interface WorkoutUnitComparisonInput {
+  unitId: string;
+  label: string;
+  range: DateRange;
+}
+
+export interface WorkoutUnitComparisonSide extends WorkoutUnitComparisonInput {
+  metrics: BlockMetrics;
+}
+
+/**
+ * Compares two library workout units over their own ranges, reusing
+ * {@link computeBlockMetrics} on each unit-scoped, deload-filtered dataset.
+ * `dayToUnitId` maps a plan day to the unit it was copied from, so plan-day
+ * workouts are attributed to their source unit as well as direct-start ones.
+ */
+export function compareWorkoutUnits(
+  dataset: AnalyticsDataset,
+  bodyEntries: BodyWeightEntry[],
+  dayToUnitId: Map<string, string>,
+  a: WorkoutUnitComparisonInput,
+  b: WorkoutUnitComparisonInput,
+  deloadFilter: DeloadFilter = 'include',
+  now: Date = new Date(),
+): { a: WorkoutUnitComparisonSide; b: WorkoutUnitComparisonSide } {
+  const side = (input: WorkoutUnitComparisonInput): WorkoutUnitComparisonSide => {
+    const scoped = filterDatasetByDeload(
+      filterDatasetByWorkoutUnit(dataset, input.unitId, dayToUnitId),
+      deloadFilter,
+    );
+    return {
+      ...input,
+      metrics: computeBlockMetrics(scoped, bodyEntries, input.range, input.label, now),
     };
   };
   return { a: side(a), b: side(b) };

@@ -1,13 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import {
   comparePlans,
+  compareWorkoutUnits,
   filterDatasetByDeload,
   filterDatasetByPlan,
+  filterDatasetByWorkoutUnit,
   filterSessionsByDeload,
   isDeloadSession,
   planUsagePeriodsOverlap,
   planUsageSpan,
   restrictDatasetToSessions,
+  sessionWorkoutUnitId,
 } from '@/services/analysisFilters';
 import type { AnalyticsDataset } from '@/services/analytics';
 import type { PlanUsagePeriod } from '@/types';
@@ -117,6 +120,58 @@ describe('comparePlans', () => {
     );
     // Plan A had 2 sessions, one of them a deload → 1 remains.
     expect(result.a.metrics.sessions).toBe(1);
+  });
+});
+
+describe('workout unit scoping', () => {
+  // U1 trained directly and via a plan day (day-1); U2 directly; one free session.
+  const dayToUnitId = new Map([['day-1', 'U1']]);
+  function unitDataset(): AnalyticsDataset {
+    const exercise = makeExercise({ id: 'ex' });
+    const sessions = [
+      makeSession({ id: 'd1', workoutUnitTemplateId: 'U1' }),
+      makeSession({ id: 'd2', templateId: 'day-1' }),
+      makeSession({ id: 'd3', workoutUnitTemplateId: 'U2' }),
+      makeSession({ id: 'd4' }),
+    ];
+    const sessionExercises = sessions.map((s) =>
+      makeSessionExercise({ id: `se-${s.id}`, sessionId: s.id, exerciseId: 'ex' }),
+    );
+    const sets = sessionExercises.map((se) =>
+      makeSet({ id: `set-${se.id}`, sessionExerciseId: se.id }),
+    );
+    return { sessions, sessionExercises, sets, exercises: [exercise] };
+  }
+
+  it('attributes a session to its direct or plan-day source unit', () => {
+    const { sessions } = unitDataset();
+    const [d1, d2, d3, d4] = sessions;
+    expect(sessionWorkoutUnitId(d1, dayToUnitId)).toBe('U1'); // direct
+    expect(sessionWorkoutUnitId(d2, dayToUnitId)).toBe('U1'); // via plan day
+    expect(sessionWorkoutUnitId(d3, dayToUnitId)).toBe('U2');
+    expect(sessionWorkoutUnitId(d4, dayToUnitId)).toBeUndefined();
+  });
+
+  it('scopes the dataset to one unit across both attribution paths', () => {
+    const filtered = filterDatasetByWorkoutUnit(unitDataset(), 'U1', dayToUnitId);
+    expect(filtered.sessions.map((s) => s.id).sort()).toEqual(['d1', 'd2']);
+  });
+
+  it('compares two units by reusing the metrics engine', () => {
+    const range: DateRange = {
+      from: new Date('2026-01-01T00:00:00'),
+      to: new Date('2026-12-31T23:59:59'),
+    };
+    const result = compareWorkoutUnits(
+      unitDataset(),
+      [],
+      dayToUnitId,
+      { unitId: 'U1', label: 'Push', range },
+      { unitId: 'U2', label: 'Pull', range },
+    );
+    expect(result.a.metrics.sessions).toBe(2);
+    expect(result.b.metrics.sessions).toBe(1);
+    expect(result.a.label).toBe('Push');
   });
 });
 

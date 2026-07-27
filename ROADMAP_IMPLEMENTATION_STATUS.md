@@ -5,7 +5,7 @@ ausbauen" (Opus-Gesamtprompt). Diese Datei ersetzt keine Umsetzung, sondern häl
 den geprüften Stand fest.
 
 Zuletzt grüne Pflichtchecks (lokal): `typecheck`, `lint`, `test` (62 Dateien,
-703 Tests), `build`, `prettier --check` (geänderte Dateien).
+706 Tests), `build`, `prettier --check` (geänderte Dateien).
 
 ## Abgeschlossen
 
@@ -160,10 +160,15 @@ Enum-, Feld- oder Versionsänderung. Reset betrifft kein Import/Export-Format.
   gemeinsame `MetricsCompareTable` extrahiert und wird jetzt auch vom
   Block-Vergleich genutzt (Duplikat entfernt). Reine Helfer getestet; nutzt
   weiter nur `comparePlans`/`computeBlockMetrics` (kein zweiter Motor).
-- **Offen in Phase 6:** Einheiten-Vergleich als Screen + Übungseinheiten-Scoping
-  (Session↔Einheit über `sourceWorkoutUnitTemplateId`/`workoutUnitTemplateId` —
-  der Session↔Einheit-Link liegt teils erst auf dem Plan-Tag, braucht also
-  zusätzliches Daten-Mapping).
+- **Einheiten-Vergleich-Screen + Scoping — ERLEDIGT (Phase 6 abgeschlossen):**
+  reine Helfer `sessionWorkoutUnitId` (Attribution über direktes
+  `workoutUnitTemplateId` **oder** den Plan-Tag-Snapshot
+  `sourceWorkoutUnitTemplateId`), `filterDatasetByWorkoutUnit` und
+  `compareWorkoutUnits` (nutzt wieder nur `computeBlockMetrics`). Neue Seite
+  `/analyse/einheiten-vergleich` (`WorkoutUnitComparePage`): listet nur
+  tatsächlich trainierte Bibliothekseinheiten, Vergleich über die jeweilige
+  Session-Spanne, Deload-Filter, gemeinsame `MetricsCompareTable`. Helfer
+  getestet.
 
 ### Phase 7 — Formate (teilweise)
 
@@ -250,13 +255,13 @@ Enum-, Feld- oder Versionsänderung. Reset betrifft kein Import/Export-Format.
 
 Phasen 0–5, 7, 8 (bis auf Kleinreste) und 9 sind abgeschlossen. Verbleibend:
 
-- **Phase 6 (Rest)** — Plan-Vergleich-Screen + Unsicherheitsanzeige sind fertig;
-  offen bleibt der Einheiten-Vergleich als Screen samt Übungseinheiten-Scoping
-  (Session↔Einheit, teils erst über den Plan-Tag verknüpft).
 - **Phase A Rest (Rest)** — Rest-Tage in der Zyklus-/Frei-Vorschau (bei diesen
   Modi ist „heute" nicht kalendergebunden — bewusst offen).
 - **Phase 8 (Rest)** — KI-UI-Texte final durchsehen; interner `templateVersions`-
   Store bleibt als KI-Wiederherstellungspunkt.
+
+Damit sind alle größeren Roadmap-Blöcke (Phasen 0–9) umgesetzt; es verbleiben nur
+noch die oben genannten bewusst offenen Kleinreste.
 
 ## Bekannte Risiken / Hinweise
 

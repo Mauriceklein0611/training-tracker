@@ -185,6 +185,13 @@ export default function AnalyticsPage() {
           <GitCompareArrows size={18} className="text-accent" aria-hidden="true" />
           Pläne vergleichen
         </Link>
+        <Link
+          to="/analyse/einheiten-vergleich"
+          className="flex min-h-[48px] items-center gap-2 rounded-2xl border border-border bg-surface px-4 text-sm font-medium active:bg-surface-2"
+        >
+          <GitCompareArrows size={18} className="text-accent" aria-hidden="true" />
+          Einheiten vergleichen
+        </Link>
       </div>
 
       <Segmented
