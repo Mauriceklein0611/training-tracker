@@ -1,7 +1,7 @@
 import type { AnalyticsDataset } from '@/services/analytics';
 import { computeBlockMetrics, type BlockMetrics } from '@/services/blockComparison';
-import type { BodyWeightEntry, WorkoutSession } from '@/types';
-import type { DateRange } from '@/utils/date';
+import type { BodyWeightEntry, PlanUsagePeriod, WorkoutSession } from '@/types';
+import { dayKey, type DateRange } from '@/utils/date';
 
 /**
  * Deload- and plan-aware analysis filters (Phase 6).
@@ -74,6 +74,53 @@ export function filterDatasetByDeload(
     filterSessionsByDeload(dataset.sessions, filter).map((s) => s.id),
   );
   return restrictDatasetToSessions(dataset, keptSessionIds);
+}
+
+/** The inclusive local-day span [from, to] of one usage period; open ends today. */
+function periodSpans(
+  periods: PlanUsagePeriod[],
+  planId: string,
+  todayKey: string,
+): { from: string; to: string }[] {
+  return periods
+    .filter((period) => period.planId === planId)
+    .map((period) => ({ from: period.startDate, to: period.endDate ?? todayKey }));
+}
+
+/**
+ * The overall span a plan was the active plan, derived from its usage periods
+ * (open periods run to today). Returns null when the plan has no usage history,
+ * so the caller can fall back rather than invent a range.
+ */
+export function planUsageSpan(
+  periods: PlanUsagePeriod[],
+  planId: string,
+  today: Date = new Date(),
+): { from: string; to: string } | null {
+  const spans = periodSpans(periods, planId, dayKey(today));
+  if (spans.length === 0) return null;
+  return {
+    from: spans.reduce((min, span) => (span.from < min ? span.from : min), spans[0].from),
+    to: spans.reduce((max, span) => (span.to > max ? span.to : max), spans[0].to),
+  };
+}
+
+/**
+ * Whether two plans' usage periods overlap in time. When they do, a side-by-side
+ * comparison cannot attribute a body change to one plan alone, so the UI must say
+ * the attribution is uncertain rather than imply causation.
+ */
+export function planUsagePeriodsOverlap(
+  periods: PlanUsagePeriod[],
+  planIdA: string,
+  planIdB: string,
+  today: Date = new Date(),
+): boolean {
+  const todayKey = dayKey(today);
+  const a = periodSpans(periods, planIdA, todayKey);
+  const b = periodSpans(periods, planIdB, todayKey);
+  // Inclusive day ranges overlap when each starts on or before the other ends.
+  return a.some((x) => b.some((y) => x.from <= y.to && y.from <= x.to));
 }
 
 export interface PlanComparisonSide {

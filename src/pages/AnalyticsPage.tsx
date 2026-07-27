@@ -170,13 +170,22 @@ export default function AnalyticsPage() {
         subtitle="Berechnet ausschließlich aus deinen lokalen Daten"
       />
 
-      <Link
-        to="/analyse/vergleich"
-        className="mb-3 flex min-h-[48px] items-center gap-2 rounded-2xl border border-border bg-surface px-4 text-sm font-medium active:bg-surface-2"
-      >
-        <GitCompareArrows size={18} className="text-accent" aria-hidden="true" />
-        Trainingsblöcke vergleichen
-      </Link>
+      <div className="mb-3 grid gap-2">
+        <Link
+          to="/analyse/vergleich"
+          className="flex min-h-[48px] items-center gap-2 rounded-2xl border border-border bg-surface px-4 text-sm font-medium active:bg-surface-2"
+        >
+          <GitCompareArrows size={18} className="text-accent" aria-hidden="true" />
+          Trainingsblöcke vergleichen
+        </Link>
+        <Link
+          to="/analyse/plaene-vergleich"
+          className="flex min-h-[48px] items-center gap-2 rounded-2xl border border-border bg-surface px-4 text-sm font-medium active:bg-surface-2"
+        >
+          <GitCompareArrows size={18} className="text-accent" aria-hidden="true" />
+          Pläne vergleichen
+        </Link>
+      </div>
 
       <Segmented
         label="Zeitraum"

@@ -5,7 +5,7 @@ ausbauen" (Opus-Gesamtprompt). Diese Datei ersetzt keine Umsetzung, sondern häl
 den geprüften Stand fest.
 
 Zuletzt grüne Pflichtchecks (lokal): `typecheck`, `lint`, `test` (62 Dateien,
-701 Tests), `build`, `prettier --check` (geänderte Dateien).
+703 Tests), `build`, `prettier --check` (geänderte Dateien).
 
 ## Abgeschlossen
 
@@ -151,10 +151,19 @@ Enum-, Feld- oder Versionsänderung. Reset betrifft kein Import/Export-Format.
   getestet.
 - **UI:** Deload-Filter in AnalyticsPage verdrahtet (bewusster Deload wird nicht
   als Plateau gewertet).
-- **Offen in Phase 6:** eigene Analyse-Modus-UI (Plan-Vergleich, Einheiten-
-  Vergleich als Screens), Übungseinheiten-Scoping (Session↔Einheit über
-  `sourceWorkoutUnitTemplateId`/`workoutUnitTemplateId`), Unsicherheitsanzeige
-  bei überlappenden `PlanUsagePeriod`s im Vergleich.
+- **Plan-Vergleich-Screen — ERLEDIGT:** neue Seite `/analyse/plaene-vergleich`
+  (`PlanComparePage`): zwei Pläne wählen, Kennzahlen nebeneinander über den
+  jeweiligen **Nutzungszeitraum** (reine Helfer `planUsageSpan` +
+  `planUsagePeriodsOverlap`, Fallback auf die Session-Spanne wenn kein
+  Nutzungszeitraum), Deload-Filter, und eine **Unsicherheitsanzeige** wenn sich
+  die Nutzungszeiträume überlappen (keine Kausalaussage). Die Tabelle ist als
+  gemeinsame `MetricsCompareTable` extrahiert und wird jetzt auch vom
+  Block-Vergleich genutzt (Duplikat entfernt). Reine Helfer getestet; nutzt
+  weiter nur `comparePlans`/`computeBlockMetrics` (kein zweiter Motor).
+- **Offen in Phase 6:** Einheiten-Vergleich als Screen + Übungseinheiten-Scoping
+  (Session↔Einheit über `sourceWorkoutUnitTemplateId`/`workoutUnitTemplateId` —
+  der Session↔Einheit-Link liegt teils erst auf dem Plan-Tag, braucht also
+  zusätzliches Daten-Mapping).
 
 ### Phase 7 — Formate (teilweise)
 
@@ -241,10 +250,9 @@ Enum-, Feld- oder Versionsänderung. Reset betrifft kein Import/Export-Format.
 
 Phasen 0–5, 7, 8 (bis auf Kleinreste) und 9 sind abgeschlossen. Verbleibend:
 
-- **Phase 6 (Rest)** — eigene Analyse-Modus-UI: Plan-Vergleich und Einheiten-
-  Vergleich als eigene Screens auf der vorhandenen Filterschicht
-  (`analysisFilters.ts`), Übungseinheiten-Scoping (Session↔Einheit) und
-  Unsicherheitsanzeige bei überlappenden `PlanUsagePeriod`s.
+- **Phase 6 (Rest)** — Plan-Vergleich-Screen + Unsicherheitsanzeige sind fertig;
+  offen bleibt der Einheiten-Vergleich als Screen samt Übungseinheiten-Scoping
+  (Session↔Einheit, teils erst über den Plan-Tag verknüpft).
 - **Phase A Rest (Rest)** — Rest-Tage in der Zyklus-/Frei-Vorschau (bei diesen
   Modi ist „heute" nicht kalendergebunden — bewusst offen).
 - **Phase 8 (Rest)** — KI-UI-Texte final durchsehen; interner `templateVersions`-

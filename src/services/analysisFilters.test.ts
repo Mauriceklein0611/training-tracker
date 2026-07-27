@@ -5,9 +5,12 @@ import {
   filterDatasetByPlan,
   filterSessionsByDeload,
   isDeloadSession,
+  planUsagePeriodsOverlap,
+  planUsageSpan,
   restrictDatasetToSessions,
 } from '@/services/analysisFilters';
 import type { AnalyticsDataset } from '@/services/analytics';
+import type { PlanUsagePeriod } from '@/types';
 import {
   makeExercise,
   makeSession,
@@ -114,5 +117,46 @@ describe('comparePlans', () => {
     );
     // Plan A had 2 sessions, one of them a deload → 1 remains.
     expect(result.a.metrics.sessions).toBe(1);
+  });
+});
+
+describe('plan usage spans and overlap', () => {
+  const now = new Date('2026-08-01T12:00:00');
+  function period(planId: string, startDate: string, endDate?: string): PlanUsagePeriod {
+    return {
+      id: `${planId}-${startDate}`,
+      planId,
+      planNameSnapshot: planId,
+      startDate,
+      endDate,
+      createdAt: '',
+      updatedAt: '',
+    };
+  }
+
+  it('spans a plan from its earliest start to its latest end (open = today)', () => {
+    const periods = [
+      period('A', '2026-06-01', '2026-06-20'),
+      period('A', '2026-07-01'), // open → runs to today
+    ];
+    expect(planUsageSpan(periods, 'A', now)).toEqual({
+      from: '2026-06-01',
+      to: '2026-08-01',
+    });
+    expect(planUsageSpan(periods, 'B', now)).toBeNull();
+  });
+
+  it('detects overlapping usage periods between two plans', () => {
+    const overlapping = [
+      period('A', '2026-06-01', '2026-06-30'),
+      period('B', '2026-06-20', '2026-07-10'),
+    ];
+    expect(planUsagePeriodsOverlap(overlapping, 'A', 'B', now)).toBe(true);
+
+    const disjoint = [
+      period('A', '2026-06-01', '2026-06-10'),
+      period('B', '2026-06-20', '2026-06-30'),
+    ];
+    expect(planUsagePeriodsOverlap(disjoint, 'A', 'B', now)).toBe(false);
   });
 });
