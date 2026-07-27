@@ -78,9 +78,15 @@ function parseWeightList(raw: string): number[] | undefined {
   return unique.length > 0 ? unique : undefined;
 }
 
-function toFormState(exercise?: Exercise, defaultRest = 120): FormState {
+function toFormState(
+  exercise?: Exercise,
+  defaultRest = 120,
+  initialName = '',
+): FormState {
   return {
-    name: exercise?.name ?? '',
+    // A new exercise created straight from a search prefills the searched name;
+    // an existing exercise always keeps its own name.
+    name: exercise?.name ?? initialName.trim(),
     primaryMuscleGroup: exercise?.primaryMuscleGroup ?? '',
     secondaryMuscleGroups: exercise?.secondaryMuscleGroups ?? [],
     equipment: exercise?.equipment ?? '',
@@ -110,6 +116,7 @@ export function ExerciseFormDialog({
   exercise,
   existingNames,
   defaultRestSeconds = 120,
+  initialName = '',
   onClose,
   onSaved,
 }: {
@@ -117,13 +124,15 @@ export function ExerciseFormDialog({
   exercise?: Exercise;
   existingNames: string[];
   defaultRestSeconds?: number;
+  /** Prefills the name for a brand-new exercise, e.g. from an unmatched search. */
+  initialName?: string;
   onClose: () => void;
   onSaved?: (exercise: Exercise) => void;
 }) {
   const toast = useToast();
   const listId = useId();
   const [form, setForm] = useState<FormState>(() =>
-    toFormState(exercise, defaultRestSeconds),
+    toFormState(exercise, defaultRestSeconds, initialName),
   );
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
@@ -141,10 +150,10 @@ export function ExerciseFormDialog({
 
   useEffect(() => {
     if (open) {
-      setForm(toFormState(exercise, defaultRestSeconds));
+      setForm(toFormState(exercise, defaultRestSeconds, initialName));
       setErrors({});
     }
-  }, [open, exercise, defaultRestSeconds]);
+  }, [open, exercise, defaultRestSeconds, initialName]);
 
   const weightModes = useMemo(
     () => allowedWeightModes(form.trackingType),

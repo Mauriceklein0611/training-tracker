@@ -97,6 +97,14 @@ export function ExercisePickerDialog({
                   ? 'Lege deine erste Übung an. Du bestimmst dabei, wie sie erfasst wird — mit Gewicht, mit Körpergewicht oder auf Zeit.'
                   : 'Passe die Suche an oder lege eine neue Übung an.'
               }
+              action={
+                search.trim() ? (
+                  <Button variant="primary" onClick={() => setCreateOpen(true)}>
+                    <Plus size={18} aria-hidden="true" />„{search.trim()}" als neue Übung
+                    erstellen
+                  </Button>
+                ) : undefined
+              }
             />
           ) : (
             <ul className="grid gap-1">
@@ -130,9 +138,11 @@ export function ExercisePickerDialog({
       <ExerciseFormDialog
         open={createOpen}
         existingNames={existingNames}
+        initialName={search}
         onClose={() => setCreateOpen(false)}
         onSaved={(exercise) => {
           setCreateOpen(false);
+          setSearch('');
           onSelect(exercise);
         }}
       />
