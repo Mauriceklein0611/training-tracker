@@ -18,6 +18,11 @@ erweitert, Editor `features/plans/ScheduleEditor.tsx`. free-rotation speichert
 keine Entries (Reihenfolge aus `WorkoutTemplate.position`); nur cycle/weekly
 haben Entries. Cursor `cyclePosition` nur für `repeating-cycle`.
 
+- **Rest-Tag-Hinweis in der Vorschau — ERLEDIGT:** Home und die Pläne-Übersicht
+  zeigen bei **Wochenplänen** an, wenn heute ein Pausen-/freier Tag geplant ist
+  („Heute: Pause/Frei", aus `state.current`). Für `repeating-cycle`/
+  `free-rotation` bewusst nicht (siehe „Bekannte Risiken / Hinweise").
+
 ### Phase 0 — Kritische Integrationsfehler
 
 - **0.1 Zeitplan-Fortschaltung nach Abschluss.** `finishSession` schaltet den
@@ -258,18 +263,13 @@ Enum-, Feld- oder Versionsänderung. Reset betrifft kein Import/Export-Format.
   Strukturguard im Backup-Test abgesichert (analog zum Reset-Guard). Register mit
   Audit-Stempel versehen. **Phase 9 abgeschlossen.**
 
-## Offen (nächste Schritte, in Roadmap-Reihenfolge)
+## Offen (nächste Schritte)
 
-Phasen 0–5, 7, 8 (bis auf Kleinreste) und 9 sind abgeschlossen. Verbleibend:
+Keine offenen Punkte — die Roadmap (Phasen 0–9) ist vollständig abgearbeitet.
 
-- **Phase A Rest (bewusst offen)** — Rest-Tage in der Zyklus-/Frei-Vorschau. Bei
-  diesen Modi ist „heute" nicht kalendergebunden (der Zyklus-Cursor ist
-  trainings-, nicht datumsgetrieben; freie Rotation hat gar keinen Kalenderplan),
-  daher würde ein „Heute: Pause" dort in die Irre führen. Bewusste Design-
-  Entscheidung, nicht zu implementieren.
-
-Alle größeren Roadmap-Blöcke (Phasen 0–9) sind umgesetzt. Der einzige verbleibende
-Punkt ist die oben genannte bewusst offene Phase-A-Rest-Entscheidung.
+Eine bewusste Nicht-Umsetzung ist unter „Bekannte Risiken / Hinweise" als
+abgeschlossene Design-Entscheidung festgehalten (Rest-Tage-Hinweis nur bei
+Wochenplänen), damit sie nicht erneut als offener Punkt auftaucht.
 
 ## Bekannte Risiken / Hinweise
 
@@ -280,12 +280,14 @@ Punkt ist die oben genannte bewusst offene Phase-A-Rest-Entscheidung.
   kalenderbasierte Ableitung ersetzt, muss der Test in
   `sessionSchedule.test.ts` weiterhin belegen, dass nach einem Abschluss der
   fachlich nächste Zustand erscheint.
+- **Rest-Tag-Hinweis nur bei Wochenplänen (abgeschlossene Design-Entscheidung).**
+  Bei `repeating-cycle` ist der Cursor trainings-, nicht datumsgetrieben, und
+  `free-rotation` hat gar keinen Kalenderplan — ein „Heute: Pause" wäre dort
+  fachlich falsch. Deshalb zeigt die Vorschau den Hinweis ausschließlich für
+  `weekly`. Kein offener Punkt, sondern bewusst so belassen.
 
 ### Nächster exakter Schritt
 
-Gut machbare nächste Schritte: KI-Analyse-Export um Plan-/Einheiten-/Deload-/
-Nutzungszeitraum-Kontext erweitern (7.1); ungenutzte Versions-Repo-Funktionen
-(`setTemplateVersionArchived`, `deleteTemplateVersion`) + Tests aufräumen (Phase
-8-Rest); Phase-A-Rest (Rest-Tage in Home/Templates-Vorschau); Phase-4-Ausnahmen
-(verschoben/übersprungen/zusätzliche Pause); Phase-6-Analyse-Modus-UI. Zum
-Abschluss der Format-Impact-Matrix-Durchlauf (§9.1).
+Keiner offen — die Roadmap (Phasen 0–9) ist vollständig abgearbeitet und lokal
+grün (`typecheck`, `lint`, `test`, `build`, `prettier`). Neue Arbeit käme nur aus
+neuen Anforderungen außerhalb dieser Roadmap.
