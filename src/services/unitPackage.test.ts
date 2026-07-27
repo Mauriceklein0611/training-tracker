@@ -14,6 +14,7 @@ import {
   buildWorkoutUnitPackage,
   importWorkoutUnitPackage,
   parseWorkoutUnitPackage,
+  workoutUnitPackageFingerprint,
   workoutUnitPackageSchema,
 } from '@/services/unitPackage';
 import type { Exercise } from '@/types';
@@ -165,5 +166,24 @@ describe('importWorkoutUnitPackage', () => {
     const preview = analyzeUnitPackageImport(pkg, await db.exercises.toArray(), fps);
     expect(preview.alreadyImported).toBe(true);
     expect(preview.unitNames).toEqual(['Push']);
+  });
+
+  it('fingerprint changes when a rep target or rest changes', async () => {
+    const unit = await seedUnit();
+    const detail = (await getWorkoutUnitWithExercises(unit.id))!;
+    const pkg = buildWorkoutUnitPackage([detail], {
+      packageName: 'Push',
+      source: 'app-export',
+    });
+    const original = workoutUnitPackageFingerprint(pkg);
+
+    const withRepChange = structuredClone(pkg);
+    withRepChange.units[0].exercises[0].targetRepMax =
+      (withRepChange.units[0].exercises[0].targetRepMax ?? 10) + 1;
+    expect(workoutUnitPackageFingerprint(withRepChange)).not.toBe(original);
+
+    const withRestChange = structuredClone(pkg);
+    withRestChange.units[0].exercises[0].restSeconds += 30;
+    expect(workoutUnitPackageFingerprint(withRestChange)).not.toBe(original);
   });
 });

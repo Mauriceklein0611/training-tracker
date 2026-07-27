@@ -375,6 +375,58 @@ describe('importPlanPackage', () => {
     expect(second.duplicate).toBe(true);
   });
 
+  describe('canonical fingerprint sensitivity', () => {
+    const base = () => planPackageSchema.parse(validPlanPackage());
+
+    it('is stable for the same content and ignores volatile metadata', () => {
+      const a = planPackageSchema.parse({
+        ...validPlanPackage(),
+        packageId: 'other-id',
+        createdAt: '2030-12-31T23:59:59.000Z',
+        source: { kind: 'app-export' },
+      });
+      expect(planPackageFingerprint(a)).toBe(planPackageFingerprint(base()));
+    });
+
+    it('changes when a duration target changes', () => {
+      const pkg = base();
+      pkg.plans[0].days[0].exercises[0].targetDurationSeconds = 45;
+      expect(planPackageFingerprint(pkg)).not.toBe(planPackageFingerprint(base()));
+    });
+
+    it('changes when the weight multiplier changes', () => {
+      const pkg = base();
+      pkg.exercises[1].weightMultiplier = 3;
+      expect(planPackageFingerprint(pkg)).not.toBe(planPackageFingerprint(base()));
+    });
+
+    it('changes when the schedule mode or a rest day changes', () => {
+      const withSchedule = () => {
+        const pkg = base();
+        pkg.plans[0].schedule = {
+          mode: 'repeating-cycle',
+          entries: [
+            { type: 'workout', dayKey: 'day-1', position: 0 },
+            { type: 'rest', position: 1 },
+            { type: 'workout', dayKey: 'day-2', position: 2 },
+          ],
+        };
+        return pkg;
+      };
+      // A plan with a schedule differs from the default free-rotation.
+      expect(planPackageFingerprint(withSchedule())).not.toBe(
+        planPackageFingerprint(base()),
+      );
+      // Removing the rest day changes the fingerprint again.
+      const withoutRest = withSchedule();
+      withoutRest.plans[0].schedule!.entries =
+        withoutRest.plans[0].schedule!.entries.filter((entry) => entry.type !== 'rest');
+      expect(planPackageFingerprint(withoutRest)).not.toBe(
+        planPackageFingerprint(withSchedule()),
+      );
+    });
+  });
+
   it('rolls back completely when a write fails mid-transaction', async () => {
     const pkg = parsedFixture();
     const analysis = analyzePlanPackageImport(pkg, [], []);

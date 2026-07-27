@@ -253,20 +253,48 @@ export function buildWorkoutUnitPackage(
   });
 }
 
-/** Content fingerprint (ignores volatile packageId/createdAt/source). */
+/**
+ * Content fingerprint (ignores only the volatile packageId/createdAt/source).
+ *
+ * Canonical over every portable business field of the units and their
+ * exercises, so a change to any target (sets, rep range, duration), the rest,
+ * a note, the group, the unit description or the exercise definition changes the
+ * fingerprint. Ordering-independent: exercises sorted by name, unit exercises by
+ * their stable order.
+ */
 export function workoutUnitPackageFingerprint(pkg: WorkoutUnitPackage): string {
-  const nameByKey = new Map(pkg.exercises.map((e) => [e.exerciseKey, e.name]));
+  const exerciseByKey = new Map(pkg.exercises.map((e) => [e.exerciseKey, e]));
   const content = {
     exercises: [...pkg.exercises]
-      .map((e) => ({ ...e, exerciseKey: e.name }))
-      .sort((a, b) => a.name.localeCompare(b.name)),
+      .map((e) => ({
+        name: e.name.trim().toLowerCase(),
+        trackingType: e.trackingType,
+        weightMode: e.weightMode,
+        weightMultiplier: e.weightMultiplier,
+        equipment: e.equipment.trim().toLowerCase(),
+        defaultRestSeconds: e.defaultRestSeconds,
+        primaryMuscleGroup: e.primaryMuscleGroup,
+        secondaryMuscleGroups: [...e.secondaryMuscleGroups].sort(),
+      }))
+      .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0)),
     units: pkg.units.map((unit) => ({
-      name: unit.name,
-      exercises: unit.exercises.map((pe) => ({
-        exercise: nameByKey.get(pe.exerciseKey) ?? pe.exerciseKey,
-        order: pe.order,
-        targetSets: pe.targetSets,
-      })),
+      name: unit.name.trim().toLowerCase(),
+      description: unit.description.trim(),
+      exercises: [...unit.exercises]
+        .sort((a, b) => a.order - b.order)
+        .map((pe) => ({
+          exercise:
+            exerciseByKey.get(pe.exerciseKey)?.name.trim().toLowerCase() ??
+            pe.exerciseKey,
+          order: pe.order,
+          targetSets: pe.targetSets,
+          targetRepMin: pe.targetRepMin ?? null,
+          targetRepMax: pe.targetRepMax ?? null,
+          targetDurationSeconds: pe.targetDurationSeconds ?? null,
+          restSeconds: pe.restSeconds,
+          notes: pe.notes.trim(),
+          group: pe.group ? { type: pe.group.type, restMode: pe.group.restMode } : null,
+        })),
     })),
   };
   return fingerprint(stableStringify(content));
