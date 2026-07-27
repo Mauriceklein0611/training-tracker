@@ -248,7 +248,9 @@ describe('personal records', () => {
     ];
 
     const records = computePersonalRecords(contexts);
-    const record = records.get('exercise-1');
+    // One execution (barbell/total) → one record line.
+    expect(records.size).toBe(1);
+    const record = [...records.values()][0];
 
     expect(record?.bestLoadKg).toBe(110);
     expect(record?.bestLoadReps).toBe(3);
@@ -263,7 +265,37 @@ describe('personal records', () => {
       makeContext({ weightKg: 200, reps: 1, setType: 'warmup' }, shared),
       makeContext({ weightKg: 100, reps: 5 }, shared),
     ]);
-    expect(records.get('exercise-1')?.bestLoadKg).toBe(100);
+    expect([...records.values()][0]?.bestLoadKg).toBe(100);
+  });
+
+  it('keeps records of different executions apart (dumbbell never beats barbell)', () => {
+    const barbell = makeContext(
+      {
+        weightKg: 100,
+        reps: 5,
+        equipmentSnapshot: 'barbell',
+        weightModeSnapshot: 'total',
+      },
+      { exerciseId: 'ex', exerciseNameSnapshot: 'Schulterdrücken' },
+    );
+    const dumbbell = makeContext(
+      {
+        weightKg: 30, // 30 per hand ×2 = 60 kg total, below the 100 kg barbell
+        reps: 5,
+        equipmentSnapshot: 'dumbbells',
+        weightModeSnapshot: 'per_hand',
+        weightMultiplierSnapshot: 2,
+      },
+      { exerciseId: 'ex', exerciseNameSnapshot: 'Schulterdrücken' },
+    );
+
+    const records = computePersonalRecords([barbell, dumbbell]);
+    expect(records.size).toBe(2);
+    const byEquipment = new Map(
+      [...records.values()].map((record) => [record.equipment, record]),
+    );
+    expect(byEquipment.get('barbell')?.bestLoadKg).toBe(100);
+    expect(byEquipment.get('dumbbells')?.bestLoadKg).toBe(60);
   });
 
   it('reports a new record only when it beats the earlier history', () => {

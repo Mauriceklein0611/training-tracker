@@ -1,4 +1,5 @@
 import type {
+  Equipment,
   SessionExercise,
   SetType,
   SetWithContext,
@@ -6,6 +7,7 @@ import type {
   WeightMode,
   WorkoutSet,
 } from '@/types';
+import { effectiveSetExecution } from '@/services/equipment';
 
 /**
  * Domain calculations.
@@ -226,6 +228,15 @@ export interface PersonalRecords {
   exerciseId: string;
   exerciseName: string;
   trackingType: TrackingType;
+  /**
+   * Execution the record belongs to. Bests are kept apart per equipment +
+   * weight mode, so a dumbbell set never overwrites a barbell record — while
+   * volume is still merged under the exercise elsewhere. Absent execution data
+   * resolves to `unspecified`, so existing single-execution history stays one
+   * record line.
+   */
+  equipment: Equipment;
+  weightMode: WeightMode;
   /** Heaviest total load moved in a working set. */
   bestLoadKg: number | null;
   bestLoadReps: number | null;
@@ -248,11 +259,15 @@ function emptyRecords(
   exerciseId: string,
   exerciseName: string,
   trackingType: TrackingType,
+  equipment: Equipment,
+  weightMode: WeightMode,
 ): PersonalRecords {
   return {
     exerciseId,
     exerciseName,
     trackingType,
+    equipment,
+    weightMode,
     bestLoadKg: null,
     bestLoadReps: null,
     bestLoadAt: null,
@@ -267,9 +282,17 @@ function emptyRecords(
   };
 }
 
+/** Groups records by exercise *and* execution, so bests never mix executions. */
+function recordKey(exerciseId: string, equipment: Equipment, weightMode: WeightMode) {
+  return `${exerciseId} ${equipment} ${weightMode}`;
+}
+
 /**
- * Personal bests per exercise, derived from completed working sets.
- * Grouping uses `exerciseId` so a renamed exercise keeps one record line.
+ * Personal bests per exercise and execution, derived from completed working
+ * sets. Grouping uses `exerciseId` + equipment + weight mode so a renamed
+ * exercise keeps its record line but a dumbbell set never overwrites a barbell
+ * best. History with a single execution (equipment `unspecified`, one weight
+ * mode) collapses to one record line, exactly as before.
  */
 export function computePersonalRecords(
   entries: SetWithContext[],
@@ -283,13 +306,20 @@ export function computePersonalRecords(
     if (!isCompleted(set)) continue;
     if (!includeWarmup && !isWorkingSet(set)) continue;
 
-    const key = sessionExercise.exerciseId;
+    const execution = effectiveSetExecution(set, sessionExercise);
+    const key = recordKey(
+      sessionExercise.exerciseId,
+      execution.equipment,
+      execution.weightMode,
+    );
     const record =
       records.get(key) ??
       emptyRecords(
-        key,
+        sessionExercise.exerciseId,
         sessionExercise.exerciseNameSnapshot,
         sessionExercise.trackingTypeSnapshot,
+        execution.equipment,
+        execution.weightMode,
       );
     // Keep the most recent name for display.
     record.exerciseName = sessionExercise.exerciseNameSnapshot;
@@ -336,8 +366,9 @@ export function computePersonalRecords(
   }
 
   // Second pass: session volume records need the completed per-session sums.
-  for (const [exerciseId, perSession] of sessionVolume) {
-    const record = records.get(exerciseId);
+  // Keyed by the same exercise+execution key as the records above.
+  for (const [key, perSession] of sessionVolume) {
+    const record = records.get(key);
     if (!record) continue;
     for (const [sessionId, volume] of perSession) {
       if (record.bestSessionVolumeKg == null || volume > record.bestSessionVolumeKg) {
@@ -354,6 +385,9 @@ export function computePersonalRecords(
 export interface NewRecord {
   exerciseId: string;
   exerciseName: string;
+  /** Execution the record was set with (separates a dumbbell PR from a barbell one). */
+  equipment: Equipment;
+  weightMode: WeightMode;
   kind: 'load' | 'oneRepMax' | 'reps' | 'duration' | 'sessionVolume';
   label: string;
   value: number;
@@ -391,6 +425,8 @@ export function findNewRecords(
     results.push({
       exerciseId: current.exerciseId,
       exerciseName: current.exerciseName,
+      equipment: current.equipment,
+      weightMode: current.weightMode,
       kind,
       label: RECORD_LABELS[kind],
       value: currentValue,
@@ -398,8 +434,8 @@ export function findNewRecords(
     });
   };
 
-  for (const [exerciseId, current] of during) {
-    const previous = before.get(exerciseId);
+  for (const [key, current] of during) {
+    const previous = before.get(key);
     compare(current, 'load', current.bestLoadKg, previous?.bestLoadKg ?? null);
     compare(
       current,

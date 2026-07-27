@@ -911,6 +911,10 @@ export function buildAiExport(
     personalRecords: analytics.personalRecords.map((record) => ({
       exercise: record.exerciseName,
       trackingType: record.trackingType,
+      // Bests are per execution; equipment/weightMode are stable enum values, so
+      // a dumbbell and a barbell record of the same exercise stay distinct.
+      equipment: record.equipment,
+      weightMode: record.weightMode,
       bestTotalLoadKg: round(record.bestLoadKg),
       bestTotalLoadReps: record.bestLoadReps,
       bestTotalLoadAt: record.bestLoadAt,

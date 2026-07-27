@@ -1,5 +1,6 @@
 import { Trophy } from 'lucide-react';
 import { Stat } from '@/components/ui/Card';
+import { equipmentLabel } from '@/services/equipment';
 import type { SessionSummary } from '@/services/sessionSummary';
 import { formatDurationLong } from '@/utils/date';
 import {
@@ -68,8 +69,17 @@ export function SessionSummaryView({ summary }: { summary: SessionSummary }) {
           </h3>
           <ul className="mt-2 grid gap-1.5">
             {summary.newRecords.map((record) => (
-              <li key={`${record.exerciseId}-${record.kind}`} className="text-sm">
+              <li
+                key={`${record.exerciseId} ${record.equipment} ${record.weightMode} ${record.kind}`}
+                className="text-sm"
+              >
                 <span className="font-medium">{record.exerciseName}</span>
+                {record.equipment !== 'unspecified' ? (
+                  <span className="text-muted">
+                    {' '}
+                    · {equipmentLabel(record.equipment)}
+                  </span>
+                ) : null}
                 <span className="text-muted"> — {record.label}: </span>
                 <span className="numeric font-semibold">
                   {record.kind === 'reps'

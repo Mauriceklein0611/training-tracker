@@ -4,6 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { GitCompareArrows } from 'lucide-react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card, CardHeader, EmptyState, Stat } from '@/components/ui/Card';
+import { equipmentLabel } from '@/services/equipment';
 import { Segmented, SelectField, TextField } from '@/components/ui/Field';
 import {
   DataTable,
@@ -453,10 +454,18 @@ export default function AnalyticsPage() {
               <ul className="grid gap-2">
                 {analytics.personalRecords.map((record) => (
                   <li
-                    key={record.exerciseId}
+                    key={`${record.exerciseId} ${record.equipment} ${record.weightMode}`}
                     className="border-t border-border pt-2 first:border-0 first:pt-0"
                   >
-                    <p className="font-medium">{record.exerciseName}</p>
+                    <p className="font-medium">
+                      {record.exerciseName}
+                      {record.equipment !== 'unspecified' ? (
+                        <span className="font-normal text-muted">
+                          {' '}
+                          · {equipmentLabel(record.equipment)}
+                        </span>
+                      ) : null}
+                    </p>
                     <p className="numeric mt-0.5 text-sm text-muted">
                       {record.bestLoadKg != null
                         ? `Bestlast ${formatKg(record.bestLoadKg)}${record.bestLoadReps ? ` × ${record.bestLoadReps}` : ''}`
