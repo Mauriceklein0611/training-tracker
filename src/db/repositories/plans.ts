@@ -249,6 +249,7 @@ export async function deletePlan(planId: string): Promise<void> {
       db.planSchedules,
       db.scheduleEntries,
       db.planUsagePeriods,
+      db.planScheduleExceptions,
       db.settings,
     ],
     async () => {
@@ -259,6 +260,9 @@ export async function deletePlan(planId: string): Promise<void> {
       }
       await db.workoutTemplates.where('planId').equals(planId).delete();
       await deleteScheduleForPlan(planId);
+      // Calendar exceptions are per-plan overrides with no snapshot value once the
+      // plan is gone — unlike usage periods, they are removed with the plan.
+      await db.planScheduleExceptions.where('planId').equals(planId).delete();
 
       // Usage periods are kept — the name snapshot keeps them readable for the
       // analysis — but an open period is closed and, if this was the active

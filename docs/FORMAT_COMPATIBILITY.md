@@ -6,10 +6,10 @@ names and versions are centralised in `src/constants/formats.ts` or the format's
 own established constant.
 
 Last full matrix audit (2026-07-27): every version in the table below was
-cross-checked against its code constant (`SCHEMA_VERSION` 24, `AI_EXPORT_VERSION`
+cross-checked against its code constant (`SCHEMA_VERSION` 25, `AI_EXPORT_VERSION`
 2, `AI_RESPONSE_SCHEMA_VERSION` 1, `PLAN_BUILDER_KIT_VERSION` 2,
 `PLAN_PACKAGE_SCHEMA_VERSION` 3, `SUPPORTED_WORKOUT_UNIT_PACKAGE_VERSIONS` [1]),
-and the backup was confirmed to cover all 19 Dexie stores + settings (guarded by
+and the backup was confirmed to cover all 20 Dexie stores + settings (guarded by
 test).
 
 General rules:
@@ -24,7 +24,7 @@ General rules:
 
 | Format                             | Direction               | Name (in content)                       | Version field                           | Version              | Supported imports |
 | ---------------------------------- | ----------------------- | --------------------------------------- | --------------------------------------- | -------------------- | ----------------- |
-| Full backup                        | export + import         | `app: training-tracker`                 | `exportFormatVersion` / `schemaVersion` | format 1 / schema 24 | schema ≤ 24       |
+| Full backup                        | export + import         | `app: training-tracker`                 | `exportFormatVersion` / `schemaVersion` | format 1 / schema 25 | schema ≤ 25       |
 | AI analysis export                 | export                  | (AI export doc)                         | `exportVersion`                         | 2                    | —                 |
 | AI response import                 | import                  | `format: training-ai-response`          | `schemaVersion`                         | 1                    | exactly 1         |
 | Plan builder kit                   | export                  | `format: training-plan-builder-kit`     | `version`                               | 2                    | —                 |
@@ -71,6 +71,9 @@ General rules:
   `scheduleModeSnapshot`, `plannedDate` and `scheduleEntryId`, snapshotted when a
   workout is started from a plan (Phase 4.4). Optional/defaulted, so older
   sessions and backups restore unchanged; they simply lack the schedule context.
+- Plan schedule exceptions (schema 25): a new `planScheduleExceptions` store holds
+  per-day overrides (`type` `skip` | `rest`, one per plan+date). Optional/defaulted,
+  so older backups restore with no exceptions; removed with their plan on delete.
 - AI import undo (schema 24): `aiAnalyses` gain optional `restoreVersionIds`
   (the `ai-import` `templateVersions` frozen before applying, one per changed
   plan) and `undoneAt` (set when the import was reverted). Optional/defaulted, so

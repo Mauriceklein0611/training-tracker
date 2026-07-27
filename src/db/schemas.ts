@@ -134,6 +134,17 @@ export const planUsagePeriodSchema = z.object({
   updatedAt: isoDateTime,
 });
 
+/** Added in schema version 25; a per-day override of a plan's derived schedule. */
+export const planScheduleExceptionSchema = z.object({
+  id,
+  planId: id,
+  date: isoDate,
+  type: z.enum(['skip', 'rest']),
+  note: z.string().max(2000).optional(),
+  createdAt: isoDateTime,
+  updatedAt: isoDateTime,
+});
+
 export const workoutTemplateSchema = z.object({
   id,
   // Added in schema version 17; optional so backups written before the split

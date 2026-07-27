@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { buildPlanCalendarMonth } from '@/services/planCalendar';
 import type {
   PlanSchedule,
+  PlanScheduleException,
   ScheduleEntry,
   WorkoutSession,
   WorkoutTemplate,
@@ -178,5 +179,60 @@ describe('free-rotation calendar', () => {
     });
     expect(cellFor(days, '2026-07-09').status).toBe('completed');
     expect(cellFor(days, '2026-07-10').status).toBe('free');
+  });
+});
+
+describe('schedule exceptions', () => {
+  // Cycle: Push(0), Pull(1), Rest(2), anchored 2026-07-01.
+  const entries: ScheduleEntry[] = [
+    entry({ position: 0, templateId: 'a' }),
+    entry({ position: 1, templateId: 'b' }),
+    entry({ position: 2, type: 'rest' }),
+  ];
+
+  function exception(
+    date: string,
+    type: 'skip' | 'rest',
+    note?: string,
+  ): PlanScheduleException {
+    return { id: date, planId: 'p', date, type, note, createdAt: NOW, updatedAt: NOW };
+  }
+
+  const base = {
+    schedule: schedule({ startDate: '2026-07-01' }),
+    entries,
+    units,
+    sessions: [],
+    month: new Date('2026-07-10T12:00:00'),
+    today: new Date('2026-07-10T12:00:00'),
+  };
+
+  it('shows a skipped past workout as skipped, not missed', () => {
+    const days = buildPlanCalendarMonth({
+      ...base,
+      exceptions: [exception('2026-07-01', 'skip')],
+    });
+    const cell = cellFor(days, '2026-07-01');
+    expect(cell.status).toBe('skipped');
+    expect(cell.label).toBe('Push'); // keeps the skipped workout's name
+  });
+
+  it('turns any day into a rest day with an extra-rest exception', () => {
+    const days = buildPlanCalendarMonth({
+      ...base,
+      exceptions: [exception('2026-07-04', 'rest', 'Reise')],
+    });
+    const cell = cellFor(days, '2026-07-04'); // would be Push (wraps)
+    expect(cell.status).toBe('rest');
+    expect(cell.label).toBe('Reise');
+  });
+
+  it('never lets an exception override a completed session', () => {
+    const days = buildPlanCalendarMonth({
+      ...base,
+      sessions: [session('2026-07-01')],
+      exceptions: [exception('2026-07-01', 'skip')],
+    });
+    expect(cellFor(days, '2026-07-01').status).toBe('completed');
   });
 });

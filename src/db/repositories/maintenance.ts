@@ -62,6 +62,7 @@ export const ALL_DATA_TABLES = [
   'workoutUnitTemplateExercises',
   'planUsagePeriods',
   'planDeloadPeriods',
+  'planScheduleExceptions',
   'settings',
 ] as const;
 

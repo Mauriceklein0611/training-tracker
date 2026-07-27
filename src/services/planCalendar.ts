@@ -1,6 +1,7 @@
 import { differenceInCalendarDays, endOfMonth, parseISO, startOfMonth } from 'date-fns';
 import type {
   PlanSchedule,
+  PlanScheduleException,
   ScheduleEntry,
   WorkoutSession,
   WorkoutTemplate,
@@ -28,6 +29,8 @@ export type PlanCalendarStatus =
   | 'missed'
   /** A planned rest day. */
   | 'rest'
+  /** A planned workout the user deliberately skipped (not counted as missed). */
+  | 'skipped'
   /** Nothing planned and nothing done. */
   | 'free';
 
@@ -51,6 +54,8 @@ export interface PlanCalendarInput {
   units: WorkoutTemplate[];
   /** Completed sessions attributed to the plan. */
   sessions: WorkoutSession[];
+  /** Per-day overrides: a skipped workout or an extra rest day. */
+  exceptions?: PlanScheduleException[];
   /** The month to build, any date within it. */
   month: Date;
   today?: Date;
@@ -121,6 +126,12 @@ export function buildPlanCalendarMonth(input: PlanCalendarInput): PlanCalendarDa
     if (!completedByDay.has(key)) completedByDay.set(key, session);
   }
 
+  // Per-day exceptions (at most one per day; a later one wins deterministically).
+  const exceptionByDay = new Map<string, PlanScheduleException>();
+  for (const exception of input.exceptions ?? []) {
+    exceptionByDay.set(exception.date, exception);
+  }
+
   const days: PlanCalendarDay[] = [];
   const total = differenceInCalendarDays(last, first) + 1;
   for (let i = 0; i < total; i += 1) {
@@ -143,6 +154,37 @@ export function buildPlanCalendarMonth(input: PlanCalendarInput): PlanCalendarDa
     }
 
     const planned = plannedEntryFor(input, date);
+
+    // A per-day exception overrides the derived plan, but never a completed day.
+    const exception = exceptionByDay.get(key);
+    if (exception) {
+      if (exception.type === 'rest') {
+        days.push({
+          date: key,
+          dayOfMonth: date.getDate(),
+          weekday,
+          status: 'rest',
+          label: exception.note?.trim() || 'Pause',
+          isToday,
+        });
+        continue;
+      }
+      // 'skip': the day's planned workout is cancelled — shown as skipped, not
+      // missed. Keep the workout name so it is clear what was skipped.
+      const skippedLabel =
+        exception.note?.trim() ||
+        (planned?.type === 'workout' ? planned.label : undefined) ||
+        'Übersprungen';
+      days.push({
+        date: key,
+        dayOfMonth: date.getDate(),
+        weekday,
+        status: 'skipped',
+        label: skippedLabel,
+        isToday,
+      });
+      continue;
+    }
     if (!planned) {
       days.push({
         date: key,

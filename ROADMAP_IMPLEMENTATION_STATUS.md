@@ -4,8 +4,8 @@ Bezug: „Training Tracker zur vollständigen Plan-, Kalender- und Analyse-App
 ausbauen" (Opus-Gesamtprompt). Diese Datei ersetzt keine Umsetzung, sondern hält
 den geprüften Stand fest.
 
-Zuletzt grüne Pflichtchecks (lokal): `typecheck`, `lint`, `test` (61 Dateien,
-682 Tests), `build`, `prettier --check` (geänderte Dateien).
+Zuletzt grüne Pflichtchecks (lokal): `typecheck`, `lint`, `test` (62 Dateien,
+698 Tests), `build`, `prettier --check` (geänderte Dateien).
 
 ## Abgeschlossen
 
@@ -109,8 +109,18 @@ Enum-, Feld- oder Versionsänderung. Reset betrifft kein Import/Export-Format.
   snapshotten `scheduleModeSnapshot`, `plannedDate`, `scheduleEntryId` (Dexie
   v23, Backup, Format-Doc). Damit CSV `Geplantes Datum`/`Zeitplanmodus`
   freigeschaltet. Frei-Trainings bleiben leer.
-- **Offen in Phase 4:** Ausnahmen (verschoben/übersprungen/zusätzliche Pause) als
-  eigenes Modell + Aktionen mit Vorschau/Bestätigung.
+- **4.5 Zeitplan-Ausnahmen (übersprungen / zusätzliche Pause) — ERLEDIGT:** neuer
+  Store `planScheduleExceptions` (Dexie v25, eine Ausnahme je Plan+Datum) mit Repo
+  `planExceptions.ts` (idempotentes `setPlanException`, `clearPlanException`,
+  `listPlanExceptions`). Reine Ableitung erweitert: `skip` → Status `skipped`
+  (zählt **nicht** als „verpasst", behält den Übungsnamen), `rest` →
+  Pausentag; eine abgeschlossene Session sticht jede Ausnahme. UI: Kalendertage
+  sind antippbar (nur bei datumsgebundenen Modi) → Dialog „Übersprungen" /
+  „Zusätzliche Pause" / „Ausnahme entfernen" mit Hinweis, dass der Zeitplan
+  unverändert bleibt. Backup/Reset/Plan-Löschung/Format-Doc erweitert; Tests grün.
+- **Offen in Phase 4:** „verschoben" (Training auf ein anderes Datum verlegen) als
+  Zwei-Datums-Ausnahme mit Vorschau — bewusst als eigener Folgeschritt (braucht
+  Ziel-Datumsauswahl + Vorschau beider Tage).
 
 ### Phase 5 — Zeitboxierter 7-Tage-Deload
 

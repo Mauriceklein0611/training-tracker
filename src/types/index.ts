@@ -218,6 +218,27 @@ export interface PlanUsagePeriod {
   updatedAt: ISODateTime;
 }
 
+/** `skip` cancels a planned workout that day; `rest` marks an extra rest day. */
+export type PlanScheduleExceptionType = 'skip' | 'rest';
+
+/**
+ * A per-day override of a plan's derived schedule (Phase 4). One per plan+date.
+ * The schedule itself is unchanged — exceptions only re-colour a single calendar
+ * day: a deliberately skipped workout is not counted as "missed", and an extra
+ * rest day turns a planned/free day into a pause.
+ */
+export interface PlanScheduleException {
+  id: string;
+  planId: string;
+  /** Local day (yyyy-MM-dd) this exception applies to. */
+  date: ISODate;
+  type: PlanScheduleExceptionType;
+  /** Optional reason/label shown on the day. */
+  note?: string;
+  createdAt: ISODateTime;
+  updatedAt: ISODateTime;
+}
+
 /**
  * A single training day within a {@link TrainingPlan} — historically the whole
  * "plan". It owns its exercises via {@link TemplateExercise} and is what a

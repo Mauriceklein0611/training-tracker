@@ -9,6 +9,7 @@ import type {
   Exercise,
   PlanDeloadPeriod,
   PlanSchedule,
+  PlanScheduleException,
   PlanUsagePeriod,
   ScheduleEntry,
   SessionExercise,
@@ -31,7 +32,7 @@ import { ensureSchedulesForPlans } from '@/db/scheduleMigration';
  * Bump this together with a new `.version()` block below and record the change
  * in MIGRATIONS so the settings screen can show what the database went through.
  */
-export const SCHEMA_VERSION = 24;
+export const SCHEMA_VERSION = 25;
 
 export const MIGRATIONS: { version: number; description: string }[] = [
   { version: 1, description: 'Initiales Schema: Übungen, Pläne, Einheiten, Sätze.' },
@@ -193,6 +194,13 @@ export const MIGRATIONS: { version: number; description: string }[] = [
       'rückgängig gemacht werden kann. Bestehende Analysen bleiben unverändert ' +
       '(optionale Felder).',
   },
+  {
+    version: 25,
+    description:
+      'Zeitplan-Ausnahmen je Tag: ein neuer Store hält einzelne Abweichungen ' +
+      '(Training übersprungen oder zusätzlicher Pausentag) pro Plan und Datum. ' +
+      'Der Zeitplan selbst bleibt unverändert; bestehende Daten bleiben gleich.',
+  },
 ];
 
 export class TrainingDatabase extends Dexie {
@@ -215,6 +223,7 @@ export class TrainingDatabase extends Dexie {
   workoutUnitTemplateExercises!: Table<WorkoutUnitTemplateExercise, string>;
   planUsagePeriods!: Table<PlanUsagePeriod, string>;
   planDeloadPeriods!: Table<PlanDeloadPeriod, string>;
+  planScheduleExceptions!: Table<PlanScheduleException, string>;
   settings!: Table<AppSettings, string>;
 
   constructor(name = 'training-tracker') {
@@ -628,6 +637,22 @@ export class TrainingDatabase extends Dexie {
           settings.schemaVersion = 24;
         });
     });
+
+    // ---- v25 ------------------------------------------------------------
+    // Per-day plan schedule exceptions (Phase 4): a new planScheduleExceptions
+    // store. No backfill — existing plans simply have no exceptions.
+    this.version(25)
+      .stores({
+        planScheduleExceptions: 'id, planId, date',
+      })
+      .upgrade(async (tx) => {
+        await tx
+          .table<AppSettings>('settings')
+          .toCollection()
+          .modify((settings) => {
+            settings.schemaVersion = 25;
+          });
+      });
   }
 }
 
