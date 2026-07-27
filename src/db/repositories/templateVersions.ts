@@ -152,7 +152,7 @@ export async function activateTemplateVersionWithinTransaction(
   versionId: string,
 ): Promise<void> {
   const version = await db.templateVersions.get(versionId);
-  if (!version) throw new Error('Die Planversion wurde nicht gefunden.');
+  if (!version) throw new Error('Der Wiederherstellungspunkt wurde nicht gefunden.');
   const template = await db.workoutTemplates.get(version.templateId);
   if (!template) throw new Error('Der Trainingsplan wurde nicht gefunden.');
 

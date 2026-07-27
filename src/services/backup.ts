@@ -135,7 +135,7 @@ export const BACKUP_COUNT_LABELS: Record<keyof BackupCounts, string> = {
   trainingPlans: 'Trainingspläne',
   workoutTemplates: 'Trainingstage',
   templateExercises: 'Planübungen',
-  templateVersions: 'Planversionen',
+  templateVersions: 'Wiederherstellungspunkte',
   workoutSessions: 'Trainingseinheiten',
   sessionExercises: 'Übungen in Einheiten',
   workoutSets: 'Sätze',

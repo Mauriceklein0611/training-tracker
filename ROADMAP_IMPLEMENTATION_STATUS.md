@@ -4,8 +4,8 @@ Bezug: „Training Tracker zur vollständigen Plan-, Kalender- und Analyse-App
 ausbauen" (Opus-Gesamtprompt). Diese Datei ersetzt keine Umsetzung, sondern hält
 den geprüften Stand fest.
 
-Zuletzt grüne Pflichtchecks (lokal): `typecheck`, `lint`, `test` (62 Dateien,
-706 Tests), `build`, `prettier --check` (geänderte Dateien).
+Zuletzt grüne Pflichtchecks (lokal): `typecheck`, `lint`, `test` (61 Dateien,
+700 Tests), `build`, `prettier --check` (geänderte Dateien).
 
 ## Abgeschlossen
 
@@ -235,6 +235,13 @@ Enum-, Feld- oder Versionsänderung. Reset betrifft kein Import/Export-Format.
   `createTemplateVersion*`/`listTemplateVersions`/`snapshotTemplate`/
   `deleteVersionsForTemplate` bleiben (intern/Tests). Das persistierte
   `archived`-Feld bleibt (Backup-Kompatibilität), ist nun aber nur-lesend.
+- **KI-UI-Text-Review + verwaiste Plan-Diff-Ansicht — ERLEDIGT:** die verwaiste
+  `TemplateDiffView` samt `services/templateDiff.ts` + Test entfernt (Reste der
+  entfernten Versions-Vergleichs-UI, keine Aufrufer mehr). Nutzersichtbare Reste
+  von „Planversion" bereinigt: Backup-Label „Planversionen" →
+  „Wiederherstellungspunkte", interne Fehlermeldung „Die Planversion …" →
+  „Der Wiederherstellungspunkt …". Die historische Migrations-Beschreibung (v10)
+  bleibt als korrekte Historie. **Damit ist Phase 8 abgeschlossen.**
 
 ### Phase 9 — CSV-Kontextspalten + Format-Audit
 
@@ -255,13 +262,14 @@ Enum-, Feld- oder Versionsänderung. Reset betrifft kein Import/Export-Format.
 
 Phasen 0–5, 7, 8 (bis auf Kleinreste) und 9 sind abgeschlossen. Verbleibend:
 
-- **Phase A Rest (Rest)** — Rest-Tage in der Zyklus-/Frei-Vorschau (bei diesen
-  Modi ist „heute" nicht kalendergebunden — bewusst offen).
-- **Phase 8 (Rest)** — KI-UI-Texte final durchsehen; interner `templateVersions`-
-  Store bleibt als KI-Wiederherstellungspunkt.
+- **Phase A Rest (bewusst offen)** — Rest-Tage in der Zyklus-/Frei-Vorschau. Bei
+  diesen Modi ist „heute" nicht kalendergebunden (der Zyklus-Cursor ist
+  trainings-, nicht datumsgetrieben; freie Rotation hat gar keinen Kalenderplan),
+  daher würde ein „Heute: Pause" dort in die Irre führen. Bewusste Design-
+  Entscheidung, nicht zu implementieren.
 
-Damit sind alle größeren Roadmap-Blöcke (Phasen 0–9) umgesetzt; es verbleiben nur
-noch die oben genannten bewusst offenen Kleinreste.
+Alle größeren Roadmap-Blöcke (Phasen 0–9) sind umgesetzt. Der einzige verbleibende
+Punkt ist die oben genannte bewusst offene Phase-A-Rest-Entscheidung.
 
 ## Bekannte Risiken / Hinweise
 
