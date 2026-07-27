@@ -113,12 +113,6 @@ export async function listTemplateVersions(
   return versions.sort((a, b) => b.versionNumber - a.versionNumber);
 }
 
-export async function getTemplateVersion(
-  id: string,
-): Promise<TemplateVersion | undefined> {
-  return db.templateVersions.get(id);
-}
-
 /** Turns a snapshot back into live template exercise rows. */
 function rowsFromSnapshot(
   templateId: string,
@@ -198,18 +192,7 @@ export async function activateTemplateVersion(versionId: string): Promise<void> 
   );
 }
 
-export async function setTemplateVersionArchived(
-  versionId: string,
-  archived: boolean,
-): Promise<void> {
-  await db.templateVersions.update(versionId, { archived });
-}
-
-export async function deleteTemplateVersion(versionId: string): Promise<void> {
-  await db.templateVersions.delete(versionId);
-}
-
-/** Removes every version of a template — used when the plan itself is deleted. */
+/** Removes every version of a template. */
 export async function deleteVersionsForTemplate(templateId: string): Promise<void> {
   await db.templateVersions.where('templateId').equals(templateId).delete();
 }

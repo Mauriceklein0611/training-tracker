@@ -200,9 +200,12 @@ Enum-, Feld- oder Versionsänderung. Reset betrifft kein Import/Export-Format.
 - **KI-UI-Texte — ERLEDIGT:** die Stellen, die eine KI-Übernahme als „neue
   Planversion"/„neue Version" beschrieben, sprechen jetzt von einem
   „Wiederherstellungspunkt" bzw. „rückgängig machen" (siehe Phase 7.2).
-- **Offen in Phase 8:** ungenutzte Repo-Funktionen (`setTemplateVersionArchived`,
-  `deleteTemplateVersion`) + deren Tests aufräumen — `activateTemplateVersion*`
-  wird jetzt vom 7.2-Undo genutzt und bleibt.
+- **Ungenutzte Versions-Repo-Funktionen — ERLEDIGT:** `getTemplateVersion`,
+  `setTemplateVersionArchived` und `deleteTemplateVersion` (keine Aufrufer, keine
+  Tests) entfernt. `activateTemplateVersion*` bleibt (7.2-Undo),
+  `createTemplateVersion*`/`listTemplateVersions`/`snapshotTemplate`/
+  `deleteVersionsForTemplate` bleiben (intern/Tests). Das persistierte
+  `archived`-Feld bleibt (Backup-Kompatibilität), ist nun aber nur-lesend.
 
 ### Phase 9 — CSV-Kontextspalten (teilweise)
 
@@ -216,10 +219,10 @@ Enum-, Feld- oder Versionsänderung. Reset betrifft kein Import/Export-Format.
 
 ## Offen (nächste Schritte, in Roadmap-Reihenfolge)
 
-- **Phase A Rest (teilweise):** Home zeigt jetzt bei Wochenplänen an, wenn heute
-  ein Pausen-/freier Tag geplant ist („Heute: Pause/Frei", aus `state.current`).
-  Offen: Rest-Tage in der Templates-Übersicht und in der Zyklus-/Frei-Vorschau
-  (bei diesen Modi ist „heute" nicht kalendergebunden — bewusst noch offen).
+- **Phase A Rest (teilweise):** Home **und** die Pläne-Übersicht zeigen bei
+  Wochenplänen an, wenn heute ein Pausen-/freier Tag geplant ist („Heute:
+  Pause/Frei", aus `state.current`). Offen: Rest-Tage in der Zyklus-/Frei-
+  Vorschau (bei diesen Modi ist „heute" nicht kalendergebunden — bewusst offen).
 - **Phase 4** — Zeitplan-Kalender (geplant vs. tatsächlich, Ausnahmen,
   Session-Snapshots `scheduleEntryId`/geplantes Datum).
 - **Phase 5** — Zeitboxierter 7-Tage-Deload (ersetzt heutigen

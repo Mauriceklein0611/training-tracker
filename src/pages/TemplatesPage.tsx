@@ -11,10 +11,10 @@ import {
   deletePlan,
   duplicatePlan,
   listPlansWithDays,
-  nextDayForPlan,
   SPLIT_TYPE_LABELS,
   type PlanWithDays,
 } from '@/db/repositories/plans';
+import { getPlanScheduleState } from '@/db/repositories/schedules';
 import {
   ActiveSessionExistsError,
   startSessionFromTemplate,
@@ -30,6 +30,8 @@ interface PlanOverview extends PlanWithDays {
   exerciseCount: number;
   nextDayId?: string;
   nextDayName?: string;
+  /** Weekly plans: label of today's scheduled rest/free day, if today is one. */
+  restToday?: string;
 }
 
 export default function TemplatesPage() {
@@ -47,7 +49,12 @@ export default function TemplatesPage() {
       }
       return Promise.all(
         withDays.map(async (entry) => {
-          const next = await nextDayForPlan(entry.plan.id);
+          const state = await getPlanScheduleState(entry.plan.id);
+          const next = state.nextWorkout?.template;
+          const restToday =
+            state.mode === 'weekly' && state.current?.type === 'rest'
+              ? (state.current.name ?? undefined)
+              : undefined;
           return {
             ...entry,
             exerciseCount: entry.days.reduce(
@@ -56,6 +63,7 @@ export default function TemplatesPage() {
             ),
             nextDayId: next?.id,
             nextDayName: next?.name,
+            restToday,
           };
         }),
       );
@@ -126,6 +134,11 @@ export default function TemplatesPage() {
                         ? `${SPLIT_TYPE_LABELS[entry.plan.splitType]} · ${entry.days.length} Tage`
                         : `${entry.exerciseCount} ${entry.exerciseCount === 1 ? 'Übung' : 'Übungen'}`}
                     </p>
+                    {entry.restToday ? (
+                      <p className="truncate text-xs text-muted">
+                        Heute: {entry.restToday}
+                      </p>
+                    ) : null}
                     {multiDay && entry.nextDayName ? (
                       <p className="truncate text-xs text-accent">
                         Als Nächstes: {entry.nextDayName}
