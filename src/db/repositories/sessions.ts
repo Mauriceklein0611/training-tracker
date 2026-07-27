@@ -7,6 +7,7 @@ import type {
   GroupType,
   SessionExercise,
   SetType,
+  TrackingType,
   WeightMode,
   WorkoutSession,
   WorkoutSet,
@@ -695,6 +696,60 @@ export async function updateSet(
   changes: Partial<Omit<WorkoutSet, 'id' | 'sessionExerciseId' | 'createdAt'>>,
 ): Promise<void> {
   await db.workoutSets.update(setId, { ...changes, updatedAt: nowIso() });
+}
+
+export interface EditCompletedSetValues {
+  setType: SetType;
+  weightKg?: number;
+  reps?: number;
+  durationSeconds?: number;
+  rir?: number;
+  rpe?: number;
+  /** The execution the set was performed with; frozen onto the set. */
+  equipment: Equipment;
+  weightMode: WeightMode;
+  weightMultiplier: number;
+  trackingType: TrackingType;
+}
+
+/**
+ * Corrects an already-completed set in place (Feature 2). Updates only the
+ * recorded values and freezes the set's execution snapshot; it never changes
+ * the id, position, rest data or completion time, never starts or resets a rest
+ * timer, never completes another set and never creates a duplicate. Touching the
+ * session makes every derived metric (volume, records, 1RM, analysis, exports)
+ * recompute from the corrected raw data.
+ */
+export async function editCompletedSet(
+  setId: string,
+  values: EditCompletedSetValues,
+): Promise<void> {
+  await db.transaction(
+    'rw',
+    db.workoutSets,
+    db.sessionExercises,
+    db.workoutSessions,
+    async () => {
+      const set = await db.workoutSets.get(setId);
+      if (!set) throw new Error('Der Satz wurde nicht gefunden.');
+      await db.workoutSets.update(setId, {
+        setType: values.setType,
+        weightKg: values.weightKg,
+        reps: values.reps,
+        durationSeconds: values.durationSeconds,
+        rir: values.rir,
+        rpe: values.rpe,
+        equipmentSnapshot: values.equipment,
+        weightModeSnapshot: values.weightMode,
+        weightMultiplierSnapshot:
+          values.weightMode === 'per_hand' ? Math.max(1, values.weightMultiplier) : 1,
+        trackingTypeSnapshot: values.trackingType,
+        updatedAt: nowIso(),
+      });
+      const sessionExercise = await db.sessionExercises.get(set.sessionExerciseId);
+      if (sessionExercise) await touchSession(sessionExercise.sessionId);
+    },
+  );
 }
 
 export async function deleteSet(setId: string): Promise<void> {

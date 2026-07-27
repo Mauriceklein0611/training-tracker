@@ -6,6 +6,7 @@ import { Button, IconButton } from '@/components/ui/Button';
 import { TextAreaField } from '@/components/ui/Field';
 import { CompletedSetRow, SetEditor, type SetValues } from '@/features/session/SetEditor';
 import { ExecutionChangeDialog } from '@/features/session/ExecutionChangeDialog';
+import { EditSetDialog } from '@/features/session/EditSetDialog';
 import { effectiveSetExecution, equipmentLabel } from '@/services/equipment';
 import {
   addSet,
@@ -29,7 +30,7 @@ import { ProgressionHint } from '@/features/session/ProgressionHint';
 import { db } from '@/db/db';
 import { TRACKING_TYPE_LABELS, formatKg } from '@/utils/format';
 import { formatDate } from '@/utils/date';
-import type { TemplateExercise } from '@/types';
+import type { TemplateExercise, WorkoutSet } from '@/types';
 
 export interface ExerciseTarget {
   targetSets?: number;
@@ -204,6 +205,7 @@ export function SessionExerciseCard({
 
   const [isAdding, setIsAdding] = useState(false);
   const [executionOpen, setExecutionOpen] = useState(false);
+  const [editSet, setEditSet] = useState<WorkoutSet | null>(null);
 
   /**
    * The execution currently active for this exercise in this workout, and whether
@@ -376,7 +378,11 @@ export function SessionExerciseCard({
         <ul className="mt-3 grid gap-1">
           {completedSets.map((set) => (
             <li key={set.id}>
-              <CompletedSetRow set={set} sessionExercise={sessionExercise} />
+              <CompletedSetRow
+                set={set}
+                sessionExercise={sessionExercise}
+                onEdit={() => setEditSet(set)}
+              />
             </li>
           ))}
         </ul>
@@ -473,6 +479,15 @@ export function SessionExerciseCard({
         defaultEquipment={exercise?.defaultEquipment}
         onClose={() => setExecutionOpen(false)}
       />
+
+      {editSet ? (
+        <EditSetDialog
+          open
+          set={editSet}
+          sessionExercise={sessionExercise}
+          onClose={() => setEditSet(null)}
+        />
+      ) : null}
     </section>
   );
 }
