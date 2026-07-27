@@ -1,10 +1,12 @@
 import { useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { ArrowDown, ArrowUp, Check, Plus, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, Check, Plus, Repeat, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/Card';
 import { Button, IconButton } from '@/components/ui/Button';
 import { TextAreaField } from '@/components/ui/Field';
 import { CompletedSetRow, SetEditor, type SetValues } from '@/features/session/SetEditor';
+import { ExecutionChangeDialog } from '@/features/session/ExecutionChangeDialog';
+import { effectiveSetExecution, equipmentLabel } from '@/services/equipment';
 import {
   addSet,
   completeSet,
@@ -201,6 +203,27 @@ export function SessionExerciseCard({
   );
 
   const [isAdding, setIsAdding] = useState(false);
+  const [executionOpen, setExecutionOpen] = useState(false);
+
+  /**
+   * The execution currently active for this exercise in this workout, and whether
+   * it differs from the stored exercise default (i.e. a temporary switch). The
+   * badge makes a taken-barbell dumbbell substitution visible without changing
+   * the exercise itself.
+   */
+  const currentExecution = useMemo(
+    () => effectiveSetExecution({}, sessionExercise),
+    [sessionExercise],
+  );
+  const isTemporaryExecution = useMemo(() => {
+    if (!exercise) return currentExecution.equipment !== 'unspecified';
+    return (
+      currentExecution.equipment !== (exercise.defaultEquipment ?? 'unspecified') ||
+      currentExecution.weightMode !== exercise.weightMode
+    );
+  }, [exercise, currentExecution]);
+  const showExecutionBadge =
+    currentExecution.equipment !== 'unspecified' || isTemporaryExecution;
 
   const handleAddSet = async () => {
     if (isAdding) return;
@@ -265,8 +288,14 @@ export function SessionExerciseCard({
               <span>Ziel: {describeTarget(effectiveTarget)}</span>
             ) : null}
             <span>Pause {restTarget}s</span>
-            {sessionExercise.weightModeSnapshot === 'per_hand' ? (
-              <span>je Hand ×{sessionExercise.weightMultiplierSnapshot}</span>
+            {showExecutionBadge ? (
+              <Badge tone={isTemporaryExecution ? 'accent' : 'default'}>
+                {equipmentLabel(currentExecution.equipment)}
+                {currentExecution.weightMode === 'per_hand'
+                  ? ` · pro Hantel ×${currentExecution.weightMultiplier}`
+                  : ''}
+                {isTemporaryExecution ? ' · nur dieses Training' : ''}
+              </Badge>
             ) : null}
             {previousSessionLabel ? <span>{previousSessionLabel}</span> : null}
           </p>
@@ -306,6 +335,19 @@ export function SessionExerciseCard({
             </li>
           ))}
         </ul>
+      ) : null}
+
+      {/* Temporary execution switch (e.g. barbell taken → dumbbells). Only for
+          weighted exercises, where the equipment/convention actually matters. */}
+      {sessionExercise.trackingTypeSnapshot === 'weight_reps' ? (
+        <button
+          type="button"
+          onClick={() => setExecutionOpen(true)}
+          className="mt-2 flex min-h-[44px] items-center gap-1.5 text-sm font-medium text-accent"
+        >
+          <Repeat size={16} aria-hidden="true" />
+          Ausführung ändern
+        </button>
       ) : null}
 
       {/* Swapping is only offered before any set is recorded — the sets belong
@@ -424,6 +466,13 @@ export function SessionExerciseCard({
           </button>
         )}
       </div>
+
+      <ExecutionChangeDialog
+        open={executionOpen}
+        sessionExercise={sessionExercise}
+        defaultEquipment={exercise?.defaultEquipment}
+        onClose={() => setExecutionOpen(false)}
+      />
     </section>
   );
 }

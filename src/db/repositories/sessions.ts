@@ -1,11 +1,13 @@
 import { db, ensureSettings } from '@/db/db';
 import type {
+  Equipment,
   Exercise,
   ExerciseGrouping,
   GroupRestMode,
   GroupType,
   SessionExercise,
   SetType,
+  WeightMode,
   WorkoutSession,
   WorkoutSet,
 } from '@/types';
@@ -88,6 +90,9 @@ function buildSessionExercise(
     trackingTypeSnapshot: exercise.trackingType,
     weightModeSnapshot: exercise.weightMode,
     weightMultiplierSnapshot: exercise.weightMultiplier,
+    // Structured equipment starts from the exercise default (absent → the set
+    // resolves to "unspecified"). It is only ever the starting execution.
+    equipmentSnapshot: exercise.defaultEquipment,
     restSecondsSnapshot: resolveRestSeconds({
       templateRestSeconds: context.templateRestSeconds,
       exerciseDefaultRestSeconds: exercise.defaultRestSeconds,
@@ -428,6 +433,63 @@ export async function updateSessionExercise(
     ...changes,
     updatedAt: nowIso(),
   });
+}
+
+/**
+ * Temporarily changes the execution (equipment + weight convention) of one
+ * exercise inside the current workout (Feature 3). The stored exercise is never
+ * touched — only this session slot and its future sets. Already-completed sets
+ * keep the execution they were performed with: any completed set that has no
+ * per-set snapshot yet is frozen with the *current* execution first, so the
+ * change can never rewrite a past set's load. The new execution becomes the
+ * default for the exercise's following sets.
+ */
+export async function setSessionExerciseExecution(
+  sessionExerciseId: string,
+  execution: { equipment: Equipment; weightMode: WeightMode; weightMultiplier: number },
+): Promise<void> {
+  await db.transaction(
+    'rw',
+    db.sessionExercises,
+    db.workoutSets,
+    db.workoutSessions,
+    async () => {
+      const sessionExercise = await db.sessionExercises.get(sessionExerciseId);
+      if (!sessionExercise) return;
+
+      const sets = await db.workoutSets
+        .where('sessionExerciseId')
+        .equals(sessionExerciseId)
+        .toArray();
+      const timestamp = nowIso();
+      for (const set of sets) {
+        if (!set.completedAt) continue;
+        // Already frozen (completed under this or an earlier feature version)?
+        const alreadyFrozen =
+          set.weightModeSnapshot != null ||
+          set.equipmentSnapshot != null ||
+          set.trackingTypeSnapshot != null;
+        if (alreadyFrozen) continue;
+        await db.workoutSets.update(set.id, {
+          equipmentSnapshot: sessionExercise.equipmentSnapshot ?? 'unspecified',
+          weightModeSnapshot: sessionExercise.weightModeSnapshot,
+          weightMultiplierSnapshot: sessionExercise.weightMultiplierSnapshot,
+          trackingTypeSnapshot: sessionExercise.trackingTypeSnapshot,
+          updatedAt: timestamp,
+        });
+      }
+
+      const multiplier =
+        execution.weightMode === 'per_hand' ? Math.max(1, execution.weightMultiplier) : 1;
+      await db.sessionExercises.update(sessionExerciseId, {
+        equipmentSnapshot: execution.equipment,
+        weightModeSnapshot: execution.weightMode,
+        weightMultiplierSnapshot: multiplier,
+        updatedAt: timestamp,
+      });
+      await touchSession(sessionExercise.sessionId);
+    },
+  );
 }
 
 /**
@@ -775,6 +837,15 @@ export async function completeSet(
 
     await db.workoutSets.update(setId, {
       ...values,
+      // Freeze the execution actually used for this set, so a later temporary
+      // execution switch on the same exercise never rewrites this set's load.
+      // Only fills fields the set does not already carry (idempotent by guard).
+      equipmentSnapshot: set.equipmentSnapshot ?? sessionExercise?.equipmentSnapshot,
+      weightModeSnapshot: set.weightModeSnapshot ?? sessionExercise?.weightModeSnapshot,
+      weightMultiplierSnapshot:
+        set.weightMultiplierSnapshot ?? sessionExercise?.weightMultiplierSnapshot,
+      trackingTypeSnapshot:
+        set.trackingTypeSnapshot ?? sessionExercise?.trackingTypeSnapshot,
       completedAt: timestamp,
       restStartedAt: startRest ? timestamp : undefined,
       restEndedAt: undefined,

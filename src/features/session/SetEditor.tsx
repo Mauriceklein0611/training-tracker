@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/Card';
 import type { SessionExercise, SetType, WorkoutSet } from '@/types';
 import { hasErrors, parseNumberInput, validateSetInput } from '@/services/validation';
 import { requiredFieldsFor, weightFieldLabel } from '@/services/metrics';
+import { effectiveSetExecution, equipmentLabel } from '@/services/equipment';
 import { restDeviationSeconds } from '@/services/rest';
 import { SET_TYPE_LABELS, describeSet, formatSignedSeconds } from '@/utils/format';
 import { cn } from '@/utils/cn';
@@ -373,18 +374,20 @@ export function CompletedSetRow({
   onEdit?: () => void;
 }) {
   const deviation = restDeviationSeconds(set);
+  // The set's own execution snapshot wins, so a dumbbell set stays labelled as
+  // dumbbells even after the exercise switches back to a barbell.
+  const execution = effectiveSetExecution(set, sessionExercise);
   const content = (
     <>
       <span className="flex w-7 shrink-0 items-center justify-center rounded-lg bg-surface-3 text-xs font-semibold">
         {set.position + 1}
       </span>
       <span className="numeric min-w-0 flex-1 truncate font-medium">
-        {describeSet(
-          set,
-          sessionExercise.trackingTypeSnapshot,
-          sessionExercise.weightModeSnapshot,
-        )}
+        {describeSet(set, execution.trackingType, execution.weightMode)}
       </span>
+      {execution.equipment !== 'unspecified' ? (
+        <Badge>{equipmentLabel(execution.equipment)}</Badge>
+      ) : null}
       {set.setType !== 'working' ? (
         <Badge tone={set.setType === 'warmup' ? 'default' : 'accent'}>
           {SET_TYPE_LABELS[set.setType]}
