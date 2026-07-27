@@ -36,6 +36,24 @@ export type WeightMode =
 
 export type SetType = 'warmup' | 'working' | 'drop' | 'failure';
 
+/**
+ * Structured equipment a set can be performed with. Stable internal enum values
+ * (German labels live in `services/equipment.ts`). `unspecified` is the neutral
+ * fallback for exercises and sets written before equipment was structured — it
+ * is never guessed from a name or the free-text {@link Exercise.equipment}.
+ */
+export type Equipment =
+  | 'unspecified'
+  | 'barbell'
+  | 'dumbbells'
+  | 'machine'
+  | 'cable'
+  | 'kettlebell'
+  | 'bodyweight'
+  | 'band'
+  | 'trx'
+  | 'other';
+
 export type SessionStatus = 'active' | 'completed';
 
 /** How an exercise should preferably be progressed. */
@@ -86,7 +104,14 @@ export interface Exercise {
   searchTerms?: string[];
   primaryMuscleGroup: string;
   secondaryMuscleGroups: string[];
+  /** Free-text equipment description, unchanged since v1 (e.g. "Langhantel"). */
   equipment: string;
+  /**
+   * Structured default equipment (added schema v27). Optional and only ever a
+   * starting value for a new workout; absent on older exercises → treated as
+   * `unspecified`. Never derived from the name or the free-text {@link equipment}.
+   */
+  defaultEquipment?: Equipment;
   trackingType: TrackingType;
   weightMode: WeightMode;
   /**
@@ -620,6 +645,14 @@ export interface SessionExercise extends ExerciseGrouping {
   weightModeSnapshot: WeightMode;
   weightMultiplierSnapshot: number;
   /**
+   * The equipment currently in use for this exercise in this workout (added
+   * schema v27). Set from the exercise's {@link Exercise.defaultEquipment} at
+   * start and changed by a temporary execution switch; it is the *default* for
+   * new sets — each completed set freezes its own {@link WorkoutSet.equipmentSnapshot}.
+   * Absent on older rows → `unspecified`.
+   */
+  equipmentSnapshot?: Equipment;
+  /**
    * Rest time resolved when the exercise entered this workout (plan target →
    * exercise default → global default). Snapshotted so editing the exercise
    * later cannot change what a past workout prescribed.
@@ -658,6 +691,17 @@ export interface WorkoutSet {
   rir?: number;
   /** Rate of perceived exertion, 1–10. */
   rpe?: number;
+  /**
+   * Per-set execution snapshot (added schema v27). Frozen when the set is
+   * completed so it survives a later temporary execution switch on the same
+   * exercise. When absent (older sets, open sets) the effective execution falls
+   * back field-by-field to the parent {@link SessionExercise} snapshot, then a
+   * neutral default. Historic load/volume/records never read the live exercise.
+   */
+  equipmentSnapshot?: Equipment;
+  weightModeSnapshot?: WeightMode;
+  weightMultiplierSnapshot?: number;
+  trackingTypeSnapshot?: TrackingType;
   restTargetSeconds: number;
   /** Absolute timestamps — the rest timer is always derived from these. */
   restStartedAt?: ISODateTime;

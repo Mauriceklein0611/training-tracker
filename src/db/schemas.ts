@@ -36,6 +36,20 @@ export const weightModeSchema = z.enum([
 
 export const setTypeSchema = z.enum(['warmup', 'working', 'drop', 'failure']);
 
+/** Structured equipment enum (added schema version 27). */
+export const equipmentSchema = z.enum([
+  'unspecified',
+  'barbell',
+  'dumbbells',
+  'machine',
+  'cable',
+  'kettlebell',
+  'bodyweight',
+  'band',
+  'trx',
+  'other',
+]);
+
 export const groupTypeSchema = z.enum(['superset', 'circuit']);
 export const groupRestModeSchema = z.enum(['each', 'round']);
 
@@ -61,6 +75,8 @@ export const exerciseSchema = z.object({
   primaryMuscleGroup: z.string().default(''),
   secondaryMuscleGroups: z.array(z.string()).default([]),
   equipment: z.string().default(''),
+  // Added in schema version 27; optional so older backups still validate.
+  defaultEquipment: equipmentSchema.optional(),
   trackingType: trackingTypeSchema,
   weightMode: weightModeSchema,
   weightMultiplier: z.number().positive().max(10).default(1),
@@ -331,6 +347,8 @@ export const sessionExerciseSchema = z.object({
   trackingTypeSnapshot: trackingTypeSchema,
   weightModeSnapshot: weightModeSchema,
   weightMultiplierSnapshot: z.number().positive().max(10).default(1),
+  // Added in schema version 27; optional so older rows still validate.
+  equipmentSnapshot: equipmentSchema.optional(),
   // Added in schema version 4. Defaulted rather than required so backups
   // written by older versions of the app still validate and import cleanly.
   restSecondsSnapshot: z.number().int().min(0).max(3600).default(120),
@@ -365,6 +383,12 @@ export const workoutSetSchema = z.object({
     .optional(),
   rir: z.number().min(0).max(10).optional(),
   rpe: z.number().min(1).max(10).optional(),
+  // Per-set execution snapshot (added schema version 27); all optional so older
+  // sets still validate and fall back to the session-exercise snapshot.
+  equipmentSnapshot: equipmentSchema.optional(),
+  weightModeSnapshot: weightModeSchema.optional(),
+  weightMultiplierSnapshot: z.number().positive().max(10).optional(),
+  trackingTypeSnapshot: trackingTypeSchema.optional(),
   restTargetSeconds: z.number().int().min(0).max(3600).default(0),
   restStartedAt: isoDateTime.optional(),
   restEndedAt: isoDateTime.optional(),

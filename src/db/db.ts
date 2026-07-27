@@ -32,7 +32,7 @@ import { ensureSchedulesForPlans } from '@/db/scheduleMigration';
  * Bump this together with a new `.version()` block below and record the change
  * in MIGRATIONS so the settings screen can show what the database went through.
  */
-export const SCHEMA_VERSION = 26;
+export const SCHEMA_VERSION = 27;
 
 export const MIGRATIONS: { version: number; description: string }[] = [
   { version: 1, description: 'Initiales Schema: Übungen, Pläne, Einheiten, Sätze.' },
@@ -207,6 +207,14 @@ export const MIGRATIONS: { version: number; description: string }[] = [
       'Zeitplan-Ausnahmen können ein Training auf ein anderes Datum verschieben ' +
       '(neuer Typ „move" mit Zieldatum). Bestehende Ausnahmen bleiben unverändert ' +
       '(optionales Feld).',
+  },
+  {
+    version: 27,
+    description:
+      'Strukturierte Ausrüstung: Übungen können eine Standardausrüstung erhalten, ' +
+      'und jeder Satz kann seine tatsächlich genutzte Ausführung (Ausrüstung, ' +
+      'Gewichtsmodus, Multiplikator) als Snapshot festhalten. Alles optional; ' +
+      'bestehende Daten bleiben unverändert und werden nie aus dem Namen geraten.',
   },
 ];
 
@@ -670,6 +678,22 @@ export class TrainingDatabase extends Dexie {
         .toCollection()
         .modify((settings) => {
           settings.schemaVersion = 26;
+        });
+    });
+
+    // ---- v27 ------------------------------------------------------------
+    // Structured equipment + per-set execution snapshots (exercises gain optional
+    // defaultEquipment; sessionExercises gain optional equipmentSnapshot; sets
+    // gain optional equipment/weightMode/weightMultiplier/trackingType snapshots).
+    // Purely additive: no store or index change and NO backfill — old rows keep
+    // their existing execution via the field-by-field fallback, and equipment is
+    // never guessed from a name. Only the recorded schema version is bumped.
+    this.version(27).upgrade(async (tx) => {
+      await tx
+        .table<AppSettings>('settings')
+        .toCollection()
+        .modify((settings) => {
+          settings.schemaVersion = 27;
         });
     });
   }

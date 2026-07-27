@@ -45,6 +45,25 @@ describe('effectiveLoadKg / weight multiplier', () => {
   it('returns null when no weight was recorded', () => {
     expect(effectiveLoadKg({ weightKg: undefined }, makeSessionExercise())).toBeNull();
   });
+
+  it('prefers the set-level execution snapshot over the session-exercise one', () => {
+    // The exercise defaulted to a barbell (total), but this set was performed
+    // with dumbbells (per_hand, ×2): the set snapshot must win.
+    const context = makeSessionExercise({
+      weightModeSnapshot: 'total',
+      weightMultiplierSnapshot: 1,
+    });
+    const dumbbellSet = makeSet({
+      weightKg: 20,
+      weightModeSnapshot: 'per_hand',
+      weightMultiplierSnapshot: 2,
+    });
+    expect(effectiveLoadKg(dumbbellSet, context)).toBe(40);
+    // 40 kg barbell and 20 kg-per-hand dumbbells reach the same 40 kg total load,
+    // so the merged exercise volume matches at equal reps.
+    expect(setVolumeKg(dumbbellSet, context)).toBe(400);
+    expect(setVolumeKg(makeSet({ weightKg: 40, reps: 10 }), context)).toBe(400);
+  });
 });
 
 describe('setVolumeKg', () => {

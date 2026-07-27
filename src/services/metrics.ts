@@ -39,13 +39,17 @@ export function isCompleted(set: WorkoutSet): boolean {
  *   because bodyweight is not part of the record → `null`.
  */
 export function effectiveLoadKg(
-  set: Pick<WorkoutSet, 'weightKg'>,
+  set: Pick<WorkoutSet, 'weightKg' | 'weightModeSnapshot' | 'weightMultiplierSnapshot'>,
   context: Pick<SessionExercise, 'weightModeSnapshot' | 'weightMultiplierSnapshot'>,
 ): number | null {
   if (set.weightKg == null) return null;
-  switch (context.weightModeSnapshot) {
+  // A set's own execution snapshot wins; the session-exercise snapshot is the
+  // fallback for older sets and for the still-open set of the current exercise.
+  const weightMode = set.weightModeSnapshot ?? context.weightModeSnapshot;
+  const multiplier = set.weightMultiplierSnapshot ?? context.weightMultiplierSnapshot;
+  switch (weightMode) {
     case 'per_hand':
-      return set.weightKg * (context.weightMultiplierSnapshot || 1);
+      return set.weightKg * (multiplier || 1);
     case 'total':
       return set.weightKg;
     case 'added_weight':
@@ -69,7 +73,8 @@ export function setVolumeKg(
     'trackingTypeSnapshot' | 'weightModeSnapshot' | 'weightMultiplierSnapshot'
   >,
 ): number | null {
-  if (context.trackingTypeSnapshot !== 'weight_reps') return null;
+  const trackingType = set.trackingTypeSnapshot ?? context.trackingTypeSnapshot;
+  if (trackingType !== 'weight_reps') return null;
   if (set.reps == null || set.reps <= 0) return null;
   const load = effectiveLoadKg(set, context);
   if (load == null || load <= 0) return null;
@@ -84,8 +89,10 @@ export function addedWeightVolumeKg(
   set: WorkoutSet,
   context: Pick<SessionExercise, 'trackingTypeSnapshot' | 'weightModeSnapshot'>,
 ): number | null {
-  if (context.trackingTypeSnapshot !== 'bodyweight_reps') return null;
-  if (context.weightModeSnapshot !== 'added_weight') return null;
+  const trackingType = set.trackingTypeSnapshot ?? context.trackingTypeSnapshot;
+  const weightMode = set.weightModeSnapshot ?? context.weightModeSnapshot;
+  if (trackingType !== 'bodyweight_reps') return null;
+  if (weightMode !== 'added_weight') return null;
   if (!set.weightKg || set.weightKg <= 0 || !set.reps || set.reps <= 0) return null;
   return set.weightKg * set.reps;
 }
@@ -110,7 +117,8 @@ export function estimatedOneRepMax(
     'trackingTypeSnapshot' | 'weightModeSnapshot' | 'weightMultiplierSnapshot'
   >,
 ): number | null {
-  if (context.trackingTypeSnapshot !== 'weight_reps') return null;
+  const trackingType = set.trackingTypeSnapshot ?? context.trackingTypeSnapshot;
+  if (trackingType !== 'weight_reps') return null;
   if (set.reps == null || set.reps < ONE_RM_MIN_REPS || set.reps > ONE_RM_MAX_REPS)
     return null;
   const load = effectiveLoadKg(set, context);

@@ -5,6 +5,31 @@ Tailwind + Dexie/IndexedDB + Zod + Recharts + vite-plugin-pwa). No account, no
 backend, no cloud, no external runtime APIs, no telemetry, no direct LLM API.
 UI is German; code, types and technical comments are English. Mobile-first.
 
+## Mandatory: existing local user data is production data
+
+Testers already run this app with real exercises, plans, running and finished
+workouts, body data, settings and exports on their devices. **A database reset,
+dropping a table, clearing IndexedDB/localStorage, or discarding rows that fail
+validation is NEVER a valid migration or update path.** Any change to the data
+model, Dexie schema, entities, snapshots, analyses, imports or exports needs a
+documented compatibility check and migration tests. If a feature cannot be built
+safely against existing data, stop and document the conflict instead of resetting.
+
+### Data-compatibility checklist (run for every data-relevant change)
+
+- Are existing rows still read (old records without new fields must not be
+  dropped by Zod — new persisted fields are optional/defaulted)?
+- Are ids and relationships preserved (never re-mint ids for existing rows)?
+- Does Dexie need a new schema version (next free version, additive,
+  transactional, deterministic, **no backfill that guesses**)?
+- Are there safe field-by-field fallbacks for absent new fields?
+- Do running workouts stay usable and finished workouts stay historically correct
+  (never recompute history from live master data)?
+- Do backups need adjusting, and do old backups still import?
+- Do the AI export/import, plan packages, builder kit or CSV need adjusting?
+- Are there migration tests, and is the service worker confirmed not to wipe data?
+- Does the deployment domain stay unchanged (a new origin is a separate store)?
+
 ## Mandatory: format-compatibility check on every change
 
 **No change is complete until you have explicitly checked whether it affects any

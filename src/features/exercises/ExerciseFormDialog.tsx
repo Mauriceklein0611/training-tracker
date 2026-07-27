@@ -15,7 +15,14 @@ import { allowedWeightModes, defaultWeightModeFor } from '@/services/exerciseRul
 import { normalizeMuscleQuery } from '@/constants/muscleGroups';
 import { MuscleGroupChips } from '@/features/exercises/MuscleGroupChips';
 import { MuscleGroupPicker } from '@/features/exercises/MuscleGroupPicker';
-import type { Exercise, ProgressionMethod, TrackingType, WeightMode } from '@/types';
+import type {
+  Equipment,
+  Exercise,
+  ProgressionMethod,
+  TrackingType,
+  WeightMode,
+} from '@/types';
+import { EQUIPMENT_LABELS, EQUIPMENT_VALUES } from '@/services/equipment';
 import {
   EQUIPMENT_SUGGESTIONS,
   TRACKING_TYPE_HELP,
@@ -30,6 +37,7 @@ interface FormState {
   primaryMuscleGroup: string;
   secondaryMuscleGroups: string[];
   equipment: string;
+  defaultEquipment: Equipment;
   trackingType: TrackingType;
   weightMode: WeightMode;
   weightMultiplier: string;
@@ -90,6 +98,7 @@ function toFormState(
     primaryMuscleGroup: exercise?.primaryMuscleGroup ?? '',
     secondaryMuscleGroups: exercise?.secondaryMuscleGroups ?? [],
     equipment: exercise?.equipment ?? '',
+    defaultEquipment: exercise?.defaultEquipment ?? 'unspecified',
     trackingType: exercise?.trackingType ?? 'weight_reps',
     weightMode: exercise?.weightMode ?? 'total',
     weightMultiplier: String(exercise?.weightMultiplier ?? 1),
@@ -210,6 +219,10 @@ export function ExerciseFormDialog({
         .filter(Boolean)
         .filter((value) => normalizeMuscleQuery(value) !== normalizeMuscleQuery(primary)),
       equipment: form.equipment.trim(),
+      // Optional structured equipment; "unspecified" stays undefined so an old
+      // exercise is never given a guessed value just by being edited.
+      defaultEquipment:
+        form.defaultEquipment === 'unspecified' ? undefined : form.defaultEquipment,
       trackingType: form.trackingType,
       weightMode: form.weightMode,
       // The multiplier only has a meaning for the "per hand" convention.
@@ -335,6 +348,21 @@ export function ExerciseFormDialog({
               <option key={item} value={item} />
             ))}
           </datalist>
+
+          <SelectField
+            label="Standardausrüstung"
+            value={form.defaultEquipment}
+            hint="Ausgangswert für neue Trainings. Im laufenden Training lässt sich die Ausführung temporär wechseln, ohne die Übung zu ändern."
+            onChange={(event) =>
+              update('defaultEquipment', event.target.value as Equipment)
+            }
+          >
+            {EQUIPMENT_VALUES.map((value) => (
+              <option key={value} value={value}>
+                {EQUIPMENT_LABELS[value]}
+              </option>
+            ))}
+          </SelectField>
 
           <SelectField
             label="Tracking-Typ"
