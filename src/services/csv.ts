@@ -1,6 +1,7 @@
 import type { AnalyticsDataset } from '@/services/analytics';
 import { buildSetContexts } from '@/services/analytics';
 import { setVolumeKg } from '@/services/metrics';
+import { effectiveSetExecution, equipmentLabel } from '@/services/equipment';
 import { restDeviationSeconds } from '@/services/rest';
 import type { BodyWeightEntry, Exercise } from '@/types';
 import { BODY_MEASUREMENT_FIELDS } from '@/utils/format';
@@ -149,6 +150,8 @@ export function setsCsv(dataset: AnalyticsDataset): string {
     // Appended context columns (Phase 9).
     'Trainingsplan',
     'Deload',
+    // Structured per-set equipment (Feature 3); appended so the header stays stable.
+    'Ausrüstung',
   ];
 
   const exercisesById = new Map(
@@ -163,20 +166,21 @@ export function setsCsv(dataset: AnalyticsDataset): string {
 
   const rows = contexts.map(({ set, sessionExercise, session }) => {
     const exercise = exercisesById.get(sessionExercise.exerciseId);
+    // The set's actually-performed execution (per-set snapshot → session-exercise
+    // snapshot). Identical to the old columns for history without per-set data.
+    const execution = effectiveSetExecution(set, sessionExercise);
     return [
       session.startedAt.slice(0, 10),
       session.name,
       sessionExercise.exerciseNameSnapshot,
       exercise?.primaryMuscleGroup ?? '',
       exercise?.equipment ?? '',
-      TRACKING_TYPE_LABELS[sessionExercise.trackingTypeSnapshot] ??
-        sessionExercise.trackingTypeSnapshot,
+      TRACKING_TYPE_LABELS[execution.trackingType] ?? execution.trackingType,
       set.position + 1,
       SET_TYPE_LABELS[set.setType] ?? set.setType,
       num(set.weightKg),
-      WEIGHT_MODE_LABELS[sessionExercise.weightModeSnapshot] ??
-        sessionExercise.weightModeSnapshot,
-      num(sessionExercise.weightMultiplierSnapshot, 2),
+      WEIGHT_MODE_LABELS[execution.weightMode] ?? execution.weightMode,
+      num(execution.weightMultiplier, 2),
       set.reps ?? '',
       num(set.durationSeconds, 0),
       num(set.rir, 1),
@@ -188,6 +192,8 @@ export function setsCsv(dataset: AnalyticsDataset): string {
       sessionExercise.notes,
       session.planNameSnapshot ?? '',
       session.deloadIntensity ? 'ja' : 'nein',
+      // Empty for unspecified so old rows stay blank rather than saying "Nicht festgelegt".
+      execution.equipment === 'unspecified' ? '' : equipmentLabel(execution.equipment),
     ];
   });
 

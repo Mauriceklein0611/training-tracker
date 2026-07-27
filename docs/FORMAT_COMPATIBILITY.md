@@ -119,7 +119,11 @@ General rules:
   block (active plan, per-plan goals/metadata, `trainingBlocks` from usage
   periods, `activeDeload`), marks deload sessions with `deloadIntensity` on each
   workout, and adds per-workout `plan`/`workoutUnit` attribution snapshots (name
-  at start), each with a data-quality note. All of it is configuration/targets, never
+  at start), each with a data-quality note. Each exported set carries its
+  effective `equipment`/`weightMode`/`weightMultiplier` (schema 27) so a dumbbell
+  substitution is visible and `totalLoadKg` uses the right convention;
+  `personalRecords` entries carry `equipment`/`weightMode` because bests are kept
+  apart per execution. All of it is configuration/targets, never
   measurements, and omitted when unset. The export is export-only (no importer
   reads `exportVersion`), so the bump is informational; the response contract and
   its `plans` targets are unchanged. Builder `buildTrainingBlockContext`.
@@ -160,6 +164,12 @@ General rules:
 - Excludes all private data: no history, past sets/weights, PRs, body data,
   check-ins, AI analyses, settings, internal ids. `includeNotes: false` also
   strips plan/exercise notes before sharing.
+- **Structured `defaultEquipment` (schema 27) is deliberately NOT carried** in the
+  package or the builder kit: the free-text `equipment` string is already shared,
+  and the structured default is local metadata. A shared exercise imports with no
+  structured default (→ `unspecified`), which the user can set locally. This keeps
+  the package at v3 with no strict-schema break — a follow-up could add it as an
+  optional field behind a version bump if sharing it becomes worthwhile.
 - Import never overwrites local data: a same-name compatible exercise is reused,
   an incompatible one is created as a copy, plans are always created new with a
   de-duplicated name. Everything runs in one Dexie transaction (full rollback).
@@ -221,9 +231,16 @@ General rules:
 - New context columns are **appended** (never inserted), so an older parser
   keeps working: `sessionsCsv` gains `Trainingsplan`, `Übungseinheit`, `Deload`
   (ja/nein), `Geplantes Datum`, `Zeitplanmodus`; `setsCsv` gains `Trainingsplan`,
-  `Deload`; `exercisesCsv` gains `Herkunft` (System/Eigene). `Deload` reads the
-  session's `deloadIntensity` marker (Phase 5); planned date and schedule mode
-  come from the session's Phase-4.4 snapshot fields.
+  `Deload` and `Ausrüstung`; `exercisesCsv` gains `Herkunft` (System/Eigene).
+  `Deload` reads the session's `deloadIntensity` marker (Phase 5); planned date
+  and schedule mode come from the session's Phase-4.4 snapshot fields.
+- Equipment/execution (schema 27): `setsCsv`'s existing `Gewichtskonvention` and
+  `Gewichtsmultiplikator` columns now report the set's _effective_ execution
+  (per-set snapshot → session-exercise snapshot) instead of only the
+  session-exercise snapshot — identical for history without per-set data, more
+  accurate once a set carries its own execution. The appended `Ausrüstung` column
+  holds the structured equipment label (empty for `unspecified`). Header order is
+  otherwise unchanged.
 
 ## Muscle-group catalog — `src/constants/muscleGroups.ts`
 

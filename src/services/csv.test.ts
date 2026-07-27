@@ -120,6 +120,7 @@ describe('setsCsv', () => {
       'Notiz',
       'Trainingsplan',
       'Deload',
+      'Ausrüstung',
     ]) {
       expect(header).toContain(column);
     }
@@ -186,7 +187,8 @@ describe('other CSV exports', () => {
 
     const sets = setsCsv(dataset);
     expect(sets).toContain('Muskelaufbau');
-    expect(sets.replace(UTF8_BOM, '').split('\r\n')[1].endsWith(',ja')).toBe(true);
+    // Deload 'ja' then the trailing (empty for unspecified) Ausrüstung column.
+    expect(sets.replace(UTF8_BOM, '').split('\r\n')[1].endsWith(',ja,')).toBe(true);
 
     // A system exercise is labelled in the exercises export.
     const exercises = exercisesCsv([

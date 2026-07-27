@@ -31,6 +31,7 @@ import type {
   WeeklyGoals,
 } from '@/types';
 import { hasAnyWeeklyGoal } from '@/services/calendar';
+import { effectiveSetExecution } from '@/services/equipment';
 import { EXPERIENCE_LEVEL_LABELS, PLAN_GOAL_TYPE_LABELS } from '@/services/planGoals';
 import { DELOAD_INTENSITY_LABELS } from '@/services/deload';
 import { SCHEDULE_MODE_LABELS } from '@/services/schedule';
@@ -693,22 +694,33 @@ export function buildAiExport(
               : {}),
             sets: exerciseEntries
               .sort((a, b) => a.set.position - b.set.position)
-              .map(({ set }) => ({
-                setNumber: set.position + 1,
-                setType: set.setType,
-                weightKg: round(set.weightKg),
-                totalLoadKg: round(effectiveLoadKg(set, sessionExercise)),
-                reps: set.reps ?? null,
-                durationSeconds: set.durationSeconds ?? null,
-                rir: set.rir ?? null,
-                rpe: set.rpe ?? null,
-                volumeKg: round(setVolumeKg(set, sessionExercise)),
-                restTargetSeconds: set.restTargetSeconds || null,
-                restActualSeconds: set.restActualSeconds ?? null,
-                restDeviationSeconds: restDeviationSeconds(set),
-                completedAt: set.completedAt ?? null,
-                ...(recordMarks.has(set.id) ? { records: recordMarks.get(set.id) } : {}),
-              })),
+              .map(({ set }) => {
+                // The execution actually used for this set (per-set snapshot →
+                // session-exercise snapshot), so a dumbbell substitution is
+                // visible and totalLoadKg reflects the right convention.
+                const execution = effectiveSetExecution(set, sessionExercise);
+                return {
+                  setNumber: set.position + 1,
+                  setType: set.setType,
+                  equipment: execution.equipment,
+                  weightMode: execution.weightMode,
+                  weightMultiplier: execution.weightMultiplier,
+                  weightKg: round(set.weightKg),
+                  totalLoadKg: round(effectiveLoadKg(set, sessionExercise)),
+                  reps: set.reps ?? null,
+                  durationSeconds: set.durationSeconds ?? null,
+                  rir: set.rir ?? null,
+                  rpe: set.rpe ?? null,
+                  volumeKg: round(setVolumeKg(set, sessionExercise)),
+                  restTargetSeconds: set.restTargetSeconds || null,
+                  restActualSeconds: set.restActualSeconds ?? null,
+                  restDeviationSeconds: restDeviationSeconds(set),
+                  completedAt: set.completedAt ?? null,
+                  ...(recordMarks.has(set.id)
+                    ? { records: recordMarks.get(set.id) }
+                    : {}),
+                };
+              }),
           };
         });
 
