@@ -291,6 +291,10 @@ export const workoutSessionSchema = z.object({
   workoutUnitNameSnapshot: z.string().optional(),
   // Added in schema version 22; marks a session started during a plan deload.
   deloadIntensity: z.enum(['light', 'medium', 'strong']).optional(),
+  // Added in schema version 23; schedule context snapshot (Phase 4.4).
+  scheduleModeSnapshot: z.enum(['free-rotation', 'repeating-cycle', 'weekly']).optional(),
+  plannedDate: isoDate.optional(),
+  scheduleEntryId: id.optional(),
   name: z.string().default('Training'),
   status: z.enum(['active', 'completed']),
   startedAt: isoDateTime,

@@ -166,6 +166,8 @@ describe('other CSV exports', () => {
         planNameSnapshot: 'Muskelaufbau',
         workoutUnitNameSnapshot: 'Push A',
         deloadIntensity: 'medium',
+        plannedDate: '2026-07-20',
+        scheduleModeSnapshot: 'repeating-cycle',
       }),
     ];
     dataset.sessionExercises = [
@@ -176,9 +178,11 @@ describe('other CSV exports', () => {
     const sessions = sessionsCsv(dataset);
     expect(sessions).toContain('Muskelaufbau');
     expect(sessions).toContain('Push A');
-    // A deload session is flagged "ja".
+    expect(sessions).toContain('2026-07-20');
+    expect(sessions).toContain('Wiederholender Zyklus');
+    // Last two columns are the planned date and the schedule mode.
     const sessionRow = sessions.replace(UTF8_BOM, '').split('\r\n')[1];
-    expect(sessionRow.endsWith(',ja')).toBe(true);
+    expect(sessionRow.endsWith(',2026-07-20,Wiederholender Zyklus')).toBe(true);
 
     const sets = setsCsv(dataset);
     expect(sets).toContain('Muskelaufbau');

@@ -17,7 +17,7 @@ General rules:
 
 | Format                             | Direction               | Name (in content)                       | Version field                           | Version              | Supported imports |
 | ---------------------------------- | ----------------------- | --------------------------------------- | --------------------------------------- | -------------------- | ----------------- |
-| Full backup                        | export + import         | `app: training-tracker`                 | `exportFormatVersion` / `schemaVersion` | format 1 / schema 22 | schema ≤ 22       |
+| Full backup                        | export + import         | `app: training-tracker`                 | `exportFormatVersion` / `schemaVersion` | format 1 / schema 23 | schema ≤ 23       |
 | AI analysis export                 | export                  | (AI export doc)                         | `exportVersion`                         | 1                    | —                 |
 | AI response import                 | import                  | `format: training-ai-response`          | `schemaVersion`                         | 1                    | exactly 1         |
 | Plan builder kit                   | export                  | `format: training-plan-builder-kit`     | `version`                               | 2                    | —                 |
@@ -58,8 +58,12 @@ General rules:
 - Time-boxed deload (schema 22): a new `planDeloadPeriods` store holds 7-day
   deload windows per plan with snapshotted reductions; sessions gain an optional
   `deloadIntensity` marker. Optional/defaulted, so older backups restore with no
-  deload history. The legacy plan-level `deloadIntensity` toggle still validates
-  and is applied as a set-only fallback when no period is active.
+  deload history. The legacy plan-level `deloadIntensity` field still validates
+  but is inert since Phase 8 (no UI, not applied at session start).
+- Session schedule snapshot (schema 23): sessions gain optional
+  `scheduleModeSnapshot`, `plannedDate` and `scheduleEntryId`, snapshotted when a
+  workout is started from a plan (Phase 4.4). Optional/defaulted, so older
+  sessions and backups restore unchanged; they simply lack the schedule context.
 - Schedule system (schema 18): every plan owns one `PlanSchedule`
   (`free-rotation` | `repeating-cycle` | `weekly`) with `ScheduleEntry` rows for
   the cycle/weekly modes (workout or rest days). Restoring a pre-schedule backup
@@ -174,10 +178,10 @@ General rules:
   never a fabricated 0.
 - New context columns are **appended** (never inserted), so an older parser
   keeps working: `sessionsCsv` gains `Trainingsplan`, `Übungseinheit`, `Deload`
-  (ja/nein); `setsCsv` gains `Trainingsplan`, `Deload`; `exercisesCsv` gains
-  `Herkunft` (System/Eigene). `Deload` reads the session's `deloadIntensity`
-  marker (Phase 5). The planned date and schedule mode are not yet exported —
-  sessions do not snapshot them yet (Phase 4.4).
+  (ja/nein), `Geplantes Datum`, `Zeitplanmodus`; `setsCsv` gains `Trainingsplan`,
+  `Deload`; `exercisesCsv` gains `Herkunft` (System/Eigene). `Deload` reads the
+  session's `deloadIntensity` marker (Phase 5); planned date and schedule mode
+  come from the session's Phase-4.4 snapshot fields.
 
 ## Muscle-group catalog — `src/constants/muscleGroups.ts`
 

@@ -72,6 +72,12 @@ const SET_TYPE_LABELS: Record<string, string> = {
   failure: 'Satz bis Muskelversagen',
 };
 
+const SCHEDULE_MODE_LABELS: Record<string, string> = {
+  'free-rotation': 'Freie Rotation',
+  'repeating-cycle': 'Wiederholender Zyklus',
+  weekly: 'Wochenplan',
+};
+
 export function sessionsCsv(dataset: AnalyticsDataset): string {
   // New context columns are appended, never inserted, so the header order stays
   // stable for anyone parsing an older export.
@@ -86,6 +92,8 @@ export function sessionsCsv(dataset: AnalyticsDataset): string {
     'Trainingsplan',
     'Übungseinheit',
     'Deload',
+    'Geplantes Datum',
+    'Zeitplanmodus',
   ];
   const rows = [...dataset.sessions]
     .sort((a, b) => a.startedAt.localeCompare(b.startedAt))
@@ -106,6 +114,11 @@ export function sessionsCsv(dataset: AnalyticsDataset): string {
         session.planNameSnapshot ?? '',
         session.workoutUnitNameSnapshot ?? '',
         session.deloadIntensity ? 'ja' : 'nein',
+        session.plannedDate ?? '',
+        session.scheduleModeSnapshot
+          ? (SCHEDULE_MODE_LABELS[session.scheduleModeSnapshot] ??
+            session.scheduleModeSnapshot)
+          : '',
       ];
     });
   return toCsv(headers, rows);

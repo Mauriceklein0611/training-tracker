@@ -548,6 +548,16 @@ export interface WorkoutSession {
    * it separately; the effective reduced targets live on the session exercises.
    */
   deloadIntensity?: DeloadIntensity;
+  /**
+   * Schedule context snapshotted when the workout was started from a plan
+   * (Phase 4.4), so the calendar and analysis stay historically correct even
+   * after the plan's schedule changes. `plannedDate` is the local day the
+   * workout was started for; `scheduleEntryId` links to the cycle/weekly entry
+   * it corresponds to, if any. All absent for free workouts and older sessions.
+   */
+  scheduleModeSnapshot?: ScheduleMode;
+  plannedDate?: ISODate;
+  scheduleEntryId?: string;
   name: string;
   status: SessionStatus;
   startedAt: ISODateTime;

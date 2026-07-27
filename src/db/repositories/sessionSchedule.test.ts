@@ -125,3 +125,25 @@ describe('repeat previous workout carries plan attribution (0.3)', () => {
     expect(await db.workoutSessions.where('status').equals('active').count()).toBe(1);
   });
 });
+
+describe('session schedule snapshot (4.4)', () => {
+  it('snapshots mode, planned date and the matching schedule entry', async () => {
+    const plan = await createPlan({ name: 'PPL', splitType: '2-day' });
+    const { days } = (await getPlanWithDays(plan.id))!;
+    await setScheduleMode(plan.id, 'repeating-cycle'); // seeds a workout entry per day
+
+    const session = await startSessionFromTemplate(days[0].id);
+    expect(session.scheduleModeSnapshot).toBe('repeating-cycle');
+    expect(session.plannedDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    // The snapshotted entry belongs to this plan and points at day 0.
+    const entry = await db.scheduleEntries.get(session.scheduleEntryId!);
+    expect(entry?.templateId).toBe(days[0].id);
+  });
+
+  it('leaves the schedule snapshot empty for a free workout', async () => {
+    const free = await startFreeSession('Frei');
+    expect(free.scheduleModeSnapshot).toBeUndefined();
+    expect(free.plannedDate).toBeUndefined();
+    expect(free.scheduleEntryId).toBeUndefined();
+  });
+});

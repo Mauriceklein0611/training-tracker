@@ -21,8 +21,12 @@ import {
   planGroupNormalization,
   roundBoundaryReached,
 } from '@/services/grouping';
-import { advanceScheduleAfterWorkout } from '@/db/repositories/schedules';
+import {
+  advanceScheduleAfterWorkout,
+  getPlanScheduleView,
+} from '@/db/repositories/schedules';
 import { getWorkoutUnitWithExercises } from '@/db/repositories/workoutUnits';
+import { dayKey } from '@/utils/date';
 
 export interface SessionExerciseDetail {
   sessionExercise: SessionExercise;
@@ -207,6 +211,16 @@ export async function startSessionFromTemplate(
   const activeDeload = plan ? await getActiveDeload(plan.id) : undefined;
   const sessionDeloadIntensity = activeDeload?.intensity;
 
+  // Schedule context snapshot (Phase 4.4): the mode, the local planned day, and
+  // the cycle/weekly entry this workout corresponds to (best effort by matching
+  // the day). Kept on the session so the calendar/analysis stay correct after a
+  // later schedule change. Absent for a plan whose schedule cannot be read.
+  const scheduleView = plan ? await getPlanScheduleView(plan.id) : undefined;
+  const scheduleModeSnapshot = scheduleView?.schedule.mode;
+  const scheduleEntryId = scheduleView?.entries.find(
+    (entry) => entry.type === 'workout' && entry.templateId === templateId,
+  )?.id;
+
   const effectiveSets = (sets: number): number =>
     activeDeload ? deloadSets(sets, activeDeload.setReductionPercent) : sets;
   const effectiveDuration = (seconds: number | undefined): number | undefined => {
@@ -235,6 +249,9 @@ export async function startSessionFromTemplate(
         startedAt: timestamp,
         notes: '',
         deloadIntensity: sessionDeloadIntensity,
+        scheduleModeSnapshot,
+        plannedDate: dayKey(new Date()),
+        scheduleEntryId,
         createdAt: timestamp,
         updatedAt: timestamp,
       };

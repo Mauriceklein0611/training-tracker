@@ -105,9 +105,12 @@ Enum-, Feld- oder Versionsänderung. Reset betrifft kein Import/Export-Format.
 - **UI (`features/plans/PlanCalendarView.tsx`):** Monatsansicht mit Vor/Zurück,
   farbcodierten Zellen (verpasst nicht strafend), Legende; „Kalender"-Button im
   Plan-Editor.
+- **4.4 Session-Snapshots — ERLEDIGT:** aus einem Plan gestartete Trainings
+  snapshotten `scheduleModeSnapshot`, `plannedDate`, `scheduleEntryId` (Dexie
+  v23, Backup, Format-Doc). Damit CSV `Geplantes Datum`/`Zeitplanmodus`
+  freigeschaltet. Frei-Trainings bleiben leer.
 - **Offen in Phase 4:** Ausnahmen (verschoben/übersprungen/zusätzliche Pause) als
-  eigenes Modell + Aktionen mit Vorschau/Bestätigung; Session-Snapshots
-  `scheduleEntryId`/`plannedDate`/`scheduleMode` (4.4) für volle Historientreue.
+  eigenes Modell + Aktionen mit Vorschau/Bestätigung.
 
 ### Phase 5 — Zeitboxierter 7-Tage-Deload
 

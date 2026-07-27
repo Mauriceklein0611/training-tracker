@@ -31,7 +31,7 @@ import { ensureSchedulesForPlans } from '@/db/scheduleMigration';
  * Bump this together with a new `.version()` block below and record the change
  * in MIGRATIONS so the settings screen can show what the database went through.
  */
-export const SCHEMA_VERSION = 22;
+export const SCHEMA_VERSION = 23;
 
 export const MIGRATIONS: { version: number; description: string }[] = [
   { version: 1, description: 'Initiales Schema: Übungen, Pläne, Einheiten, Sätze.' },
@@ -177,6 +177,13 @@ export const MIGRATIONS: { version: number; description: string }[] = [
       'Zeitboxierter Deload: ein neuer Store hält 7-Tage-Deload-Zeiträume je ' +
       'Plan mit gesnapshotteten Reduktionen. Trainings während eines Deloads ' +
       'werden markiert. Bestehende Daten bleiben unverändert.',
+  },
+  {
+    version: 23,
+    description:
+      'Zeitplan-Snapshot auf Trainings: aus einem Plan gestartete Trainings ' +
+      'merken sich Zeitplanmodus, geplantes Datum und Zeitplaneintrag. ' +
+      'Bestehende Trainings bleiben unverändert (optionale Felder).',
   },
 ];
 
@@ -589,6 +596,18 @@ export class TrainingDatabase extends Dexie {
             settings.schemaVersion = 22;
           });
       });
+
+    // ---- v23 ------------------------------------------------------------
+    // Sessions gain optional schedule-context snapshot fields (Phase 4.4); no
+    // store or index change and no backfill — older sessions simply lack them.
+    this.version(23).upgrade(async (tx) => {
+      await tx
+        .table<AppSettings>('settings')
+        .toCollection()
+        .modify((settings) => {
+          settings.schemaVersion = 23;
+        });
+    });
   }
 }
 
