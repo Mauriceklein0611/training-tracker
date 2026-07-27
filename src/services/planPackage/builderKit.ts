@@ -130,6 +130,18 @@ function buildExample(): unknown {
             ],
           },
         ],
+        // Optional schedule (package v3): a repeating cycle Push → Pause → Pull →
+        // Pause. Workout entries reference a dayKey of this plan; rest entries
+        // carry an optional label. free-rotation would omit "entries" entirely.
+        schedule: {
+          mode: 'repeating-cycle',
+          entries: [
+            { type: 'workout', dayKey: 'day-1', position: 0 },
+            { type: 'rest', label: 'Pause', position: 1 },
+            { type: 'workout', dayKey: 'day-2', position: 2 },
+            { type: 'rest', label: 'Pause', position: 3 },
+          ],
+        },
       },
     ],
   };
@@ -145,9 +157,10 @@ export function buildPlanBuilderKit(): PlanBuilderKit {
     version: PLAN_BUILDER_KIT_VERSION,
     description:
       'Bauanleitung für einen mehrtägigen Trainingsplan im Format ' +
-      '„training-plan-package" (Version 2, Plan mit Trainingstagen). Frage mich ' +
-      'zuerst nach Zielen, Erfahrung, Trainingstagen und Ausrüstung. Erzeuge die ' +
-      'Datei erst am Ende, wenn ich sie ausdrücklich anfordere.',
+      `„training-plan-package" (schemaVersion ${PLAN_PACKAGE_SCHEMA_VERSION}, Plan ` +
+      'mit Trainingstagen und optionalem Zeitplan). Frage mich zuerst nach Zielen, ' +
+      'Erfahrung, Trainingstagen und Ausrüstung. Erzeuge die Datei erst am Ende, ' +
+      'wenn ich sie ausdrücklich anfordere.',
     target: {
       format: PLAN_PACKAGE_FORMAT,
       schemaVersion: PLAN_PACKAGE_SCHEMA_VERSION,
@@ -167,7 +180,10 @@ export function buildPlanBuilderKit(): PlanBuilderKit {
       'exerciseKey, dayKey und planExerciseKey sind jeweils eindeutig; jede Planposition verweist auf einen vorhandenen exerciseKey.',
       'order beginnt bei 0 und ist je Tag eindeutig. targetRepMin darf nicht größer als targetRepMax sein.',
       'Übungen einer Gruppe verwenden denselben groupKey mit identischem type und restMode und stehen am selben Tag direkt hintereinander.',
-      'Pflichtfelder: format, schemaVersion, packageId, createdAt, source, packageName, plans (mit planKey, name, days). Optionale Felder können entfallen.',
+      'Optionaler Zeitplan je Plan im Feld „schedule" mit „mode" (free-rotation, repeating-cycle oder weekly) und „entries". Ohne schedule wird der Plan als freie Rotation importiert.',
+      'schedule.entries: „workout"-Einträge verweisen über „dayKey" auf einen Tag desselben Plans; „rest"-Einträge sind Pausentage mit optionalem „label". Jeder Eintrag hat eine eindeutige „position" (0,1,2, …).',
+      'Bei mode „weekly" braucht jeder Eintrag zusätzlich „weekday" (0=Montag … 6=Sonntag), jeder Wochentag höchstens einmal. Bei mode „free-rotation" bleibt „entries" leer (Reihenfolge ergibt sich aus den Tagen).',
+      'Pflichtfelder: format, schemaVersion, packageId, createdAt, source, packageName, plans (mit planKey, name, days). Optionale Felder (auch schedule) können entfallen.',
       'Erfinde keine persönlichen Daten. Das Paket enthält nur Pläne und Übungsdefinitionen, keine Trainingshistorie.',
     ],
     allowedValues: {

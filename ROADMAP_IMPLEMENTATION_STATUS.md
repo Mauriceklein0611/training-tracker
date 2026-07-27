@@ -184,8 +184,13 @@ Enum-, Feld- oder Versionsänderung. Reset betrifft kein Import/Export-Format.
   machen"-Button mit Bestätigungsdialog + „rückgängig gemacht"-Badge in den
   KI-Analysen; die alten „neue Planversion"-Texte auf
   „Wiederherstellungspunkt/rückgängig" umgestellt. Tests grün.
-- **Offen in Phase 7:** weitere Allowlist-Erweiterungen (7.2); Builder-Kit um
-  Zeitplan-Beispiel ergänzen (7.3).
+- **7.3 Builder-Kit-Zeitplan — ERLEDIGT:** das Kit-Beispiel trägt jetzt einen
+  optionalen `schedule` (repeating-cycle mit Workout- und Pausen-Einträgen), und
+  die `rules` erklären alle drei Modi (workout→`dayKey`, rest mit `label`, weekly
+  mit `weekday` 0–6, free-rotation ohne Einträge). Beispiel wird weiterhin gegen
+  das echte `planPackageSchema` (v3) getestet; neuer Test sichert die Zeitplan-
+  Demonstration. Format-Doc aktualisiert.
+- **Offen in Phase 7:** weitere Allowlist-Erweiterungen (7.2).
 
 ### Phase 8 — Sichtbare Planversionen/Archiv entfernen (teilweise)
 

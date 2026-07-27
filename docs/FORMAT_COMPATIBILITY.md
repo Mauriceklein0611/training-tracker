@@ -177,8 +177,9 @@ General rules:
   `training-plan-package` (schema version 3): it carries the target contract, the
   allowed enums (`splitType`, plus weight-mode-per-tracking rules from
   `exerciseRules.ts`), the muscle-group catalog and a two-day example. The
-  example omits the optional schedule, so a kit-built plan imports as
-  free-rotation; adding a schedule example to the kit is a follow-up.
+  example now includes an optional `schedule` (a `repeating-cycle` with workout
+  and rest entries), and the rules explain all three modes, so a kit-built plan
+  can carry a schedule; omitting `schedule` still imports as free-rotation.
 - Export/share only; never imported. The example is validated against the real
   `planPackageSchema` (v2) by test so the two can never drift.
 
