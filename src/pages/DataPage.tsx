@@ -15,6 +15,10 @@ import { db } from '@/db/db';
 import { markBackupCreated } from '@/db/repositories/settings';
 import { listBodyWeightEntries } from '@/db/repositories/bodyWeight';
 import { listTemplatesWithExercises } from '@/db/repositories/templates';
+import { listPlansWithDays } from '@/db/repositories/plans';
+import { getActivePlanId, listUsagePeriods } from '@/db/repositories/planUsage';
+import { getActiveDeload } from '@/db/repositories/planDeload';
+import { getPlanScheduleView } from '@/db/repositories/schedules';
 import { recordAiExport } from '@/db/repositories/aiAnalyses';
 import { deleteTrainingHistory, resetAllData } from '@/db/repositories/maintenance';
 import { uuid } from '@/utils/id';
@@ -36,6 +40,7 @@ import {
   buildAiExport,
   buildContextBlock,
   buildPlansExport,
+  buildTrainingBlockContext,
   DEFAULT_AI_EXPORT_OPTIONS,
   hasExportPeriodErrors,
   validateExportPeriod,
@@ -211,14 +216,32 @@ export default function DataPage() {
     buildContextBlock(settings.analysisContext)
       ? 'deine Angaben zum Trainingskontext'
       : 'keine Kontextangaben hinterlegt',
+    'Planungskontext: aktiver Plan, Planziele, Trainingsblöcke und aktiver Deload',
   ];
 
   const buildExportFile = async () => {
-    const [dataset, bodyWeight, templates] = await Promise.all([
-      loadAnalyticsDataset(),
-      aiOptions.includeBodyWeight ? listBodyWeightEntries() : Promise.resolve([]),
-      listTemplatesWithExercises(),
-    ]);
+    const [dataset, bodyWeight, templates, plansWithDays, activePlanId, usagePeriods] =
+      await Promise.all([
+        loadAnalyticsDataset(),
+        aiOptions.includeBodyWeight ? listBodyWeightEntries() : Promise.resolve([]),
+        listTemplatesWithExercises(),
+        listPlansWithDays(),
+        getActivePlanId(),
+        listUsagePeriods(),
+      ]);
+    const planEntries = await Promise.all(
+      plansWithDays.map(async ({ plan }) => ({
+        plan,
+        scheduleMode: (await getPlanScheduleView(plan.id)).schedule.mode,
+        isActive: plan.id === activePlanId,
+      })),
+    );
+    const activeDeload = activePlanId ? await getActiveDeload(activePlanId) : undefined;
+    const trainingContext = buildTrainingBlockContext({
+      plans: planEntries,
+      usagePeriods,
+      activeDeload,
+    });
     const file = buildAiExport(
       dataset,
       bodyWeight,
@@ -230,6 +253,7 @@ export default function DataPage() {
       },
       new Date(),
       buildPlansExport(templates),
+      trainingContext,
     );
     // Remember this export so a later response file can be tied back to it.
     await recordAiExport(file.exportId, file.sourceFingerprint);

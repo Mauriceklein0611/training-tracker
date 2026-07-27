@@ -162,6 +162,16 @@ Enum-, Feld- oder Versionsänderung. Reset betrifft kein Import/Export-Format.
   (schema 1) in `services/unitPackage.ts` — Build/Parse/Import (strikte Zod,
   Übungs-Reuse-oder-Kopie, transaktional, Dedup über `planImports`-Fingerprint),
   Share/Download-Fallback + Import-Vorschau in der Bibliothek-UI. Tests grün.
+- **7.1 KI-Export-Kontext — ERLEDIGT:** `buildAiExport` (jetzt `exportVersion` 2)
+  trägt einen beschreibenden `trainingContext`-Block (aktiver Plan, Planziele/
+  -metadaten, Trainingsblöcke aus `PlanUsagePeriod`s, aktiver Deload) über die
+  reine Funktion `buildTrainingBlockContext`; Deload-Trainings werden je Workout
+  mit `deloadIntensity` markiert + Data-Quality-Hinweis, und der Response-Contract
+  bittet die KI, Deload-Einheiten nicht als Leistungseinbruch zu werten. Alles
+  ist Konfiguration/Vorgabe (keine Messwerte) und wird bei leeren Angaben
+  weggelassen. Export-only (kein Parser liest `exportVersion`), Contract/`plans`-
+  Ziele unverändert. Format-Register + Tests erweitert. **Offen bleibt** der
+  Einheiten-Kontext (Session↔`sourceWorkoutUnitTemplateId`) für den Export.
 - **7.2 Ein-Punkt-Undo des letzten KI-Imports — ERLEDIGT:** `commitAiAnalysis`
   merkt sich die vor dem Übernehmen erzeugten `ai-import`-Wiederherstellungspunkte
   je Plan als `AiAnalysis.restoreVersionIds`; neue reine Repo-Funktion
@@ -172,9 +182,9 @@ Enum-, Feld- oder Versionsänderung. Reset betrifft kein Import/Export-Format.
   machen"-Button mit Bestätigungsdialog + „rückgängig gemacht"-Badge in den
   KI-Analysen; die alten „neue Planversion"-Texte auf
   „Wiederherstellungspunkt/rückgängig" umgestellt. Tests grün.
-- **Offen in Phase 7:** KI-Analyse-Export um Plan-/Einheiten-/Deload-/
-  Nutzungszeitraum-Kontext erweitern (7.1); weitere Allowlist-Erweiterungen (7.2);
-  Builder-Kit um Zeitplan-Beispiel ergänzen (7.3).
+- **Offen in Phase 7:** Einheiten-Kontext (Übungseinheiten) im KI-Export (Rest
+  von 7.1); weitere Allowlist-Erweiterungen (7.2); Builder-Kit um Zeitplan-
+  Beispiel ergänzen (7.3).
 
 ### Phase 8 — Sichtbare Planversionen/Archiv entfernen (teilweise)
 

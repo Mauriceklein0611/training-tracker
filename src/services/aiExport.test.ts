@@ -3,6 +3,7 @@ import {
   AI_ANALYSIS_PROMPT,
   aiExportFileName,
   buildAiExport,
+  buildTrainingBlockContext,
   DEFAULT_AI_EXPORT_OPTIONS,
   hasExportPeriodErrors,
   InvalidExportPeriodError,
@@ -10,7 +11,13 @@ import {
   validateExportPeriod,
 } from '@/services/aiExport';
 import type { AnalyticsDataset } from '@/services/analytics';
-import type { AnalysisContext, BodyWeightEntry } from '@/types';
+import type {
+  AnalysisContext,
+  BodyWeightEntry,
+  PlanDeloadPeriod,
+  PlanUsagePeriod,
+  TrainingPlan,
+} from '@/types';
 import {
   makeExercise,
   makeSession,
@@ -217,7 +224,7 @@ describe('buildAiExport', () => {
   it('is self-describing: units, conventions and tracking types are explained', () => {
     const file = buildAiExport(buildDataset(), [], DEFAULT_AI_EXPORT_OPTIONS, NOW);
 
-    expect(file.exportVersion).toBe(1);
+    expect(file.exportVersion).toBe(2);
     expect(file.generatedAt).toBe(NOW.toISOString());
     expect(file.units.weight).toBe('kg');
     expect(file.conventions.trackingTypes.weight_reps).toContain('Volumen');
@@ -513,6 +520,147 @@ describe('analysis context', () => {
     const without = buildAiExport(buildDataset(), [], DEFAULT_AI_EXPORT_OPTIONS, NOW);
     const with_ = withContext({ goal: 'Kraftaufbau', trainingDaysPerWeekTarget: 5 });
 
+    expect(with_.summary).toEqual(without.summary);
+    expect(with_.workouts).toEqual(without.workouts);
+  });
+});
+
+function makePlan(overrides: Partial<TrainingPlan> = {}): TrainingPlan {
+  return {
+    id: 'p1',
+    name: 'PPL',
+    description: '',
+    splitType: '3-day',
+    createdAt: '',
+    updatedAt: '',
+    ...overrides,
+  };
+}
+
+describe('buildTrainingBlockContext', () => {
+  it('returns undefined when there is no planning context', () => {
+    expect(
+      buildTrainingBlockContext({ plans: [], usagePeriods: [], activeDeload: undefined }),
+    ).toBeUndefined();
+    // A bare, inactive plan with no metadata is not worth listing either.
+    expect(
+      buildTrainingBlockContext({
+        plans: [{ plan: makePlan(), isActive: false }],
+        usagePeriods: [],
+        activeDeload: undefined,
+      }),
+    ).toBeUndefined();
+  });
+
+  it('describes the active plan, its goals, schedule mode and training blocks', () => {
+    const block = buildTrainingBlockContext({
+      plans: [
+        {
+          plan: makePlan({
+            goalType: 'muscle',
+            experienceLevel: 'intermediate',
+            sessionsPerWeekTarget: 4,
+            focusMuscleGroups: ['Brust'],
+          }),
+          scheduleMode: 'weekly',
+          isActive: true,
+        },
+      ],
+      usagePeriods: [
+        {
+          id: 'u1',
+          planId: 'p1',
+          planNameSnapshot: 'PPL',
+          startDate: '2026-06-01',
+          createdAt: '',
+          updatedAt: '',
+        } satisfies PlanUsagePeriod,
+      ],
+      activeDeload: undefined,
+    });
+
+    const plans = block?.plans as Record<string, unknown>[];
+    expect(plans[0].active).toBe(true);
+    expect(plans[0].goal).toBe('Muskelaufbau');
+    expect(plans[0].experienceLevel).toBe('Fortgeschritten');
+    expect(plans[0].scheduleMode).toBe('Wochenplan');
+    const blocks = block?.trainingBlocks as Record<string, unknown>[];
+    expect(blocks[0]).toEqual({ plan: 'PPL', from: '2026-06-01', to: null });
+  });
+
+  it('surfaces an active deload with reduced percentages and a no-plateau note', () => {
+    const deload: PlanDeloadPeriod = {
+      id: 'd1',
+      planId: 'p1',
+      intensity: 'medium',
+      startDate: '2026-07-18',
+      endDate: '2026-07-24',
+      setReductionPercent: 0.4,
+      durationReductionPercent: 0.4,
+      addedRir: 1,
+      createdAt: '',
+      updatedAt: '',
+    };
+    const block = buildTrainingBlockContext({
+      plans: [],
+      usagePeriods: [],
+      activeDeload: deload,
+    });
+    const active = block?.activeDeload as Record<string, unknown>;
+    expect(active.setReductionPercent).toBe(40);
+    expect(active.intensity).toContain('Mittel');
+    expect(String(active.note)).toContain('Plateau');
+  });
+});
+
+describe('deload workouts', () => {
+  it('marks a deload session and warns not to read it as a slump', () => {
+    const bench = makeExercise({ id: 'ex-bench', name: 'Bankdrücken' });
+    const dataset: AnalyticsDataset = {
+      exercises: [bench],
+      sessions: [
+        makeSession({
+          id: 's1',
+          startedAt: '2026-07-20T10:00:00.000Z',
+          deloadIntensity: 'medium',
+        }),
+      ],
+      sessionExercises: [
+        makeSessionExercise({ id: 'se1', sessionId: 's1', exerciseId: 'ex-bench' }),
+      ],
+      sets: [
+        makeSet({
+          sessionExerciseId: 'se1',
+          weightKg: 60,
+          reps: 8,
+          completedAt: '2026-07-20T10:05:00.000Z',
+        }),
+      ],
+    };
+    const file = buildAiExport(dataset, [], DEFAULT_AI_EXPORT_OPTIONS, NOW);
+    expect((file.workouts[0] as { deloadIntensity?: string }).deloadIntensity).toBe(
+      'medium',
+    );
+    expect(file.dataQuality.notes.some((note) => note.includes('deloadIntensity'))).toBe(
+      true,
+    );
+  });
+});
+
+describe('training context passthrough', () => {
+  it('embeds a provided training context and leaves figures untouched', () => {
+    const trainingContext = { note: 'x', plans: [{ name: 'PPL', active: true }] };
+    const without = buildAiExport(buildDataset(), [], DEFAULT_AI_EXPORT_OPTIONS, NOW);
+    const with_ = buildAiExport(
+      buildDataset(),
+      [],
+      DEFAULT_AI_EXPORT_OPTIONS,
+      NOW,
+      [],
+      trainingContext,
+    );
+    expect(with_.trainingContext).toEqual(trainingContext);
+    expect(without.trainingContext).toBeUndefined();
     expect(with_.summary).toEqual(without.summary);
     expect(with_.workouts).toEqual(without.workouts);
   });

@@ -18,7 +18,7 @@ General rules:
 | Format                             | Direction               | Name (in content)                       | Version field                           | Version              | Supported imports |
 | ---------------------------------- | ----------------------- | --------------------------------------- | --------------------------------------- | -------------------- | ----------------- |
 | Full backup                        | export + import         | `app: training-tracker`                 | `exportFormatVersion` / `schemaVersion` | format 1 / schema 24 | schema ≤ 24       |
-| AI analysis export                 | export                  | (AI export doc)                         | `exportVersion`                         | 1                    | —                 |
+| AI analysis export                 | export                  | (AI export doc)                         | `exportVersion`                         | 2                    | —                 |
 | AI response import                 | import                  | `format: training-ai-response`          | `schemaVersion`                         | 1                    | exactly 1         |
 | Plan builder kit                   | export                  | `format: training-plan-builder-kit`     | `version`                               | 2                    | —                 |
 | Training plan package              | export + import + share | `format: training-plan-package`         | `schemaVersion`                         | 3                    | 1, 2, 3           |
@@ -90,6 +90,13 @@ General rules:
 - Export carries `exportId`, `sourceExport {exportId, fingerprint}`,
   `analysisRequest`, `responseContract`, and a `plans` block (only place with
   plan/plan-exercise ids). No workout history ids.
+- **exportVersion 2 (Phase 7.1):** adds an optional descriptive `trainingContext`
+  block (active plan, per-plan goals/metadata, `trainingBlocks` from usage
+  periods, `activeDeload`) and marks deload sessions with `deloadIntensity` on
+  each workout plus a data-quality note. All of it is configuration/targets, never
+  measurements, and omitted when unset. The export is export-only (no importer
+  reads `exportVersion`), so the bump is informational; the response contract and
+  its `plans` targets are unchanged. Builder `buildTrainingBlockContext`.
 - Response import: strict schema, `schemaVersion` must equal
   `SUPPORTED_RESPONSE_SCHEMA_VERSION`, unknown fields rejected, duplicate
   proposalIds rejected, `expected` must cover every `changes` field (null = unset),
