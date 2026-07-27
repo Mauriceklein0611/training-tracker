@@ -31,6 +31,8 @@ export type PlanCalendarStatus =
   | 'rest'
   /** A planned workout the user deliberately skipped (not counted as missed). */
   | 'skipped'
+  /** A planned workout the user moved to another date (see the target day). */
+  | 'moved'
   /** Nothing planned and nothing done. */
   | 'free';
 
@@ -127,10 +129,17 @@ export function buildPlanCalendarMonth(input: PlanCalendarInput): PlanCalendarDa
   }
 
   // Per-day exceptions (at most one per day; a later one wins deterministically).
+  // A `move` is indexed twice: on its source day and on its target day.
   const exceptionByDay = new Map<string, PlanScheduleException>();
+  const movedInByDay = new Map<string, PlanScheduleException>();
   for (const exception of input.exceptions ?? []) {
     exceptionByDay.set(exception.date, exception);
+    if (exception.type === 'move' && exception.movedToDate) {
+      movedInByDay.set(exception.movedToDate, exception);
+    }
   }
+
+  const readable = (iso: string): string => iso.split('-').reverse().join('.');
 
   const days: PlanCalendarDay[] = [];
   const total = differenceInCalendarDays(last, first) + 1;
@@ -169,6 +178,20 @@ export function buildPlanCalendarMonth(input: PlanCalendarInput): PlanCalendarDa
         });
         continue;
       }
+      if (exception.type === 'move') {
+        // The workout is relocated away from this day (it shows on movedToDate).
+        days.push({
+          date: key,
+          dayOfMonth: date.getDate(),
+          weekday,
+          status: 'moved',
+          label: exception.movedToDate
+            ? `→ ${readable(exception.movedToDate)}`
+            : 'Verschoben',
+          isToday,
+        });
+        continue;
+      }
       // 'skip': the day's planned workout is cancelled — shown as skipped, not
       // missed. Keep the workout name so it is clear what was skipped.
       const skippedLabel =
@@ -185,6 +208,27 @@ export function buildPlanCalendarMonth(input: PlanCalendarInput): PlanCalendarDa
       });
       continue;
     }
+
+    // A workout moved onto this day from another date takes precedence over the
+    // day's own base schedule.
+    const movedIn = movedInByDay.get(key);
+    if (movedIn) {
+      const source = plannedEntryFor(input, parseISO(movedIn.date));
+      const label =
+        movedIn.note?.trim() ||
+        (source?.type === 'workout' ? source.label : undefined) ||
+        'Training';
+      days.push({
+        date: key,
+        dayOfMonth: date.getDate(),
+        weekday,
+        status: key < todayKey ? 'missed' : 'planned',
+        label,
+        isToday,
+      });
+      continue;
+    }
+
     if (!planned) {
       days.push({
         date: key,

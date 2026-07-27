@@ -235,4 +235,27 @@ describe('schedule exceptions', () => {
     });
     expect(cellFor(days, '2026-07-01').status).toBe('completed');
   });
+
+  it('moves a workout to its target day and marks the source as moved', () => {
+    const days = buildPlanCalendarMonth({
+      ...base,
+      exceptions: [
+        {
+          id: 'm',
+          planId: 'p',
+          date: '2026-07-01',
+          type: 'move',
+          movedToDate: '2026-07-20',
+          createdAt: NOW,
+          updatedAt: NOW,
+        },
+      ],
+    });
+    const source = cellFor(days, '2026-07-01');
+    expect(source.status).toBe('moved');
+    expect(source.label).toBe('→ 20.07.2026');
+    const target = cellFor(days, '2026-07-20'); // future → planned
+    expect(target.status).toBe('planned');
+    expect(target.label).toBe('Push'); // the moved workout's name
+  });
 });

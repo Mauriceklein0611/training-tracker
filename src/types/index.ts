@@ -218,21 +218,28 @@ export interface PlanUsagePeriod {
   updatedAt: ISODateTime;
 }
 
-/** `skip` cancels a planned workout that day; `rest` marks an extra rest day. */
-export type PlanScheduleExceptionType = 'skip' | 'rest';
+/**
+ * `skip` cancels a planned workout that day; `rest` marks an extra rest day;
+ * `move` relocates the day's planned workout to another date ({@link
+ * PlanScheduleException.movedToDate}).
+ */
+export type PlanScheduleExceptionType = 'skip' | 'rest' | 'move';
 
 /**
  * A per-day override of a plan's derived schedule (Phase 4). One per plan+date.
  * The schedule itself is unchanged — exceptions only re-colour a single calendar
- * day: a deliberately skipped workout is not counted as "missed", and an extra
- * rest day turns a planned/free day into a pause.
+ * day: a deliberately skipped workout is not counted as "missed", an extra rest
+ * day turns a planned/free day into a pause, and a moved workout appears on its
+ * target date instead of the original one.
  */
 export interface PlanScheduleException {
   id: string;
   planId: string;
-  /** Local day (yyyy-MM-dd) this exception applies to. */
+  /** Local day (yyyy-MM-dd) this exception applies to (the source day). */
   date: ISODate;
   type: PlanScheduleExceptionType;
+  /** For `move`: the local target day the workout is relocated to. */
+  movedToDate?: ISODate;
   /** Optional reason/label shown on the day. */
   note?: string;
   createdAt: ISODateTime;

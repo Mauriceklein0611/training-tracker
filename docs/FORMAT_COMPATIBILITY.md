@@ -6,7 +6,7 @@ names and versions are centralised in `src/constants/formats.ts` or the format's
 own established constant.
 
 Last full matrix audit (2026-07-27): every version in the table below was
-cross-checked against its code constant (`SCHEMA_VERSION` 25, `AI_EXPORT_VERSION`
+cross-checked against its code constant (`SCHEMA_VERSION` 26, `AI_EXPORT_VERSION`
 2, `AI_RESPONSE_SCHEMA_VERSION` 1, `PLAN_BUILDER_KIT_VERSION` 2,
 `PLAN_PACKAGE_SCHEMA_VERSION` 3, `SUPPORTED_WORKOUT_UNIT_PACKAGE_VERSIONS` [1]),
 and the backup was confirmed to cover all 20 Dexie stores + settings (guarded by
@@ -24,7 +24,7 @@ General rules:
 
 | Format                             | Direction               | Name (in content)                       | Version field                           | Version              | Supported imports |
 | ---------------------------------- | ----------------------- | --------------------------------------- | --------------------------------------- | -------------------- | ----------------- |
-| Full backup                        | export + import         | `app: training-tracker`                 | `exportFormatVersion` / `schemaVersion` | format 1 / schema 25 | schema ≤ 25       |
+| Full backup                        | export + import         | `app: training-tracker`                 | `exportFormatVersion` / `schemaVersion` | format 1 / schema 26 | schema ≤ 26       |
 | AI analysis export                 | export                  | (AI export doc)                         | `exportVersion`                         | 2                    | —                 |
 | AI response import                 | import                  | `format: training-ai-response`          | `schemaVersion`                         | 1                    | exactly 1         |
 | Plan builder kit                   | export                  | `format: training-plan-builder-kit`     | `version`                               | 2                    | —                 |
@@ -74,6 +74,10 @@ General rules:
 - Plan schedule exceptions (schema 25): a new `planScheduleExceptions` store holds
   per-day overrides (`type` `skip` | `rest`, one per plan+date). Optional/defaulted,
   so older backups restore with no exceptions; removed with their plan on delete.
+- Move exceptions (schema 26): the exception `type` gains `move` plus an optional
+  `movedToDate` (the target day the workout is relocated to). A schema-25 build
+  rejects a schema-26 backup as "newer" rather than choking on the unknown enum
+  value, which is exactly why the version was bumped.
 - AI import undo (schema 24): `aiAnalyses` gain optional `restoreVersionIds`
   (the `ai-import` `templateVersions` frozen before applying, one per changed
   plan) and `undoneAt` (set when the import was reverted). Optional/defaulted, so

@@ -5,7 +5,7 @@ ausbauen" (Opus-Gesamtprompt). Diese Datei ersetzt keine Umsetzung, sondern häl
 den geprüften Stand fest.
 
 Zuletzt grüne Pflichtchecks (lokal): `typecheck`, `lint`, `test` (62 Dateien,
-698 Tests), `build`, `prettier --check` (geänderte Dateien).
+701 Tests), `build`, `prettier --check` (geänderte Dateien).
 
 ## Abgeschlossen
 
@@ -109,18 +109,17 @@ Enum-, Feld- oder Versionsänderung. Reset betrifft kein Import/Export-Format.
   snapshotten `scheduleModeSnapshot`, `plannedDate`, `scheduleEntryId` (Dexie
   v23, Backup, Format-Doc). Damit CSV `Geplantes Datum`/`Zeitplanmodus`
   freigeschaltet. Frei-Trainings bleiben leer.
-- **4.5 Zeitplan-Ausnahmen (übersprungen / zusätzliche Pause) — ERLEDIGT:** neuer
-  Store `planScheduleExceptions` (Dexie v25, eine Ausnahme je Plan+Datum) mit Repo
+- **4.5 Zeitplan-Ausnahmen — ERLEDIGT (Phase 4 abgeschlossen):** neuer Store
+  `planScheduleExceptions` (Dexie v25, eine Ausnahme je Plan+Datum) mit Repo
   `planExceptions.ts` (idempotentes `setPlanException`, `clearPlanException`,
   `listPlanExceptions`). Reine Ableitung erweitert: `skip` → Status `skipped`
-  (zählt **nicht** als „verpasst", behält den Übungsnamen), `rest` →
-  Pausentag; eine abgeschlossene Session sticht jede Ausnahme. UI: Kalendertage
-  sind antippbar (nur bei datumsgebundenen Modi) → Dialog „Übersprungen" /
-  „Zusätzliche Pause" / „Ausnahme entfernen" mit Hinweis, dass der Zeitplan
+  (zählt **nicht** als „verpasst", behält den Übungsnamen), `rest` → Pausentag,
+  `move` → Quelltag `moved` („→ Zieldatum") und das Training erscheint am Zieltag
+  (v26, Feld `movedToDate`); eine abgeschlossene Session sticht jede Ausnahme. UI:
+  Kalendertage sind antippbar (nur bei datumsgebundenen Modi) → Dialog
+  „Übersprungen" / „Zusätzliche Pause" / „Verschieben" (mit Datumsauswahl +
+  Vorschau beider Tage) / „Ausnahme entfernen"; Hinweis, dass der Zeitplan
   unverändert bleibt. Backup/Reset/Plan-Löschung/Format-Doc erweitert; Tests grün.
-- **Offen in Phase 4:** „verschoben" (Training auf ein anderes Datum verlegen) als
-  Zwei-Datums-Ausnahme mit Vorschau — bewusst als eigener Folgeschritt (braucht
-  Ziel-Datumsauswahl + Vorschau beider Tage).
 
 ### Phase 5 — Zeitboxierter 7-Tage-Deload
 
@@ -240,16 +239,16 @@ Enum-, Feld- oder Versionsänderung. Reset betrifft kein Import/Export-Format.
 
 ## Offen (nächste Schritte, in Roadmap-Reihenfolge)
 
-- **Phase A Rest (teilweise):** Home **und** die Pläne-Übersicht zeigen bei
-  Wochenplänen an, wenn heute ein Pausen-/freier Tag geplant ist („Heute:
-  Pause/Frei", aus `state.current`). Offen: Rest-Tage in der Zyklus-/Frei-
-  Vorschau (bei diesen Modi ist „heute" nicht kalendergebunden — bewusst offen).
-- **Phase 4** — Zeitplan-Kalender (geplant vs. tatsächlich, Ausnahmen,
-  Session-Snapshots `scheduleEntryId`/geplantes Datum).
-- **Phase 5** — Zeitboxierter 7-Tage-Deload (ersetzt heutigen
-  `deloadIntensity`-Toggle).
-- **Phasen 6–8** — Analyse (4 Ebenen), KI-Import/Undo/Formate, Entfernung der
-  sichtbaren Planversions-/Archiv-UI.
+Phasen 0–5, 7, 8 (bis auf Kleinreste) und 9 sind abgeschlossen. Verbleibend:
+
+- **Phase 6 (Rest)** — eigene Analyse-Modus-UI: Plan-Vergleich und Einheiten-
+  Vergleich als eigene Screens auf der vorhandenen Filterschicht
+  (`analysisFilters.ts`), Übungseinheiten-Scoping (Session↔Einheit) und
+  Unsicherheitsanzeige bei überlappenden `PlanUsagePeriod`s.
+- **Phase A Rest (Rest)** — Rest-Tage in der Zyklus-/Frei-Vorschau (bei diesen
+  Modi ist „heute" nicht kalendergebunden — bewusst offen).
+- **Phase 8 (Rest)** — KI-UI-Texte final durchsehen; interner `templateVersions`-
+  Store bleibt als KI-Wiederherstellungspunkt.
 
 ## Bekannte Risiken / Hinweise
 

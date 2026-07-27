@@ -32,7 +32,7 @@ import { ensureSchedulesForPlans } from '@/db/scheduleMigration';
  * Bump this together with a new `.version()` block below and record the change
  * in MIGRATIONS so the settings screen can show what the database went through.
  */
-export const SCHEMA_VERSION = 25;
+export const SCHEMA_VERSION = 26;
 
 export const MIGRATIONS: { version: number; description: string }[] = [
   { version: 1, description: 'Initiales Schema: Übungen, Pläne, Einheiten, Sätze.' },
@@ -200,6 +200,13 @@ export const MIGRATIONS: { version: number; description: string }[] = [
       'Zeitplan-Ausnahmen je Tag: ein neuer Store hält einzelne Abweichungen ' +
       '(Training übersprungen oder zusätzlicher Pausentag) pro Plan und Datum. ' +
       'Der Zeitplan selbst bleibt unverändert; bestehende Daten bleiben gleich.',
+  },
+  {
+    version: 26,
+    description:
+      'Zeitplan-Ausnahmen können ein Training auf ein anderes Datum verschieben ' +
+      '(neuer Typ „move" mit Zieldatum). Bestehende Ausnahmen bleiben unverändert ' +
+      '(optionales Feld).',
   },
 ];
 
@@ -653,6 +660,18 @@ export class TrainingDatabase extends Dexie {
             settings.schemaVersion = 25;
           });
       });
+
+    // ---- v26 ------------------------------------------------------------
+    // Schedule exceptions gain the optional 'move' type + movedToDate field
+    // (Phase 4); no store or index change and no backfill.
+    this.version(26).upgrade(async (tx) => {
+      await tx
+        .table<AppSettings>('settings')
+        .toCollection()
+        .modify((settings) => {
+          settings.schemaVersion = 26;
+        });
+    });
   }
 }
 

@@ -1,7 +1,14 @@
 import { useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { addMonths } from 'date-fns';
-import { ChevronLeft, ChevronRight, Coffee, SkipForward, Undo2 } from 'lucide-react';
+import {
+  CalendarClock,
+  ChevronLeft,
+  ChevronRight,
+  Coffee,
+  SkipForward,
+  Undo2,
+} from 'lucide-react';
 import { db } from '@/db/db';
 import { Button, IconButton } from '@/components/ui/Button';
 import { Dialog } from '@/components/ui/Dialog';
@@ -42,6 +49,7 @@ const STATUS_STYLE: Record<PlanCalendarStatus, string> = {
   missed: 'border border-border text-muted',
   rest: 'bg-surface-2 text-muted',
   skipped: 'border border-dashed border-border text-muted/70',
+  moved: 'border border-dashed border-accent/50 text-accent/80',
   free: 'text-muted/60',
 };
 
@@ -51,6 +59,7 @@ const STATUS_LEGEND: { status: PlanCalendarStatus; label: string }[] = [
   { status: 'rest', label: 'Pause' },
   { status: 'missed', label: 'Verpasst' },
   { status: 'skipped', label: 'Übersprungen' },
+  { status: 'moved', label: 'Verschoben' },
 ];
 
 const STATUS_TEXT: Record<PlanCalendarStatus, string> = {
@@ -59,6 +68,7 @@ const STATUS_TEXT: Record<PlanCalendarStatus, string> = {
   missed: 'Geplant, aber nicht absolviert',
   rest: 'Pausentag',
   skipped: 'Übersprungen',
+  moved: 'Auf ein anderes Datum verschoben',
   free: 'Kein Training geplant',
 };
 
@@ -77,6 +87,8 @@ export function PlanCalendarView({ plan }: { plan: TrainingPlan }) {
   const toast = useToast();
   const [month, setMonth] = useState(() => new Date());
   const [selected, setSelected] = useState<PlanCalendarDay | null>(null);
+  const [moveFor, setMoveFor] = useState<PlanCalendarDay | null>(null);
+  const [moveTarget, setMoveTarget] = useState('');
   const view = useLiveQuery(() => getPlanScheduleView(plan.id), [plan.id]);
   const sessions = useLiveQuery(() => completedSessionsOfPlan(plan.id), [plan.id], []);
   const exceptions = useLiveQuery(() => listPlanExceptions(plan.id), [plan.id], []);
@@ -116,6 +128,29 @@ export function PlanCalendarView({ plan }: { plan: TrainingPlan }) {
       type === 'skip' ? 'Als übersprungen markiert.' : 'Zusätzlicher Pausentag gesetzt.',
       'success',
     );
+  };
+
+  const startMove = (day: PlanCalendarDay) => {
+    setSelected(null);
+    setMoveTarget('');
+    setMoveFor(day);
+  };
+
+  const confirmMove = async () => {
+    if (!moveFor || !moveTarget || moveTarget === moveFor.date) return;
+    const target = moveTarget;
+    const source = moveFor;
+    setMoveFor(null);
+    setMoveTarget('');
+    try {
+      await setPlanException(plan.id, source.date, 'move', { movedToDate: target });
+      toast.show(`Training auf ${readableDate(target)} verschoben.`, 'success');
+    } catch (error) {
+      toast.show(
+        error instanceof Error ? error.message : 'Verschieben fehlgeschlagen.',
+        'error',
+      );
+    }
   };
 
   // Pad the grid so the first cell lands under its weekday column (Mon-based).
@@ -240,6 +275,12 @@ export function PlanCalendarView({ plan }: { plan: TrainingPlan }) {
                   Übersprungen
                 </Button>
               ) : null}
+              {selected.status === 'planned' || selected.status === 'missed' ? (
+                <Button variant="secondary" onClick={() => startMove(selected)}>
+                  <CalendarClock size={16} aria-hidden="true" />
+                  Verschieben
+                </Button>
+              ) : null}
               {selected.status !== 'rest' ? (
                 <Button
                   variant="primary"
@@ -257,6 +298,48 @@ export function PlanCalendarView({ plan }: { plan: TrainingPlan }) {
           Der Zeitplan bleibt unverändert — die Ausnahme betrifft nur diesen Tag. Ein
           übersprungenes Training zählt nicht als „verpasst".
         </p>
+      </Dialog>
+
+      <Dialog
+        open={moveFor != null}
+        onClose={() => setMoveFor(null)}
+        title="Training verschieben"
+        description={
+          moveFor
+            ? `„${moveFor.label ?? 'Training'}" vom ${readableDate(moveFor.date)} auf ein anderes Datum legen.`
+            : undefined
+        }
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setMoveFor(null)}>
+              Abbrechen
+            </Button>
+            <Button
+              variant="primary"
+              disabled={!moveTarget || moveTarget === moveFor?.date}
+              onClick={() => void confirmMove()}
+            >
+              <CalendarClock size={16} aria-hidden="true" />
+              Verschieben
+            </Button>
+          </>
+        }
+      >
+        <label className="grid gap-1 text-sm">
+          <span className="font-medium">Neues Datum</span>
+          <input
+            type="date"
+            value={moveTarget}
+            onChange={(event) => setMoveTarget(event.target.value)}
+            className="min-h-[44px] rounded-xl border border-border bg-surface px-3 text-text"
+          />
+        </label>
+        {moveTarget && moveTarget !== moveFor?.date ? (
+          <p className="mt-3 text-sm text-muted">
+            „{moveFor?.label ?? 'Training'}" erscheint dann am {readableDate(moveTarget)};
+            der {readableDate(moveFor?.date ?? '')} wird als verschoben markiert.
+          </p>
+        ) : null}
       </Dialog>
     </div>
   );

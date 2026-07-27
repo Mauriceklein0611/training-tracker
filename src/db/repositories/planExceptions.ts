@@ -23,21 +23,30 @@ export async function listPlanExceptions(
   return rows.sort((a, b) => a.date.localeCompare(b.date));
 }
 
-/** Creates or updates the exception for a plan+date. Idempotent per day. */
+/**
+ * Creates or updates the exception for a plan+date. Idempotent per day. A
+ * `move` requires a `movedToDate` other than the source day; the moved-to date
+ * is only kept for `move` (cleared when a day switches to skip/rest).
+ */
 export async function setPlanException(
   planId: string,
   date: string,
   type: PlanScheduleExceptionType,
-  note?: string,
+  options: { note?: string; movedToDate?: string } = {},
 ): Promise<PlanScheduleException> {
+  const movedToDate = type === 'move' ? options.movedToDate : undefined;
+  if (type === 'move' && (!movedToDate || movedToDate === date)) {
+    throw new Error('Ein verschobenes Training braucht ein anderes Zieldatum.');
+  }
   return db.transaction('rw', db.planScheduleExceptions, async () => {
     const existing = (await exceptionsOfPlan(planId)).find((row) => row.date === date);
     const now = nowIso();
-    const trimmedNote = note?.trim() || undefined;
+    const trimmedNote = options.note?.trim() || undefined;
     if (existing) {
       const updated: PlanScheduleException = {
         ...existing,
         type,
+        movedToDate,
         note: trimmedNote,
         updatedAt: now,
       };
@@ -49,6 +58,7 @@ export async function setPlanException(
       planId,
       date,
       type,
+      movedToDate,
       note: trimmedNote,
       createdAt: now,
       updatedAt: now,
