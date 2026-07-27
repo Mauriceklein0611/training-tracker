@@ -75,6 +75,7 @@ export function SetEditor({
   set,
   sessionExercise,
   previousSets,
+  previousContext,
   sessionSets,
   recordBaseline,
   onPersist,
@@ -88,6 +89,12 @@ export function SetEditor({
   sessionExercise: SessionExercise;
   /** Completed sets of the previous workout for this exercise. */
   previousSets: WorkoutSet[];
+  /**
+   * The previous workout's session-exercise, i.e. the execution context those
+   * `previousSets` were actually performed with. Used so a set from a different
+   * execution is compared with its own convention, or shown as a reference only.
+   */
+  previousContext?: SessionExercise;
   /** All sets of this exercise in the running workout. */
   sessionSets: WorkoutSet[];
   /** Best values recorded before this workout. */
@@ -162,8 +169,21 @@ export function SetEditor({
       ordinalWithinType,
     });
     if (!match) return null;
-    return compareSet(draftToValues(draft), match, sessionExercise, recordBaseline);
-  }, [previousSets, draft, ordinalWithinType, sessionExercise, recordBaseline]);
+    return compareSet(
+      draftToValues(draft),
+      match,
+      sessionExercise,
+      recordBaseline,
+      previousContext ?? sessionExercise,
+    );
+  }, [
+    previousSets,
+    draft,
+    ordinalWithinType,
+    sessionExercise,
+    recordBaseline,
+    previousContext,
+  ]);
 
   const update = (key: keyof Draft, value: string) => {
     setDraft((current) => ({ ...current, [key]: value }));
@@ -234,6 +254,10 @@ export function SetEditor({
             {comparison.matchedBy === 'same-position' ? 'Letztes Mal' : 'Zuletzt'}:
           </span>
           <span className="numeric font-medium">{comparison.previousSummary}</span>
+
+          {!comparison.sameExecution ? (
+            <span className="text-muted">(andere Ausführung – nur zur Referenz)</span>
+          ) : null}
 
           {comparison.deltas.map((delta) => (
             <span

@@ -7,7 +7,12 @@ import { TextAreaField } from '@/components/ui/Field';
 import { CompletedSetRow, SetEditor, type SetValues } from '@/features/session/SetEditor';
 import { ExecutionChangeDialog } from '@/features/session/ExecutionChangeDialog';
 import { EditSetDialog } from '@/features/session/EditSetDialog';
-import { effectiveSetExecution, equipmentLabel } from '@/services/equipment';
+import {
+  effectiveSetExecution,
+  equipmentLabel,
+  executionKey,
+  setExecutionKey,
+} from '@/services/equipment';
 import {
   addSet,
   completeSet,
@@ -22,7 +27,7 @@ import {
   type SessionExerciseDetail,
 } from '@/db/repositories/sessions';
 import { primeAudio } from '@/services/sound';
-import { isWorkingSet } from '@/services/metrics';
+import { effectiveLoadKg, isWorkingSet } from '@/services/metrics';
 import { buildRecordBaseline } from '@/services/comparison';
 import { resolveEffectiveTarget } from '@/services/sessionTargets';
 import { suggestProgression } from '@/services/progression';
@@ -30,7 +35,7 @@ import { ProgressionHint } from '@/features/session/ProgressionHint';
 import { db } from '@/db/db';
 import { TRACKING_TYPE_LABELS, formatKg } from '@/utils/format';
 import { formatDate } from '@/utils/date';
-import type { TemplateExercise, WorkoutSet } from '@/types';
+import type { SessionExercise, TemplateExercise, WorkoutSet } from '@/types';
 
 export interface ExerciseTarget {
   targetSets?: number;
@@ -123,17 +128,50 @@ export function SessionExerciseCard({
   );
   const setGoalReached = targetSets != null && completedWorkingSets >= targetSets;
 
-  /** Prefill the next set from the previous one in this session, else from history. */
+  /**
+   * The execution the *next* set will be performed with — the current
+   * session-exercise snapshot (a still-open/new set inherits it).
+   */
+  const currentExecutionKey = useMemo(
+    () =>
+      executionKey(
+        sessionExercise.exerciseId,
+        effectiveSetExecution({}, sessionExercise),
+      ),
+    [sessionExercise],
+  );
+
+  /**
+   * Prefill the next set. The weight is only carried over from a set performed
+   * with the *same* execution (see {@link executionKey}); after a temporary
+   * switch — e.g. barbell 40 kg total → dumbbells per hand — a raw 40 must not be
+   * pre-filled as 40 per hand, so the weight is left empty until the user types
+   * it. Repetitions/duration carry over only for the same tracking type.
+   */
   const suggestionValues = useMemo(() => {
-    const previous = completedSets[completedSets.length - 1];
-    if (previous) {
+    const sameExecution = (set: WorkoutSet, context: SessionExercise) =>
+      setExecutionKey(sessionExercise.exerciseId, set, context) === currentExecutionKey;
+
+    // Last completed set of this session with the same execution.
+    const sessionMatch = [...completedSets]
+      .reverse()
+      .find((set) => sameExecution(set, sessionExercise));
+    if (sessionMatch) {
       return {
-        weightKg: previous.weightKg,
-        reps: previous.reps,
-        durationSeconds: previous.durationSeconds,
+        weightKg: sessionMatch.weightKg,
+        reps: sessionMatch.reps,
+        durationSeconds: sessionMatch.durationSeconds,
       };
     }
-    const historic = lastPerformance?.sets.find((set) => set.setType === 'working');
+
+    // Otherwise the most recent historic working set with the same execution
+    // (evaluated with the previous workout's own context).
+    const previousContext = lastPerformance?.sessionExercise;
+    const historic = previousContext
+      ? [...(lastPerformance?.sets ?? [])]
+          .reverse()
+          .find((set) => set.setType === 'working' && sameExecution(set, previousContext))
+      : undefined;
     if (historic) {
       return {
         weightKg: historic.weightKg,
@@ -141,10 +179,36 @@ export function SessionExerciseCard({
         durationSeconds: historic.durationSeconds,
       };
     }
+
+    // No comparable execution: leave the weight empty rather than guessing.
+    // Reps/duration still carry from the last set of this session when the
+    // tracking type matches, since a rep count survives a weight change.
+    const lastAny = completedSets[completedSets.length - 1];
+    if (
+      lastAny &&
+      effectiveSetExecution(lastAny, sessionExercise).trackingType ===
+        sessionExercise.trackingTypeSnapshot
+    ) {
+      return { reps: lastAny.reps, durationSeconds: lastAny.durationSeconds };
+    }
     return {};
-  }, [completedSets, lastPerformance]);
+  }, [completedSets, lastPerformance, sessionExercise, currentExecutionKey]);
 
   const previousSets = useMemo(() => lastPerformance?.sets ?? [], [lastPerformance]);
+
+  /**
+   * Total load of the last completed set, using *that set's own* execution
+   * snapshot (not the possibly-changed session-exercise context). Only shown for
+   * per-hand work where a total load is meaningful; `effectiveLoadKg` returns
+   * null for every other mode, so nothing misleading is displayed.
+   */
+  const lastSetTotalLoadKg = useMemo(() => {
+    const last = completedSets[completedSets.length - 1];
+    if (!last) return null;
+    const execution = effectiveSetExecution(last, sessionExercise);
+    if (execution.weightMode !== 'per_hand') return null;
+    return effectiveLoadKg(last, sessionExercise);
+  }, [completedSets, sessionExercise]);
 
   /**
    * Every completed set of this exercise before the running workout. This is the
@@ -158,7 +222,21 @@ export function SessionExerciseCard({
     [],
   );
 
-  const recordBaseline = useMemo(() => buildRecordBaseline(historySets), [historySets]);
+  /**
+   * The "new best" baseline is built only from history performed with the *same*
+   * execution as the set being entered, so a dumbbell best never competes
+   * against a barbell one. A single-execution history keeps every set, unchanged.
+   */
+  const recordBaseline = useMemo(
+    () =>
+      buildRecordBaseline(
+        historySets.filter(
+          ({ set, context }) =>
+            setExecutionKey(context.exerciseId, set, context) === currentExecutionKey,
+        ),
+      ),
+    [historySets, currentExecutionKey],
+  );
 
   /** The exercise record, for its optional progression settings and cues. */
   const exercise = useLiveQuery(
@@ -182,7 +260,16 @@ export function SessionExerciseCard({
    * today, so it reads as a takeaway rather than as instructions mid-set.
    */
   const progression = useMemo(() => {
-    const currentWorkingSets = sets.filter((set) => set.completedAt && isWorkingSet(set));
+    // Only sets performed with the current execution are comparable; a temporary
+    // switch within the exercise must not mix e.g. barbell and dumbbell sets into
+    // one recommendation (see executionKey).
+    const currentWorkingSets = sets.filter(
+      (set) =>
+        set.completedAt &&
+        isWorkingSet(set) &&
+        setExecutionKey(sessionExercise.exerciseId, set, sessionExercise) ===
+          currentExecutionKey,
+    );
     if (currentWorkingSets.length === 0) return null;
     return suggestProgression(currentWorkingSets, sessionExercise, {
       targetRepMin: effectiveTarget?.targetRepMin,
@@ -192,7 +279,7 @@ export function SessionExerciseCard({
       availableWeightsKg: exercise?.availableWeightsKg,
       progressionMethod: exercise?.progressionMethod,
     });
-  }, [sets, sessionExercise, effectiveTarget, exercise]);
+  }, [sets, sessionExercise, effectiveTarget, exercise, currentExecutionKey]);
 
   /** Date line above the sets, so the comparison has a reference point. */
   const previousSessionLabel = useMemo(
@@ -388,13 +475,9 @@ export function SessionExerciseCard({
         </ul>
       ) : null}
 
-      {sessionExercise.weightModeSnapshot === 'per_hand' && completedSets.length > 0 ? (
+      {lastSetTotalLoadKg != null ? (
         <p className="mt-2 text-xs text-muted">
-          Gesamtlast letzter Satz:{' '}
-          {formatKg(
-            (completedSets[completedSets.length - 1].weightKg ?? 0) *
-              sessionExercise.weightMultiplierSnapshot,
-          )}
+          Gesamtlast letzter Satz: {formatKg(lastSetTotalLoadKg)}
         </p>
       ) : null}
 
@@ -406,6 +489,7 @@ export function SessionExerciseCard({
             set={openSet}
             sessionExercise={sessionExercise}
             previousSets={previousSets}
+            previousContext={lastPerformance?.sessionExercise}
             sessionSets={sets}
             recordBaseline={recordBaseline}
             targetDurationSeconds={effectiveTarget?.targetDurationSeconds}
@@ -476,7 +560,15 @@ export function SessionExerciseCard({
       <ExecutionChangeDialog
         open={executionOpen}
         sessionExercise={sessionExercise}
-        defaultEquipment={exercise?.defaultEquipment}
+        standard={
+          exercise
+            ? {
+                equipment: exercise.defaultEquipment,
+                weightMode: exercise.weightMode,
+                weightMultiplier: exercise.weightMultiplier,
+              }
+            : undefined
+        }
         onClose={() => setExecutionOpen(false)}
       />
 

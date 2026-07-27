@@ -31,7 +31,7 @@ import type {
   WeeklyGoals,
 } from '@/types';
 import { hasAnyWeeklyGoal } from '@/services/calendar';
-import { effectiveSetExecution } from '@/services/equipment';
+import { effectiveSetExecution, setExecutionKey } from '@/services/equipment';
 import { EXPERIENCE_LEVEL_LABELS, PLAN_GOAL_TYPE_LABELS } from '@/services/planGoals';
 import { DELOAD_INTENSITY_LABELS } from '@/services/deload';
 import { SCHEDULE_MODE_LABELS } from '@/services/schedule';
@@ -570,7 +570,10 @@ function markRecordSets(contexts: SetWithContext[]): Map<string, string[]> {
 
   for (const { set, sessionExercise } of contexts) {
     if (!isCompleted(set) || !isWorkingSet(set)) continue;
-    const key = sessionExercise.exerciseId;
+    // Group by the central execution key, not the raw exercise id, so a
+    // best is never claimed across executions (a per-hand dumbbell set must not
+    // beat a total-load barbell set of the "same" exercise).
+    const key = setExecutionKey(sessionExercise.exerciseId, set, sessionExercise);
     const entry = best.get(key) ?? {};
 
     const load = effectiveLoadKg(set, sessionExercise);

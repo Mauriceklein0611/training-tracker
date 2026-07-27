@@ -59,6 +59,7 @@ export function EditSetDialog({
   const toast = useToast();
   const [draft, setDraft] = useState<Draft>(() => seed());
   const [touched, setTouched] = useState(false);
+  const [multiplierError, setMultiplierError] = useState<string | undefined>();
   const [saving, setSaving] = useState(false);
 
   function seed(): Draft {
@@ -116,13 +117,28 @@ export function EditSetDialog({
   const handleSave = async () => {
     setTouched(true);
     if (hasErrors(errors)) return;
+
+    // Strict multiplier validation for per-hand work — no silent `?? 2` that
+    // would hide a typo behind a wrong load.
+    let weightMultiplier = 1;
+    if (draft.weightMode === 'per_hand') {
+      const parsed = toNumber(draft.multiplier);
+      if (parsed == null || !Number.isFinite(parsed) || parsed <= 0 || parsed > 10) {
+        setMultiplierError(
+          'Bitte einen gültigen Multiplikator zwischen 0 und 10 eingeben.',
+        );
+        return;
+      }
+      weightMultiplier = parsed;
+    }
+
     setSaving(true);
     try {
       await editCompletedSet(set.id, {
         ...values,
         equipment: draft.equipment,
         weightMode: draft.weightMode,
-        weightMultiplier: toNumber(draft.multiplier) ?? 2,
+        weightMultiplier,
         trackingType,
       });
       toast.show('Satz aktualisiert.', 'success');
@@ -247,7 +263,11 @@ export function EditSetDialog({
                 label="Multiplikator"
                 decimal
                 value={draft.multiplier}
-                onChange={(event) => update('multiplier', event.target.value)}
+                error={multiplierError}
+                onChange={(event) => {
+                  update('multiplier', event.target.value);
+                  setMultiplierError(undefined);
+                }}
               />
             ) : null}
           </>

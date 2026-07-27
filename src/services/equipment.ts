@@ -110,3 +110,46 @@ export function effectiveSetExecution(
     equipment: set.equipmentSnapshot ?? context.equipmentSnapshot ?? 'unspecified',
   };
 }
+
+/**
+ * The single, central grouping key for "the same execution of an exercise".
+ *
+ * Every place that compares sets like-for-like — next-set prefill, the "last
+ * time" comparison, personal records, the 1RM/best baseline, progression and
+ * the AI export's record marking — must derive its grouping from this one
+ * function. Keeping a single definition is what stops a dumbbell set from ever
+ * being silently compared against, or overwriting the record of, a barbell set.
+ *
+ * The key carries the exercise id plus the parts of the effective execution
+ * that change what the numbers *mean*: tracking type, equipment and weight mode.
+ * The weight multiplier is included only when it actually changes the load
+ * (per-hand work); for every other mode the multiplier is irrelevant to the
+ * load, so it is normalised out to keep the key stable. History performed with a
+ * single, consistent execution collapses to exactly one key, unchanged.
+ */
+export function executionKey(
+  exerciseId: string,
+  execution: Pick<
+    EffectiveExecution,
+    'trackingType' | 'equipment' | 'weightMode' | 'weightMultiplier'
+  >,
+): string {
+  const multiplierPart =
+    execution.weightMode === 'per_hand' ? `x${execution.weightMultiplier}` : 'x1';
+  return [
+    exerciseId,
+    execution.trackingType,
+    execution.equipment,
+    execution.weightMode,
+    multiplierPart,
+  ].join('|');
+}
+
+/** Convenience: the {@link executionKey} for a concrete set in its context. */
+export function setExecutionKey(
+  exerciseId: string,
+  set: SetExecutionFields,
+  context: ContextExecutionFields,
+): string {
+  return executionKey(exerciseId, effectiveSetExecution(set, context));
+}

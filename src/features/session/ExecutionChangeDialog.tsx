@@ -27,13 +27,21 @@ import type { Equipment, SessionExercise, WeightMode } from '@/types';
 export function ExecutionChangeDialog({
   open,
   sessionExercise,
-  defaultEquipment,
+  standard,
   onClose,
 }: {
   open: boolean;
   sessionExercise: SessionExercise;
-  /** The exercise's stored default equipment, shown for reference. */
-  defaultEquipment?: Equipment;
+  /**
+   * The exercise's *stored* standard execution (equipment + weight convention),
+   * from the unchanged exercise master record. Shown alongside the current
+   * (possibly already switched) execution so the two states are never confused.
+   */
+  standard?: {
+    equipment?: Equipment;
+    weightMode: WeightMode;
+    weightMultiplier: number;
+  };
   onClose: () => void;
 }) {
   const toast = useToast();
@@ -49,6 +57,7 @@ export function ExecutionChangeDialog({
   const [equipment, setEquipment] = useState<Equipment>(current.equipment);
   const [weightMode, setWeightMode] = useState<WeightMode>(current.weightMode);
   const [multiplier, setMultiplier] = useState(String(current.weightMultiplier));
+  const [multiplierError, setMultiplierError] = useState<string | undefined>();
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -56,6 +65,7 @@ export function ExecutionChangeDialog({
       setEquipment(current.equipment);
       setWeightMode(current.weightMode);
       setMultiplier(String(current.weightMultiplier));
+      setMultiplierError(undefined);
     }
     // Only reseed when the dialog (re)opens for this exercise.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -67,18 +77,31 @@ export function ExecutionChangeDialog({
     const suggestedMode = suggestedWeightModeForEquipment(next, trackingType);
     setWeightMode(suggestedMode);
     setMultiplier(String(suggestedMultiplierForWeightMode(suggestedMode)));
+    setMultiplierError(undefined);
   };
 
   const weightLabel = weightFieldLabel(trackingType, weightMode);
 
   const handleSave = async () => {
+    // The multiplier is validated strictly for per-hand work — no silent `?? 2`
+    // fallback or clamping that would hide a typo behind a wrong load.
+    let weightMultiplier = 1;
+    if (weightMode === 'per_hand') {
+      const parsed = parseNumberInput(multiplier);
+      if (parsed == null || !Number.isFinite(parsed) || parsed <= 0 || parsed > 10) {
+        setMultiplierError(
+          'Bitte einen gültigen Multiplikator zwischen 0 und 10 eingeben (z. B. 2 für zwei Hanteln).',
+        );
+        return;
+      }
+      weightMultiplier = parsed;
+    }
     setSaving(true);
     try {
-      const parsed = parseNumberInput(multiplier) ?? 2;
       await setSessionExerciseExecution(sessionExercise.id, {
         equipment,
         weightMode,
-        weightMultiplier: weightMode === 'per_hand' ? parsed : 1,
+        weightMultiplier,
       });
       toast.show('Ausführung für dieses Training geändert.', 'success');
       onClose();
@@ -107,10 +130,23 @@ export function ExecutionChangeDialog({
       }
     >
       <div className="grid gap-4">
-        <p className="rounded-xl bg-surface-2 p-2 text-xs leading-relaxed text-muted">
-          Standardausführung: {equipmentLabel(defaultEquipment)} ·{' '}
-          {WEIGHT_MODE_LABELS[sessionExercise.weightModeSnapshot]}
-        </p>
+        <div className="grid gap-1 rounded-xl bg-surface-2 p-2 text-xs leading-relaxed text-muted">
+          <p>
+            <span className="font-medium">Standard</span> (gespeicherte Übung):{' '}
+            {equipmentLabel(standard?.equipment)} ·{' '}
+            {
+              WEIGHT_MODE_LABELS[
+                standard?.weightMode ?? sessionExercise.weightModeSnapshot
+              ]
+            }
+            {standard?.weightMode === 'per_hand' ? ` ×${standard.weightMultiplier}` : ''}
+          </p>
+          <p>
+            <span className="font-medium">Aktuell</span> (dieses Training):{' '}
+            {equipmentLabel(current.equipment)} · {WEIGHT_MODE_LABELS[current.weightMode]}
+            {current.weightMode === 'per_hand' ? ` ×${current.weightMultiplier}` : ''}
+          </p>
+        </div>
 
         <SelectField
           label="Ausrüstung"
@@ -142,8 +178,12 @@ export function ExecutionChangeDialog({
             label="Gewichtsmultiplikator"
             decimal
             value={multiplier}
+            error={multiplierError}
             hint="Bei zwei Kurzhanteln à 20 kg ergibt der Multiplikator 2 eine Gesamtlast von 40 kg."
-            onChange={(event) => setMultiplier(event.target.value)}
+            onChange={(event) => {
+              setMultiplier(event.target.value);
+              setMultiplierError(undefined);
+            }}
           />
         ) : null}
 

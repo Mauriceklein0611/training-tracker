@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   effectiveSetExecution,
   equipmentLabel,
+  executionKey,
+  setExecutionKey,
   suggestedMultiplierForWeightMode,
   suggestedWeightModeForEquipment,
 } from '@/services/equipment';
@@ -73,5 +75,65 @@ describe('effectiveSetExecution — field-by-field fallback', () => {
   it('falls back to unspecified equipment when neither level has it', () => {
     const context = makeSessionExercise(); // no equipmentSnapshot
     expect(effectiveSetExecution(makeSet(), context).equipment).toBe('unspecified');
+  });
+});
+
+describe('executionKey — the central like-for-like grouping', () => {
+  const base = {
+    trackingType: 'weight_reps',
+    equipment: 'barbell',
+    weightMode: 'total',
+    weightMultiplier: 1,
+  } as const;
+
+  it('separates equipment, weight mode and tracking type', () => {
+    expect(executionKey('ex1', base)).not.toBe(
+      executionKey('ex1', { ...base, equipment: 'dumbbells' }),
+    );
+    expect(executionKey('ex1', base)).not.toBe(
+      executionKey('ex1', { ...base, weightMode: 'per_hand' }),
+    );
+    expect(executionKey('ex1', base)).not.toBe(
+      executionKey('ex1', { ...base, trackingType: 'reps_only' }),
+    );
+  });
+
+  it('includes the multiplier only when it changes the load (per-hand work)', () => {
+    // For a total-load set the multiplier is irrelevant, so it is normalised out.
+    expect(executionKey('ex1', { ...base, weightMultiplier: 2 })).toBe(
+      executionKey('ex1', { ...base, weightMultiplier: 1 }),
+    );
+    // For per-hand work a different multiplier is a different load, so a
+    // different key.
+    const perHand = { ...base, weightMode: 'per_hand' } as const;
+    expect(executionKey('ex1', { ...perHand, weightMultiplier: 2 })).not.toBe(
+      executionKey('ex1', { ...perHand, weightMultiplier: 1 }),
+    );
+  });
+
+  it('a single, consistent execution collapses to one key across sets', () => {
+    const context = makeSessionExercise({
+      trackingTypeSnapshot: 'weight_reps',
+      weightModeSnapshot: 'total',
+      equipmentSnapshot: 'barbell',
+    });
+    const a = setExecutionKey('ex1', makeSet({ weightKg: 80 }), context);
+    const b = setExecutionKey('ex1', makeSet({ weightKg: 100 }), context);
+    expect(a).toBe(b);
+  });
+
+  it('a per-set execution snapshot overrides the session-exercise one', () => {
+    const context = makeSessionExercise({
+      trackingTypeSnapshot: 'weight_reps',
+      weightModeSnapshot: 'total',
+      equipmentSnapshot: 'barbell',
+    });
+    const switched = setExecutionKey(
+      'ex1',
+      makeSet({ equipmentSnapshot: 'dumbbells', weightModeSnapshot: 'per_hand' }),
+      context,
+    );
+    const original = setExecutionKey('ex1', makeSet(), context);
+    expect(switched).not.toBe(original);
   });
 });

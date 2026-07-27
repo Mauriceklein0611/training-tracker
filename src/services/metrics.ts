@@ -7,7 +7,11 @@ import type {
   WeightMode,
   WorkoutSet,
 } from '@/types';
-import { effectiveSetExecution } from '@/services/equipment';
+import {
+  effectiveSetExecution,
+  executionKey,
+  type EffectiveExecution,
+} from '@/services/equipment';
 
 /**
  * Domain calculations.
@@ -282,9 +286,14 @@ function emptyRecords(
   };
 }
 
-/** Groups records by exercise *and* execution, so bests never mix executions. */
-function recordKey(exerciseId: string, equipment: Equipment, weightMode: WeightMode) {
-  return `${exerciseId} ${equipment} ${weightMode}`;
+/**
+ * Groups records by exercise *and* execution, so bests never mix executions.
+ * Delegates to the central {@link executionKey} so record grouping, the AI
+ * export's record marking and every like-for-like comparison stay in lockstep;
+ * a single-execution history still collapses to one key.
+ */
+function recordKey(exerciseId: string, execution: EffectiveExecution) {
+  return executionKey(exerciseId, execution);
 }
 
 /**
@@ -307,11 +316,7 @@ export function computePersonalRecords(
     if (!includeWarmup && !isWorkingSet(set)) continue;
 
     const execution = effectiveSetExecution(set, sessionExercise);
-    const key = recordKey(
-      sessionExercise.exerciseId,
-      execution.equipment,
-      execution.weightMode,
-    );
+    const key = recordKey(sessionExercise.exerciseId, execution);
     const record =
       records.get(key) ??
       emptyRecords(

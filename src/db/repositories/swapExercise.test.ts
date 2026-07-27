@@ -48,6 +48,42 @@ describe('swapSessionExercise', () => {
     // The previous exercise's sets are gone.
     expect(entry?.sets).toHaveLength(0);
   });
+
+  it('resets the equipment snapshot to the new exercise, never leaking the old', async () => {
+    const session = await startFreeSession('Test');
+    const bench = await createExercise({
+      name: 'Bankdrücken',
+      primaryMuscleGroup: 'Brust',
+      secondaryMuscleGroups: [],
+      equipment: 'Langhantel',
+      defaultEquipment: 'barbell',
+      trackingType: 'weight_reps',
+      weightMode: 'total',
+      weightMultiplier: 1,
+      defaultRestSeconds: 90,
+      notes: '',
+    });
+    const machineFly = await createExercise({
+      name: 'Butterfly',
+      primaryMuscleGroup: 'Brust',
+      secondaryMuscleGroups: [],
+      equipment: 'Maschine',
+      defaultEquipment: 'machine',
+      trackingType: 'weight_reps',
+      weightMode: 'total',
+      weightMultiplier: 1,
+      defaultRestSeconds: 90,
+      notes: '',
+    });
+    const se = await addExerciseToSession(session.id, bench);
+    expect(se.equipmentSnapshot).toBe('barbell');
+
+    await swapSessionExercise(se.id, machineFly);
+
+    const swapped = (await db.sessionExercises.get(se.id))!;
+    // The old barbell snapshot must not leak into the machine exercise.
+    expect(swapped.equipmentSnapshot).toBe('machine');
+  });
 });
 
 describe('technique cues and alternatives', () => {

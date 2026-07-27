@@ -465,23 +465,35 @@ export async function setSessionExerciseExecution(
       const timestamp = nowIso();
       for (const set of sets) {
         if (!set.completedAt) continue;
-        // Already frozen (completed under this or an earlier feature version)?
-        const alreadyFrozen =
-          set.weightModeSnapshot != null ||
-          set.equipmentSnapshot != null ||
-          set.trackingTypeSnapshot != null;
-        if (alreadyFrozen) continue;
-        await db.workoutSets.update(set.id, {
-          equipmentSnapshot: sessionExercise.equipmentSnapshot ?? 'unspecified',
-          weightModeSnapshot: sessionExercise.weightModeSnapshot,
-          weightMultiplierSnapshot: sessionExercise.weightMultiplierSnapshot,
-          trackingTypeSnapshot: sessionExercise.trackingTypeSnapshot,
-          updatedAt: timestamp,
-        });
+        // Freeze the execution the set was actually performed with, field by
+        // field: only *missing* snapshot fields are filled from the context
+        // that was in effect *before* this switch. A partially-frozen set (some
+        // fields already set) must not be treated as fully frozen, and an
+        // existing snapshot field is never overwritten.
+        const patch: Partial<WorkoutSet> = {};
+        if (set.equipmentSnapshot == null) {
+          patch.equipmentSnapshot = sessionExercise.equipmentSnapshot ?? 'unspecified';
+        }
+        if (set.weightModeSnapshot == null) {
+          patch.weightModeSnapshot = sessionExercise.weightModeSnapshot;
+        }
+        if (set.weightMultiplierSnapshot == null) {
+          patch.weightMultiplierSnapshot = sessionExercise.weightMultiplierSnapshot;
+        }
+        if (set.trackingTypeSnapshot == null) {
+          patch.trackingTypeSnapshot = sessionExercise.trackingTypeSnapshot;
+        }
+        if (Object.keys(patch).length > 0) {
+          patch.updatedAt = timestamp;
+          await db.workoutSets.update(set.id, patch);
+        }
       }
 
+      // The multiplier is validated by the caller; only enforce that a
+      // non-per-hand mode carries the neutral 1. No silent clamp of an invalid
+      // per-hand value — that is rejected before this function is called.
       const multiplier =
-        execution.weightMode === 'per_hand' ? Math.max(1, execution.weightMultiplier) : 1;
+        execution.weightMode === 'per_hand' ? execution.weightMultiplier : 1;
       await db.sessionExercises.update(sessionExerciseId, {
         equipmentSnapshot: execution.equipment,
         weightModeSnapshot: execution.weightMode,
@@ -514,6 +526,9 @@ export async function swapSessionExercise(
       trackingTypeSnapshot: newExercise.trackingType,
       weightModeSnapshot: newExercise.weightMode,
       weightMultiplierSnapshot: newExercise.weightMultiplier,
+      // Reset the equipment snapshot to the new exercise's default, so the
+      // replaced exercise's equipment can never leak into the slot.
+      equipmentSnapshot: newExercise.defaultEquipment ?? 'unspecified',
       restSecondsSnapshot: resolveRestSeconds({
         exerciseDefaultRestSeconds: newExercise.defaultRestSeconds,
         globalDefaultRestSeconds,
