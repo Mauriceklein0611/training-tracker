@@ -17,7 +17,7 @@ General rules:
 
 | Format                             | Direction               | Name (in content)                       | Version field                           | Version              | Supported imports |
 | ---------------------------------- | ----------------------- | --------------------------------------- | --------------------------------------- | -------------------- | ----------------- |
-| Full backup                        | export + import         | `app: training-tracker`                 | `exportFormatVersion` / `schemaVersion` | format 1 / schema 23 | schema ≤ 23       |
+| Full backup                        | export + import         | `app: training-tracker`                 | `exportFormatVersion` / `schemaVersion` | format 1 / schema 24 | schema ≤ 24       |
 | AI analysis export                 | export                  | (AI export doc)                         | `exportVersion`                         | 1                    | —                 |
 | AI response import                 | import                  | `format: training-ai-response`          | `schemaVersion`                         | 1                    | exactly 1         |
 | Plan builder kit                   | export                  | `format: training-plan-builder-kit`     | `version`                               | 2                    | —                 |
@@ -64,6 +64,11 @@ General rules:
   `scheduleModeSnapshot`, `plannedDate` and `scheduleEntryId`, snapshotted when a
   workout is started from a plan (Phase 4.4). Optional/defaulted, so older
   sessions and backups restore unchanged; they simply lack the schedule context.
+- AI import undo (schema 24): `aiAnalyses` gain optional `restoreVersionIds`
+  (the `ai-import` `templateVersions` frozen before applying, one per changed
+  plan) and `undoneAt` (set when the import was reverted). Optional/defaulted, so
+  older analyses restore unchanged and are simply not undoable. The referenced
+  restore versions travel with the backup in `templateVersions`.
 - Schedule system (schema 18): every plan owns one `PlanSchedule`
   (`free-rotation` | `repeating-cycle` | `weekly`) with `ScheduleEntry` rows for
   the cycle/weekly modes (workout or rest days). Restoring a pre-schedule backup
@@ -89,7 +94,10 @@ General rules:
   `SUPPORTED_RESPONSE_SCHEMA_VERSION`, unknown fields rejected, duplicate
   proposalIds rejected, `expected` must cover every `changes` field (null = unset),
   four-way provenance (valid / missing / unknown / fingerprint-mismatch), atomic
-  apply with per-plan restore version. Tests: `aiResponse.test.ts`, `aiApply.test.ts`.
+  apply with per-plan restore version whose ids are recorded on the stored
+  analysis (`restoreVersionIds`). `undoAiAnalysis` reverts the last import by
+  reactivating those restore points and stamping `undoneAt` — a strict one-point
+  undo. Tests: `aiResponse.test.ts`, `aiApply.test.ts`.
 
 ## Training plan package — `src/services/planPackage/*`
 

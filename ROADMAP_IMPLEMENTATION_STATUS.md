@@ -4,8 +4,8 @@ Bezug: „Training Tracker zur vollständigen Plan-, Kalender- und Analyse-App
 ausbauen" (Opus-Gesamtprompt). Diese Datei ersetzt keine Umsetzung, sondern hält
 den geprüften Stand fest.
 
-Zuletzt grüne Pflichtchecks (lokal): `typecheck`, `lint`, `test` (51 Dateien,
-611 Tests), `build`, `prettier --check` (geänderte Dateien), `git diff --check`.
+Zuletzt grüne Pflichtchecks (lokal): `typecheck`, `lint`, `test` (61 Dateien,
+682 Tests), `build`, `prettier --check` (geänderte Dateien).
 
 ## Abgeschlossen
 
@@ -162,9 +162,19 @@ Enum-, Feld- oder Versionsänderung. Reset betrifft kein Import/Export-Format.
   (schema 1) in `services/unitPackage.ts` — Build/Parse/Import (strikte Zod,
   Übungs-Reuse-oder-Kopie, transaktional, Dedup über `planImports`-Fingerprint),
   Share/Download-Fallback + Import-Vorschau in der Bibliothek-UI. Tests grün.
+- **7.2 Ein-Punkt-Undo des letzten KI-Imports — ERLEDIGT:** `commitAiAnalysis`
+  merkt sich die vor dem Übernehmen erzeugten `ai-import`-Wiederherstellungspunkte
+  je Plan als `AiAnalysis.restoreVersionIds`; neue reine Repo-Funktion
+  `undoAiAnalysis` reaktiviert sie transaktional (fehlende/gelöschte Pläne werden
+  übersprungen, nie dangling) und stempelt `undoneAt` — striktes Ein-Punkt-Undo
+  (nur der jüngste Import mit Punkten ist rückgängig machbar). Dexie v24,
+  Zod/Backup/Format-Doc erweitert (optional/defaulted). UI: „Import rückgängig
+  machen"-Button mit Bestätigungsdialog + „rückgängig gemacht"-Badge in den
+  KI-Analysen; die alten „neue Planversion"-Texte auf
+  „Wiederherstellungspunkt/rückgängig" umgestellt. Tests grün.
 - **Offen in Phase 7:** KI-Analyse-Export um Plan-/Einheiten-/Deload-/
-  Nutzungszeitraum-Kontext erweitern (7.1); Allowlist-Erweiterungen + begrenzter
-  Ein-Punkt-Undo je Plan (7.2); Builder-Kit um Zeitplan-Beispiel ergänzen (7.3).
+  Nutzungszeitraum-Kontext erweitern (7.1); weitere Allowlist-Erweiterungen (7.2);
+  Builder-Kit um Zeitplan-Beispiel ergänzen (7.3).
 
 ### Phase 8 — Sichtbare Planversionen/Archiv entfernen (teilweise)
 
@@ -177,10 +187,12 @@ Enum-, Feld- oder Versionsänderung. Reset betrifft kein Import/Export-Format.
   - `createTemplateVersionWithinTransaction`/`listTemplateVersions` bleiben
     **intern** als KI-Wiederherstellungspunkt (aiApply) und im Backup; nicht mehr
     in der UI. Abgeschlossene Sessions/Snapshots unangetastet.
-- **Offen in Phase 8:** ungenutzte Repo-Funktionen (restore/archive/delete
-  version) + deren Tests aufräumen; KI-UI-Texte prüfen, die Änderungen als „neue
-  Planversion" beschreiben; endgültiges Ablösen des Legacy-`deloadIntensity`-
-  Toggles im Plan-Einstellungen-Dialog.
+- **KI-UI-Texte — ERLEDIGT:** die Stellen, die eine KI-Übernahme als „neue
+  Planversion"/„neue Version" beschrieben, sprechen jetzt von einem
+  „Wiederherstellungspunkt" bzw. „rückgängig machen" (siehe Phase 7.2).
+- **Offen in Phase 8:** ungenutzte Repo-Funktionen (`setTemplateVersionArchived`,
+  `deleteTemplateVersion`) + deren Tests aufräumen — `activateTemplateVersion*`
+  wird jetzt vom 7.2-Undo genutzt und bleibt.
 
 ### Phase 9 — CSV-Kontextspalten (teilweise)
 
@@ -214,9 +226,9 @@ Enum-, Feld- oder Versionsänderung. Reset betrifft kein Import/Export-Format.
 
 ### Nächster exakter Schritt
 
-Phase 8 abschließen oder Phase 9/10/11 angehen. Konkret als Nächstes gut machbar:
-KI-UI-Texte von „Planversion" auf „Wiederherstellungspunkt/rückgängig" umstellen
-(7.2) und den Legacy-`deloadIntensity`-Toggle aus dem Plan-Einstellungen-Dialog
-entfernen (durch Phase 5 abgelöst; `startSessionFromTemplate`-Fallback dann auch
-entfernen). Danach Phase 9 (CSV-Spalten Plan/Einheit/Deload/geplantes Datum;
-Format-Impact-Matrix-Durchlauf) und offene Reste aus Phase 4/6/7.
+Gut machbare nächste Schritte: KI-Analyse-Export um Plan-/Einheiten-/Deload-/
+Nutzungszeitraum-Kontext erweitern (7.1); ungenutzte Versions-Repo-Funktionen
+(`setTemplateVersionArchived`, `deleteTemplateVersion`) + Tests aufräumen (Phase
+8-Rest); Phase-A-Rest (Rest-Tage in Home/Templates-Vorschau); Phase-4-Ausnahmen
+(verschoben/übersprungen/zusätzliche Pause); Phase-6-Analyse-Modus-UI. Zum
+Abschluss der Format-Impact-Matrix-Durchlauf (§9.1).

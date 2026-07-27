@@ -8,7 +8,10 @@ import {
   type ValidatedAiImport,
 } from '@/services/aiResponse';
 import { listTemplatesWithExercises } from '@/db/repositories/templates';
-import { createTemplateVersionWithinTransaction } from '@/db/repositories/templateVersions';
+import {
+  activateTemplateVersionWithinTransaction,
+  createTemplateVersionWithinTransaction,
+} from '@/db/repositories/templateVersions';
 import {
   knownImportFingerprints,
   listAiExportRecords,
@@ -119,6 +122,7 @@ export async function commitAiAnalysis(
     nextAnalysisAfter: validated.feedback.nextAnalysisAfter,
     importFingerprint: validated.importFingerprint,
     proposals: finalProposals,
+    restoreVersionIds: [],
   };
 
   // Everything — re-validation, restore versions, plan edits and saving the
@@ -143,13 +147,15 @@ export async function commitAiAnalysis(
         else Object.assign(proposal, verdict.change);
       }
 
-      // Pass 2: one restore version per plan that actually gets a change.
+      // Pass 2: one restore version per plan that actually gets a change. Their
+      // ids are recorded on the analysis so the import can be undone one-click.
       const affectedTemplateIds = [...new Set(toApply.map((p) => p.target.templateId))];
       for (const templateId of affectedTemplateIds) {
-        await createTemplateVersionWithinTransaction(templateId, {
+        const version = await createTemplateVersionWithinTransaction(templateId, {
           source: 'ai-import',
           label: `Vor KI-Import ${now.toISOString().slice(0, 10)}`,
         });
+        analysis.restoreVersionIds?.push(version.id);
       }
 
       // Pass 3: apply.
@@ -169,6 +175,54 @@ export async function commitAiAnalysis(
   );
 
   return analysis;
+}
+
+export type UndoResult =
+  | { ok: true; restoredPlans: number }
+  | { ok: false; reason: 'not-found' | 'nothing-to-undo' | 'already-undone' };
+
+/**
+ * Reverts a stored AI import by reactivating the restore points it froze before
+ * applying — the one-point undo. Each affected plan is set back to its
+ * pre-import snapshot (which also discards any manual edits made since, hence
+ * the UI confirmation). A restore point whose plan was deleted meanwhile is
+ * skipped, never dangling. Marks the analysis as undone so it is offered once.
+ *
+ * Everything runs in one transaction: either every reachable plan is reverted
+ * and the analysis is marked, or nothing changes.
+ */
+export async function undoAiAnalysis(
+  analysisId: string,
+  now: Date = new Date(),
+): Promise<UndoResult> {
+  return db.transaction(
+    'rw',
+    db.workoutTemplates,
+    db.templateExercises,
+    db.exercises,
+    db.templateVersions,
+    db.aiAnalyses,
+    async (): Promise<UndoResult> => {
+      const analysis = await db.aiAnalyses.get(analysisId);
+      if (!analysis) return { ok: false, reason: 'not-found' };
+      if (analysis.undoneAt) return { ok: false, reason: 'already-undone' };
+      const versionIds = analysis.restoreVersionIds ?? [];
+      if (versionIds.length === 0) return { ok: false, reason: 'nothing-to-undo' };
+
+      let restoredPlans = 0;
+      for (const versionId of versionIds) {
+        const version = await db.templateVersions.get(versionId);
+        if (!version) continue; // restore point gone (e.g. plan deleted)
+        const template = await db.workoutTemplates.get(version.templateId);
+        if (!template) continue; // plan deleted since the import
+        await activateTemplateVersionWithinTransaction(versionId);
+        restoredPlans += 1;
+      }
+
+      await db.aiAnalyses.update(analysisId, { undoneAt: now.toISOString() });
+      return { ok: true, restoredPlans };
+    },
+  );
 }
 
 type Verdict =

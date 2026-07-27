@@ -421,6 +421,9 @@ export const aiAnalysisSchema = z.object({
   nextAnalysisAfter: isoDate.optional(),
   importFingerprint: z.string().default(''),
   proposals: z.array(storedAiProposalSchema).default([]),
+  // Added in schema version 24; optional/defaulted so older backups still validate.
+  restoreVersionIds: z.array(z.string()).default([]),
+  undoneAt: isoDateTime.optional(),
 });
 
 export const appSettingsSchema = z.object({

@@ -6,6 +6,7 @@ import {
   ClipboardPaste,
   Sparkles,
   Trash2,
+  Undo2,
   Upload,
   X,
 } from 'lucide-react';
@@ -14,7 +15,11 @@ import { Button } from '@/components/ui/Button';
 import { Badge, Card, CardHeader, EmptyState } from '@/components/ui/Card';
 import { ConfirmDialog } from '@/components/ui/Dialog';
 import { TextAreaField } from '@/components/ui/Field';
-import { commitAiAnalysis, importAiResponse } from '@/db/repositories/aiApply';
+import {
+  commitAiAnalysis,
+  importAiResponse,
+  undoAiAnalysis,
+} from '@/db/repositories/aiApply';
 import { deleteAiAnalysis, listAiAnalyses } from '@/db/repositories/aiAnalyses';
 import { useToast } from '@/hooks/useToast';
 import type { AiAnalysis, AiProposalStatus, StoredAiProposal } from '@/types';
@@ -191,7 +196,14 @@ export default function AiAnalysesPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
   const [remove, setRemove] = useState<AiAnalysis | null>(null);
+  const [undo, setUndo] = useState<AiAnalysis | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
+
+  // Only the most recent import that froze restore points can be undone
+  // (a strict one-point undo). Older imports may already have been superseded.
+  const undoableId = analyses.find(
+    (analysis) => (analysis.restoreVersionIds?.length ?? 0) > 0,
+  )?.id;
 
   const startReview = async (text: string) => {
     const result = await importAiResponse(text);
@@ -231,7 +243,7 @@ export default function AiAnalysesPage() {
       const applied = analysis.proposals.filter((p) => p.status === 'applied').length;
       toast.show(
         applied > 0
-          ? `${applied} Vorschlag/Vorschläge übernommen — als neue Planversion gesichert.`
+          ? `${applied} Vorschlag/Vorschläge übernommen — du kannst den Import unten rückgängig machen.`
           : 'Analyse gespeichert. Keine Planänderung übernommen.',
         'success',
       );
@@ -240,6 +252,21 @@ export default function AiAnalysesPage() {
       setSelected(new Set());
     } finally {
       setBusy(false);
+    }
+  };
+
+  const handleUndo = async (analysis: AiAnalysis) => {
+    setUndo(null);
+    const result = await undoAiAnalysis(analysis.id);
+    if (result.ok) {
+      toast.show(
+        result.restoredPlans > 0
+          ? `Import rückgängig gemacht — ${result.restoredPlans} Plan/Pläne zurückgesetzt.`
+          : 'Import als rückgängig markiert. Die betroffenen Pläne gibt es nicht mehr.',
+        'success',
+      );
+    } else {
+      toast.show('Dieser Import lässt sich nicht mehr rückgängig machen.', 'error');
     }
   };
 
@@ -292,9 +319,9 @@ export default function AiAnalysesPage() {
                 Planvorschläge ({review.proposals.length})
               </h3>
               <p className="mb-2 text-xs leading-relaxed text-muted">
-                Nur ausgewählte, gültige Vorschläge werden übernommen. Dabei wird der
-                aktuelle Plan automatisch als neue Version gesichert, sodass du jederzeit
-                zurück kannst.
+                Nur ausgewählte, gültige Vorschläge werden übernommen. Vorher wird vom
+                aktuellen Plan ein Wiederherstellungspunkt gesichert, sodass du den
+                letzten Import jederzeit rückgängig machen kannst.
               </p>
               <div className="grid gap-2">
                 {review.proposals.map((proposal) => (
@@ -414,6 +441,19 @@ export default function AiAnalysesPage() {
                   </button>
                 </div>
 
+                {analysis.undoneAt ? (
+                  <p className="mt-2 text-xs text-muted">
+                    <Badge tone="default">rückgängig gemacht</Badge>
+                  </p>
+                ) : analysis.id === undoableId ? (
+                  <div className="mt-2">
+                    <Button variant="ghost" size="sm" onClick={() => setUndo(analysis)}>
+                      <Undo2 size={16} aria-hidden="true" />
+                      Import rückgängig machen
+                    </Button>
+                  </div>
+                ) : null}
+
                 {open ? (
                   <div className="mt-3 border-t border-border pt-3">
                     <FeedbackView
@@ -445,6 +485,17 @@ export default function AiAnalysesPage() {
           })}
         </ul>
       )}
+
+      <ConfirmDialog
+        open={undo != null}
+        title="Import rückgängig machen?"
+        description="Die von diesem Import betroffenen Pläne werden auf den Stand vor dem Import zurückgesetzt. Spätere manuelle Änderungen an diesen Plänen gehen dabei verloren. Trainingsverlauf und abgeschlossene Sessions bleiben unberührt."
+        confirmLabel="Rückgängig machen"
+        onCancel={() => setUndo(null)}
+        onConfirm={() => {
+          if (undo) void handleUndo(undo);
+        }}
+      />
 
       <ConfirmDialog
         open={remove != null}

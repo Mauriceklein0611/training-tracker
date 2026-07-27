@@ -506,6 +506,11 @@ export interface AiAnalysis {
   /** Hash of the imported file, to detect a duplicate import. */
   importFingerprint: string;
   proposals: StoredAiProposal[];
+  /** Restore-point version ids frozen before applying (one per changed plan).
+   * Present only when at least one proposal was applied; the basis for undo. */
+  restoreVersionIds?: string[];
+  /** Set when this import was reverted via the one-point undo. */
+  undoneAt?: ISODateTime;
 }
 
 /** Lightweight record of a generated AI export, to tie a response back to it. */

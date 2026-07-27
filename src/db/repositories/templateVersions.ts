@@ -145,12 +145,48 @@ function rowsFromSnapshot(
 }
 
 /**
- * Makes a saved version the live plan again.
+ * Makes a saved version the live plan again, using the *ambient* Dexie
+ * transaction (opens none of its own), so it can be composed into a larger
+ * atomic operation such as the AI-import undo. The caller's transaction must
+ * cover workoutTemplates, templateExercises, exercises and templateVersions.
  *
  * The current live state is first frozen as its own ("auto") version, so
  * reactivating an older version never loses the plan that was active before —
  * the operation is fully reversible by reactivating that auto version.
  */
+export async function activateTemplateVersionWithinTransaction(
+  versionId: string,
+): Promise<void> {
+  const version = await db.templateVersions.get(versionId);
+  if (!version) throw new Error('Die Planversion wurde nicht gefunden.');
+  const template = await db.workoutTemplates.get(version.templateId);
+  if (!template) throw new Error('Der Trainingsplan wurde nicht gefunden.');
+
+  // Preserve the state we are about to replace.
+  const currentSnapshot = await snapshotTemplate(version.templateId);
+  await db.templateVersions.add({
+    id: uuid(),
+    templateId: version.templateId,
+    versionNumber: await nextVersionNumber(version.templateId),
+    label: `Automatisch gesichert vor Wiederherstellung von v${version.versionNumber}`,
+    source: 'auto',
+    snapshot: currentSnapshot,
+    createdAt: nowIso(),
+  });
+
+  // Replace the live plan's exercises with the version's snapshot.
+  await db.templateExercises.where('templateId').equals(version.templateId).delete();
+  await db.templateExercises.bulkAdd(
+    rowsFromSnapshot(version.templateId, version.snapshot),
+  );
+  await db.workoutTemplates.update(version.templateId, {
+    name: version.snapshot.name,
+    description: version.snapshot.description,
+    updatedAt: nowIso(),
+  });
+}
+
+/** Makes a saved version the live plan again in its own transaction. */
 export async function activateTemplateVersion(versionId: string): Promise<void> {
   await db.transaction(
     'rw',
@@ -158,35 +194,7 @@ export async function activateTemplateVersion(versionId: string): Promise<void> 
     db.templateExercises,
     db.exercises,
     db.templateVersions,
-    async () => {
-      const version = await db.templateVersions.get(versionId);
-      if (!version) throw new Error('Die Planversion wurde nicht gefunden.');
-      const template = await db.workoutTemplates.get(version.templateId);
-      if (!template) throw new Error('Der Trainingsplan wurde nicht gefunden.');
-
-      // Preserve the state we are about to replace.
-      const currentSnapshot = await snapshotTemplate(version.templateId);
-      await db.templateVersions.add({
-        id: uuid(),
-        templateId: version.templateId,
-        versionNumber: await nextVersionNumber(version.templateId),
-        label: `Automatisch gesichert vor Wiederherstellung von v${version.versionNumber}`,
-        source: 'auto',
-        snapshot: currentSnapshot,
-        createdAt: nowIso(),
-      });
-
-      // Replace the live plan's exercises with the version's snapshot.
-      await db.templateExercises.where('templateId').equals(version.templateId).delete();
-      await db.templateExercises.bulkAdd(
-        rowsFromSnapshot(version.templateId, version.snapshot),
-      );
-      await db.workoutTemplates.update(version.templateId, {
-        name: version.snapshot.name,
-        description: version.snapshot.description,
-        updatedAt: nowIso(),
-      });
-    },
+    () => activateTemplateVersionWithinTransaction(versionId),
   );
 }
 

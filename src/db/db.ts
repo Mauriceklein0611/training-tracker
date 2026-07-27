@@ -31,7 +31,7 @@ import { ensureSchedulesForPlans } from '@/db/scheduleMigration';
  * Bump this together with a new `.version()` block below and record the change
  * in MIGRATIONS so the settings screen can show what the database went through.
  */
-export const SCHEMA_VERSION = 23;
+export const SCHEMA_VERSION = 24;
 
 export const MIGRATIONS: { version: number; description: string }[] = [
   { version: 1, description: 'Initiales Schema: Übungen, Pläne, Einheiten, Sätze.' },
@@ -184,6 +184,14 @@ export const MIGRATIONS: { version: number; description: string }[] = [
       'Zeitplan-Snapshot auf Trainings: aus einem Plan gestartete Trainings ' +
       'merken sich Zeitplanmodus, geplantes Datum und Zeitplaneintrag. ' +
       'Bestehende Trainings bleiben unverändert (optionale Felder).',
+  },
+  {
+    version: 24,
+    description:
+      'KI-Analysen merken sich die vor dem Übernehmen erzeugten ' +
+      'Wiederherstellungspunkte, damit der letzte KI-Import mit einem Klick ' +
+      'rückgängig gemacht werden kann. Bestehende Analysen bleiben unverändert ' +
+      '(optionale Felder).',
   },
 ];
 
@@ -606,6 +614,18 @@ export class TrainingDatabase extends Dexie {
         .toCollection()
         .modify((settings) => {
           settings.schemaVersion = 23;
+        });
+    });
+
+    // ---- v24 ------------------------------------------------------------
+    // AI analyses gain optional restoreVersionIds + undoneAt (Phase 7.2 undo);
+    // no store or index change and no backfill — older analyses simply lack them.
+    this.version(24).upgrade(async (tx) => {
+      await tx
+        .table<AppSettings>('settings')
+        .toCollection()
+        .modify((settings) => {
+          settings.schemaVersion = 24;
         });
     });
   }

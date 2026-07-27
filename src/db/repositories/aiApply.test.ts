@@ -11,6 +11,7 @@ import {
   buildPlanContext,
   commitAiAnalysis,
   importAiResponse,
+  undoAiAnalysis,
 } from '@/db/repositories/aiApply';
 import {
   knownImportFingerprints,
@@ -132,6 +133,9 @@ describe('commitAiAnalysis', () => {
     const aiVersion = versions.find((version) => version.source === 'ai-import');
     expect(aiVersion?.snapshot.exercises[0].targetSets).toBe(3);
 
+    // Its id is recorded on the analysis, so the import can be undone.
+    expect(analysis.restoreVersionIds).toEqual([aiVersion?.id]);
+
     // The analysis is stored.
     expect(await listAiAnalyses()).toHaveLength(1);
   });
@@ -217,5 +221,73 @@ describe('commitAiAnalysis', () => {
 
     const seen = await knownImportFingerprints();
     expect(seen.has(result.value.importFingerprint)).toBe(true);
+  });
+});
+
+describe('undoAiAnalysis', () => {
+  async function applyOne() {
+    const { templateId, exerciseRowId, fingerprint } = await prepareWithExport();
+    const result = await importAiResponse(
+      response(templateId, exerciseRowId, fingerprint),
+    );
+    if (!result.ok) throw new Error('import failed');
+    const analysis = await commitAiAnalysis(result.value, ['p1']);
+    return { templateId, exerciseRowId, analysis };
+  }
+
+  it('reverts the plan to its pre-import state and marks the analysis undone', async () => {
+    const { templateId, exerciseRowId, analysis } = await applyOne();
+    // Sanity: the change is live.
+    expect((await db.templateExercises.get(exerciseRowId))?.targetSets).toBe(4);
+
+    const outcome = await undoAiAnalysis(analysis.id);
+    expect(outcome).toEqual({ ok: true, restoredPlans: 1 });
+
+    // Pre-import targets are back. Restoring rebuilds the plan's exercise rows
+    // (fresh ids), so the check is by plan, not the original row id.
+    const rows = await db.templateExercises
+      .where('templateId')
+      .equals(templateId)
+      .toArray();
+    expect(rows).toHaveLength(1);
+    expect(rows[0].targetSets).toBe(3);
+    expect(rows[0].restSeconds).toBe(120);
+
+    // The analysis is flagged so the undo is only offered once.
+    const stored = await db.aiAnalyses.get(analysis.id);
+    expect(stored?.undoneAt).toBeTruthy();
+  });
+
+  it('is a no-op the second time (already undone)', async () => {
+    const { analysis } = await applyOne();
+    await undoAiAnalysis(analysis.id);
+    expect(await undoAiAnalysis(analysis.id)).toEqual({
+      ok: false,
+      reason: 'already-undone',
+    });
+  });
+
+  it('reports nothing to undo when no change was applied', async () => {
+    const { templateId, exerciseRowId, fingerprint } = await prepareWithExport();
+    const result = await importAiResponse(
+      response(templateId, exerciseRowId, fingerprint),
+    );
+    if (!result.ok) throw new Error('import failed');
+    const analysis = await commitAiAnalysis(result.value, []); // nothing selected
+
+    expect(await undoAiAnalysis(analysis.id)).toEqual({
+      ok: false,
+      reason: 'nothing-to-undo',
+    });
+  });
+
+  it('skips a restore point whose plan was deleted and still marks it undone', async () => {
+    const { templateId, analysis } = await applyOne();
+    await db.workoutTemplates.delete(templateId);
+    await db.templateExercises.where('templateId').equals(templateId).delete();
+
+    const outcome = await undoAiAnalysis(analysis.id);
+    expect(outcome).toEqual({ ok: true, restoredPlans: 0 });
+    expect((await db.aiAnalyses.get(analysis.id))?.undoneAt).toBeTruthy();
   });
 });
