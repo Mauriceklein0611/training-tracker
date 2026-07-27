@@ -730,6 +730,12 @@ export function buildAiExport(
         finishedAt: session.finishedAt ?? null,
         durationMinutes,
         name: session.name,
+        // Attribution snapshots taken at start, so the reader can group a workout
+        // by its plan or its library unit even after the source was renamed.
+        ...(session.planNameSnapshot ? { plan: session.planNameSnapshot } : {}),
+        ...(session.workoutUnitNameSnapshot
+          ? { workoutUnit: session.workoutUnitNameSnapshot }
+          : {}),
         ...(session.deloadIntensity ? { deloadIntensity: session.deloadIntensity } : {}),
         ...(options.includeNotes && session.notes ? { note: session.notes } : {}),
         ...(checkInBefore ? { checkInBefore } : {}),
@@ -812,6 +818,17 @@ export function buildAiExport(
       'Einzelne Trainings tragen "deloadIntensity": sie fanden während eines ' +
         'geplanten Deloads mit bewusst reduzierten Zielsätzen/-dauer statt. Werte ' +
         'ihren geringeren Umfang nicht als Leistungseinbruch oder Plateau.',
+    );
+  }
+  const hasAttribution = contexts.some(
+    (context) =>
+      context.session.planNameSnapshot || context.session.workoutUnitNameSnapshot,
+  );
+  if (hasAttribution) {
+    notes.push(
+      '"plan"/"workoutUnit" auf einem Training sind der zum Startzeitpunkt ' +
+        'gesnapshottete Plan- bzw. Übungseinheiten-Name — nützlich, um Trainings ' +
+        'einem Plan oder einer Einheit zuzuordnen. Freie Trainings tragen keinen.',
     );
   }
 

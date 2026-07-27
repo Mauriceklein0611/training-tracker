@@ -647,6 +647,41 @@ describe('deload workouts', () => {
   });
 });
 
+describe('workout attribution', () => {
+  it('snapshots the plan and library-unit name on a workout', () => {
+    const bench = makeExercise({ id: 'ex-bench', name: 'Bankdrücken' });
+    const dataset: AnalyticsDataset = {
+      exercises: [bench],
+      sessions: [
+        makeSession({
+          id: 's1',
+          startedAt: '2026-07-20T10:00:00.000Z',
+          planNameSnapshot: 'PPL',
+          workoutUnitNameSnapshot: 'Push A',
+        }),
+      ],
+      sessionExercises: [
+        makeSessionExercise({ id: 'se1', sessionId: 's1', exerciseId: 'ex-bench' }),
+      ],
+      sets: [
+        makeSet({
+          sessionExerciseId: 'se1',
+          weightKg: 60,
+          reps: 8,
+          completedAt: '2026-07-20T10:05:00.000Z',
+        }),
+      ],
+    };
+    const file = buildAiExport(dataset, [], DEFAULT_AI_EXPORT_OPTIONS, NOW);
+    const workout = file.workouts[0] as { plan?: string; workoutUnit?: string };
+    expect(workout.plan).toBe('PPL');
+    expect(workout.workoutUnit).toBe('Push A');
+    expect(file.dataQuality.notes.some((note) => note.includes('workoutUnit'))).toBe(
+      true,
+    );
+  });
+});
+
 describe('training context passthrough', () => {
   it('embeds a provided training context and leaves figures untouched', () => {
     const trainingContext = { note: 'x', plans: [{ name: 'PPL', active: true }] };

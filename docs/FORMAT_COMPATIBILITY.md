@@ -92,8 +92,9 @@ General rules:
   plan/plan-exercise ids). No workout history ids.
 - **exportVersion 2 (Phase 7.1):** adds an optional descriptive `trainingContext`
   block (active plan, per-plan goals/metadata, `trainingBlocks` from usage
-  periods, `activeDeload`) and marks deload sessions with `deloadIntensity` on
-  each workout plus a data-quality note. All of it is configuration/targets, never
+  periods, `activeDeload`), marks deload sessions with `deloadIntensity` on each
+  workout, and adds per-workout `plan`/`workoutUnit` attribution snapshots (name
+  at start), each with a data-quality note. All of it is configuration/targets, never
   measurements, and omitted when unset. The export is export-only (no importer
   reads `exportVersion`), so the bump is informational; the response contract and
   its `plans` targets are unchanged. Builder `buildTrainingBlockContext`.
