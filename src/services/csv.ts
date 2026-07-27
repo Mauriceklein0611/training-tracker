@@ -73,6 +73,8 @@ const SET_TYPE_LABELS: Record<string, string> = {
 };
 
 export function sessionsCsv(dataset: AnalyticsDataset): string {
+  // New context columns are appended, never inserted, so the header order stays
+  // stable for anyone parsing an older export.
   const headers = [
     'Datum',
     'Beginn',
@@ -81,6 +83,9 @@ export function sessionsCsv(dataset: AnalyticsDataset): string {
     'Status',
     'Dauer (min)',
     'Notiz',
+    'Trainingsplan',
+    'Übungseinheit',
+    'Deload',
   ];
   const rows = [...dataset.sessions]
     .sort((a, b) => a.startedAt.localeCompare(b.startedAt))
@@ -98,6 +103,9 @@ export function sessionsCsv(dataset: AnalyticsDataset): string {
         session.status === 'completed' ? 'abgeschlossen' : 'aktiv',
         num(duration, 1),
         session.notes,
+        session.planNameSnapshot ?? '',
+        session.workoutUnitNameSnapshot ?? '',
+        session.deloadIntensity ? 'ja' : 'nein',
       ];
     });
   return toCsv(headers, rows);
@@ -125,6 +133,9 @@ export function setsCsv(dataset: AnalyticsDataset): string {
     'Pausenabweichung (s)',
     'Volumen (kg)',
     'Notiz',
+    // Appended context columns (Phase 9).
+    'Trainingsplan',
+    'Deload',
   ];
 
   const exercisesById = new Map(
@@ -162,6 +173,8 @@ export function setsCsv(dataset: AnalyticsDataset): string {
       num(restDeviationSeconds(set), 0),
       num(setVolumeKg(set, sessionExercise)),
       sessionExercise.notes,
+      session.planNameSnapshot ?? '',
+      session.deloadIntensity ? 'ja' : 'nein',
     ];
   });
 
@@ -180,6 +193,7 @@ export function exercisesCsv(exercises: Exercise[]): string {
     'Standardpause (s)',
     'Archiviert',
     'Notiz',
+    'Herkunft',
   ];
   const rows = [...exercises]
     .sort((a, b) => a.name.localeCompare(b.name, 'de'))
@@ -194,6 +208,7 @@ export function exercisesCsv(exercises: Exercise[]): string {
       exercise.defaultRestSeconds,
       exercise.archived ? 'ja' : 'nein',
       exercise.notes,
+      exercise.origin === 'system' ? 'System' : 'Eigene',
     ]);
   return toCsv(headers, rows);
 }

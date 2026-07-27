@@ -179,6 +179,16 @@ Enum-, Feld- oder Versionsänderung. Reset betrifft kein Import/Export-Format.
   Planversion" beschreiben; endgültiges Ablösen des Legacy-`deloadIntensity`-
   Toggles im Plan-Einstellungen-Dialog.
 
+### Phase 9 — CSV-Kontextspalten (teilweise)
+
+- **ERLEDIGT:** `sessionsCsv` +`Trainingsplan`/`Übungseinheit`/`Deload`,
+  `setsCsv` +`Trainingsplan`/`Deload`, `exercisesCsv` +`Herkunft` — nur
+  angehängt (Header-Reihenfolge stabil), `Deload` aus `session.deloadIntensity`.
+  Header-Tests erweitert.
+- **Offen in Phase 9:** `geplantes Datum` + `Zeitplanmodus` in Sessions/CSV
+  (brauchen die Phase-4.4-Session-Snapshots); vollständiger Format-Impact-Matrix-
+  Durchlauf (§9.1) als Abschluss-Audit.
+
 ## Offen (nächste Schritte, in Roadmap-Reihenfolge)
 
 - **Phase A Rest:** Home/Templates zeigen Rest-Tage in der Vorschau noch nicht.

@@ -118,6 +118,8 @@ describe('setsCsv', () => {
       'Tatsächliche Pause (s)',
       'Volumen (kg)',
       'Notiz',
+      'Trainingsplan',
+      'Deload',
     ]) {
       expect(header).toContain(column);
     }
@@ -153,6 +155,40 @@ describe('other CSV exports', () => {
     const csv = exercisesCsv(buildDataset().exercises);
     expect(csv).toContain('Kurzhantel-Rudern');
     expect(csv).toContain('je Hand');
+  });
+
+  it('includes plan, unit and deload context (Phase 9)', () => {
+    const dataset = buildDataset();
+    dataset.sessions = [
+      makeSession({
+        id: 's-ctx',
+        name: 'Push',
+        planNameSnapshot: 'Muskelaufbau',
+        workoutUnitNameSnapshot: 'Push A',
+        deloadIntensity: 'medium',
+      }),
+    ];
+    dataset.sessionExercises = [
+      makeSessionExercise({ id: 'se-ctx', sessionId: 's-ctx', exerciseId: 'ex-1' }),
+    ];
+    dataset.sets = [makeSet({ sessionExerciseId: 'se-ctx', weightKg: 40, reps: 5 })];
+
+    const sessions = sessionsCsv(dataset);
+    expect(sessions).toContain('Muskelaufbau');
+    expect(sessions).toContain('Push A');
+    // A deload session is flagged "ja".
+    const sessionRow = sessions.replace(UTF8_BOM, '').split('\r\n')[1];
+    expect(sessionRow.endsWith(',ja')).toBe(true);
+
+    const sets = setsCsv(dataset);
+    expect(sets).toContain('Muskelaufbau');
+    expect(sets.replace(UTF8_BOM, '').split('\r\n')[1].endsWith(',ja')).toBe(true);
+
+    // A system exercise is labelled in the exercises export.
+    const exercises = exercisesCsv([
+      makeExercise({ id: 'sys', name: 'Bankdrücken', origin: 'system' }),
+    ]);
+    expect(exercises).toContain('System');
   });
 
   it('exports body data sorted by date', () => {

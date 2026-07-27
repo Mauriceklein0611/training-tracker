@@ -172,6 +172,12 @@ General rules:
 - Export only. `setsCsv`, `sessionsCsv`, `exercisesCsv`, `bodyWeightCsv`. Header
   order/meaning fixed by `src/services/csv.test.ts`. Unknown values stay empty,
   never a fabricated 0.
+- New context columns are **appended** (never inserted), so an older parser
+  keeps working: `sessionsCsv` gains `Trainingsplan`, `Übungseinheit`, `Deload`
+  (ja/nein); `setsCsv` gains `Trainingsplan`, `Deload`; `exercisesCsv` gains
+  `Herkunft` (System/Eigene). `Deload` reads the session's `deloadIntensity`
+  marker (Phase 5). The planned date and schedule mode are not yet exported —
+  sessions do not snapshot them yet (Phase 4.4).
 
 ## Muscle-group catalog — `src/constants/muscleGroups.ts`
 
