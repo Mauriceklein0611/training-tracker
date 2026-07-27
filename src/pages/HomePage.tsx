@@ -4,7 +4,8 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { AlertTriangle, ClipboardList, Play, Plus, RotateCcw, Zap } from 'lucide-react';
 import { db } from '@/db/db';
 import { listTemplates } from '@/db/repositories/templates';
-import { listPlansWithDays, nextDayForPlan } from '@/db/repositories/plans';
+import { listPlansWithDays } from '@/db/repositories/plans';
+import { getPlanScheduleState } from '@/db/repositories/schedules';
 import {
   ActiveSessionExistsError,
   startFreeSession,
@@ -42,12 +43,20 @@ export default function HomePage() {
       const withDays = await listPlansWithDays();
       return Promise.all(
         withDays.map(async (entry) => {
-          const next = await nextDayForPlan(entry.plan.id);
+          const state = await getPlanScheduleState(entry.plan.id);
+          const next = state.nextWorkout?.template;
+          // Weekly plans pin days to weekdays, so "today" is a real calendar day:
+          // surface a scheduled rest/free day instead of implying a workout.
+          const restToday =
+            state.mode === 'weekly' && state.current?.type === 'rest'
+              ? (state.current.name ?? undefined)
+              : undefined;
           return {
             plan: entry.plan,
             dayCount: entry.days.length,
             nextDayId: next?.id,
             nextDayName: next?.name,
+            restToday,
           };
         }),
       );
@@ -251,6 +260,11 @@ export default function HomePage() {
                   <div className="flex items-center gap-2 rounded-2xl border border-border bg-surface p-3">
                     <Link to={`/plaene/${entry.plan.id}`} className="min-w-0 flex-1">
                       <p className="truncate font-medium">{entry.plan.name}</p>
+                      {entry.restToday ? (
+                        <p className="truncate text-xs text-muted">
+                          Heute: {entry.restToday}
+                        </p>
+                      ) : null}
                       {multiDay && entry.nextDayName ? (
                         <p className="truncate text-xs text-accent">
                           Als Nächstes: {entry.nextDayName}

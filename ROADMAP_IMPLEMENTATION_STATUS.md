@@ -206,7 +206,10 @@ Enum-, Feld- oder Versionsänderung. Reset betrifft kein Import/Export-Format.
 
 ## Offen (nächste Schritte, in Roadmap-Reihenfolge)
 
-- **Phase A Rest:** Home/Templates zeigen Rest-Tage in der Vorschau noch nicht.
+- **Phase A Rest (teilweise):** Home zeigt jetzt bei Wochenplänen an, wenn heute
+  ein Pausen-/freier Tag geplant ist („Heute: Pause/Frei", aus `state.current`).
+  Offen: Rest-Tage in der Templates-Übersicht und in der Zyklus-/Frei-Vorschau
+  (bei diesen Modi ist „heute" nicht kalendergebunden — bewusst noch offen).
 - **Phase 4** — Zeitplan-Kalender (geplant vs. tatsächlich, Ausnahmen,
   Session-Snapshots `scheduleEntryId`/geplantes Datum).
 - **Phase 5** — Zeitboxierter 7-Tage-Deload (ersetzt heutigen
