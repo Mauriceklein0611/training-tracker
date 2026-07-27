@@ -5,6 +5,13 @@ any change that could touch a format** (see `AGENTS.md` for the rule). Format
 names and versions are centralised in `src/constants/formats.ts` or the format's
 own established constant.
 
+Last full matrix audit (2026-07-27): every version in the table below was
+cross-checked against its code constant (`SCHEMA_VERSION` 24, `AI_EXPORT_VERSION`
+2, `AI_RESPONSE_SCHEMA_VERSION` 1, `PLAN_BUILDER_KIT_VERSION` 2,
+`PLAN_PACKAGE_SCHEMA_VERSION` 3, `SUPPORTED_WORKOUT_UNIT_PACKAGE_VERSIONS` [1]),
+and the backup was confirmed to cover all 19 Dexie stores + settings (guarded by
+test).
+
 General rules:
 
 - The format name and version live in the file **content**, not just the name.
@@ -84,6 +91,9 @@ General rules:
   `dayPositionSnapshot`; older sessions without them fall back to the day.
 - Fixtures/tests: `src/services/backup.test.ts` (roundtrip, legacy per version,
   merge/replace, newer-version rejection, split round-trip + pre-split restore).
+  A structural guard iterates `db.tables` and asserts the backup carries a key for
+  every store, mirroring the reset's `ALL_DATA_TABLES` guard — so a newly added
+  store cannot be silently dropped from a backup.
 
 ## AI analysis export & response round-trip — `aiExport.ts` / `aiResponse.ts` / `aiApply.ts`
 

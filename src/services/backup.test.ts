@@ -78,6 +78,17 @@ describe('createBackup', () => {
     expect(validateBackupJson(JSON.parse(JSON.stringify(backup))).ok).toBe(true);
   });
 
+  it('carries a key for every store the database defines', async () => {
+    // Structural guard mirroring the reset's db.tables check: a newly added store
+    // must appear in the backup, or a restore/replace would silently drop it.
+    const backup = await createBackup();
+    for (const table of db.tables) {
+      expect(backup, `store "${table.name}" is missing from the backup`).toHaveProperty(
+        table.name,
+      );
+    }
+  });
+
   it('names the file with the export date', () => {
     expect(backupFileName(new Date('2026-07-21T09:00:00Z'))).toBe(
       'training-backup-2026-07-21.json',

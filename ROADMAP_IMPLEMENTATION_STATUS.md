@@ -213,15 +213,20 @@ Enum-, Feld- oder Versionsänderung. Reset betrifft kein Import/Export-Format.
   `deleteVersionsForTemplate` bleiben (intern/Tests). Das persistierte
   `archived`-Feld bleibt (Backup-Kompatibilität), ist nun aber nur-lesend.
 
-### Phase 9 — CSV-Kontextspalten (teilweise)
+### Phase 9 — CSV-Kontextspalten + Format-Audit
 
 - **ERLEDIGT:** `sessionsCsv` +`Trainingsplan`/`Übungseinheit`/`Deload`,
   `setsCsv` +`Trainingsplan`/`Deload`, `exercisesCsv` +`Herkunft` — nur
   angehängt (Header-Reihenfolge stabil), `Deload` aus `session.deloadIntensity`.
   Header-Tests erweitert.
-- **Offen in Phase 9:** `geplantes Datum` + `Zeitplanmodus` in Sessions/CSV
-  (brauchen die Phase-4.4-Session-Snapshots); vollständiger Format-Impact-Matrix-
-  Durchlauf (§9.1) als Abschluss-Audit.
+- **`geplantes Datum` + `Zeitplanmodus` in CSV — ERLEDIGT** (mit Phase 4.4):
+  `sessionsCsv` hat beide Spalten (angehängt, stabile Reihenfolge).
+- **Format-Impact-Matrix-Audit (§9.1) — ERLEDIGT:** jede Version im Register gegen
+  ihre Code-Konstante geprüft (`SCHEMA_VERSION` 24, `AI_EXPORT_VERSION` 2,
+  Response 1, Builder-Kit 2, Plan-Paket 3, Unit-Paket [1]); Backup deckt alle 19
+  Dexie-Stores + settings ab — jetzt zusätzlich durch einen `db.tables`-
+  Strukturguard im Backup-Test abgesichert (analog zum Reset-Guard). Register mit
+  Audit-Stempel versehen. **Phase 9 abgeschlossen.**
 
 ## Offen (nächste Schritte, in Roadmap-Reihenfolge)
 
