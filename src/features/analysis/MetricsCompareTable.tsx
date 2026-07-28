@@ -8,6 +8,7 @@ import {
   formatSignedSeconds,
   formatVolume,
 } from '@/utils/format';
+import { formatCardioDistance } from '@/services/cardioMetrics';
 import { formatDurationLong } from '@/utils/date';
 
 /** One comparison row; a missing value is shown honestly rather than as zero. */
@@ -124,6 +125,60 @@ export function MetricsCompareTable({
           },
         ]}
       />
+
+      {a.cardioActivities > 0 || b.cardioActivities > 0 ? (
+        <Section
+          title="Cardio"
+          a={a}
+          b={b}
+          rows={[
+            { label: 'Einheiten', get: (m) => formatNumber(m.cardioActivities) },
+            {
+              label: 'Dauer gesamt',
+              get: (m) => formatDurationLong(m.cardioDurationSeconds),
+            },
+            {
+              label: 'Distanz gesamt',
+              get: (m) =>
+                m.cardioDistanceMeters > 0
+                  ? formatCardioDistance(m.cardioDistanceMeters, undefined)
+                  : 'keine Daten',
+            },
+            {
+              label: 'Ø Dauer / Einheit',
+              get: (m) =>
+                m.cardioActivities > 0
+                  ? formatDurationLong(m.cardioDurationSeconds / m.cardioActivities)
+                  : 'keine Daten',
+            },
+            {
+              label: 'Ø Distanz / Einheit',
+              get: (m) =>
+                m.cardioActivities > 0 && m.cardioDistanceMeters > 0
+                  ? formatCardioDistance(
+                      m.cardioDistanceMeters / m.cardioActivities,
+                      undefined,
+                    )
+                  : 'keine Daten',
+            },
+            {
+              label: 'Einheiten / Wo.',
+              get: (m) => formatNumber(m.cardioActivitiesPerWeek, 1),
+            },
+            {
+              label: 'Minuten / Wo.',
+              get: (m) => `${formatNumber(m.cardioMinutesPerWeek, 0)} min`,
+            },
+            {
+              label: 'Distanz / Wo.',
+              get: (m) =>
+                m.cardioDistancePerWeekMeters > 0
+                  ? formatCardioDistance(m.cardioDistancePerWeekMeters, undefined)
+                  : 'keine Daten',
+            },
+          ]}
+        />
+      ) : null}
 
       <Section
         title="Durchschnitte"
