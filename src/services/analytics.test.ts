@@ -216,6 +216,11 @@ describe('computeAnalytics', () => {
     // Cardio is reported in its own block.
     expect(analytics.cardio.activities).toBe(1);
     expect(analytics.cardio.totalDistanceMeters).toBe(6000);
+    // …and in its own weekly time-series (minutes/distance apart from strength).
+    expect(analytics.cardioWeekly).toHaveLength(1);
+    expect(analytics.cardioWeekly[0].minutes).toBe(30);
+    expect(analytics.cardioWeekly[0].distanceMeters).toBe(6000);
+    expect(analytics.cardioWeekly[0].activities).toBe(1);
   });
 
   it('includes warm-up sets when asked to', () => {

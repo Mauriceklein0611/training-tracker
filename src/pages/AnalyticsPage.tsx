@@ -139,6 +139,27 @@ export default function AnalyticsPage() {
     [analytics],
   );
 
+  const cardioMinutePoints = useMemo(
+    () =>
+      (analytics?.cardioWeekly ?? []).map((week) => ({
+        label: formatDate(week.week).slice(0, 6),
+        value: Math.round(week.minutes),
+      })),
+    [analytics],
+  );
+
+  const cardioDistancePoints = useMemo(
+    () =>
+      (analytics?.cardioWeekly ?? [])
+        .filter((week) => week.distanceMeters > 0)
+        .map((week) => ({
+          label: formatDate(week.week).slice(0, 6),
+          // Kilometres, one decimal, for a readable axis.
+          value: Math.round(week.distanceMeters / 100) / 10,
+        })),
+    [analytics],
+  );
+
   const seriesPoints = useMemo(() => {
     const points = data?.series ?? [];
     return points.map((point) => {
@@ -500,6 +521,59 @@ export default function AnalyticsPage() {
                 Cardio fließt nicht in Kraftvolumen, 1RM oder Arbeitssätze ein. Pace und
                 Geschwindigkeit werden nur je Aktivität und Modalität ausgewertet.
               </p>
+
+              <div className="mt-3 grid gap-4">
+                <ChartFrame
+                  title="Cardio-Minuten je Woche"
+                  empty={cardioMinutePoints.length === 0}
+                  summary={
+                    cardioMinutePoints.length === 0
+                      ? 'Keine Cardio-Minuten im Zeitraum.'
+                      : `Cardio-Minuten über ${cardioMinutePoints.length} Wochen.`
+                  }
+                  table={
+                    <DataTable
+                      caption="Cardio-Minuten je Woche"
+                      columns={['Woche', 'Minuten', 'Aktivitäten']}
+                      rows={(analytics.cardioWeekly ?? []).map((week) => [
+                        formatDate(week.week),
+                        Math.round(week.minutes),
+                        week.activities,
+                      ])}
+                    />
+                  }
+                >
+                  <SimpleBarChart
+                    data={cardioMinutePoints}
+                    formatValue={(value) => `${value} min`}
+                  />
+                </ChartFrame>
+
+                {cardioDistancePoints.length > 0 ? (
+                  <ChartFrame
+                    title="Cardio-Distanz je Woche"
+                    empty={false}
+                    summary={`Distanz in km über ${cardioDistancePoints.length} Wochen. Nur Wochen mit erfasster Distanz.`}
+                    table={
+                      <DataTable
+                        caption="Cardio-Distanz je Woche"
+                        columns={['Woche', 'Distanz (km)']}
+                        rows={(analytics.cardioWeekly ?? [])
+                          .filter((week) => week.distanceMeters > 0)
+                          .map((week) => [
+                            formatDate(week.week),
+                            Math.round(week.distanceMeters / 100) / 10,
+                          ])}
+                      />
+                    }
+                  >
+                    <SimpleBarChart
+                      data={cardioDistancePoints}
+                      formatValue={(value) => `${value} km`}
+                    />
+                  </ChartFrame>
+                ) : null}
+              </div>
             </Card>
           ) : null}
 
