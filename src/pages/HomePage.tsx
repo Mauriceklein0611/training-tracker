@@ -5,6 +5,7 @@ import {
   Activity,
   AlertTriangle,
   ClipboardList,
+  Download,
   Play,
   Plus,
   RotateCcw,
@@ -292,6 +293,27 @@ export default function HomePage() {
           disabled={Boolean(activeSession)}
           onStartNext={(templateId) => void startTemplate(templateId)}
         />
+      ) : !activeSession ? (
+        <Card className="mb-4">
+          <CardHeader
+            title="Kein aktiver Trainingsplan"
+            subtitle={
+              plans.length > 0
+                ? 'Aktiviere einen Plan, damit dein Homescreen dir die nächste Einheit und den Zyklus zeigt.'
+                : 'Erstelle oder importiere einen Plan — oder trainiere gleich frei.'
+            }
+          />
+          <div className="grid gap-2">
+            <Button variant="primary" onClick={() => navigate('/plaene')}>
+              <ClipboardList size={18} aria-hidden="true" />
+              {plans.length > 0 ? 'Plan aktivieren' : 'Plan erstellen'}
+            </Button>
+            <Button variant="secondary" onClick={() => navigate('/mehr/daten')}>
+              <Download size={18} aria-hidden="true" />
+              Planpaket oder KI-Datei importieren
+            </Button>
+          </div>
+        </Card>
       ) : null}
 
       {backupOverdue && hasHistory ? (
