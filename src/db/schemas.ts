@@ -529,6 +529,7 @@ export const appSettingsSchema = z.object({
   voiceAnnouncementsEnabled: z.boolean().default(false),
   // Effort metric preference (Phase G); optional so older backups still validate.
   effortInput: z.enum(['rpe', 'rir', 'none']).optional(),
+  explainMode: z.enum(['beginner', 'expert']).optional(),
   analysisContext: z
     .object({
       goal: z.string().max(300).optional(),

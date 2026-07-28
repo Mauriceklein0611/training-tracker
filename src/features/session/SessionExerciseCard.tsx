@@ -94,6 +94,7 @@ export function SessionExerciseCard({
   soundEnabled,
   vibrationEnabled,
   effortInput,
+  expertLabels,
 }: {
   detail: SessionExerciseDetail;
   sessionId: string;
@@ -109,6 +110,8 @@ export function SessionExerciseCard({
   vibrationEnabled?: boolean;
   /** Effort metric preference passed to the strength set editor. */
   effortInput?: EffortInput;
+  /** Compact effort labels for experienced users. */
+  expertLabels?: boolean;
 }) {
   const { sessionExercise, sets } = detail;
 
@@ -548,6 +551,7 @@ export function SessionExerciseCard({
         ) : openSet ? (
           <SetEditor
             effortInput={effortInput}
+            expertLabels={expertLabels}
             // Remounting on a new set id resets the draft exactly once.
             key={openSet.id}
             set={openSet}

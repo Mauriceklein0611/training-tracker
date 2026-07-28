@@ -32,6 +32,7 @@ export function LiveExerciseList({
   soundEnabled,
   vibrationEnabled,
   effortInput,
+  expertLabels,
 }: {
   detail: SessionDetail;
   sessionId: string;
@@ -39,6 +40,7 @@ export function LiveExerciseList({
   soundEnabled?: boolean;
   vibrationEnabled?: boolean;
   effortInput?: EffortInput;
+  expertLabels?: boolean;
 }) {
   const entries = detail.exercises;
   const detailById = new Map(entries.map((entry) => [entry.sessionExercise.id, entry]));
@@ -89,6 +91,7 @@ export function LiveExerciseList({
                 soundEnabled={soundEnabled}
                 vibrationEnabled={vibrationEnabled}
                 effortInput={effortInput}
+                expertLabels={expertLabels}
               />
               {grouped ? (
                 <button

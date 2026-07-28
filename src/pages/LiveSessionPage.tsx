@@ -231,6 +231,7 @@ export default function LiveSessionPage() {
           soundEnabled={settings.restSoundEnabled}
           vibrationEnabled={settings.restVibrationEnabled}
           effortInput={settings.effortInput ?? 'rir'}
+          expertLabels={settings.explainMode === 'expert'}
         />
       )}
 

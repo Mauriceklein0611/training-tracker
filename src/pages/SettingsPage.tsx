@@ -10,7 +10,7 @@ import { isWakeLockSupported } from '@/hooks/useWakeLock';
 import { playRestFinishedSound, primeAudio, vibrate } from '@/services/sound';
 import { isSpeechSupported, speak } from '@/services/speech';
 import { EFFORT_INPUT_LABELS } from '@/services/effort';
-import type { AnalyticsRangeKey, AppSettings, EffortInput } from '@/types';
+import type { AnalyticsRangeKey, AppSettings, EffortInput, ExplainMode } from '@/types';
 import { formatDateTime } from '@/utils/date';
 
 export default function SettingsPage() {
@@ -58,6 +58,17 @@ export default function SettingsPage() {
                   {EFFORT_INPUT_LABELS[key]}
                 </option>
               ))}
+            </SelectField>
+            <SelectField
+              label="Fachbegriffe"
+              value={settings.explainMode ?? 'beginner'}
+              hint="Anfänger sehen ausführliche Labels (z. B. „Anstrengung (RPE)“), erfahrene Nutzer kompakte Fachlabels."
+              onChange={(event) =>
+                void update({ explainMode: event.target.value as ExplainMode })
+              }
+            >
+              <option value="beginner">Ausführlich (Anfänger)</option>
+              <option value="expert">Kompakt (erfahren)</option>
             </SelectField>
           </div>
         </Card>

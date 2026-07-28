@@ -99,6 +99,7 @@ export function SetEditor({
   soundEnabled = true,
   vibrationEnabled = true,
   effortInput = 'rir',
+  expertLabels = false,
 }: {
   set: WorkoutSet;
   sessionExercise: SessionExercise;
@@ -123,6 +124,8 @@ export function SetEditor({
   vibrationEnabled?: boolean;
   /** Which effort metric to collect (RPE, RIR or none). Defaults to RIR. */
   effortInput?: EffortInput;
+  /** Compact effort labels for experienced users (G6). */
+  expertLabels?: boolean;
 }) {
   /*
    * The draft is seeded from the record once and then belongs to the user.
@@ -397,6 +400,7 @@ export function SetEditor({
         {effortInput !== 'none' ? (
           <EffortField
             mode={effortInput}
+            expertLabels={expertLabels}
             rir={draft.rir}
             rpe={draft.rpe}
             onChange={(next) =>

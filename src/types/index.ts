@@ -893,6 +893,9 @@ export interface WeeklyGoals {
 /** Which effort metric the set editor collects, or none (Phase G). */
 export type EffortInput = 'rpe' | 'rir' | 'none';
 
+/** Label verbosity for technical terms (Phase G6). */
+export type ExplainMode = 'beginner' | 'expert';
+
 export interface AppSettings {
   /** Singleton row. */
   id: 'app-settings';
@@ -911,6 +914,11 @@ export interface AppSettings {
    * settings rows → treated as the default; never blocks completing a set.
    */
   effortInput?: EffortInput;
+  /**
+   * Label verbosity (Phase G6): 'beginner' spells terms out ("Anstrengung
+   * (RPE)"), 'expert' uses compact labels ("RPE"). Absent → beginner.
+   */
+  explainMode?: ExplainMode;
   /** Optional context for the AI export; never used for calculations. */
   analysisContext?: AnalysisContext;
   /** Optional weekly training goals; absent means no goals are set. */

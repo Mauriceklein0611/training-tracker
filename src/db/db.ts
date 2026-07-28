@@ -738,6 +738,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   keepScreenAwake: true,
   voiceAnnouncementsEnabled: false,
   effortInput: 'rir',
+  explainMode: 'beginner',
   backupReminderDays: 14,
   schemaVersion: SCHEMA_VERSION,
   createdAt: '',

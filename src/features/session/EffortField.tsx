@@ -19,11 +19,14 @@ export function EffortField({
   rir,
   rpe,
   onChange,
+  expertLabels = false,
 }: {
   mode: 'rpe' | 'rir';
   rir: string;
   rpe: string;
   onChange: (next: { rir: string; rpe: string }) => void;
+  /** Compact term labels ("RPE") instead of the spelled-out beginner ones. */
+  expertLabels?: boolean;
 }) {
   const rpeMode = mode === 'rpe';
   const raw = rpeMode ? rpe : rir;
@@ -50,7 +53,13 @@ export function EffortField({
   };
 
   const values = rpeMode ? RPE_CHIP_VALUES : RIR_CHIP_VALUES;
-  const label = rpeMode ? 'Anstrengung (RPE)' : 'Reps in Reserve (RIR)';
+  const label = expertLabels
+    ? rpeMode
+      ? 'RPE'
+      : 'RIR'
+    : rpeMode
+      ? 'Anstrengung (RPE)'
+      : 'Reps in Reserve (RIR)';
 
   const approx =
     selected == null

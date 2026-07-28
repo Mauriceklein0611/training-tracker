@@ -34,6 +34,19 @@ describe('EffortField', () => {
     expect(onChange).toHaveBeenCalledWith({ rir: '', rpe: '' });
   });
 
+  it('uses spelled-out labels for beginners and compact ones for experts', () => {
+    const { rerender } = render(
+      <EffortField mode="rpe" rir="" rpe="" onChange={() => {}} />,
+    );
+    // The chip group's accessible name carries the label.
+    expect(screen.getByRole('group', { name: 'Anstrengung (RPE)' })).toBeInTheDocument();
+    rerender(<EffortField mode="rpe" rir="" rpe="" onChange={() => {}} expertLabels />);
+    expect(screen.getByRole('group', { name: 'RPE' })).toBeInTheDocument();
+    expect(
+      screen.queryByRole('group', { name: 'Anstrengung (RPE)' }),
+    ).not.toBeInTheDocument();
+  });
+
   it('treats the last RIR chip as "4 or more"', () => {
     render(<EffortField mode="rir" rir="6" rpe="" onChange={() => {}} />);
     // A stored RIR of 6 still marks the "4+" chip as active.
