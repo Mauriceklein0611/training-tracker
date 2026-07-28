@@ -9,6 +9,7 @@ import {
   type VolumeTotals,
 } from '@/services/metrics';
 import { computeRestStatistics, type RestStatistics } from '@/services/rest';
+import { aggregateCardio, type CardioTotals } from '@/services/cardioMetrics';
 import type { WorkoutSession } from '@/types';
 
 export interface SessionSummary {
@@ -21,6 +22,10 @@ export interface SessionSummary {
   restStatistics: RestStatistics;
   /** Bests achieved in this session that beat every earlier session. */
   newRecords: NewRecord[];
+  /** Cardio totals for this session, shown as a separate block. */
+  cardio: CardioTotals;
+  /** Whether the session contained any completed cardio section. */
+  hasCardio: boolean;
 }
 
 /**
@@ -55,6 +60,14 @@ export function summarizeSession(
     { includeWarmup: true, requireCompleted: false },
   );
 
+  // Cardio is summarised separately — never merged into the strength totals.
+  const cardio = aggregateCardio(
+    sessionContexts.map(({ set, sessionExercise }) => ({
+      set,
+      context: sessionExercise,
+    })),
+  );
+
   const end = session.finishedAt ? new Date(session.finishedAt) : now;
   const durationSeconds = Math.max(
     0,
@@ -71,5 +84,7 @@ export function summarizeSession(
     volume,
     restStatistics: computeRestStatistics(workingContexts.map((context) => context.set)),
     newRecords: findNewRecords(sessionContexts, historyContexts),
+    cardio,
+    hasCardio: cardio.activities > 0,
   };
 }

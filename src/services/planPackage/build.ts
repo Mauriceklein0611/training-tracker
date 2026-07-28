@@ -112,6 +112,11 @@ export function buildPlanPackage(
         primaryMuscleGroup: exercise.primaryMuscleGroup,
         secondaryMuscleGroups: exercise.secondaryMuscleGroups,
         equipment: exercise.equipment,
+        // Structured equipment + cardio modality (package v4); omitted when absent.
+        ...(exercise.defaultEquipment
+          ? { defaultEquipment: exercise.defaultEquipment }
+          : {}),
+        ...(exercise.cardioModality ? { cardioModality: exercise.cardioModality } : {}),
         trackingType: exercise.trackingType,
         weightMode: exercise.weightMode,
         weightMultiplier: exercise.weightMultiplier,
@@ -181,6 +186,8 @@ export function buildPlanPackage(
               targetRepMin: row.targetRepMin ?? null,
               targetRepMax: row.targetRepMax ?? null,
               targetDurationSeconds: row.targetDurationSeconds ?? null,
+              targetDistanceMeters: row.targetDistanceMeters ?? null,
+              targetRpe: row.targetRpe ?? null,
               restSeconds: row.restSeconds,
               notes: note(row.notes),
               group,
@@ -211,37 +218,86 @@ export function buildPlanPackage(
 }
 
 /**
- * Deterministic fingerprint of a package's *content* (ignoring the volatile
+ * Canonical schedule of a plan, independent of local ids: days are referenced by
+ * their stable `position` (not the volatile `dayKey`), and a missing schedule is
+ * the default free-rotation. So a change of mode, of a weekday, of the cycle
+ * order or of a rest day all change the fingerprint.
+ */
+function canonicalSchedule(plan: PlanPackage['plans'][number]) {
+  const positionByDayKey = new Map(plan.days.map((day) => [day.dayKey, day.position]));
+  const mode = plan.schedule?.mode ?? 'free-rotation';
+  const entries = [...(plan.schedule?.entries ?? [])]
+    .sort((a, b) => a.position - b.position)
+    .map((entry) => ({
+      type: entry.type,
+      day: entry.dayKey != null ? (positionByDayKey.get(entry.dayKey) ?? null) : null,
+      weekday: entry.weekday ?? null,
+      label: entry.label?.trim() ?? null,
+      position: entry.position,
+    }));
+  return { mode, entries };
+}
+
+/**
+ * Deterministic fingerprint of a package's *content* (ignoring only the volatile
  * packageId, createdAt and source), for duplicate-import detection.
+ *
+ * Canonical over every portable business field, so changing a single target
+ * (sets, rep range, duration), the weight convention/multiplier, the rest,
+ * a note, the muscle groups, or the schedule (mode / cycle order / weekday /
+ * rest day) yields a different fingerprint. Ordering-independent: exercises are
+ * sorted by name and days/plan-exercises by their stable position/order.
  */
 export function planPackageFingerprint(pkg: PlanPackage): string {
-  const nameByKey = new Map(pkg.exercises.map((e) => [e.exerciseKey, e.name]));
+  const exerciseByKey = new Map(pkg.exercises.map((e) => [e.exerciseKey, e]));
   const canonical = {
-    exercises: pkg.exercises.map((exercise) => ({
-      name: exercise.name.trim().toLowerCase(),
-      trackingType: exercise.trackingType,
-      weightMode: exercise.weightMode,
-      primaryMuscleGroup: exercise.primaryMuscleGroup,
-      secondaryMuscleGroups: [...exercise.secondaryMuscleGroups].sort(),
-    })),
+    packageName: pkg.packageName.trim().toLowerCase(),
+    programNotes: pkg.programNotes.trim(),
+    exercises: [...pkg.exercises]
+      .map((exercise) => ({
+        name: exercise.name.trim().toLowerCase(),
+        trackingType: exercise.trackingType,
+        weightMode: exercise.weightMode,
+        weightMultiplier: exercise.weightMultiplier,
+        equipment: exercise.equipment.trim().toLowerCase(),
+        defaultEquipment: exercise.defaultEquipment ?? null,
+        cardioModality: exercise.cardioModality ?? null,
+        defaultRestSeconds: exercise.defaultRestSeconds,
+        primaryMuscleGroup: exercise.primaryMuscleGroup,
+        secondaryMuscleGroups: [...exercise.secondaryMuscleGroups].sort(),
+      }))
+      .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0)),
     plans: pkg.plans.map((plan) => ({
       name: plan.name.trim().toLowerCase(),
+      description: plan.description.trim(),
       splitType: plan.splitType,
-      days: plan.days.map((day) => ({
-        name: day.name.trim().toLowerCase(),
-        position: day.position,
-        exercises: day.exercises.map((planExercise) => ({
-          exercise: nameByKey.get(planExercise.exerciseKey),
-          order: planExercise.order,
-          targetSets: planExercise.targetSets,
-          targetRepMin: planExercise.targetRepMin ?? null,
-          targetRepMax: planExercise.targetRepMax ?? null,
-          restSeconds: planExercise.restSeconds,
-          group: planExercise.group
-            ? { type: planExercise.group.type, restMode: planExercise.group.restMode }
-            : null,
+      days: [...plan.days]
+        .sort((a, b) => a.position - b.position)
+        .map((day) => ({
+          name: day.name.trim().toLowerCase(),
+          description: day.description.trim(),
+          position: day.position,
+          exercises: [...day.exercises]
+            .sort((a, b) => a.order - b.order)
+            .map((planExercise) => ({
+              exercise:
+                exerciseByKey.get(planExercise.exerciseKey)?.name.trim().toLowerCase() ??
+                planExercise.exerciseKey,
+              order: planExercise.order,
+              targetSets: planExercise.targetSets,
+              targetRepMin: planExercise.targetRepMin ?? null,
+              targetRepMax: planExercise.targetRepMax ?? null,
+              targetDurationSeconds: planExercise.targetDurationSeconds ?? null,
+              targetDistanceMeters: planExercise.targetDistanceMeters ?? null,
+              targetRpe: planExercise.targetRpe ?? null,
+              restSeconds: planExercise.restSeconds,
+              notes: planExercise.notes.trim(),
+              group: planExercise.group
+                ? { type: planExercise.group.type, restMode: planExercise.group.restMode }
+                : null,
+            })),
         })),
-      })),
+      schedule: canonicalSchedule(plan),
     })),
   };
   return fingerprint(stableStringify(canonical));

@@ -111,7 +111,9 @@ function refineUnitPackage(
 export const workoutUnitPackageSchema = z
   .object({
     format: z.literal(WORKOUT_UNIT_PACKAGE_FORMAT),
-    schemaVersion: z.literal(1),
+    // Versions 1 and 2 share this schema; the v2-only structured-equipment and
+    // cardio fields are optional, so a v1 file still validates with them absent.
+    schemaVersion: z.union([z.literal(1), z.literal(2)]),
     packageId: portableKey,
     createdAt: z.string(),
     source: z
@@ -177,6 +179,11 @@ export function buildWorkoutUnitPackage(
       primaryMuscleGroup: exercise.primaryMuscleGroup,
       secondaryMuscleGroups: exercise.secondaryMuscleGroups,
       equipment: exercise.equipment,
+      // Structured equipment + cardio modality (unit package v2); omitted if absent.
+      ...(exercise.defaultEquipment
+        ? { defaultEquipment: exercise.defaultEquipment }
+        : {}),
+      ...(exercise.cardioModality ? { cardioModality: exercise.cardioModality } : {}),
       trackingType: exercise.trackingType,
       weightMode: exercise.weightMode,
       weightMultiplier: exercise.weightMultiplier,
@@ -233,6 +240,8 @@ export function buildWorkoutUnitPackage(
           targetRepMin: row.targetRepMin ?? null,
           targetRepMax: row.targetRepMax ?? null,
           targetDurationSeconds: row.targetDurationSeconds ?? null,
+          targetDistanceMeters: row.targetDistanceMeters ?? null,
+          targetRpe: row.targetRpe ?? null,
           restSeconds: row.restSeconds,
           notes: note(row.notes),
           group,
@@ -253,20 +262,52 @@ export function buildWorkoutUnitPackage(
   });
 }
 
-/** Content fingerprint (ignores volatile packageId/createdAt/source). */
+/**
+ * Content fingerprint (ignores only the volatile packageId/createdAt/source).
+ *
+ * Canonical over every portable business field of the units and their
+ * exercises, so a change to any target (sets, rep range, duration), the rest,
+ * a note, the group, the unit description or the exercise definition changes the
+ * fingerprint. Ordering-independent: exercises sorted by name, unit exercises by
+ * their stable order.
+ */
 export function workoutUnitPackageFingerprint(pkg: WorkoutUnitPackage): string {
-  const nameByKey = new Map(pkg.exercises.map((e) => [e.exerciseKey, e.name]));
+  const exerciseByKey = new Map(pkg.exercises.map((e) => [e.exerciseKey, e]));
   const content = {
     exercises: [...pkg.exercises]
-      .map((e) => ({ ...e, exerciseKey: e.name }))
-      .sort((a, b) => a.name.localeCompare(b.name)),
+      .map((e) => ({
+        name: e.name.trim().toLowerCase(),
+        trackingType: e.trackingType,
+        weightMode: e.weightMode,
+        weightMultiplier: e.weightMultiplier,
+        equipment: e.equipment.trim().toLowerCase(),
+        defaultEquipment: e.defaultEquipment ?? null,
+        cardioModality: e.cardioModality ?? null,
+        defaultRestSeconds: e.defaultRestSeconds,
+        primaryMuscleGroup: e.primaryMuscleGroup,
+        secondaryMuscleGroups: [...e.secondaryMuscleGroups].sort(),
+      }))
+      .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0)),
     units: pkg.units.map((unit) => ({
-      name: unit.name,
-      exercises: unit.exercises.map((pe) => ({
-        exercise: nameByKey.get(pe.exerciseKey) ?? pe.exerciseKey,
-        order: pe.order,
-        targetSets: pe.targetSets,
-      })),
+      name: unit.name.trim().toLowerCase(),
+      description: unit.description.trim(),
+      exercises: [...unit.exercises]
+        .sort((a, b) => a.order - b.order)
+        .map((pe) => ({
+          exercise:
+            exerciseByKey.get(pe.exerciseKey)?.name.trim().toLowerCase() ??
+            pe.exerciseKey,
+          order: pe.order,
+          targetSets: pe.targetSets,
+          targetRepMin: pe.targetRepMin ?? null,
+          targetRepMax: pe.targetRepMax ?? null,
+          targetDurationSeconds: pe.targetDurationSeconds ?? null,
+          targetDistanceMeters: pe.targetDistanceMeters ?? null,
+          targetRpe: pe.targetRpe ?? null,
+          restSeconds: pe.restSeconds,
+          notes: pe.notes.trim(),
+          group: pe.group ? { type: pe.group.type, restMode: pe.group.restMode } : null,
+        })),
     })),
   };
   return fingerprint(stableStringify(content));
@@ -445,6 +486,8 @@ export async function importWorkoutUnitPackage(
           primaryMuscleGroup: pkgExercise.primaryMuscleGroup,
           secondaryMuscleGroups: [...pkgExercise.secondaryMuscleGroups],
           equipment: pkgExercise.equipment,
+          defaultEquipment: pkgExercise.defaultEquipment,
+          cardioModality: pkgExercise.cardioModality,
           trackingType: pkgExercise.trackingType,
           weightMode: pkgExercise.weightMode,
           weightMultiplier: pkgExercise.weightMultiplier,
@@ -501,6 +544,8 @@ export async function importWorkoutUnitPackage(
               targetRepMin: planExercise.targetRepMin ?? undefined,
               targetRepMax: planExercise.targetRepMax ?? undefined,
               targetDurationSeconds: planExercise.targetDurationSeconds ?? undefined,
+              targetDistanceMeters: planExercise.targetDistanceMeters ?? undefined,
+              targetRpe: planExercise.targetRpe ?? undefined,
               restSeconds: planExercise.restSeconds,
               notes: planExercise.notes,
               groupId,

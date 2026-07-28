@@ -29,6 +29,22 @@ describe('exercise catalog data', () => {
   it('covers a broad range of exercises', () => {
     expect(SYSTEM_EXERCISES.length).toBeGreaterThanOrEqual(80);
   });
+
+  it('includes cardio entries carrying a modality and structured device', () => {
+    const cardio = SYSTEM_EXERCISES.filter((entry) => entry.trackingType === 'cardio');
+    expect(cardio.length).toBeGreaterThanOrEqual(10);
+    for (const entry of cardio) {
+      expect(entry.cardioModality).toBeTruthy();
+      expect(entry.weightMode).toBe('none');
+      expect(entry.defaultEquipment).toBeTruthy();
+    }
+    // The running/treadmill pair share a modality but differ by device.
+    const running = cardio.find((e) => e.catalogKey === 'cardio-running');
+    const treadmill = cardio.find((e) => e.catalogKey === 'cardio-treadmill');
+    expect(running?.cardioModality).toBe('running');
+    expect(treadmill?.cardioModality).toBe('running');
+    expect(treadmill?.defaultEquipment).toBe('treadmill');
+  });
 });
 
 describe('seedSystemExercises', () => {
@@ -38,6 +54,11 @@ describe('seedSystemExercises', () => {
     expect(await db.exercises.count()).toBe(SYSTEM_EXERCISES.length);
     const all = await db.exercises.toArray();
     expect(all.every((exercise) => exercise.origin === 'system')).toBe(true);
+    // Cardio entries persist their modality and structured device.
+    const treadmill = all.find((e) => e.catalogKey === 'cardio-treadmill');
+    expect(treadmill?.trackingType).toBe('cardio');
+    expect(treadmill?.cardioModality).toBe('running');
+    expect(treadmill?.defaultEquipment).toBe('treadmill');
   });
 
   it('is idempotent — a second run adds nothing', async () => {

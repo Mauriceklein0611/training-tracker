@@ -1,6 +1,5 @@
 import { ArrowDown, ArrowUp, GripVertical, Link2, Link2Off, Trash2 } from 'lucide-react';
 import { IconButton } from '@/components/ui/Button';
-import { NumberField, TextField } from '@/components/ui/Field';
 import {
   attachTemplateExerciseToPrevious,
   detachTemplateExercise,
@@ -8,7 +7,7 @@ import {
   removeTemplateExercise,
   updateTemplateExercise,
 } from '@/db/repositories/templates';
-import { parseNumberInput } from '@/services/validation';
+import { ExerciseTargetFields } from '@/features/templates/ExerciseTargetFields';
 import type { Exercise, TemplateExercise } from '@/types';
 import { TRACKING_TYPE_LABELS } from '@/utils/format';
 
@@ -42,7 +41,6 @@ export function TemplateExerciseRow({
   onDrop: () => void;
   onDragEnd: () => void;
 }) {
-  const isDuration = exercise?.trackingType === 'duration';
   const name = exercise?.name ?? 'Gelöschte Übung';
 
   return (
@@ -116,89 +114,11 @@ export function TemplateExerciseRow({
         </button>
       ) : null}
 
-      <div className="mt-3 grid grid-cols-2 gap-2">
-        <NumberField
-          label="Sätze"
-          value={String(entry.targetSets)}
-          onChange={(event) =>
-            void updateTemplateExercise(entry.id, {
-              targetSets: Math.max(
-                1,
-                Math.round(parseNumberInput(event.target.value) ?? 1),
-              ),
-            })
-          }
-        />
-        <NumberField
-          label="Pause (s)"
-          value={String(entry.restSeconds)}
-          onChange={(event) =>
-            void updateTemplateExercise(entry.id, {
-              restSeconds: Math.max(
-                0,
-                Math.round(parseNumberInput(event.target.value) ?? 0),
-              ),
-            })
-          }
-        />
-        {isDuration ? (
-          <NumberField
-            label="Zieldauer (s)"
-            containerClassName="col-span-2"
-            value={String(entry.targetDurationSeconds ?? '')}
-            onChange={(event) =>
-              void updateTemplateExercise(entry.id, {
-                targetDurationSeconds:
-                  parseNumberInput(event.target.value) == null
-                    ? undefined
-                    : Math.max(0, Math.round(parseNumberInput(event.target.value) ?? 0)),
-              })
-            }
-          />
-        ) : (
-          <>
-            <NumberField
-              label="Wdh. von"
-              value={String(entry.targetRepMin ?? '')}
-              onChange={(event) =>
-                void updateTemplateExercise(entry.id, {
-                  targetRepMin:
-                    parseNumberInput(event.target.value) == null
-                      ? undefined
-                      : Math.max(
-                          0,
-                          Math.round(parseNumberInput(event.target.value) ?? 0),
-                        ),
-                })
-              }
-            />
-            <NumberField
-              label="Wdh. bis"
-              value={String(entry.targetRepMax ?? '')}
-              onChange={(event) =>
-                void updateTemplateExercise(entry.id, {
-                  targetRepMax:
-                    parseNumberInput(event.target.value) == null
-                      ? undefined
-                      : Math.max(
-                          0,
-                          Math.round(parseNumberInput(event.target.value) ?? 0),
-                        ),
-                })
-              }
-            />
-          </>
-        )}
-        <TextField
-          label="Notiz"
-          containerClassName="col-span-2"
-          value={entry.notes}
-          placeholder="Optional"
-          onChange={(event) =>
-            void updateTemplateExercise(entry.id, { notes: event.target.value })
-          }
-        />
-      </div>
+      <ExerciseTargetFields
+        trackingType={exercise?.trackingType ?? 'weight_reps'}
+        values={entry}
+        onChange={(patch) => void updateTemplateExercise(entry.id, patch)}
+      />
     </div>
   );
 }

@@ -6,7 +6,9 @@ import {
 } from '@/constants/formats';
 import { MUSCLE_GROUPS } from '@/constants/muscleGroups';
 import { allowedWeightModes } from '@/services/exerciseRules';
-import type { TrackingType } from '@/types';
+import { EQUIPMENT_VALUES } from '@/services/equipment';
+import { CARDIO_MODALITY_VALUES } from '@/services/cardio';
+import type { CardioModality, Equipment, TrackingType } from '@/types';
 import { dayKey } from '@/utils/date';
 
 /**
@@ -24,6 +26,7 @@ const TRACKING_TYPES: TrackingType[] = [
   'assisted_bodyweight_reps',
   'reps_only',
   'duration',
+  'cardio',
 ];
 
 export interface PlanBuilderKit {
@@ -38,6 +41,8 @@ export interface PlanBuilderKit {
   allowedValues: {
     trackingType: TrackingType[];
     weightModeByTrackingType: Record<TrackingType, string[]>;
+    equipment: Equipment[];
+    cardioModality: CardioModality[];
     splitType: string[];
     groupType: string[];
     groupRestMode: string[];
@@ -63,6 +68,7 @@ function buildExample(): unknown {
         primaryMuscleGroup: 'Brust',
         secondaryMuscleGroups: ['Trizeps'],
         equipment: 'Langhantel',
+        defaultEquipment: 'barbell',
         trackingType: 'weight_reps',
         weightMode: 'total',
         weightMultiplier: 1,
@@ -79,6 +85,20 @@ function buildExample(): unknown {
         weightMode: 'none',
         weightMultiplier: 1,
         defaultRestSeconds: 150,
+        notes: '',
+      },
+      {
+        exerciseKey: 'exercise-3',
+        name: 'Laufen (Intervalle)',
+        primaryMuscleGroup: 'Ganzkörper',
+        secondaryMuscleGroups: [],
+        equipment: 'Laufband',
+        defaultEquipment: 'treadmill',
+        cardioModality: 'running',
+        trackingType: 'cardio',
+        weightMode: 'none',
+        weightMultiplier: 1,
+        defaultRestSeconds: 60,
         notes: '',
       },
     ],
@@ -124,6 +144,22 @@ function buildExample(): unknown {
                 targetRepMax: 10,
                 targetDurationSeconds: null,
                 restSeconds: 150,
+                notes: '',
+                group: null,
+              },
+              {
+                // Cardio interval position: 4 intervals of ~1000 m at RPE 7,
+                // with a 60 s pause between intervals. Reps stay null for cardio.
+                planExerciseKey: 'pe-3',
+                exerciseKey: 'exercise-3',
+                order: 1,
+                targetSets: 4,
+                targetRepMin: null,
+                targetRepMax: null,
+                targetDurationSeconds: null,
+                targetDistanceMeters: 1000,
+                targetRpe: 7,
+                restSeconds: 60,
                 notes: '',
                 group: null,
               },
@@ -174,7 +210,10 @@ export function buildPlanBuilderKit(): PlanBuilderKit {
       'Ordne jede Übung genau einem Tag zu. Übungen stehen niemals außerhalb eines Tages.',
       'Verwende ausschließlich die aufgeführten Werte für trackingType, weightMode, groupType, groupRestMode, splitType und progressionMethod.',
       'weightMode muss zum trackingType passen (siehe weightModeByTrackingType).',
-      'Zeitbasierte Übungen: trackingType „duration", weightMode „none", targetDurationSeconds gesetzt, targetRepMin/targetRepMax null.',
+      'Zeitbasierte Kraftübungen (Halten, z. B. Plank): trackingType „duration", weightMode „none", targetDurationSeconds gesetzt, targetRepMin/targetRepMax null.',
+      'Cardio: trackingType „cardio", weightMode „none", weightMultiplier 1, ein „cardioModality" aus cardioModality und optional ein „defaultEquipment" aus equipment. Cardio ist etwas anderes als „duration" und wird getrennt ausgewertet.',
+      'Cardio-Ziele je Planposition: targetSets = Anzahl Intervalle (1 für durchgehendes Cardio), optional targetDurationSeconds, targetDistanceMeters (in Metern) und targetRpe (1–10). Wiederholungen (targetRepMin/targetRepMax) bleiben bei Cardio null.',
+      'Strukturierte Ausrüstung ist optional über „defaultEquipment" je Übung. Rate sie nicht aus dem Freitext-„equipment"; lass sie weg, wenn unklar.',
       'Nutze für Muskelgruppen bevorzugt die Bezeichnungen aus „muscleGroups"; unbekannte Bezeichnungen sind erlaubt, aber sparsam.',
       'Verwende nur die Schlüssel exerciseKey, planKey, dayKey, planExerciseKey und groupKey zur Verknüpfung — niemals interne IDs.',
       'exerciseKey, dayKey und planExerciseKey sind jeweils eindeutig; jede Planposition verweist auf einen vorhandenen exerciseKey.',
@@ -189,6 +228,8 @@ export function buildPlanBuilderKit(): PlanBuilderKit {
     allowedValues: {
       trackingType: TRACKING_TYPES,
       weightModeByTrackingType,
+      equipment: EQUIPMENT_VALUES,
+      cardioModality: CARDIO_MODALITY_VALUES,
       splitType: ['single', '2-day', '3-day', '4-day', '5-day', 'custom'],
       groupType: ['superset', 'circuit'],
       groupRestMode: ['each', 'round'],
@@ -207,7 +248,7 @@ export function planBuilderKitFileName(date: Date = new Date()): string {
 export const PLAN_BUILDER_PROMPT = `Ich möchte mit dir einen Trainingsplan erstellen. Die beigefügte Datei „training-plan-builder-kit" beschreibt genau das Format, in dem die App den fertigen Plan später importieren kann.
 
 Gehe so vor:
-1. Stelle mir zuerst Fragen zu meinen Zielen, meiner Erfahrung, der Anzahl der Trainingstage pro Woche, der verfügbaren Ausrüstung und eventuellen Einschränkungen.
+1. Stelle mir zuerst Fragen zu meinen Zielen, meiner Erfahrung, der Anzahl der Trainingstage pro Woche, der Verteilung von Kraft und Cardio, bevorzugten Cardio-Aktivitäten (z. B. Laufen, Radfahren, Rudern), Dauer/Distanz und ob durchgehend oder in Intervallen, der verfügbaren Ausrüstung und eventuellen Einschränkungen (ohne medizinische Beratung).
 2. Entwickle den Plan gemeinsam mit mir im Gespräch. Erkläre deine Entscheidungen auf Deutsch und erzeuge noch KEINE Datei.
 3. Erst wenn ich ausdrücklich sage „Erstelle jetzt die Datei", gib genau eine Datei „training-plan-package.json" aus: reines JSON ohne Markdown, exakt nach den „rules" und „allowedValues" aus dem Builder-Kit, mit format „training-plan-package" und schemaVersion ${PLAN_PACKAGE_SCHEMA_VERSION}.
 

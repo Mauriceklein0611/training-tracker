@@ -1,4 +1,4 @@
-import type { TrackingType, WeightMode } from '@/types';
+import type { CardioModality, Equipment, TrackingType, WeightMode } from '@/types';
 
 /**
  * Curated system exercise catalog (Phase 2).
@@ -21,6 +21,10 @@ export interface SystemExerciseDef {
   weightMultiplier: number;
   defaultRestSeconds: number;
   searchTerms: string[];
+  /** Structured default equipment (strength devices or cardio devices). */
+  defaultEquipment?: Equipment;
+  /** The cardio activity, for `trackingType: 'cardio'` entries. */
+  cardioModality?: CardioModality;
 }
 
 /** Compact builder; weightMultiplier defaults to 1 (2 for per-hand dumbbell work). */
@@ -47,6 +51,33 @@ function b(
     weightMultiplier,
     defaultRestSeconds,
     searchTerms,
+  };
+}
+
+/** Compact builder for a cardio catalog entry (modality + structured device). */
+function c(
+  catalogKey: string,
+  name: string,
+  cardioModality: CardioModality,
+  defaultEquipment: Equipment,
+  searchTerms: string[],
+): SystemExerciseDef {
+  return {
+    catalogKey,
+    name,
+    // Cardio is not muscle-specific; the whole-body group is neutral and does
+    // not feed any strength muscle-group analysis (which excludes cardio anyway).
+    primaryMuscleGroup: 'Ganzkörper',
+    secondaryMuscleGroups: [],
+    equipment: '',
+    trackingType: 'cardio',
+    weightMode: 'none',
+    weightMultiplier: 1,
+    // Cardio has no strength rest; a modest default for interval pauses.
+    defaultRestSeconds: 60,
+    searchTerms,
+    defaultEquipment,
+    cardioModality,
   };
 }
 
@@ -1100,4 +1131,68 @@ export const SYSTEM_EXERCISES: SystemExerciseDef[] = [
     45,
     ['neck flexion', 'nacken'],
   ),
+
+  // ---- Cardio ---------------------------------------------------------
+  c('cardio-running', 'Laufen', 'running', 'unspecified', [
+    'laufen',
+    'joggen',
+    'run',
+    'running',
+    'jog',
+    'outdoor',
+  ]),
+  c('cardio-treadmill', 'Laufband', 'running', 'treadmill', [
+    'laufband',
+    'treadmill',
+    'laufen indoor',
+  ]),
+  c('cardio-walking', 'Gehen', 'walking', 'unspecified', [
+    'gehen',
+    'walking',
+    'walk',
+    'spazieren',
+  ]),
+  c('cardio-cycling-outdoor', 'Fahrradfahren Outdoor', 'cycling', 'unspecified', [
+    'radfahren',
+    'fahrrad',
+    'cycling',
+    'bike',
+    'rad outdoor',
+  ]),
+  c('cardio-ergometer', 'Fahrradergometer', 'cycling', 'ergometer', [
+    'ergometer',
+    'heimtrainer',
+    'spinning',
+    'indoor bike',
+  ]),
+  c('cardio-rowing', 'Rudermaschine', 'rowing', 'rowing_machine', [
+    'rudern',
+    'rowing',
+    'ergo',
+    'concept2',
+  ]),
+  c('cardio-elliptical', 'Crosstrainer', 'elliptical', 'elliptical', [
+    'crosstrainer',
+    'elliptical',
+    'ellipsentrainer',
+  ]),
+  c('cardio-stair-climber', 'Stair Climber', 'stair_climbing', 'stair_climber', [
+    'stairmaster',
+    'stair climber',
+    'treppen',
+    'stepper',
+  ]),
+  c('cardio-swimming', 'Schwimmen', 'swimming', 'pool', [
+    'schwimmen',
+    'swimming',
+    'swim',
+    'pool',
+    'bahnen',
+  ]),
+  c('cardio-jump-rope', 'Seilspringen', 'jump_rope', 'jump_rope', [
+    'seilspringen',
+    'springseil',
+    'jump rope',
+    'rope skipping',
+  ]),
 ];

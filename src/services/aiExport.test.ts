@@ -224,7 +224,7 @@ describe('buildAiExport', () => {
   it('is self-describing: units, conventions and tracking types are explained', () => {
     const file = buildAiExport(buildDataset(), [], DEFAULT_AI_EXPORT_OPTIONS, NOW);
 
-    expect(file.exportVersion).toBe(2);
+    expect(file.exportVersion).toBe(3);
     expect(file.generatedAt).toBe(NOW.toISOString());
     expect(file.units.weight).toBe('kg');
     expect(file.conventions.trackingTypes.weight_reps).toContain('Volumen');
@@ -709,5 +709,83 @@ describe('export metadata', () => {
   it('ships an analysis instruction that forbids inventing values', () => {
     expect(AI_ANALYSIS_PROMPT).toContain('Erfinde keine fehlenden Werte');
     expect(AI_ANALYSIS_PROMPT).toContain('vier Wochen');
+  });
+});
+
+describe('buildAiExport — cardio', () => {
+  function cardioDataset(): AnalyticsDataset {
+    const running = makeExercise({
+      id: 'ex-run',
+      name: 'Laufen',
+      trackingType: 'cardio',
+      cardioModality: 'running',
+      weightMode: 'none',
+    });
+    const session = makeSession({ id: 's-run', startedAt: '2026-07-06T10:00:00.000Z' });
+    const se = makeSessionExercise({
+      id: 'se-run',
+      sessionId: 's-run',
+      exerciseId: 'ex-run',
+      exerciseNameSnapshot: 'Laufen',
+      trackingTypeSnapshot: 'cardio',
+      weightModeSnapshot: 'none',
+      cardioModalitySnapshot: 'running',
+    });
+    return {
+      exercises: [running],
+      sessions: [session],
+      sessionExercises: [se],
+      sets: [
+        makeSet({
+          sessionExerciseId: 'se-run',
+          weightKg: undefined,
+          reps: undefined,
+          durationSeconds: 1800,
+          distanceMeters: 6000,
+          averageHeartRateBpm: 150,
+          completedAt: '2026-07-06T10:30:00.000Z',
+        }),
+      ],
+    };
+  }
+
+  function findCardioSet(file: ReturnType<typeof buildAiExport>) {
+    const workouts = file.workouts as Array<{
+      exercises: Array<{ sets: Array<Record<string, unknown>> }>;
+    }>;
+    return workouts[0].exercises[0].sets[0];
+  }
+
+  it('exports structured cardio with a derived pace and separates it from strength', () => {
+    const file = buildAiExport(cardioDataset(), [], DEFAULT_AI_EXPORT_OPTIONS, NOW);
+    const set = findCardioSet(file) as {
+      trackingType: string;
+      cardio: { modality: string; distanceMeters: number; pace: { label: string } };
+      volumeKg: number | null;
+    };
+    expect(set.trackingType).toBe('cardio');
+    expect(set.cardio.modality).toBe('running');
+    expect(set.cardio.distanceMeters).toBe(6000);
+    expect(set.cardio.pace.label).toContain('5:00 min/km');
+    // No fabricated strength volume for cardio.
+    expect(set.volumeKg).toBeNull();
+    expect(file.conventions.cardio).toContain('duration');
+  });
+
+  it('omits heart rate by default and includes it only on opt-in', () => {
+    const withoutHr = findCardioSet(
+      buildAiExport(cardioDataset(), [], DEFAULT_AI_EXPORT_OPTIONS, NOW),
+    ) as { cardio: Record<string, unknown> };
+    expect('averageHeartRateBpm' in withoutHr.cardio).toBe(false);
+
+    const withHr = findCardioSet(
+      buildAiExport(
+        cardioDataset(),
+        [],
+        { ...DEFAULT_AI_EXPORT_OPTIONS, includeHeartRate: true },
+        NOW,
+      ),
+    ) as { cardio: { averageHeartRateBpm: number } };
+    expect(withHr.cardio.averageHeartRateBpm).toBe(150);
   });
 });

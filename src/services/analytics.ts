@@ -11,12 +11,14 @@ import {
   computePersonalRecords,
   effectiveLoadKg,
   estimatedOneRepMax,
+  isCardio,
   isCompleted,
   isWorkingSet,
   setVolumeKg,
   type PersonalRecords,
   type VolumeTotals,
 } from '@/services/metrics';
+import { aggregateCardio, type CardioTotals } from '@/services/cardioMetrics';
 import { computeRestStatistics, type RestStatistics } from '@/services/rest';
 import {
   currentWeeklyStreak,
@@ -110,6 +112,14 @@ export interface WeeklyPoint {
   sessions: number;
 }
 
+/** One week of cardio totals, for the cardio time-series charts. */
+export interface CardioWeeklyPoint {
+  week: string;
+  minutes: number;
+  distanceMeters: number;
+  activities: number;
+}
+
 export interface AnalyticsResult {
   range: DateRange | null;
   sessionCount: number;
@@ -125,6 +135,10 @@ export interface AnalyticsResult {
   weekly: WeeklyPoint[];
   restStatistics: RestStatistics;
   personalRecords: PersonalRecords[];
+  /** Cardio totals for the range, computed apart from every strength metric. */
+  cardio: CardioTotals;
+  /** Weekly cardio time-series (minutes, distance, activities) for the charts. */
+  cardioWeekly: CardioWeeklyPoint[];
   streakWeeks: number;
   /** Share of weeks in the range that contain at least one workout, 0..1. */
   consistency: number;
@@ -155,9 +169,23 @@ export function computeAnalytics(
 
   const allContexts = buildSetContexts(dataset);
   const contexts = filterContextsByRange(allContexts, range);
+  // Strength metrics exclude cardio entirely: cardio must never add to volume,
+  // muscle-group load, working-set counts or the strength rest statistics.
   const countedContexts = contexts.filter(
-    (context) => isCompleted(context.set) && (includeWarmup || isWorkingSet(context.set)),
+    (context) =>
+      isCompleted(context.set) &&
+      (includeWarmup || isWorkingSet(context.set)) &&
+      !isCardio(context.set, context.sessionExercise),
   );
+  // Cardio is aggregated separately from its own completed sets in range.
+  const cardioContexts = contexts.filter(
+    (context) =>
+      isCompleted(context.set) && isCardio(context.set, context.sessionExercise),
+  );
+  const cardio = aggregateCardio(
+    cardioContexts.map(({ set, sessionExercise }) => ({ set, context: sessionExercise })),
+  );
+  const cardioWeekly = computeCardioWeeklySeries(cardioContexts);
 
   const sessionsInRange = dataset.sessions.filter(
     (session) =>
@@ -201,6 +229,8 @@ export function computeAnalytics(
     muscleGroups: computeMuscleGroupLoad(countedContexts, exercisesById),
     weekly: computeWeeklySeries(countedContexts, sessionsInRange),
     restStatistics: computeRestStatistics(countedContexts.map((context) => context.set)),
+    cardio,
+    cardioWeekly,
     personalRecords: [
       ...computePersonalRecords(contexts, { includeWarmup }).values(),
     ].sort((a, b) => a.exerciseName.localeCompare(b.exerciseName, 'de')),
@@ -315,6 +345,31 @@ export function computeWeeklySeries(
     ensure(weekKey(session.startedAt)).sessions += 1;
   }
 
+  return [...byWeek.values()].sort((a, b) => a.week.localeCompare(b.week));
+}
+
+/**
+ * Weekly cardio totals (minutes, distance, activities) over the given completed
+ * cardio contexts. Kept apart from {@link computeWeeklySeries} so cardio minutes
+ * and strength volume never share an axis.
+ */
+export function computeCardioWeeklySeries(
+  cardioContexts: SetWithContext[],
+): CardioWeeklyPoint[] {
+  const byWeek = new Map<string, CardioWeeklyPoint>();
+  for (const { set, session } of cardioContexts) {
+    const week = weekKey(session.startedAt);
+    const point = byWeek.get(week) ?? {
+      week,
+      minutes: 0,
+      distanceMeters: 0,
+      activities: 0,
+    };
+    point.minutes += (set.durationSeconds ?? 0) / 60;
+    point.distanceMeters += set.distanceMeters ?? 0;
+    point.activities += 1;
+    byWeek.set(week, point);
+  }
   return [...byWeek.values()].sort((a, b) => a.week.localeCompare(b.week));
 }
 

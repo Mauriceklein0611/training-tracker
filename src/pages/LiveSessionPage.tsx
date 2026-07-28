@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { CheckCircle2, Plus, Trash2, X } from 'lucide-react';
 import { db } from '@/db/db';
@@ -53,6 +53,20 @@ export default function LiveSessionPage() {
   }, [detail?.session.templateId]);
 
   const [pickerOpen, setPickerOpen] = useState(false);
+  // Quick cardio entry (?add=cardio): open the picker filtered to cardio once,
+  // then strip the param so a reload does not reopen it.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [pickerCardioOnly, setPickerCardioOnly] = useState(false);
+  useEffect(() => {
+    if (searchParams.get('add') === 'cardio') {
+      setPickerCardioOnly(true);
+      setPickerOpen(true);
+      const next = new URLSearchParams(searchParams);
+      next.delete('add');
+      setSearchParams(next, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
+
   const [finishOpen, setFinishOpen] = useState(false);
   const [discardOpen, setDiscardOpen] = useState(false);
   const [notes, setNotes] = useState<string | null>(null);
@@ -225,10 +239,16 @@ export default function LiveSessionPage() {
 
       <ExercisePickerDialog
         open={pickerOpen}
-        onClose={() => setPickerOpen(false)}
+        title={pickerCardioOnly ? 'Cardio-Aktivität wählen' : 'Übung hinzufügen'}
+        trackingTypeFilter={pickerCardioOnly ? 'cardio' : undefined}
+        onClose={() => {
+          setPickerOpen(false);
+          setPickerCardioOnly(false);
+        }}
         onSelect={async (exercise) => {
           await addExerciseToSession(sessionId, exercise);
           setPickerOpen(false);
+          setPickerCardioOnly(false);
         }}
       />
 

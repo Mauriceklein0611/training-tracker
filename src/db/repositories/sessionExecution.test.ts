@@ -88,6 +88,37 @@ describe('temporary execution change (Feature 3)', () => {
     expect(effectiveLoadKg(set2, seAfter)).toBe(40);
   });
 
+  it('fills only the missing snapshot fields of a partially-frozen set', async () => {
+    const exercise = await barbellPress();
+    const session = await startFreeSession('Test');
+    const se = await addExerciseToSession(session.id, exercise);
+    const set = await addSet(se.id, { restTargetSeconds: 120 });
+    await completeSet(set.id, { weightKg: 40, reps: 10 });
+
+    // Simulate a partially-frozen set: it already carries its own equipment
+    // (a manual dumbbell tag) but is missing the weight-mode snapshot.
+    await db.workoutSets.update(set.id, {
+      equipmentSnapshot: 'dumbbells',
+      weightModeSnapshot: undefined,
+      weightMultiplierSnapshot: undefined,
+      trackingTypeSnapshot: undefined,
+    });
+
+    await setSessionExerciseExecution(se.id, {
+      equipment: 'machine',
+      weightMode: 'total',
+      weightMultiplier: 1,
+    });
+
+    const frozen = (await db.workoutSets.get(set.id))!;
+    // The existing equipment field is preserved, never overwritten…
+    expect(frozen.equipmentSnapshot).toBe('dumbbells');
+    // …while the missing fields are filled from the pre-switch context (barbell
+    // was total mode), not from the new machine execution.
+    expect(frozen.weightModeSnapshot).toBe('total');
+    expect(frozen.trackingTypeSnapshot).toBe('weight_reps');
+  });
+
   it('freezes a pre-feature completed set (no snapshot) before changing execution', async () => {
     const exercise = await barbellPress();
     const session = await startFreeSession('Test');

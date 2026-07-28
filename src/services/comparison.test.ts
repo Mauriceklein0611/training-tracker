@@ -159,6 +159,57 @@ describe('compareSet — weighted exercises', () => {
     expect(compareSet({ weightKg: 80 }, match, weighted)).toBeNull();
   });
 
+  it('reports the same execution by default', () => {
+    expect(compareSet({ weightKg: 80, reps: 8 }, match, weighted)?.sameExecution).toBe(
+      true,
+    );
+  });
+});
+
+describe('compareSet — different executions are references only', () => {
+  const barbell = makeSessionExercise({
+    trackingTypeSnapshot: 'weight_reps',
+    weightModeSnapshot: 'total',
+    equipmentSnapshot: 'barbell',
+  });
+  const dumbbell = makeSessionExercise({
+    trackingTypeSnapshot: 'weight_reps',
+    weightModeSnapshot: 'per_hand',
+    weightMultiplierSnapshot: 2,
+    equipmentSnapshot: 'dumbbells',
+  });
+
+  it('shows no delta and no record when the previous set was a different execution', () => {
+    // Previous set was a per-hand dumbbell set (its own context); the current
+    // set is a total-load barbell set. They are not comparable.
+    const match = {
+      set: makeSet({ weightKg: 20, reps: 10, equipmentSnapshot: 'dumbbells' }),
+      matchedBy: 'same-position' as const,
+    };
+    const result = compareSet(
+      { weightKg: 80, reps: 8 },
+      match,
+      barbell,
+      { bestLoadKg: 10 },
+      dumbbell,
+    );
+    expect(result?.sameExecution).toBe(false);
+    expect(result?.deltas).toEqual([]);
+    expect(result?.isRecord).toBe(false);
+    // The previous set is still summarised with *its own* per-hand convention.
+    expect(result?.previousSummary).toBe('20 kg/Hand × 10 Wdh.');
+  });
+
+  it('compares normally when both sides share the execution', () => {
+    const match = {
+      set: makeSet({ weightKg: 70, reps: 8, equipmentSnapshot: 'barbell' }),
+      matchedBy: 'same-position' as const,
+    };
+    const result = compareSet({ weightKg: 80, reps: 8 }, match, barbell, {}, barbell);
+    expect(result?.sameExecution).toBe(true);
+    expect(result?.deltas[0]).toEqual({ label: '+10 kg', direction: 'better' });
+  });
+
   it('ignores floating point noise', () => {
     const noisy = {
       set: makeSet({ weightKg: 0.1 + 0.2, reps: 8 }),

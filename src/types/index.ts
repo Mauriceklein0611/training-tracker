@@ -18,8 +18,34 @@ export type TrackingType =
   | 'assisted_bodyweight_reps'
   /** Repetitions only, no meaningful load (TRX rows, mobility work). */
   | 'reps_only'
-  /** Time under tension / holds (plank, dead hang). */
-  | 'duration';
+  /**
+   * Time under tension / holds (plank, dead hang). Strictly a *strength* hold,
+   * NOT a cardio activity — a `duration` exercise never becomes cardio and its
+   * history is never re-interpreted as such.
+   */
+  | 'duration'
+  /**
+   * Cardio activity (running, cycling, rowing …). Its own metrics (duration,
+   * distance, pace) live apart from every strength metric; it never contributes
+   * to kilogram volume, 1RM, working-set counts or strength progression.
+   */
+  | 'cardio';
+
+/**
+ * The kind of cardio activity. Stable, language-neutral internal values (German
+ * labels live in `services/cardio.ts`); it describes the *activity*, whereas
+ * {@link Equipment} describes the device/context. Never guessed from a name.
+ */
+export type CardioModality =
+  | 'running'
+  | 'walking'
+  | 'cycling'
+  | 'rowing'
+  | 'swimming'
+  | 'elliptical'
+  | 'stair_climbing'
+  | 'jump_rope'
+  | 'other';
 
 /** Semantics of the number entered in the weight field. */
 export type WeightMode =
@@ -52,6 +78,15 @@ export type Equipment =
   | 'bodyweight'
   | 'band'
   | 'trx'
+  // Cardio devices (added with the cardio tracking type). Structured so cardio
+  // history keeps the device it was performed on; never inferred from a name.
+  | 'treadmill'
+  | 'ergometer'
+  | 'rowing_machine'
+  | 'elliptical'
+  | 'stair_climber'
+  | 'pool'
+  | 'jump_rope'
   | 'other';
 
 export type SessionStatus = 'active' | 'completed';
@@ -113,6 +148,11 @@ export interface Exercise {
    */
   defaultEquipment?: Equipment;
   trackingType: TrackingType;
+  /**
+   * The cardio activity, for `trackingType: 'cardio'` exercises. Absent for
+   * strength/`duration` exercises. Never guessed from the name.
+   */
+  cardioModality?: CardioModality;
   weightMode: WeightMode;
   /**
    * Factor applied to the entered weight when computing volume.
@@ -328,6 +368,10 @@ export interface WorkoutUnitTemplateExercise extends ExerciseGrouping {
   targetRepMin?: number;
   targetRepMax?: number;
   targetDurationSeconds?: number;
+  /** Cardio target distance in metres (cardio exercises only). */
+  targetDistanceMeters?: number;
+  /** Cardio target RPE 1–10 (cardio exercises only). */
+  targetRpe?: number;
   restSeconds: number;
   notes: string;
 }
@@ -414,6 +458,10 @@ export interface TemplateExercise extends ExerciseGrouping {
   targetRepMin?: number;
   targetRepMax?: number;
   targetDurationSeconds?: number;
+  /** Cardio target distance in metres (cardio exercises only). */
+  targetDistanceMeters?: number;
+  /** Cardio target RPE 1–10 (cardio exercises only). */
+  targetRpe?: number;
   restSeconds: number;
   notes: string;
 }
@@ -467,6 +515,10 @@ export interface TemplateExerciseSnapshot extends ExerciseGrouping {
   targetRepMin?: number;
   targetRepMax?: number;
   targetDurationSeconds?: number;
+  /** Cardio target distance in metres (cardio exercises only). */
+  targetDistanceMeters?: number;
+  /** Cardio target RPE 1–10 (cardio exercises only). */
+  targetRpe?: number;
   restSeconds: number;
   notes: string;
 }
@@ -642,6 +694,13 @@ export interface SessionExercise extends ExerciseGrouping {
   order: number;
   exerciseNameSnapshot: string;
   trackingTypeSnapshot: TrackingType;
+  /**
+   * The cardio activity in use for this exercise in this workout (cardio only).
+   * Set from the exercise at start; the *default* for new cardio sets — each set
+   * freezes its own {@link WorkoutSet.cardioModalitySnapshot}. Absent for
+   * strength exercises and older rows.
+   */
+  cardioModalitySnapshot?: CardioModality;
   weightModeSnapshot: WeightMode;
   weightMultiplierSnapshot: number;
   /**
@@ -674,6 +733,10 @@ export interface SessionExercise extends ExerciseGrouping {
   targetRepMinSnapshot?: number;
   targetRepMaxSnapshot?: number;
   targetDurationSecondsSnapshot?: number;
+  /** Cardio target distance in metres, frozen at start (cardio only). */
+  targetDistanceMetersSnapshot?: number;
+  /** Cardio target RPE 1–10, frozen at start (cardio only). */
+  targetRpeSnapshot?: number;
   notes: string;
   createdAt: ISODateTime;
   updatedAt: ISODateTime;
@@ -691,6 +754,23 @@ export interface WorkoutSet {
   rir?: number;
   /** Rate of perceived exertion, 1–10. */
   rpe?: number;
+  /**
+   * Cardio metrics (cardio sets only). All optional and stored raw; a missing
+   * value stays `undefined`, never coerced to 0. Pace/speed are always derived
+   * from duration + distance, never stored. Distance is always in metres.
+   */
+  distanceMeters?: number;
+  averageHeartRateBpm?: number;
+  caloriesKcal?: number;
+  elevationGainMeters?: number;
+  cadenceRpm?: number;
+  resistanceLevel?: number;
+  /**
+   * Per-set cardio modality snapshot, frozen on completion so a later modality
+   * switch on the same exercise never rewrites this set. Falls back to the
+   * session-exercise snapshot when absent.
+   */
+  cardioModalitySnapshot?: CardioModality;
   /**
    * Per-set execution snapshot (added schema v27). Frozen when the set is
    * completed so it survives a later temporary execution switch on the same
@@ -798,8 +878,14 @@ export interface ExerciseWeeklyGoal {
 export interface WeeklyGoals {
   /** Training sessions (distinct training days) per calendar week. */
   sessionsPerWeek?: number;
-  /** Total working sets per calendar week. */
+  /** Total working sets per calendar week. Strength only; cardio never counts. */
   workingSetsPerWeek?: number;
+  /** Cardio minutes per calendar week (optional). */
+  cardioMinutesPerWeek?: number;
+  /** Cardio distance in metres per calendar week (optional). */
+  cardioDistancePerWeekMeters?: number;
+  /** Cardio sessions (distinct days with a cardio activity) per week (optional). */
+  cardioSessionsPerWeek?: number;
   /** Per-exercise weekly targets. */
   exerciseGoals?: ExerciseWeeklyGoal[];
 }

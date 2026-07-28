@@ -14,6 +14,7 @@ import {
   buildWorkoutUnitPackage,
   importWorkoutUnitPackage,
   parseWorkoutUnitPackage,
+  workoutUnitPackageFingerprint,
   workoutUnitPackageSchema,
 } from '@/services/unitPackage';
 import type { Exercise } from '@/types';
@@ -165,5 +166,71 @@ describe('importWorkoutUnitPackage', () => {
     const preview = analyzeUnitPackageImport(pkg, await db.exercises.toArray(), fps);
     expect(preview.alreadyImported).toBe(true);
     expect(preview.unitNames).toEqual(['Push']);
+  });
+
+  it('roundtrips a cardio unit (v2) without losing equipment or cardio targets', async () => {
+    const running = await createExercise({
+      name: 'Rudern',
+      primaryMuscleGroup: 'Ganzkörper',
+      secondaryMuscleGroups: [],
+      equipment: 'Rudergerät',
+      defaultEquipment: 'rowing_machine',
+      trackingType: 'cardio',
+      cardioModality: 'rowing',
+      weightMode: 'none',
+      weightMultiplier: 1,
+      defaultRestSeconds: 60,
+      notes: '',
+    });
+    const unit = await createWorkoutUnit({ name: 'Cardio', description: '' });
+    const unitRow = await addExerciseToWorkoutUnit(unit.id, running);
+    await (
+      await import('@/db/repositories/workoutUnits')
+    ).updateWorkoutUnitExercise(unitRow.id, {
+      targetSets: 3,
+      targetDistanceMeters: 2000,
+      targetRpe: 6,
+    });
+
+    const detail = (await getWorkoutUnitWithExercises(unit.id))!;
+    const pkg = buildWorkoutUnitPackage([detail], {
+      packageName: 'Cardio',
+      source: 'app-export',
+    });
+    expect(pkg.schemaVersion).toBe(2);
+    expect(pkg.exercises[0].defaultEquipment).toBe('rowing_machine');
+    expect(pkg.exercises[0].cardioModality).toBe('rowing');
+
+    await resetDatabase();
+    await importWorkoutUnitPackage(pkg);
+
+    const imported = (await db.exercises.toArray()).find((e) => e.name === 'Rudern')!;
+    expect(imported.trackingType).toBe('cardio');
+    expect(imported.cardioModality).toBe('rowing');
+    expect(imported.defaultEquipment).toBe('rowing_machine');
+
+    const importedUnits = await listWorkoutUnitsWithExercises();
+    const importedRow = importedUnits[0].exercises[0];
+    expect(importedRow.targetDistanceMeters).toBe(2000);
+    expect(importedRow.targetRpe).toBe(6);
+  });
+
+  it('fingerprint changes when a rep target or rest changes', async () => {
+    const unit = await seedUnit();
+    const detail = (await getWorkoutUnitWithExercises(unit.id))!;
+    const pkg = buildWorkoutUnitPackage([detail], {
+      packageName: 'Push',
+      source: 'app-export',
+    });
+    const original = workoutUnitPackageFingerprint(pkg);
+
+    const withRepChange = structuredClone(pkg);
+    withRepChange.units[0].exercises[0].targetRepMax =
+      (withRepChange.units[0].exercises[0].targetRepMax ?? 10) + 1;
+    expect(workoutUnitPackageFingerprint(withRepChange)).not.toBe(original);
+
+    const withRestChange = structuredClone(pkg);
+    withRestChange.units[0].exercises[0].restSeconds += 30;
+    expect(workoutUnitPackageFingerprint(withRestChange)).not.toBe(original);
   });
 });

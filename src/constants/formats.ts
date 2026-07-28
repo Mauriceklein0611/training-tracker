@@ -17,23 +17,28 @@
 /** Portable training-plan package: AI-created plans, plan export and sharing. */
 export const PLAN_PACKAGE_FORMAT = 'training-plan-package';
 /**
- * Current version: 3 carries the plan schedule (rotation / repeating cycle /
- * weekly + rest days). 2 added multi-day plans (splits). Exports always write
- * this.
+ * Current version: 4 carries structured default equipment plus cardio (modality
+ * and cardio targets — distance/RPE). 3 carries the plan schedule (rotation /
+ * repeating cycle / weekly + rest days). 2 added multi-day plans (splits).
+ * Exports always write this.
  */
-export const PLAN_PACKAGE_SCHEMA_VERSION = 3;
+export const PLAN_PACKAGE_SCHEMA_VERSION = 4;
 /**
  * Package versions this app can still import. Version 1 (single implicit day) is
  * converted on import into a plan with one day ("Tag A"); version 2 (no
- * schedule) imports with a default free-rotation.
+ * schedule) imports with a default free-rotation; versions 3 and 4 share the
+ * current schema, with the v4-only structured-equipment/cardio fields simply
+ * absent in a v3 file.
  */
-export const SUPPORTED_PLAN_PACKAGE_VERSIONS = [1, 2, 3] as const;
+export const SUPPORTED_PLAN_PACKAGE_VERSIONS = [1, 2, 3, 4] as const;
 
 /** Self-describing kit handed to ChatGPT so it can build a plan package. */
 export const PLAN_BUILDER_KIT_FORMAT = 'training-plan-builder-kit';
-export const PLAN_BUILDER_KIT_VERSION = 2;
+/** Version 3 documents structured equipment and cardio (modality + targets). */
+export const PLAN_BUILDER_KIT_VERSION = 3;
 
 /** Portable package for sharing one or more library workout units (Phase 7.6). */
 export const WORKOUT_UNIT_PACKAGE_FORMAT = 'training-workout-unit-package';
-export const WORKOUT_UNIT_PACKAGE_SCHEMA_VERSION = 1;
-export const SUPPORTED_WORKOUT_UNIT_PACKAGE_VERSIONS = [1] as const;
+/** Version 2 mirrors plan-package v4: structured equipment + cardio fields. */
+export const WORKOUT_UNIT_PACKAGE_SCHEMA_VERSION = 2;
+export const SUPPORTED_WORKOUT_UNIT_PACKAGE_VERSIONS = [1, 2] as const;

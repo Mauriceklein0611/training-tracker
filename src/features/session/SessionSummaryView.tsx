@@ -1,7 +1,11 @@
-import { Trophy } from 'lucide-react';
+import { Activity, Trophy } from 'lucide-react';
 import { Stat } from '@/components/ui/Card';
 import { equipmentLabel } from '@/services/equipment';
 import type { SessionSummary } from '@/services/sessionSummary';
+import {
+  formatCardioDistance,
+  formatDuration as formatCardioDuration,
+} from '@/services/cardioMetrics';
 import { formatDurationLong } from '@/utils/date';
 import {
   formatKg,
@@ -59,6 +63,51 @@ export function SessionSummaryView({ summary }: { summary: SessionSummary }) {
           (Körpergewicht, unterstützt oder zeitbasiert). Diese werden bewusst nicht in kg
           bewertet.
         </p>
+      ) : null}
+
+      {summary.hasCardio ? (
+        <div className="rounded-2xl border border-border bg-surface p-3">
+          <h3 className="flex items-center gap-2 text-sm font-semibold">
+            <Activity size={18} aria-hidden="true" className="text-accent" />
+            Cardio
+          </h3>
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <Stat label="Aktivitäten" value={formatNumber(summary.cardio.activities)} />
+            <Stat
+              label="Cardio-Dauer"
+              value={formatCardioDuration(summary.cardio.totalDurationSeconds)}
+            />
+            {summary.cardio.totalDistanceMeters > 0 ? (
+              <Stat
+                label="Distanz"
+                value={formatCardioDistance(
+                  summary.cardio.totalDistanceMeters,
+                  undefined,
+                )}
+              />
+            ) : null}
+            {summary.cardio.averageHeartRateBpm != null ? (
+              <Stat
+                label="Ø Herzfrequenz"
+                value={`${Math.round(summary.cardio.averageHeartRateBpm)} bpm`}
+                hint="aufgezeichnet"
+              />
+            ) : null}
+            {summary.cardio.totalCaloriesKcal > 0 ? (
+              <Stat
+                label="Kalorien"
+                value={`${formatNumber(summary.cardio.totalCaloriesKcal)} kcal`}
+                hint="erfasst"
+              />
+            ) : null}
+            {summary.cardio.totalElevationGainMeters > 0 ? (
+              <Stat
+                label="Höhenmeter"
+                value={`${formatNumber(summary.cardio.totalElevationGainMeters)} m`}
+              />
+            ) : null}
+          </div>
+        </div>
       ) : null}
 
       {summary.newRecords.length > 0 ? (

@@ -1,6 +1,16 @@
 import type { SessionExercise, SetType, WorkoutSet } from '@/types';
 import { effectiveLoadKg, estimatedOneRepMax } from '@/services/metrics';
+import { effectiveSetExecution, executionKey } from '@/services/equipment';
 import { formatKg, formatNumber } from '@/utils/format';
+
+/** The execution-defining fields a comparison needs from a session-exercise. */
+export type ExecutionContext = Pick<
+  SessionExercise,
+  | 'trackingTypeSnapshot'
+  | 'weightModeSnapshot'
+  | 'weightMultiplierSnapshot'
+  | 'equipmentSnapshot'
+>;
 
 /**
  * Comparing the set being entered against the same set of the previous workout.
@@ -71,6 +81,14 @@ export interface SetComparison {
   deltas: ComparisonDelta[];
   /** True when the current values beat everything recorded before. */
   isRecord: boolean;
+  /**
+   * Whether the matched previous set was performed with the *same* execution
+   * (equipment, weight mode, multiplier, tracking type) as the set being
+   * entered. When false the previous set is shown as a clearly labelled
+   * reference only — no delta and no record claim — because comparing a
+   * per-hand dumbbell set against a total-load barbell one is meaningless.
+   */
+  sameExecution: boolean;
 }
 
 /** Best values recorded before this workout, used for the "new best" badge. */
@@ -156,61 +174,86 @@ function summarise(
 export function compareSet(
   current: ComparableValues,
   match: PreviousSetMatch,
-  context: Pick<
-    SessionExercise,
-    'trackingTypeSnapshot' | 'weightModeSnapshot' | 'weightMultiplierSnapshot'
-  >,
+  context: ExecutionContext,
   baseline: RecordBaseline = {},
+  /**
+   * The previous set's own execution context. Defaults to `context` for callers
+   * that operate within a single, unchanged execution. When it differs, the
+   * previous set is evaluated with *its* convention and, if the executions do
+   * not match, shown as a reference without deltas or a record claim.
+   */
+  previousContext: ExecutionContext = context,
 ): SetComparison | null {
   const previous = match.set;
   const type = context.trackingTypeSnapshot;
+
+  // Each side is resolved with its own effective execution (per-set snapshot
+  // over context), so a temporary switch never rewrites either reading.
+  const currentExec = effectiveSetExecution({}, context);
+  const previousExec = effectiveSetExecution(previous, previousContext);
+  const sameExecution =
+    executionKey('x', currentExec) === executionKey('x', previousExec);
+  const previousCtx = {
+    trackingTypeSnapshot: previousExec.trackingType,
+    weightModeSnapshot: previousExec.weightMode,
+    weightMultiplierSnapshot: previousExec.weightMultiplier,
+  };
+
   const deltas: ComparisonDelta[] = [];
 
   if (type === 'duration') {
     if (current.durationSeconds == null) return null;
-    if (previous.durationSeconds != null) {
-      const delta = describeDelta(
-        current.durationSeconds,
-        previous.durationSeconds,
-        'seconds',
-      );
-      if (delta) deltas.push(delta);
-    }
-  } else {
-    if (current.reps == null) return null;
+  } else if (current.reps == null) {
+    return null;
+  }
 
-    // Weight first: it is the headline number for weighted work.
-    if (type === 'weight_reps') {
-      const currentLoad = effectiveLoadKg({ weightKg: current.weightKg }, context);
-      const previousLoad = effectiveLoadKg(previous, context);
-      if (currentLoad != null && previousLoad != null) {
-        const delta = describeDelta(currentLoad, previousLoad, 'kg');
+  // Deltas and the record claim are only honest for the same execution. A set
+  // from another execution is still shown (previousSummary) as a reference.
+  if (sameExecution) {
+    if (type === 'duration') {
+      if (previous.durationSeconds != null && current.durationSeconds != null) {
+        const delta = describeDelta(
+          current.durationSeconds,
+          previous.durationSeconds,
+          'seconds',
+        );
         if (delta) deltas.push(delta);
       }
-    } else if (current.weightKg != null && previous.weightKg != null) {
-      // Bodyweight: added weight up is better, assistance down is better.
-      const lowerIsBetter = context.weightModeSnapshot === 'assistance';
-      const delta = describeDelta(
-        current.weightKg,
-        previous.weightKg,
-        'kg',
-        lowerIsBetter,
-      );
-      if (delta) deltas.push(delta);
-    }
+    } else {
+      // Weight first: it is the headline number for weighted work.
+      if (type === 'weight_reps') {
+        const currentLoad = effectiveLoadKg({ weightKg: current.weightKg }, context);
+        const previousLoad = effectiveLoadKg(previous, previousContext);
+        if (currentLoad != null && previousLoad != null) {
+          const delta = describeDelta(currentLoad, previousLoad, 'kg');
+          if (delta) deltas.push(delta);
+        }
+      } else if (current.weightKg != null && previous.weightKg != null) {
+        // Bodyweight: added weight up is better, assistance down is better.
+        const lowerIsBetter = context.weightModeSnapshot === 'assistance';
+        const delta = describeDelta(
+          current.weightKg,
+          previous.weightKg,
+          'kg',
+          lowerIsBetter,
+        );
+        if (delta) deltas.push(delta);
+      }
 
-    if (previous.reps != null) {
-      const delta = describeDelta(current.reps, previous.reps, 'reps');
-      if (delta) deltas.push(delta);
+      if (previous.reps != null && current.reps != null) {
+        const delta = describeDelta(current.reps, previous.reps, 'reps');
+        if (delta) deltas.push(delta);
+      }
     }
   }
 
   return {
     previous,
     matchedBy: match.matchedBy,
-    previousSummary: summarise(previous, context),
+    previousSummary: summarise(previous, previousCtx),
     deltas,
-    isRecord: isNewRecord(current, context, baseline),
+    isRecord: sameExecution && isNewRecord(current, context, baseline),
+    sameExecution,
   };
 }
 

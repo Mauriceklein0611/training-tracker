@@ -8,6 +8,7 @@ export const TRACKING_TYPE_LABELS: Record<TrackingType, string> = {
   assisted_bodyweight_reps: 'Unterstützt',
   reps_only: 'Nur Wiederholungen',
   duration: 'Zeit',
+  cardio: 'Cardio',
 };
 
 export const TRACKING_TYPE_HELP: Record<TrackingType, string> = {
@@ -19,6 +20,9 @@ export const TRACKING_TYPE_HELP: Record<TrackingType, string> = {
     'Unterstützte Eigengewichtsübung, z. B. Klimmzüge an der Maschine oder mit Band.',
   reps_only: 'Nur Wiederholungen ohne sinnvolle Last, z. B. TRX-Rudern oder Mobilität.',
   duration: 'Zeit statt Wiederholungen, z. B. Plank oder Dead Hang.',
+  cardio:
+    'Ausdauertraining mit Dauer und/oder Distanz, z. B. Laufen, Radfahren oder Rudern. ' +
+    'Wird getrennt von Kraft ausgewertet.',
 };
 
 export const WEIGHT_MODE_LABELS: Record<WeightMode, string> = {

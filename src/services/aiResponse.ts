@@ -17,11 +17,16 @@ import { fingerprint } from '@/utils/fingerprint';
  */
 
 /** The one response schema version this app understands. */
-export const SUPPORTED_RESPONSE_SCHEMA_VERSION = 1;
+/** Current version. v2 adds cardio/duration target changes; v1 is still read. */
+export const SUPPORTED_RESPONSE_SCHEMA_VERSION = 2;
+export const ACCEPTED_RESPONSE_SCHEMA_VERSIONS = [1, 2] as const;
 
 const setsSchema = z.number().int().min(1).max(50);
 const repSchema = z.number().int().min(0).max(1000);
 const restSchema = z.number().int().min(0).max(3600);
+const durationSchema = z.number().int().min(0).max(36000);
+const distanceSchema = z.number().min(0).max(1_000_000);
+const rpeSchema = z.number().min(1).max(10);
 const descriptionSchema = z.string().max(2000);
 
 // `expected` values may be null to mean "this field was not set" in the plan.
@@ -32,6 +37,10 @@ const targetChangeFields = {
   repMin: repSchema,
   repMax: repSchema,
   restSeconds: restSchema,
+  // Cardio/duration targets (response v2).
+  durationSeconds: durationSchema,
+  distanceMeters: distanceSchema,
+  rpe: rpeSchema,
 };
 
 const targetExpectedFields = {
@@ -39,6 +48,9 @@ const targetExpectedFields = {
   repMin: nullable(repSchema),
   repMax: nullable(repSchema),
   restSeconds: nullable(restSchema),
+  durationSeconds: nullable(durationSchema),
+  distanceMeters: nullable(distanceSchema),
+  rpe: nullable(rpeSchema),
 };
 
 // `.strict()` everywhere so an unknown field is rejected, never silently dropped.
@@ -86,8 +98,9 @@ const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 export const aiResponseSchema = z
   .object({
     format: z.literal('training-ai-response'),
-    // Must match exactly — a newer/older version is rejected, not coerced.
-    schemaVersion: z.literal(SUPPORTED_RESPONSE_SCHEMA_VERSION),
+    // Accept v1 and v2; a newer/unknown version is rejected, not coerced. The
+    // v2-only target fields simply do not appear in a v1 file.
+    schemaVersion: z.union([z.literal(1), z.literal(2)]),
     sourceExport: z
       .object({ exportId: z.string().optional(), fingerprint: z.string().optional() })
       .strict()
@@ -171,6 +184,9 @@ export interface PlanContextExercise {
   targetSets: number;
   targetRepMin?: number;
   targetRepMax?: number;
+  targetDurationSeconds?: number;
+  targetDistanceMeters?: number;
+  targetRpe?: number;
   restSeconds: number;
 }
 
@@ -216,6 +232,9 @@ const FIELD_TO_CURRENT: Record<string, keyof PlanContextExercise> = {
   repMin: 'targetRepMin',
   repMax: 'targetRepMax',
   restSeconds: 'restSeconds',
+  durationSeconds: 'targetDurationSeconds',
+  distanceMeters: 'targetDistanceMeters',
+  rpe: 'targetRpe',
 };
 
 function checkTargetProposal(

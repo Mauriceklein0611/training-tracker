@@ -76,6 +76,69 @@ describe('computeBlockMetrics', () => {
     expect(metrics.distinctExercises).toBe(1);
   });
 
+  it('keeps cardio in its own block section, out of the strength metrics', () => {
+    resetFactoryCounter();
+    const bench = makeExercise({ id: 'ex1', name: 'Bankdrücken' });
+    const running = makeExercise({
+      id: 'ex-run',
+      name: 'Laufen',
+      trackingType: 'cardio',
+      cardioModality: 'running',
+      weightMode: 'none',
+    });
+    const session = makeSession({
+      id: 's1',
+      startedAt: '2026-07-06T18:00:00',
+      finishedAt: '2026-07-06T19:00:00',
+    });
+    const dataset: AnalyticsDataset = {
+      exercises: [bench, running],
+      sessions: [session],
+      sessionExercises: [
+        makeSessionExercise({ id: 'se-str', sessionId: 's1', exerciseId: 'ex1' }),
+        makeSessionExercise({
+          id: 'se-run',
+          sessionId: 's1',
+          exerciseId: 'ex-run',
+          order: 1,
+          exerciseNameSnapshot: 'Laufen',
+          trackingTypeSnapshot: 'cardio',
+          weightModeSnapshot: 'none',
+          cardioModalitySnapshot: 'running',
+        }),
+      ],
+      sets: [
+        makeSet({
+          sessionExerciseId: 'se-str',
+          weightKg: 100,
+          reps: 10,
+          completedAt: '2026-07-06T18:10:00',
+        }),
+        makeSet({
+          sessionExerciseId: 'se-run',
+          weightKg: undefined,
+          reps: undefined,
+          durationSeconds: 1800,
+          distanceMeters: 6000,
+          completedAt: '2026-07-06T18:40:00',
+        }),
+      ],
+    };
+    const metrics = computeBlockMetrics(
+      dataset,
+      NO_BODY,
+      customRange('2026-07-06', '2026-07-12'),
+      'A',
+    );
+    // Strength side ignores the cardio activity.
+    expect(metrics.workingSets).toBe(1);
+    expect(metrics.distinctExercises).toBe(1);
+    // Cardio side has its own figures.
+    expect(metrics.cardioActivities).toBe(1);
+    expect(metrics.cardioDistanceMeters).toBe(6000);
+    expect(metrics.cardioDurationSeconds).toBe(1800);
+  });
+
   it('reports missing subjective and body data as null', () => {
     const dataset = datasetFor([{ id: 'a1', day: '2026-07-06', workingSets: 3 }]);
     const metrics = computeBlockMetrics(

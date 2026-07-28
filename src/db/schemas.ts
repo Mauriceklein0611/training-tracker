@@ -24,6 +24,20 @@ export const trackingTypeSchema = z.enum([
   'assisted_bodyweight_reps',
   'reps_only',
   'duration',
+  'cardio',
+]);
+
+/** Cardio activity enum (added with the cardio tracking type). */
+export const cardioModalitySchema = z.enum([
+  'running',
+  'walking',
+  'cycling',
+  'rowing',
+  'swimming',
+  'elliptical',
+  'stair_climbing',
+  'jump_rope',
+  'other',
 ]);
 
 export const weightModeSchema = z.enum([
@@ -36,7 +50,7 @@ export const weightModeSchema = z.enum([
 
 export const setTypeSchema = z.enum(['warmup', 'working', 'drop', 'failure']);
 
-/** Structured equipment enum (added schema version 27). */
+/** Structured equipment enum (added schema version 27; cardio devices later). */
 export const equipmentSchema = z.enum([
   'unspecified',
   'barbell',
@@ -47,6 +61,13 @@ export const equipmentSchema = z.enum([
   'bodyweight',
   'band',
   'trx',
+  'treadmill',
+  'ergometer',
+  'rowing_machine',
+  'elliptical',
+  'stair_climber',
+  'pool',
+  'jump_rope',
   'other',
 ]);
 
@@ -64,6 +85,16 @@ const groupingFields = {
   groupRestMode: groupRestModeSchema.optional(),
 };
 
+/**
+ * Optional cardio target fields shared by plan items, unit items and their
+ * snapshots (added with the cardio tracking type). All optional so every older
+ * strength row still validates. Distance is metres; RPE is 1–10.
+ */
+const cardioTargetFields = {
+  targetDistanceMeters: z.number().min(0).max(1_000_000).optional(),
+  targetRpe: z.number().min(1).max(10).optional(),
+};
+
 export const exerciseSchema = z.object({
   id,
   name: z.string().min(1, 'Name darf nicht leer sein'),
@@ -78,6 +109,8 @@ export const exerciseSchema = z.object({
   // Added in schema version 27; optional so older backups still validate.
   defaultEquipment: equipmentSchema.optional(),
   trackingType: trackingTypeSchema,
+  // Added with the cardio tracking type; optional so older backups still validate.
+  cardioModality: cardioModalitySchema.optional(),
   weightMode: weightModeSchema,
   weightMultiplier: z.number().positive().max(10).default(1),
   defaultRestSeconds: z.number().int().min(0).max(3600).default(120),
@@ -200,6 +233,7 @@ export const workoutUnitTemplateExerciseSchema = z.object({
   targetRepMin: z.number().int().min(0).max(1000).optional(),
   targetRepMax: z.number().int().min(0).max(1000).optional(),
   targetDurationSeconds: z.number().int().min(0).max(36000).optional(),
+  ...cardioTargetFields,
   restSeconds: z.number().int().min(0).max(3600).default(120),
   notes: z.string().default(''),
   ...groupingFields,
@@ -257,6 +291,7 @@ export const templateExerciseSchema = z.object({
   targetRepMin: z.number().int().min(0).max(1000).optional(),
   targetRepMax: z.number().int().min(0).max(1000).optional(),
   targetDurationSeconds: z.number().int().min(0).max(36000).optional(),
+  ...cardioTargetFields,
   restSeconds: z.number().int().min(0).max(3600).default(120),
   notes: z.string().default(''),
   ...groupingFields,
@@ -288,6 +323,7 @@ export const templateExerciseSnapshotSchema = z.object({
   targetRepMin: z.number().int().min(0).max(1000).optional(),
   targetRepMax: z.number().int().min(0).max(1000).optional(),
   targetDurationSeconds: z.number().int().min(0).max(36000).optional(),
+  ...cardioTargetFields,
   restSeconds: z.number().int().min(0).max(3600).default(120),
   notes: z.string().default(''),
   ...groupingFields,
@@ -345,6 +381,8 @@ export const sessionExerciseSchema = z.object({
   order: z.number().int().min(0),
   exerciseNameSnapshot: z.string().min(1),
   trackingTypeSnapshot: trackingTypeSchema,
+  // Added with the cardio tracking type; optional so older rows still validate.
+  cardioModalitySnapshot: cardioModalitySchema.optional(),
   weightModeSnapshot: weightModeSchema,
   weightMultiplierSnapshot: z.number().positive().max(10).default(1),
   // Added in schema version 27; optional so older rows still validate.
@@ -358,6 +396,9 @@ export const sessionExerciseSchema = z.object({
   targetRepMinSnapshot: z.number().int().min(0).max(1000).optional(),
   targetRepMaxSnapshot: z.number().int().min(0).max(1000).optional(),
   targetDurationSecondsSnapshot: z.number().int().min(0).max(36000).optional(),
+  // Added with the cardio tracking type; optional so older rows still validate.
+  targetDistanceMetersSnapshot: z.number().min(0).max(1_000_000).optional(),
+  targetRpeSnapshot: z.number().min(1).max(10).optional(),
   notes: z.string().default(''),
   ...groupingFields,
   createdAt: isoDateTime,
@@ -383,6 +424,15 @@ export const workoutSetSchema = z.object({
     .optional(),
   rir: z.number().min(0).max(10).optional(),
   rpe: z.number().min(1).max(10).optional(),
+  // Cardio metrics (added with the cardio tracking type); all optional and
+  // stored raw, never coerced to 0. Pace/speed are derived, never stored.
+  distanceMeters: z.number().min(0).max(1_000_000).optional(),
+  averageHeartRateBpm: z.number().min(20).max(300).optional(),
+  caloriesKcal: z.number().min(0).max(100_000).optional(),
+  elevationGainMeters: z.number().min(0).max(100_000).optional(),
+  cadenceRpm: z.number().min(0).max(400).optional(),
+  resistanceLevel: z.number().min(0).max(100).optional(),
+  cardioModalitySnapshot: cardioModalitySchema.optional(),
   // Per-set execution snapshot (added schema version 27); all optional so older
   // sets still validate and fall back to the session-exercise snapshot.
   equipmentSnapshot: equipmentSchema.optional(),
@@ -496,6 +546,11 @@ export const appSettingsSchema = z.object({
     .object({
       sessionsPerWeek: z.number().int().min(1).max(14).optional(),
       workingSetsPerWeek: z.number().int().min(1).max(500).optional(),
+      // Cardio weekly goals (added with the cardio tracking type); all optional
+      // so older settings still validate and absent means "no cardio goal".
+      cardioMinutesPerWeek: z.number().int().min(1).max(10000).optional(),
+      cardioDistancePerWeekMeters: z.number().min(1).max(1_000_000).optional(),
+      cardioSessionsPerWeek: z.number().int().min(1).max(14).optional(),
       exerciseGoals: z
         .array(
           z.object({

@@ -720,3 +720,53 @@ describe('import failure handling', () => {
     expect(await db.workoutSets.count()).toBe(1);
   });
 });
+
+describe('importBackup — cardio roundtrip', () => {
+  it('preserves cardio exercises and cardio metrics through a replace restore', async () => {
+    const running = await createExercise({
+      name: 'Laufen',
+      primaryMuscleGroup: 'Ganzkörper',
+      secondaryMuscleGroups: [],
+      equipment: '',
+      defaultEquipment: 'treadmill',
+      trackingType: 'cardio',
+      cardioModality: 'running',
+      weightMode: 'none',
+      weightMultiplier: 1,
+      defaultRestSeconds: 60,
+      notes: '',
+    });
+    const session = await startFreeSession('Cardio');
+    const se = await addExerciseToSession(session.id, running);
+    const set = await addSet(se.id, { restTargetSeconds: 60 });
+    await completeSet(set.id, {
+      durationSeconds: 1800,
+      distanceMeters: 6000,
+      averageHeartRateBpm: 150,
+      caloriesKcal: 400,
+    });
+    await finishSession(session.id);
+
+    const backup = await createBackup();
+    expect(backup.schemaVersion).toBe(SCHEMA_VERSION);
+    // The outer contract is unchanged — only the DB schema advanced.
+    expect(backup.exportFormatVersion).toBe(BACKUP_FORMAT_VERSION);
+
+    await resetDatabase();
+    await importBackup(backup, 'replace');
+
+    const restoredExercise = await db.exercises.get(running.id);
+    expect(restoredExercise?.trackingType).toBe('cardio');
+    expect(restoredExercise?.cardioModality).toBe('running');
+    expect(restoredExercise?.defaultEquipment).toBe('treadmill');
+
+    const restoredSet = await db.workoutSets.get(set.id);
+    expect(restoredSet?.durationSeconds).toBe(1800);
+    expect(restoredSet?.distanceMeters).toBe(6000);
+    expect(restoredSet?.averageHeartRateBpm).toBe(150);
+    expect(restoredSet?.caloriesKcal).toBe(400);
+    expect(restoredSet?.cardioModalitySnapshot).toBe('running');
+    // No strength value was invented.
+    expect(restoredSet?.weightKg).toBeUndefined();
+  });
+});

@@ -1,5 +1,6 @@
 import { db, ensureSettings } from '@/db/db';
 import type {
+  CardioModality,
   Equipment,
   Exercise,
   ExerciseGrouping,
@@ -76,6 +77,9 @@ function buildSessionExercise(
     targetRepMin?: number;
     targetRepMax?: number;
     targetDurationSeconds?: number;
+    /** Cardio plan targets frozen at start (cardio only). */
+    targetDistanceMeters?: number;
+    targetRpe?: number;
     /** Superset/circuit grouping carried over from the plan. */
     grouping?: ExerciseGrouping;
   } = {},
@@ -89,6 +93,8 @@ function buildSessionExercise(
     // Snapshots keep old sessions readable even if the exercise changes later.
     exerciseNameSnapshot: exercise.name,
     trackingTypeSnapshot: exercise.trackingType,
+    // Cardio activity snapshot (cardio only); the default for new cardio sets.
+    cardioModalitySnapshot: exercise.cardioModality,
     weightModeSnapshot: exercise.weightMode,
     weightMultiplierSnapshot: exercise.weightMultiplier,
     // Structured equipment starts from the exercise default (absent → the set
@@ -104,6 +110,8 @@ function buildSessionExercise(
     targetRepMinSnapshot: context.targetRepMin,
     targetRepMaxSnapshot: context.targetRepMax,
     targetDurationSecondsSnapshot: context.targetDurationSeconds,
+    targetDistanceMetersSnapshot: context.targetDistanceMeters,
+    targetRpeSnapshot: context.targetRpe,
     groupId: context.grouping?.groupId,
     groupType: context.grouping?.groupType,
     groupRestMode: context.grouping?.groupRestMode,
@@ -185,6 +193,8 @@ export async function startSessionFromWorkoutUnit(
           targetRepMin: row.targetRepMin,
           targetRepMax: row.targetRepMax,
           targetDurationSeconds: row.targetDurationSeconds,
+          targetDistanceMeters: row.targetDistanceMeters,
+          targetRpe: row.targetRpe,
           grouping: {
             groupId: row.groupId,
             groupType: row.groupType,
@@ -235,6 +245,15 @@ export async function startSessionFromTemplate(
       ? deloadDuration(seconds, activeDeload.durationReductionPercent)
       : seconds;
   };
+  // Cardio deload (Phase 4.3): the plan's durationReductionPercent is reused to
+  // reduce the cardio target distance too (its extended, documented semantics).
+  // Intervals fall under the set reduction; RPE and heart rate are never touched.
+  const effectiveDistance = (meters: number | undefined): number | undefined => {
+    if (meters == null) return undefined;
+    return activeDeload
+      ? deloadDuration(meters, activeDeload.durationReductionPercent)
+      : meters;
+  };
 
   return db.transaction(
     'rw',
@@ -273,6 +292,8 @@ export async function startSessionFromTemplate(
           targetRepMin: row.targetRepMin,
           targetRepMax: row.targetRepMax,
           targetDurationSeconds: effectiveDuration(row.targetDurationSeconds),
+          targetDistanceMeters: effectiveDistance(row.targetDistanceMeters),
+          targetRpe: row.targetRpe,
           grouping: {
             groupId: row.groupId,
             groupType: row.groupType,
@@ -465,23 +486,35 @@ export async function setSessionExerciseExecution(
       const timestamp = nowIso();
       for (const set of sets) {
         if (!set.completedAt) continue;
-        // Already frozen (completed under this or an earlier feature version)?
-        const alreadyFrozen =
-          set.weightModeSnapshot != null ||
-          set.equipmentSnapshot != null ||
-          set.trackingTypeSnapshot != null;
-        if (alreadyFrozen) continue;
-        await db.workoutSets.update(set.id, {
-          equipmentSnapshot: sessionExercise.equipmentSnapshot ?? 'unspecified',
-          weightModeSnapshot: sessionExercise.weightModeSnapshot,
-          weightMultiplierSnapshot: sessionExercise.weightMultiplierSnapshot,
-          trackingTypeSnapshot: sessionExercise.trackingTypeSnapshot,
-          updatedAt: timestamp,
-        });
+        // Freeze the execution the set was actually performed with, field by
+        // field: only *missing* snapshot fields are filled from the context
+        // that was in effect *before* this switch. A partially-frozen set (some
+        // fields already set) must not be treated as fully frozen, and an
+        // existing snapshot field is never overwritten.
+        const patch: Partial<WorkoutSet> = {};
+        if (set.equipmentSnapshot == null) {
+          patch.equipmentSnapshot = sessionExercise.equipmentSnapshot ?? 'unspecified';
+        }
+        if (set.weightModeSnapshot == null) {
+          patch.weightModeSnapshot = sessionExercise.weightModeSnapshot;
+        }
+        if (set.weightMultiplierSnapshot == null) {
+          patch.weightMultiplierSnapshot = sessionExercise.weightMultiplierSnapshot;
+        }
+        if (set.trackingTypeSnapshot == null) {
+          patch.trackingTypeSnapshot = sessionExercise.trackingTypeSnapshot;
+        }
+        if (Object.keys(patch).length > 0) {
+          patch.updatedAt = timestamp;
+          await db.workoutSets.update(set.id, patch);
+        }
       }
 
+      // The multiplier is validated by the caller; only enforce that a
+      // non-per-hand mode carries the neutral 1. No silent clamp of an invalid
+      // per-hand value — that is rejected before this function is called.
       const multiplier =
-        execution.weightMode === 'per_hand' ? Math.max(1, execution.weightMultiplier) : 1;
+        execution.weightMode === 'per_hand' ? execution.weightMultiplier : 1;
       await db.sessionExercises.update(sessionExerciseId, {
         equipmentSnapshot: execution.equipment,
         weightModeSnapshot: execution.weightMode,
@@ -514,6 +547,9 @@ export async function swapSessionExercise(
       trackingTypeSnapshot: newExercise.trackingType,
       weightModeSnapshot: newExercise.weightMode,
       weightMultiplierSnapshot: newExercise.weightMultiplier,
+      // Reset the equipment snapshot to the new exercise's default, so the
+      // replaced exercise's equipment can never leak into the slot.
+      equipmentSnapshot: newExercise.defaultEquipment ?? 'unspecified',
       restSecondsSnapshot: resolveRestSeconds({
         exerciseDefaultRestSeconds: newExercise.defaultRestSeconds,
         globalDefaultRestSeconds,
@@ -649,6 +685,13 @@ export interface NewSetInput {
   durationSeconds?: number;
   rir?: number;
   rpe?: number;
+  // Cardio metrics (cardio sets only); all optional.
+  distanceMeters?: number;
+  averageHeartRateBpm?: number;
+  caloriesKcal?: number;
+  elevationGainMeters?: number;
+  cadenceRpm?: number;
+  resistanceLevel?: number;
   restTargetSeconds: number;
 }
 
@@ -682,6 +725,12 @@ export async function addSet(
       durationSeconds: input.durationSeconds,
       rir: input.rir,
       rpe: input.rpe,
+      distanceMeters: input.distanceMeters,
+      averageHeartRateBpm: input.averageHeartRateBpm,
+      caloriesKcal: input.caloriesKcal,
+      elevationGainMeters: input.elevationGainMeters,
+      cadenceRpm: input.cadenceRpm,
+      resistanceLevel: input.resistanceLevel,
       restTargetSeconds: input.restTargetSeconds,
       createdAt: timestamp,
       updatedAt: timestamp,
@@ -710,6 +759,62 @@ export interface EditCompletedSetValues {
   weightMode: WeightMode;
   weightMultiplier: number;
   trackingType: TrackingType;
+}
+
+/** Cardio-section correction values; cardio uses its own field set. */
+export interface EditCompletedCardioValues {
+  durationSeconds?: number;
+  distanceMeters?: number;
+  averageHeartRateBpm?: number;
+  caloriesKcal?: number;
+  elevationGainMeters?: number;
+  cadenceRpm?: number;
+  resistanceLevel?: number;
+  rpe?: number;
+  cardioModality?: CardioModality;
+}
+
+/**
+ * Corrects an already-completed cardio section in place. Like
+ * {@link editCompletedSet} it preserves the id, position, rest data and
+ * completion time and never creates a duplicate; it rewrites only the cardio
+ * metrics and freezes the cardio execution (tracking type + modality). Strength
+ * fields are cleared so a section corrected from a mis-entry stays pure cardio.
+ */
+export async function editCompletedCardioSet(
+  setId: string,
+  values: EditCompletedCardioValues,
+): Promise<void> {
+  await db.transaction(
+    'rw',
+    db.workoutSets,
+    db.sessionExercises,
+    db.workoutSessions,
+    async () => {
+      const set = await db.workoutSets.get(setId);
+      if (!set) throw new Error('Der Satz wurde nicht gefunden.');
+      await db.workoutSets.update(setId, {
+        weightKg: undefined,
+        reps: undefined,
+        rir: undefined,
+        durationSeconds: values.durationSeconds,
+        distanceMeters: values.distanceMeters,
+        averageHeartRateBpm: values.averageHeartRateBpm,
+        caloriesKcal: values.caloriesKcal,
+        elevationGainMeters: values.elevationGainMeters,
+        cadenceRpm: values.cadenceRpm,
+        resistanceLevel: values.resistanceLevel,
+        rpe: values.rpe,
+        trackingTypeSnapshot: 'cardio',
+        weightModeSnapshot: 'none',
+        weightMultiplierSnapshot: 1,
+        cardioModalitySnapshot: values.cardioModality,
+        updatedAt: nowIso(),
+      });
+      const sessionExercise = await db.sessionExercises.get(set.sessionExerciseId);
+      if (sessionExercise) await touchSession(sessionExercise.sessionId);
+    },
+  );
 }
 
 /**
@@ -855,7 +960,21 @@ export async function closeOpenRests(
 export async function completeSet(
   setId: string,
   values: Partial<
-    Pick<WorkoutSet, 'weightKg' | 'reps' | 'durationSeconds' | 'rir' | 'rpe' | 'setType'>
+    Pick<
+      WorkoutSet,
+      | 'weightKg'
+      | 'reps'
+      | 'durationSeconds'
+      | 'rir'
+      | 'rpe'
+      | 'setType'
+      | 'distanceMeters'
+      | 'averageHeartRateBpm'
+      | 'caloriesKcal'
+      | 'elevationGainMeters'
+      | 'cadenceRpm'
+      | 'resistanceLevel'
+    >
   >,
   options: { startRest?: boolean } = {},
 ): Promise<{ newlyCompleted: boolean }> {
@@ -901,6 +1020,9 @@ export async function completeSet(
         set.weightMultiplierSnapshot ?? sessionExercise?.weightMultiplierSnapshot,
       trackingTypeSnapshot:
         set.trackingTypeSnapshot ?? sessionExercise?.trackingTypeSnapshot,
+      // Freeze the cardio modality the section was performed with (cardio only).
+      cardioModalitySnapshot:
+        set.cardioModalitySnapshot ?? sessionExercise?.cardioModalitySnapshot,
       completedAt: timestamp,
       restStartedAt: startRest ? timestamp : undefined,
       restEndedAt: undefined,

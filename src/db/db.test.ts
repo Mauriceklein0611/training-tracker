@@ -37,7 +37,7 @@ describe('schema migrations', () => {
   it('documents every version that exists', () => {
     expect(MIGRATIONS.map((migration) => migration.version)).toEqual([
       1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
-      24, 25, 26, 27,
+      24, 25, 26, 27, 28,
     ]);
     expect(MIGRATIONS[MIGRATIONS.length - 1].version).toBe(SCHEMA_VERSION);
   });
@@ -113,6 +113,88 @@ describe('schema migrations', () => {
     expect(exercise?.weightMultiplier).toBe(1);
     expect(exercise?.archived).toBe(false);
     expect(exercise?.secondaryMuscleGroups).toEqual([]);
+    upgraded.close();
+  });
+
+  it('keeps a duration exercise as duration and invents no cardio fields (v28)', async () => {
+    const legacy = await createVersion1Database();
+    // A time-based strength hold — must never be reclassified as cardio.
+    await legacy.table('exercises').add({
+      id: 'plank',
+      name: 'Plank',
+      primaryMuscleGroup: 'Rumpf',
+      equipment: '',
+      trackingType: 'duration',
+      weightMode: 'none',
+      defaultRestSeconds: 60,
+      notes: '',
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    });
+    await legacy.table('workoutSessions').add({
+      id: 'sess-1',
+      name: 'Aktiv',
+      status: 'active',
+      startedAt: '2026-01-02T10:00:00.000Z',
+      notes: '',
+      createdAt: '2026-01-02T10:00:00.000Z',
+      updatedAt: '2026-01-02T10:00:00.000Z',
+    });
+    await legacy.table('sessionExercises').add({
+      id: 'sx-1',
+      sessionId: 'sess-1',
+      exerciseId: 'plank',
+      order: 0,
+      exerciseNameSnapshot: 'Plank',
+      trackingTypeSnapshot: 'duration',
+      weightModeSnapshot: 'none',
+      weightMultiplierSnapshot: 1,
+      notes: '',
+      createdAt: '2026-01-02T10:00:00.000Z',
+      updatedAt: '2026-01-02T10:00:00.000Z',
+    });
+    await legacy.table('workoutSets').bulkAdd([
+      {
+        id: 'set-done',
+        sessionExerciseId: 'sx-1',
+        position: 0,
+        setType: 'working',
+        durationSeconds: 60,
+        restTargetSeconds: 60,
+        completedAt: '2026-01-02T10:01:00.000Z',
+        createdAt: '2026-01-02T10:00:00.000Z',
+        updatedAt: '2026-01-02T10:01:00.000Z',
+      },
+      {
+        id: 'set-open',
+        sessionExerciseId: 'sx-1',
+        position: 1,
+        setType: 'working',
+        restTargetSeconds: 60,
+        createdAt: '2026-01-02T10:01:00.000Z',
+        updatedAt: '2026-01-02T10:01:00.000Z',
+      },
+    ]);
+    legacy.close();
+
+    const upgraded = new TrainingDatabase(NAME);
+    await upgraded.open();
+    expect(upgraded.verno).toBe(SCHEMA_VERSION);
+
+    const plank = await upgraded.exercises.get('plank');
+    expect(plank?.trackingType).toBe('duration');
+    expect(plank?.cardioModality).toBeUndefined();
+
+    const sx = await upgraded.sessionExercises.get('sx-1');
+    expect(sx?.trackingTypeSnapshot).toBe('duration');
+    expect(sx?.cardioModalitySnapshot).toBeUndefined();
+
+    // The active session and both its sets survive intact and stay usable.
+    expect((await upgraded.workoutSessions.get('sess-1'))?.status).toBe('active');
+    const done = await upgraded.workoutSets.get('set-done');
+    expect(done?.durationSeconds).toBe(60);
+    expect(done?.distanceMeters).toBeUndefined();
+    expect(await upgraded.workoutSets.get('set-open')).toBeTruthy();
     upgraded.close();
   });
 

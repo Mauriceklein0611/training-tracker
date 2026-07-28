@@ -6,11 +6,14 @@ import { ToastProvider } from '@/components/ui/ToastProvider';
 import { ExercisePickerDialog } from '@/features/exercises/ExercisePickerDialog';
 import { resetDatabase } from '@/tests/dbTestUtils';
 
-function renderPicker(onSelect = vi.fn()) {
+function renderPicker(
+  onSelect = vi.fn(),
+  props: Partial<React.ComponentProps<typeof ExercisePickerDialog>> = {},
+) {
   render(
     <ToastProvider>
       <MemoryRouter>
-        <ExercisePickerDialog open onClose={vi.fn()} onSelect={onSelect} />
+        <ExercisePickerDialog open onClose={vi.fn()} onSelect={onSelect} {...props} />
       </MemoryRouter>
     </ToastProvider>,
   );
@@ -19,6 +22,41 @@ function renderPicker(onSelect = vi.fn()) {
 
 beforeEach(async () => {
   await resetDatabase();
+});
+
+describe('ExercisePickerDialog — cardio quick-start filter', () => {
+  it('lists only cardio exercises when filtered to cardio', async () => {
+    const { createExercise } = await import('@/db/repositories/exercises');
+    await createExercise({
+      name: 'Bankdrücken',
+      primaryMuscleGroup: 'Brust',
+      secondaryMuscleGroups: [],
+      equipment: 'Langhantel',
+      trackingType: 'weight_reps',
+      weightMode: 'total',
+      weightMultiplier: 1,
+      defaultRestSeconds: 120,
+      notes: '',
+    });
+    await createExercise({
+      name: 'Laufen',
+      primaryMuscleGroup: 'Ganzkörper',
+      secondaryMuscleGroups: [],
+      equipment: '',
+      defaultEquipment: 'treadmill',
+      trackingType: 'cardio',
+      cardioModality: 'running',
+      weightMode: 'none',
+      weightMultiplier: 1,
+      defaultRestSeconds: 60,
+      notes: '',
+    });
+
+    renderPicker(vi.fn(), { trackingTypeFilter: 'cardio' });
+
+    expect(await screen.findByText('Laufen')).toBeInTheDocument();
+    expect(screen.queryByText('Bankdrücken')).not.toBeInTheDocument();
+  });
 });
 
 describe('ExercisePickerDialog — create from search (Feature 1)', () => {

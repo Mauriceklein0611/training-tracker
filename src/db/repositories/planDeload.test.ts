@@ -99,6 +99,48 @@ describe('session start during a deload', () => {
     await finishSession(session.id);
   });
 
+  it('reduces cardio distance, duration and intervals but never the RPE', async () => {
+    const running = await createExercise({
+      name: 'Laufen',
+      primaryMuscleGroup: 'Ganzkörper',
+      secondaryMuscleGroups: [],
+      equipment: '',
+      defaultEquipment: 'treadmill',
+      trackingType: 'cardio',
+      cardioModality: 'running',
+      weightMode: 'none',
+      weightMultiplier: 1,
+      defaultRestSeconds: 60,
+      notes: '',
+    });
+    const plan = await createPlan({ name: 'P', splitType: 'single' });
+    const { days } = (await getPlanWithDays(plan.id))!;
+    const row = await addExerciseToTemplate(days[0].id, running);
+    await (
+      await import('@/db/repositories/templates')
+    ).updateTemplateExercise(row.id, {
+      targetSets: 4,
+      targetDurationSeconds: 600,
+      targetDistanceMeters: 5000,
+      targetRpe: 8,
+    });
+    await startDeload(plan.id, 'medium'); // −40 % sets, −30 % duration/distance
+
+    const session = await startSessionFromTemplate(days[0].id);
+    const se = (
+      await db.sessionExercises.where('sessionId').equals(session.id).toArray()
+    )[0];
+    expect(se.targetSetsSnapshot).toBe(2); // 4 * 0.6 = 2.4 → 2 (intervals)
+    expect(se.targetDurationSecondsSnapshot).toBe(420); // 600 * 0.7
+    expect(se.targetDistanceMetersSnapshot).toBe(3500); // 5000 * 0.7
+    expect(se.targetRpeSnapshot).toBe(8); // intensity target untouched
+
+    // The plan's stored values are unchanged.
+    const stored = await db.templateExercises.get(row.id);
+    expect(stored?.targetDistanceMeters).toBe(5000);
+    await finishSession(session.id);
+  });
+
   it('does not mark a normal session', async () => {
     const exercise = await makeExercise();
     const plan = await createPlan({ name: 'P', splitType: 'single' });

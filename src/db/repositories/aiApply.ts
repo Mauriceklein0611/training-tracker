@@ -35,6 +35,9 @@ export async function buildPlanContext(): Promise<PlanContext> {
           targetSets: exercise.targetSets,
           targetRepMin: exercise.targetRepMin,
           targetRepMax: exercise.targetRepMax,
+          targetDurationSeconds: exercise.targetDurationSeconds,
+          targetDistanceMeters: exercise.targetDistanceMeters,
+          targetRpe: exercise.targetRpe,
           restSeconds: exercise.restSeconds,
         },
       ]),
@@ -75,6 +78,9 @@ const FIELD_TO_COLUMN = {
   repMin: 'targetRepMin',
   repMax: 'targetRepMax',
   restSeconds: 'restSeconds',
+  durationSeconds: 'targetDurationSeconds',
+  distanceMeters: 'targetDistanceMeters',
+  rpe: 'targetRpe',
 } as const;
 
 /**

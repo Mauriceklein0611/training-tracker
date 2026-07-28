@@ -7,6 +7,8 @@ import type { SessionExercise, SetType, WorkoutSet } from '@/types';
 import { hasErrors, parseNumberInput, validateSetInput } from '@/services/validation';
 import { requiredFieldsFor, weightFieldLabel } from '@/services/metrics';
 import { effectiveSetExecution, equipmentLabel } from '@/services/equipment';
+import { cardioModalityLabel } from '@/services/cardio';
+import { describeCardioSet } from '@/services/cardioMetrics';
 import { restDeviationSeconds } from '@/services/rest';
 import { SET_TYPE_LABELS, describeSet, formatSignedSeconds } from '@/utils/format';
 import { cn } from '@/utils/cn';
@@ -75,6 +77,7 @@ export function SetEditor({
   set,
   sessionExercise,
   previousSets,
+  previousContext,
   sessionSets,
   recordBaseline,
   onPersist,
@@ -88,6 +91,12 @@ export function SetEditor({
   sessionExercise: SessionExercise;
   /** Completed sets of the previous workout for this exercise. */
   previousSets: WorkoutSet[];
+  /**
+   * The previous workout's session-exercise, i.e. the execution context those
+   * `previousSets` were actually performed with. Used so a set from a different
+   * execution is compared with its own convention, or shown as a reference only.
+   */
+  previousContext?: SessionExercise;
   /** All sets of this exercise in the running workout. */
   sessionSets: WorkoutSet[];
   /** Best values recorded before this workout. */
@@ -162,8 +171,21 @@ export function SetEditor({
       ordinalWithinType,
     });
     if (!match) return null;
-    return compareSet(draftToValues(draft), match, sessionExercise, recordBaseline);
-  }, [previousSets, draft, ordinalWithinType, sessionExercise, recordBaseline]);
+    return compareSet(
+      draftToValues(draft),
+      match,
+      sessionExercise,
+      recordBaseline,
+      previousContext ?? sessionExercise,
+    );
+  }, [
+    previousSets,
+    draft,
+    ordinalWithinType,
+    sessionExercise,
+    recordBaseline,
+    previousContext,
+  ]);
 
   const update = (key: keyof Draft, value: string) => {
     setDraft((current) => ({ ...current, [key]: value }));
@@ -234,6 +256,10 @@ export function SetEditor({
             {comparison.matchedBy === 'same-position' ? 'Letztes Mal' : 'Zuletzt'}:
           </span>
           <span className="numeric font-medium">{comparison.previousSummary}</span>
+
+          {!comparison.sameExecution ? (
+            <span className="text-muted">(andere Ausführung – nur zur Referenz)</span>
+          ) : null}
 
           {comparison.deltas.map((delta) => (
             <span
@@ -377,15 +403,19 @@ export function CompletedSetRow({
   // The set's own execution snapshot wins, so a dumbbell set stays labelled as
   // dumbbells even after the exercise switches back to a barbell.
   const execution = effectiveSetExecution(set, sessionExercise);
+  const isCardio = execution.trackingType === 'cardio';
+  const summary = isCardio
+    ? describeCardioSet(set, execution.cardioModality)
+    : describeSet(set, execution.trackingType, execution.weightMode);
   const content = (
     <>
       <span className="flex w-7 shrink-0 items-center justify-center rounded-lg bg-surface-3 text-xs font-semibold">
         {set.position + 1}
       </span>
-      <span className="numeric min-w-0 flex-1 truncate font-medium">
-        {describeSet(set, execution.trackingType, execution.weightMode)}
-      </span>
-      {execution.equipment !== 'unspecified' ? (
+      <span className="numeric min-w-0 flex-1 truncate font-medium">{summary}</span>
+      {isCardio && execution.cardioModality ? (
+        <Badge>{cardioModalityLabel(execution.cardioModality)}</Badge>
+      ) : execution.equipment !== 'unspecified' ? (
         <Badge>{equipmentLabel(execution.equipment)}</Badge>
       ) : null}
       {set.setType !== 'working' ? (
