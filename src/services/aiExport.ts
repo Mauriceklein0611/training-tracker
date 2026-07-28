@@ -32,6 +32,8 @@ import type {
 } from '@/types';
 import { hasAnyWeeklyGoal } from '@/services/calendar';
 import { effectiveSetExecution, setExecutionKey } from '@/services/equipment';
+import { computePace, formatPace } from '@/services/cardioMetrics';
+import type { CardioModality } from '@/types';
 import { EXPERIENCE_LEVEL_LABELS, PLAN_GOAL_TYPE_LABELS } from '@/services/planGoals';
 import { DELOAD_INTENSITY_LABELS } from '@/services/deload';
 import { SCHEDULE_MODE_LABELS } from '@/services/schedule';
@@ -50,7 +52,8 @@ import { customRange, dayKey, lastDaysRange, type DateRange } from '@/utils/date
 // v2 (Phase 7.1) adds the descriptive `trainingContext` block (active plan,
 // plan goals, training blocks, active deload) and marks deload workouts. The
 // file stays export-only, so nothing parses this version — it is informational.
-export const AI_EXPORT_VERSION = 2;
+/** Version 3 adds structured cardio per set and the heart-rate opt-in. */
+export const AI_EXPORT_VERSION = 3;
 export const AI_RESPONSE_SCHEMA_VERSION = 1;
 
 export interface PlanExportExercise {
@@ -217,6 +220,11 @@ export interface AiExportOptions {
   includeNotes: boolean;
   includeBodyWeight: boolean;
   includeWarmupSets: boolean;
+  /**
+   * Whether recorded average heart rate is included for cardio sets. Off by
+   * default — heart rate is only exported after the user actively opts in.
+   */
+  includeHeartRate: boolean;
 }
 
 /**
@@ -354,6 +362,7 @@ export const DEFAULT_AI_EXPORT_OPTIONS: AiExportOptions = {
   includeNotes: true,
   includeBodyWeight: false,
   includeWarmupSets: false,
+  includeHeartRate: false,
 };
 
 export interface ExportPeriodErrors {
@@ -495,6 +504,8 @@ export interface AiExportFile {
     volume: string;
     oneRepMax: string;
     warmupSetsIncluded: boolean;
+    heartRateIncluded: boolean;
+    cardio: string;
     trackingTypes: Record<string, string>;
     weightModes: Record<string, string>;
     setTypes: Record<string, string>;
@@ -534,6 +545,25 @@ export interface AiExportFile {
 function round(value: number | null | undefined, digits = 2): number | null {
   if (value == null || !Number.isFinite(value)) return null;
   return Number(value.toFixed(digits));
+}
+
+/**
+ * A clearly-derived pace/speed for a cardio set, or null. Marked as derived so a
+ * reader never treats it as a raw measurement; only present when duration and
+ * distance both allow it (never invented).
+ */
+function paceForExport(
+  set: { durationSeconds?: number; distanceMeters?: number },
+  modality: CardioModality | undefined,
+): { kind: string; value: number; label: string; derived: true } | null {
+  const pace = computePace(modality, set.durationSeconds, set.distanceMeters);
+  if (!pace) return null;
+  return {
+    kind: pace.kind,
+    value: round(pace.value) ?? pace.value,
+    label: formatPace(pace),
+    derived: true,
+  };
 }
 
 /**
@@ -702,9 +732,30 @@ export function buildAiExport(
                 // session-exercise snapshot), so a dumbbell substitution is
                 // visible and totalLoadKg reflects the right convention.
                 const execution = effectiveSetExecution(set, sessionExercise);
+                const isCardio = execution.trackingType === 'cardio';
+                // Cardio is exported structurally and kept apart from strength.
+                // Heart rate only ships when the user opted in; pace is clearly
+                // derived; nothing is invented for a missing value.
+                const cardio = isCardio
+                  ? {
+                      cardio: {
+                        modality: execution.cardioModality ?? null,
+                        distanceMeters: set.distanceMeters ?? null,
+                        pace: paceForExport(set, execution.cardioModality),
+                        caloriesKcal: set.caloriesKcal ?? null,
+                        elevationGainMeters: set.elevationGainMeters ?? null,
+                        cadenceRpm: set.cadenceRpm ?? null,
+                        resistanceLevel: set.resistanceLevel ?? null,
+                        ...(options.includeHeartRate
+                          ? { averageHeartRateBpm: set.averageHeartRateBpm ?? null }
+                          : {}),
+                      },
+                    }
+                  : {};
                 return {
                   setNumber: set.position + 1,
                   setType: set.setType,
+                  trackingType: execution.trackingType,
                   equipment: execution.equipment,
                   weightMode: execution.weightMode,
                   weightMultiplier: execution.weightMultiplier,
@@ -719,6 +770,7 @@ export function buildAiExport(
                   restActualSeconds: set.restActualSeconds ?? null,
                   restDeviationSeconds: restDeviationSeconds(set),
                   completedAt: set.completedAt ?? null,
+                  ...cardio,
                   ...(recordMarks.has(set.id)
                     ? { records: recordMarks.get(set.id) }
                     : {}),
@@ -872,6 +924,14 @@ export function buildAiExport(
         `Schätzwert, berechnet für ${ONE_RM_MIN_REPS}–${ONE_RM_MAX_REPS} Wiederholungen ` +
         'und ausschließlich für Übungen mit externem Gewicht.',
       warmupSetsIncluded: options.includeWarmupSets,
+      heartRateIncluded: options.includeHeartRate,
+      cardio:
+        'Cardio-Sätze tragen ein "cardio"-Objekt (modality, distanceMeters, ' +
+        'pace, calories …) und sind getrennt von Kraft zu bewerten. ' +
+        '"duration" ist eine zeitbasierte Kraftübung, KEINE Cardio-Aktivität. ' +
+        'Pace/Geschwindigkeit ist abgeleitet; vergleiche sie nur innerhalb ' +
+        'derselben Modalität. Herzfrequenz ist nur enthalten, wenn ' +
+        'heartRateIncluded true ist; interpretiere sie technisch, nicht medizinisch.',
       trackingTypes: TRACKING_TYPE_EXPLANATIONS,
       weightModes: WEIGHT_MODE_EXPLANATIONS,
       setTypes: SET_TYPE_EXPLANATIONS,
@@ -1004,4 +1064,6 @@ export function aiExportFileName(date: Date = new Date()): string {
 /** Ready-to-paste instruction that accompanies the export file. */
 export const AI_ANALYSIS_PROMPT = `Analysiere meine Trainingsdaten. Untersuche Trainingshäufigkeit, Progression je Übung, wöchentliches Volumen je Muskelgruppe, Pauseneinhaltung, mögliche Plateaus und auffällige Leistungseinbrüche. Unterscheide gewichtete Übungen, Körpergewichtsübungen, TRX-Übungen und zeitbasierte Übungen. Erfinde keine fehlenden Werte. Bewerte Übungen ohne Gewicht nicht anhand eines fiktiven Kilogrammvolumens. Gib konkrete Empfehlungen für die nächsten vier Wochen und kennzeichne Unsicherheiten aufgrund unvollständiger Daten.
 
-Antworte anschließend zusätzlich mit einer Datei „training-ai-response.json" nach dem Format in "responseContract" dieses Exports: reines JSON ohne Markdown, referenziere ausschließlich IDs aus "plans", übernimm exportId und fingerprint aus "sourceExport", fülle "expected" mit den aktuellen Planwerten und begründe jeden Vorschlag. Bei unzureichender Datenlage gib ein leeres "proposals"-Array zurück. Verändere niemals abgeschlossene Trainings oder Körperdaten.`;
+Werte Kraft und Cardio getrennt aus und vermische ihre Kennzahlen nicht (keine gemeinsame Leistungszahl aus Kilogramm, Minuten und Kilometern). Cardio-Sätze tragen ein „cardio"-Objekt; „duration" ist eine zeitbasierte Kraftübung und KEINE Cardio-Aktivität. Vergleiche Pace/Geschwindigkeit nur innerhalb derselben Modalität, niemals über Laufen, Rudern, Schwimmen und Radfahren hinweg. Herzfrequenz ist nur enthalten, wenn ich sie freigegeben habe; interpretiere sie rein technisch und stelle keine medizinischen Diagnosen oder individuellen Herzfrequenzzonen auf.
+
+Gib nur dann zusätzlich eine importierbare Datei „training-ai-response.json" nach dem Format in "responseContract" aus, wenn ich konkrete Planänderungen möchte: reines JSON ohne Markdown, referenziere ausschließlich IDs aus "plans", übernimm exportId und fingerprint aus "sourceExport", fülle "expected" mit den aktuellen Planwerten und begründe jeden Vorschlag. Bei unzureichender Datenlage gib ein leeres "proposals"-Array zurück. Verändere niemals abgeschlossene Trainings oder Körperdaten.`;
