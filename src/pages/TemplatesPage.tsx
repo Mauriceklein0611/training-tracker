@@ -4,7 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { ClipboardList, Copy, Play, Plus, Share2, Trash2 } from 'lucide-react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Button, IconButton } from '@/components/ui/Button';
-import { EmptyState } from '@/components/ui/Card';
+import { Badge, EmptyState } from '@/components/ui/Card';
 import { ConfirmDialog } from '@/components/ui/Dialog';
 import { db } from '@/db/db';
 import {
@@ -15,6 +15,9 @@ import {
   type PlanWithDays,
 } from '@/db/repositories/plans';
 import { getPlanScheduleState } from '@/db/repositories/schedules';
+import { getActivePlanId } from '@/db/repositories/planUsage';
+import { getActiveDeload } from '@/db/repositories/planDeload';
+import { PLAN_GOAL_TYPE_LABELS } from '@/services/planGoals';
 import {
   ActiveSessionExistsError,
   startSessionFromTemplate,
@@ -32,6 +35,8 @@ interface PlanOverview extends PlanWithDays {
   nextDayName?: string;
   /** Weekly plans: label of today's scheduled rest/free day, if today is one. */
   restToday?: string;
+  isActive: boolean;
+  deloadActive: boolean;
 }
 
 export default function TemplatesPage() {
@@ -43,6 +48,7 @@ export default function TemplatesPage() {
     async (): Promise<PlanOverview[]> => {
       const withDays = await listPlansWithDays();
       const rows = await db.templateExercises.toArray();
+      const activePlanId = await getActivePlanId();
       const countByDay = new Map<string, number>();
       for (const row of rows) {
         countByDay.set(row.templateId, (countByDay.get(row.templateId) ?? 0) + 1);
@@ -55,6 +61,7 @@ export default function TemplatesPage() {
             state.mode === 'weekly' && state.current?.type === 'rest'
               ? (state.current.name ?? undefined)
               : undefined;
+          const deload = await getActiveDeload(entry.plan.id);
           return {
             ...entry,
             exerciseCount: entry.days.reduce(
@@ -64,6 +71,8 @@ export default function TemplatesPage() {
             nextDayId: next?.id,
             nextDayName: next?.name,
             restToday,
+            isActive: entry.plan.id === activePlanId,
+            deloadActive: deload != null,
           };
         }),
       );
@@ -128,12 +137,40 @@ export default function TemplatesPage() {
               >
                 <div className="flex items-start justify-between gap-2">
                   <Link to={`/plaene/${entry.plan.id}`} className="min-w-0 flex-1">
-                    <p className="truncate font-medium">{entry.plan.name}</p>
+                    <p className="flex flex-wrap items-center gap-2 font-medium">
+                      <span className="truncate">{entry.plan.name}</span>
+                      {entry.isActive ? <Badge tone="accent">Aktiv</Badge> : null}
+                      {entry.deloadActive ? <Badge tone="warning">Deload</Badge> : null}
+                    </p>
                     <p className="truncate text-sm text-muted">
                       {multiDay
                         ? `${SPLIT_TYPE_LABELS[entry.plan.splitType]} · ${entry.days.length} Tage`
                         : `${entry.exerciseCount} ${entry.exerciseCount === 1 ? 'Übung' : 'Übungen'}`}
+                      {entry.plan.goalType
+                        ? ` · ${PLAN_GOAL_TYPE_LABELS[entry.plan.goalType]}`
+                        : ''}
                     </p>
+                    {multiDay ? (
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {entry.days.slice(0, 4).map((day) => (
+                          <span
+                            key={day.id}
+                            className={
+                              day.name === entry.nextDayName
+                                ? 'rounded-lg bg-accent/15 px-2 py-0.5 text-xs font-medium text-accent'
+                                : 'rounded-lg bg-surface-2 px-2 py-0.5 text-xs text-muted'
+                            }
+                          >
+                            {day.name}
+                          </span>
+                        ))}
+                        {entry.days.length > 4 ? (
+                          <span className="rounded-lg bg-surface-2 px-2 py-0.5 text-xs text-muted">
+                            +{entry.days.length - 4}
+                          </span>
+                        ) : null}
+                      </div>
+                    ) : null}
                     {entry.restToday ? (
                       <p className="truncate text-xs text-muted">
                         Heute: {entry.restToday}
