@@ -18,7 +18,12 @@ import {
   type PersonalRecords,
   type VolumeTotals,
 } from '@/services/metrics';
-import { aggregateCardio, type CardioTotals } from '@/services/cardioMetrics';
+import {
+  aggregateCardio,
+  computePace,
+  type CardioTotals,
+  type Pace,
+} from '@/services/cardioMetrics';
 import { computeRestStatistics, type RestStatistics } from '@/services/rest';
 import {
   currentWeeklyStreak,
@@ -102,6 +107,14 @@ export interface ExerciseSeriesPoint {
   bestReps: number | null;
   maxDurationSeconds: number | null;
   workingSets: number;
+  /**
+   * Cardio per session (cardio exercises only; null for strength). Totals are
+   * summed over the session's cardio sections; pace is derived from those totals
+   * in the modality's convention, never invented when distance is absent.
+   */
+  cardioDurationSeconds: number | null;
+  cardioDistanceMeters: number | null;
+  cardioPace: Pace | null;
 }
 
 export interface WeeklyPoint {
@@ -410,6 +423,11 @@ export function computeExerciseSeries(
     let totalReps = 0;
     let bestReps: number | null = null;
     let maxDurationSeconds: number | null = null;
+    // Cardio aggregates for the session, kept apart from the strength figures.
+    let cardioDurationSeconds = 0;
+    let cardioDistanceMeters = 0;
+    let hasCardio = false;
+    let cardioModality = entries[0].sessionExercise.cardioModalitySnapshot;
 
     for (const { set, sessionExercise } of entries) {
       const volume = setVolumeKg(set, sessionExercise);
@@ -433,6 +451,12 @@ export function computeExerciseSeries(
       ) {
         maxDurationSeconds = set.durationSeconds;
       }
+      if (isCardio(set, sessionExercise)) {
+        hasCardio = true;
+        cardioModality = set.cardioModalitySnapshot ?? cardioModality;
+        if (set.durationSeconds != null) cardioDurationSeconds += set.durationSeconds;
+        if (set.distanceMeters != null) cardioDistanceMeters += set.distanceMeters;
+      }
     }
 
     points.push({
@@ -446,6 +470,11 @@ export function computeExerciseSeries(
       bestReps,
       maxDurationSeconds,
       workingSets: entries.length,
+      cardioDurationSeconds: hasCardio ? cardioDurationSeconds : null,
+      cardioDistanceMeters: hasCardio ? cardioDistanceMeters : null,
+      cardioPace: hasCardio
+        ? computePace(cardioModality, cardioDurationSeconds, cardioDistanceMeters)
+        : null,
     });
   }
 

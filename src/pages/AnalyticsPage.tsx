@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { GitCompareArrows } from 'lucide-react';
@@ -23,6 +23,7 @@ import {
   computeAnalytics,
   computeExerciseSeries,
   listTrackedExercises,
+  type ExerciseSeriesPoint,
 } from '@/services/analytics';
 import { analyzePlateau } from '@/services/plateau';
 import { PlateauHint } from '@/features/analytics/PlateauHint';
@@ -47,6 +48,7 @@ import {
 import {
   formatCardioDistance,
   formatDuration as formatCardioDuration,
+  formatPace,
 } from '@/services/cardioMetrics';
 
 const RANGE_OPTIONS: { value: AnalyticsRangeKey; label: string }[] = [
@@ -57,7 +59,15 @@ const RANGE_OPTIONS: { value: AnalyticsRangeKey; label: string }[] = [
   { value: 'custom', label: 'Eigen' },
 ];
 
-type Metric = 'volume' | 'topSet' | 'oneRm' | 'reps' | 'duration';
+type Metric =
+  | 'volume'
+  | 'topSet'
+  | 'oneRm'
+  | 'reps'
+  | 'duration'
+  | 'cardioDuration'
+  | 'cardioDistance'
+  | 'cardioPace';
 
 const METRIC_LABELS: Record<Metric, string> = {
   volume: 'Volumen je Einheit',
@@ -65,7 +75,16 @@ const METRIC_LABELS: Record<Metric, string> = {
   oneRm: 'Geschätztes 1RM (Schätzwert)',
   reps: 'Wiederholungen je Einheit',
   duration: 'Längster Zeitsatz',
+  cardioDuration: 'Dauer je Einheit',
+  cardioDistance: 'Distanz je Einheit',
+  cardioPace: 'Pace / Geschwindigkeit',
 };
+
+// Which metrics make sense for which kind of exercise. A cardio activity like
+// "Laufen" must never offer Volumen, schwerster Satz, 1RM or Wiederholungen as
+// primary options, and a strength exercise never offers pace/distance.
+const STRENGTH_METRICS: Metric[] = ['volume', 'topSet', 'oneRm', 'reps', 'duration'];
+const CARDIO_METRICS: Metric[] = ['cardioDuration', 'cardioDistance', 'cardioPace'];
 
 export default function AnalyticsPage() {
   const { settings } = useSettings();
@@ -121,6 +140,24 @@ export default function AnalyticsPage() {
   const trackedExercises = data?.exercises ?? [];
   const selectedExercise = trackedExercises.find((entry) => entry.id === exerciseId);
 
+  // The metric picker follows the exercise's tracking type: cardio activities
+  // never expose strength metrics (Volumen, 1RM, …) and vice versa.
+  const isCardioExercise = selectedExercise?.trackingType === 'cardio';
+  const availableMetrics = isCardioExercise ? CARDIO_METRICS : STRENGTH_METRICS;
+
+  // Keep the selected metric valid for the chosen exercise; when switching
+  // between a strength and a cardio exercise, fall back to that type's default.
+  useEffect(() => {
+    if (!availableMetrics.includes(metric)) setMetric(availableMetrics[0]);
+  }, [availableMetrics, metric]);
+
+  // Pace convention for the selected cardio exercise, taken from its history so
+  // the pace axis is labelled in the modality's unit (min/km, /500 m, km/h …).
+  const cardioPaceKind = useMemo(
+    () => (data?.series ?? []).find((point) => point.cardioPace)?.cardioPace?.kind,
+    [data?.series],
+  );
+
   const weeklyPoints = useMemo(
     () =>
       (analytics?.weekly ?? []).map((week) => ({
@@ -172,7 +209,13 @@ export default function AnalyticsPage() {
               ? point.estimatedOneRepMax
               : metric === 'reps'
                 ? point.totalReps
-                : point.maxDurationSeconds;
+                : metric === 'duration'
+                  ? point.maxDurationSeconds
+                  : metric === 'cardioDuration'
+                    ? point.cardioDurationSeconds
+                    : metric === 'cardioDistance'
+                      ? point.cardioDistanceMeters
+                      : point.cardioPace?.value;
       return {
         label: formatDate(point.date).slice(0, 6),
         value: value == null ? null : Math.round(value * 10) / 10,
@@ -184,7 +227,41 @@ export default function AnalyticsPage() {
     if (metric === 'reps') return formatNumber(value);
     if (metric === 'duration') return `${formatNumber(value)} s`;
     if (metric === 'volume') return formatVolume(value);
+    if (metric === 'cardioDuration') return formatCardioDuration(value);
+    if (metric === 'cardioDistance') return formatCardioDistance(value, undefined);
+    if (metric === 'cardioPace')
+      return cardioPaceKind
+        ? formatPace({ kind: cardioPaceKind, value })
+        : formatNumber(value);
     return formatKg(value);
+  };
+
+  // Value cell for the per-session data table, from raw (unrounded) figures.
+  const metricCell = (point: ExerciseSeriesPoint): string => {
+    switch (metric) {
+      case 'volume':
+        return formatVolume(point.volumeKg);
+      case 'topSet':
+        return formatKg(point.topSetLoadKg);
+      case 'oneRm':
+        return formatKg(point.estimatedOneRepMax);
+      case 'reps':
+        return formatNumber(point.totalReps);
+      case 'duration':
+        return point.maxDurationSeconds == null
+          ? '–'
+          : `${formatNumber(point.maxDurationSeconds)} s`;
+      case 'cardioDuration':
+        return point.cardioDurationSeconds == null
+          ? '–'
+          : formatCardioDuration(point.cardioDurationSeconds);
+      case 'cardioDistance':
+        return point.cardioDistanceMeters == null
+          ? '–'
+          : formatCardioDistance(point.cardioDistanceMeters, undefined);
+      case 'cardioPace':
+        return point.cardioPace ? formatPace(point.cardioPace) : '–';
+    }
   };
 
   const hasData = (analytics?.sessionCount ?? 0) > 0;
@@ -389,7 +466,7 @@ export default function AnalyticsPage() {
                 disabled={!exerciseId}
                 onChange={(event) => setMetric(event.target.value as Metric)}
               >
-                {(Object.keys(METRIC_LABELS) as Metric[]).map((key) => (
+                {availableMetrics.map((key) => (
                   <option key={key} value={key}>
                     {METRIC_LABELS[key]}
                   </option>
@@ -410,23 +487,21 @@ export default function AnalyticsPage() {
                   table={
                     <DataTable
                       caption={`${METRIC_LABELS[metric]} je Einheit`}
-                      columns={['Datum', 'Wert', 'Sätze', 'Wdh.']}
-                      rows={(data?.series ?? []).map((point) => [
-                        formatDate(point.date),
-                        metric === 'volume'
-                          ? formatVolume(point.volumeKg)
-                          : metric === 'topSet'
-                            ? formatKg(point.topSetLoadKg)
-                            : metric === 'oneRm'
-                              ? formatKg(point.estimatedOneRepMax)
-                              : metric === 'reps'
-                                ? formatNumber(point.totalReps)
-                                : point.maxDurationSeconds == null
-                                  ? '–'
-                                  : `${formatNumber(point.maxDurationSeconds)} s`,
-                        point.workingSets,
-                        point.totalReps,
-                      ])}
+                      columns={
+                        isCardioExercise
+                          ? ['Datum', 'Wert', 'Abschnitte']
+                          : ['Datum', 'Wert', 'Sätze', 'Wdh.']
+                      }
+                      rows={(data?.series ?? []).map((point) =>
+                        isCardioExercise
+                          ? [formatDate(point.date), metricCell(point), point.workingSets]
+                          : [
+                              formatDate(point.date),
+                              metricCell(point),
+                              point.workingSets,
+                              point.totalReps,
+                            ],
+                      )}
                     />
                   }
                 >

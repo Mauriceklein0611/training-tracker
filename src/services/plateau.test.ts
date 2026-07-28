@@ -14,6 +14,9 @@ function point(date: string, values: Partial<ExerciseSeriesPoint>): ExerciseSeri
     bestReps: null,
     maxDurationSeconds: null,
     workingSets: 3,
+    cardioDurationSeconds: null,
+    cardioDistanceMeters: null,
+    cardioPace: null,
     ...values,
   };
 }

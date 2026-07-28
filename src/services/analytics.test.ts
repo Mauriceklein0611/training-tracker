@@ -331,6 +331,53 @@ describe('computeExerciseSeries', () => {
     expect(series[0].estimatedOneRepMax).toBeNull();
     expect(series[0].totalReps).toBe(8);
   });
+
+  it('summarises cardio per session with derived pace, and null for strength', () => {
+    const dataset = buildDataset();
+    dataset.exercises.push(
+      makeExercise({
+        id: 'ex-run',
+        name: 'Laufen',
+        trackingType: 'cardio',
+        cardioModality: 'running',
+        weightMode: 'none',
+      }),
+    );
+    dataset.sessionExercises.push(
+      makeSessionExercise({
+        id: 'se-run',
+        sessionId: 's-a',
+        exerciseId: 'ex-run',
+        order: 5,
+        exerciseNameSnapshot: 'Laufen',
+        trackingTypeSnapshot: 'cardio',
+        weightModeSnapshot: 'none',
+        cardioModalitySnapshot: 'running',
+      }),
+    );
+    dataset.sets.push(
+      makeSet({
+        sessionExerciseId: 'se-run',
+        weightKg: undefined,
+        reps: undefined,
+        durationSeconds: 1800,
+        distanceMeters: 6000,
+        completedAt: '2026-07-06T11:00:00.000Z',
+      }),
+    );
+
+    const [point] = computeExerciseSeries(dataset, 'ex-run', null);
+    expect(point.cardioDurationSeconds).toBe(1800);
+    expect(point.cardioDistanceMeters).toBe(6000);
+    // 1800 s over 6 km → 5:00 min/km.
+    expect(point.cardioPace).toEqual({ kind: 'min_per_km', value: 5 });
+
+    // A strength exercise carries no cardio figures.
+    const [bench] = computeExerciseSeries(dataset, 'ex-bench', null);
+    expect(bench.cardioDurationSeconds).toBeNull();
+    expect(bench.cardioDistanceMeters).toBeNull();
+    expect(bench.cardioPace).toBeNull();
+  });
 });
 
 describe('listTrackedExercises', () => {
