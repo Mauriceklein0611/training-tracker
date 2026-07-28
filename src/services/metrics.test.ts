@@ -318,6 +318,11 @@ describe('personal records', () => {
     expect(beaten.some((record) => record.kind === 'load' && record.value === 105)).toBe(
       true,
     );
+    // A heavier top set also beats the estimated 1RM, surfaced as its own record
+    // with the German label so the summary can show it (G5).
+    const oneRm = beaten.find((record) => record.kind === 'oneRepMax');
+    expect(oneRm?.label).toBe('Neues geschätztes 1RM');
+    expect(oneRm?.value).toBeGreaterThan(oneRm?.previousValue ?? 0);
 
     const notBeaten = findNewRecords(
       [makeContext({ weightKg: 95, reps: 5 }, shared)],

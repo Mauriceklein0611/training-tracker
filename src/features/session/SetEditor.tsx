@@ -5,13 +5,23 @@ import { NumberField, SelectField } from '@/components/ui/Field';
 import { Badge } from '@/components/ui/Card';
 import type { SessionExercise, SetType, WorkoutSet } from '@/types';
 import { hasErrors, parseNumberInput, validateSetInput } from '@/services/validation';
-import { requiredFieldsFor, weightFieldLabel } from '@/services/metrics';
+import {
+  estimatedOneRepMax,
+  requiredFieldsFor,
+  weightFieldLabel,
+} from '@/services/metrics';
 import { effectiveSetExecution, equipmentLabel } from '@/services/equipment';
 import { cardioModalityLabel } from '@/services/cardio';
 import { describeCardioSet } from '@/services/cardioMetrics';
 import { restDeviationSeconds } from '@/services/rest';
-import { SET_TYPE_LABELS, describeSet, formatSignedSeconds } from '@/utils/format';
+import {
+  SET_TYPE_LABELS,
+  describeSet,
+  formatKg,
+  formatSignedSeconds,
+} from '@/utils/format';
 import { cn } from '@/utils/cn';
+import { InfoHint } from '@/components/ui/InfoHint';
 import { useAutosave } from '@/hooks/useAutosave';
 import { useToast } from '@/hooks/useToast';
 import { ExerciseTimer } from '@/features/session/ExerciseTimer';
@@ -192,6 +202,17 @@ export function SetEditor({
     previousContext,
   ]);
 
+  // Live estimated 1RM from the values being entered — a weighted-set estimate,
+  // always labelled "ca."/"geschätzt", never a measurement (Epley, 1–12 reps).
+  const liveOneRm = useMemo(() => {
+    if (trackingType !== 'weight_reps') return null;
+    if (values.weightKg == null || values.reps == null) return null;
+    return estimatedOneRepMax(
+      { ...set, weightKg: values.weightKg, reps: values.reps },
+      sessionExercise,
+    );
+  }, [trackingType, values.weightKg, values.reps, set, sessionExercise]);
+
   const update = (key: keyof Draft, value: string) => {
     setDraft((current) => ({ ...current, [key]: value }));
   };
@@ -291,6 +312,18 @@ export function SetEditor({
           {comparison.matchedBy === 'last-working-set' ? (
             <span className="text-muted">(letzter Arbeitssatz)</span>
           ) : null}
+        </div>
+      ) : null}
+
+      {liveOneRm != null ? (
+        <div className="mb-2 flex items-center gap-1 text-xs text-muted">
+          <span>
+            Geschätztes 1RM:{' '}
+            <span className="numeric font-medium text-text">
+              ca. {formatKg(liveOneRm)}
+            </span>
+          </span>
+          <InfoHint term="e1rm" />
         </div>
       ) : null}
 
