@@ -3,7 +3,9 @@ import { buildSetContexts } from '@/services/analytics';
 import { setVolumeKg } from '@/services/metrics';
 import { effectiveSetExecution, equipmentLabel } from '@/services/equipment';
 import { restDeviationSeconds } from '@/services/rest';
-import type { BodyWeightEntry, Exercise } from '@/types';
+import { CARDIO_MODALITY_LABELS } from '@/services/cardio';
+import { computePace, formatPace } from '@/services/cardioMetrics';
+import type { BodyWeightEntry, CardioModality, Exercise, WorkoutSet } from '@/types';
 import { BODY_MEASUREMENT_FIELDS } from '@/utils/format';
 
 /**
@@ -56,6 +58,7 @@ const TRACKING_TYPE_LABELS: Record<string, string> = {
   assisted_bodyweight_reps: 'Unterstützt + Wiederholungen',
   reps_only: 'Nur Wiederholungen',
   duration: 'Zeit',
+  cardio: 'Cardio',
 };
 
 const WEIGHT_MODE_LABELS: Record<string, string> = {
@@ -125,6 +128,30 @@ export function sessionsCsv(dataset: AnalyticsDataset): string {
   return toCsv(headers, rows);
 }
 
+/**
+ * The eight cardio cells for a set row. All empty for a strength set; for a
+ * cardio set each value is the raw entry (blank when absent, never 0), plus a
+ * clearly derived pace/speed column computed from duration + distance.
+ */
+function cardioColumns(
+  set: WorkoutSet,
+  modality: CardioModality | undefined,
+  isCardio: boolean,
+): (string | number)[] {
+  if (!isCardio) return ['', '', '', '', '', '', '', ''];
+  const pace = computePace(modality, set.durationSeconds, set.distanceMeters);
+  return [
+    modality ? CARDIO_MODALITY_LABELS[modality] : '',
+    num(set.distanceMeters, 0),
+    pace ? formatPace(pace) : '',
+    num(set.averageHeartRateBpm, 0),
+    num(set.caloriesKcal, 0),
+    num(set.elevationGainMeters, 0),
+    num(set.cadenceRpm, 0),
+    num(set.resistanceLevel, 0),
+  ];
+}
+
 export function setsCsv(dataset: AnalyticsDataset): string {
   const headers = [
     'Datum',
@@ -152,6 +179,15 @@ export function setsCsv(dataset: AnalyticsDataset): string {
     'Deload',
     // Structured per-set equipment (Feature 3); appended so the header stays stable.
     'Ausrüstung',
+    // Cardio columns, appended so existing columns keep their meaning and order.
+    'Cardio-Modalität',
+    'Distanz (m)',
+    'Pace/Geschwindigkeit',
+    'Ø Herzfrequenz (bpm)',
+    'Kalorien (kcal)',
+    'Höhenmeter (m)',
+    'Kadenz (rpm)',
+    'Widerstand',
   ];
 
   const exercisesById = new Map(
@@ -194,6 +230,12 @@ export function setsCsv(dataset: AnalyticsDataset): string {
       session.deloadIntensity ? 'ja' : 'nein',
       // Empty for unspecified so old rows stay blank rather than saying "Nicht festgelegt".
       execution.equipment === 'unspecified' ? '' : equipmentLabel(execution.equipment),
+      // Cardio: empty cells for a strength set, raw values (never 0) for cardio.
+      ...cardioColumns(
+        set,
+        execution.cardioModality,
+        execution.trackingType === 'cardio',
+      ),
     ];
   });
 
@@ -213,6 +255,8 @@ export function exercisesCsv(exercises: Exercise[]): string {
     'Archiviert',
     'Notiz',
     'Herkunft',
+    // Appended so existing columns keep their order.
+    'Cardio-Modalität',
   ];
   const rows = [...exercises]
     .sort((a, b) => a.name.localeCompare(b.name, 'de'))
@@ -228,6 +272,7 @@ export function exercisesCsv(exercises: Exercise[]): string {
       exercise.archived ? 'ja' : 'nein',
       exercise.notes,
       exercise.origin === 'system' ? 'System' : 'Eigene',
+      exercise.cardioModality ? CARDIO_MODALITY_LABELS[exercise.cardioModality] : '',
     ]);
   return toCsv(headers, rows);
 }

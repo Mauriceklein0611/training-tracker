@@ -187,8 +187,14 @@ describe('other CSV exports', () => {
 
     const sets = setsCsv(dataset);
     expect(sets).toContain('Muskelaufbau');
-    // Deload 'ja' then the trailing (empty for unspecified) Ausrüstung column.
-    expect(sets.replace(UTF8_BOM, '').split('\r\n')[1].endsWith(',ja,')).toBe(true);
+    // Deload 'ja', then the (empty for unspecified) Ausrüstung column, then the
+    // eight appended cardio columns — all empty for a strength set.
+    expect(
+      sets
+        .replace(UTF8_BOM, '')
+        .split('\r\n')[1]
+        .endsWith(',ja' + ','.repeat(9)),
+    ).toBe(true);
 
     // A system exercise is labelled in the exercises export.
     const exercises = exercisesCsv([
@@ -262,5 +268,58 @@ describe('other CSV exports', () => {
     // Same number of columns, but nothing invented for what was not measured.
     expect(row.split(',')).toHaveLength(header.split(',').length);
     expect(row.split(',').filter((cell) => cell === '').length).toBeGreaterThan(10);
+  });
+});
+
+describe('setsCsv — cardio columns', () => {
+  it('fills the cardio columns for a cardio set and derives the pace', () => {
+    const running = makeExercise({
+      id: 'ex-run',
+      name: 'Laufen',
+      trackingType: 'cardio',
+      cardioModality: 'running',
+      weightMode: 'none',
+    });
+    const session = makeSession({ id: 's-run', startedAt: '2026-07-06T10:00:00.000Z' });
+    const se = makeSessionExercise({
+      id: 'se-run',
+      sessionId: 's-run',
+      exerciseId: 'ex-run',
+      exerciseNameSnapshot: 'Laufen',
+      trackingTypeSnapshot: 'cardio',
+      weightModeSnapshot: 'none',
+      cardioModalitySnapshot: 'running',
+    });
+    const dataset: AnalyticsDataset = {
+      exercises: [running],
+      sessions: [session],
+      sessionExercises: [se],
+      sets: [
+        makeSet({
+          sessionExerciseId: 'se-run',
+          weightKg: undefined,
+          reps: undefined,
+          durationSeconds: 1800,
+          distanceMeters: 6000,
+          averageHeartRateBpm: 150,
+          completedAt: '2026-07-06T10:30:00.000Z',
+        }),
+      ],
+    };
+
+    const csv = setsCsv(dataset);
+    const [header, row] = csv.replace(UTF8_BOM, '').trim().split('\r\n');
+    const cols = header.split(',');
+    const cells = row.split(',');
+    const at = (label: string) => cells[cols.indexOf(label)];
+
+    expect(at('Cardio-Modalität')).toBe('Laufen');
+    expect(at('Distanz (m)')).toBe('6000');
+    // 6 km in 30 min → 5:00 min/km (may be quoted; strip quotes for the check).
+    expect(at('Pace/Geschwindigkeit').replace(/"/g, '')).toContain('5:00 min/km');
+    expect(at('Ø Herzfrequenz (bpm)')).toBe('150');
+    // Strength columns stay blank — nothing invented.
+    expect(at('Gewicht')).toBe('');
+    expect(at('Wiederholungen')).toBe('');
   });
 });
