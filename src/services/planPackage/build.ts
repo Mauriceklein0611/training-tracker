@@ -112,6 +112,11 @@ export function buildPlanPackage(
         primaryMuscleGroup: exercise.primaryMuscleGroup,
         secondaryMuscleGroups: exercise.secondaryMuscleGroups,
         equipment: exercise.equipment,
+        // Structured equipment + cardio modality (package v4); omitted when absent.
+        ...(exercise.defaultEquipment
+          ? { defaultEquipment: exercise.defaultEquipment }
+          : {}),
+        ...(exercise.cardioModality ? { cardioModality: exercise.cardioModality } : {}),
         trackingType: exercise.trackingType,
         weightMode: exercise.weightMode,
         weightMultiplier: exercise.weightMultiplier,
@@ -181,6 +186,8 @@ export function buildPlanPackage(
               targetRepMin: row.targetRepMin ?? null,
               targetRepMax: row.targetRepMax ?? null,
               targetDurationSeconds: row.targetDurationSeconds ?? null,
+              targetDistanceMeters: row.targetDistanceMeters ?? null,
+              targetRpe: row.targetRpe ?? null,
               restSeconds: row.restSeconds,
               notes: note(row.notes),
               group,
@@ -253,6 +260,8 @@ export function planPackageFingerprint(pkg: PlanPackage): string {
         weightMode: exercise.weightMode,
         weightMultiplier: exercise.weightMultiplier,
         equipment: exercise.equipment.trim().toLowerCase(),
+        defaultEquipment: exercise.defaultEquipment ?? null,
+        cardioModality: exercise.cardioModality ?? null,
         defaultRestSeconds: exercise.defaultRestSeconds,
         primaryMuscleGroup: exercise.primaryMuscleGroup,
         secondaryMuscleGroups: [...exercise.secondaryMuscleGroups].sort(),
@@ -279,6 +288,8 @@ export function planPackageFingerprint(pkg: PlanPackage): string {
               targetRepMin: planExercise.targetRepMin ?? null,
               targetRepMax: planExercise.targetRepMax ?? null,
               targetDurationSeconds: planExercise.targetDurationSeconds ?? null,
+              targetDistanceMeters: planExercise.targetDistanceMeters ?? null,
+              targetRpe: planExercise.targetRpe ?? null,
               restSeconds: planExercise.restSeconds,
               notes: planExercise.notes.trim(),
               group: planExercise.group

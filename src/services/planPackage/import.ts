@@ -228,6 +228,9 @@ function exerciseDraftFromPackage(
     primaryMuscleGroup: pkg.primaryMuscleGroup,
     secondaryMuscleGroups: [...pkg.secondaryMuscleGroups],
     equipment: pkg.equipment,
+    // Structured equipment + cardio modality (package v4); absent in older files.
+    defaultEquipment: pkg.defaultEquipment,
+    cardioModality: pkg.cardioModality,
     trackingType: pkg.trackingType,
     weightMode: pkg.weightMode,
     weightMultiplier: pkg.weightMultiplier,
@@ -376,6 +379,8 @@ export async function importPlanPackage(
                 targetRepMin: planExercise.targetRepMin ?? undefined,
                 targetRepMax: planExercise.targetRepMax ?? undefined,
                 targetDurationSeconds: planExercise.targetDurationSeconds ?? undefined,
+                targetDistanceMeters: planExercise.targetDistanceMeters ?? undefined,
+                targetRpe: planExercise.targetRpe ?? undefined,
                 restSeconds: planExercise.restSeconds,
                 notes: planExercise.notes,
                 groupId,

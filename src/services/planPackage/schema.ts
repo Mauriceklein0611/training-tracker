@@ -1,5 +1,7 @@
 import { z } from 'zod';
 import {
+  cardioModalitySchema,
+  equipmentSchema,
   groupRestModeSchema,
   groupTypeSchema,
   trackingTypeSchema,
@@ -45,6 +47,10 @@ export const packageExerciseSchema = z
     primaryMuscleGroup: z.string().max(100).default(''),
     secondaryMuscleGroups: z.array(z.string().max(100)).max(20).default([]),
     equipment: z.string().max(100).default(''),
+    // Structured default equipment + cardio modality (package v4). Optional so
+    // v2/v3 files still validate; never guessed from the free-text equipment.
+    defaultEquipment: equipmentSchema.optional(),
+    cardioModality: cardioModalitySchema.optional(),
     trackingType: trackingTypeSchema,
     weightMode: weightModeSchema,
     weightMultiplier: z.number().positive().max(10).default(1),
@@ -68,6 +74,9 @@ export const packagePlanExerciseSchema = z
     targetRepMin: z.number().int().min(0).max(1000).nullable().optional(),
     targetRepMax: z.number().int().min(0).max(1000).nullable().optional(),
     targetDurationSeconds: z.number().int().min(0).max(36000).nullable().optional(),
+    // Cardio targets (package v4). Optional/nullable so older files still validate.
+    targetDistanceMeters: z.number().min(0).max(1_000_000).nullable().optional(),
+    targetRpe: z.number().min(1).max(10).nullable().optional(),
     restSeconds: z.number().int().min(0).max(3600).default(120),
     notes: z.string().max(2000).default(''),
     group: packageGroupSchema.nullable().optional(),
@@ -295,9 +304,10 @@ function refinePackage(
 export const planPackageSchema = z
   .object({
     format: z.literal(PLAN_PACKAGE_FORMAT),
-    // Both 2 (no schedule) and 3 (schedule) share this schema; schedule is
-    // optional, so a version-2 file still validates and imports as free-rotation.
-    schemaVersion: z.union([z.literal(2), z.literal(3)]),
+    // Versions 2, 3 and 4 share this schema; the schedule (v3) and the
+    // structured-equipment/cardio fields (v4) are optional, so an older file
+    // still validates and imports with those fields simply absent.
+    schemaVersion: z.union([z.literal(2), z.literal(3), z.literal(4)]),
     packageId: portableKey,
     createdAt: z.string(),
     source: z

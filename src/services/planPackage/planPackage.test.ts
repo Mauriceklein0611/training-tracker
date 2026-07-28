@@ -206,6 +206,83 @@ describe('buildPlanPackage roundtrip', () => {
     expect(imported.template.name).toBe('Oberkörper');
     expect(imported.exercises).toHaveLength(2);
   });
+
+  it('round-trips a cardio plan (v4) without losing equipment or cardio targets', async () => {
+    const running = await createExercise({
+      name: 'Laufen',
+      primaryMuscleGroup: 'Ganzkörper',
+      secondaryMuscleGroups: [],
+      equipment: 'Laufband',
+      defaultEquipment: 'treadmill',
+      trackingType: 'cardio',
+      cardioModality: 'running',
+      weightMode: 'none',
+      weightMultiplier: 1,
+      defaultRestSeconds: 60,
+      notes: '',
+    });
+    const template = await createTemplate('Ausdauer');
+    const row = await addExerciseToTemplate(template.id, running);
+    await (
+      await import('@/db/repositories/templates')
+    ).updateTemplateExercise(row.id, {
+      targetSets: 4,
+      targetDurationSeconds: 600,
+      targetDistanceMeters: 2000,
+      targetRpe: 7,
+    });
+
+    const pkg = buildPlanPackage([await exportInputFor(template)], {
+      packageName: 'Ausdauer',
+      source: 'app-export',
+    });
+    expect(pkg.schemaVersion).toBe(4);
+    expect(pkg.exercises[0].defaultEquipment).toBe('treadmill');
+    expect(pkg.exercises[0].cardioModality).toBe('running');
+
+    await resetDatabase();
+    const result = await importPlanPackage(pkg, analyzePlanPackageImport(pkg, [], []));
+    expect(result.createdExercises).toBe(1);
+
+    const importedExercise = (await db.exercises.toArray()).find(
+      (e) => e.name === 'Laufen',
+    )!;
+    expect(importedExercise.trackingType).toBe('cardio');
+    expect(importedExercise.cardioModality).toBe('running');
+    expect(importedExercise.defaultEquipment).toBe('treadmill');
+
+    const [imported] = await listTemplatesWithExercises();
+    const importedRow = imported.exercises[0];
+    expect(importedRow.targetDistanceMeters).toBe(2000);
+    expect(importedRow.targetRpe).toBe(7);
+    expect(importedRow.targetDurationSeconds).toBe(600);
+  });
+
+  it('still imports a version-3 package (no equipment/cardio fields)', async () => {
+    const template = await seedPlan();
+    const pkg = buildPlanPackage([await exportInputFor(template)], {
+      packageName: 'Alt',
+      source: 'app-export',
+    });
+    // Downgrade the wire version and drop the v4-only fields, as a v3 file would.
+    const v3 = {
+      ...pkg,
+      schemaVersion: 3 as const,
+      exercises: pkg.exercises.map(
+        ({ defaultEquipment: _d, cardioModality: _c, ...rest }) => rest,
+      ),
+    };
+    const parsed = parsePlanPackage(JSON.stringify(v3));
+    expect(parsed.ok).toBe(true);
+    if (parsed.ok) {
+      await resetDatabase();
+      const result = await importPlanPackage(
+        parsed.data,
+        analyzePlanPackageImport(parsed.data, [], []),
+      );
+      expect(result.createdExercises).toBe(2);
+    }
+  });
 });
 
 describe('analyzePlanPackageImport', () => {
@@ -398,6 +475,26 @@ describe('importPlanPackage', () => {
       const pkg = base();
       pkg.exercises[1].weightMultiplier = 3;
       expect(planPackageFingerprint(pkg)).not.toBe(planPackageFingerprint(base()));
+    });
+
+    it('changes when structured equipment or a cardio field changes', () => {
+      const withEquip = base();
+      withEquip.exercises[0].defaultEquipment = 'machine';
+      expect(planPackageFingerprint(withEquip)).not.toBe(planPackageFingerprint(base()));
+
+      const withCardio = base();
+      withCardio.exercises[0].cardioModality = 'running';
+      expect(planPackageFingerprint(withCardio)).not.toBe(planPackageFingerprint(base()));
+
+      const withDistance = base();
+      withDistance.plans[0].days[0].exercises[0].targetDistanceMeters = 3000;
+      expect(planPackageFingerprint(withDistance)).not.toBe(
+        planPackageFingerprint(base()),
+      );
+
+      const withRpe = base();
+      withRpe.plans[0].days[0].exercises[0].targetRpe = 8;
+      expect(planPackageFingerprint(withRpe)).not.toBe(planPackageFingerprint(base()));
     });
 
     it('changes when the schedule mode or a rest day changes', () => {

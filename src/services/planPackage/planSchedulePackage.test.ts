@@ -44,7 +44,7 @@ describe('plan package v3 — schedule', () => {
       source: 'app-export',
     });
 
-    expect(pkg.schemaVersion).toBe(3);
+    expect(pkg.schemaVersion).toBe(4);
     const schedule = pkg.plans[0].schedule!;
     expect(schedule.mode).toBe('repeating-cycle');
     expect(schedule.entries.map((e) => e.type)).toEqual(['workout', 'workout', 'rest']);

@@ -38,4 +38,23 @@ describe('buildPlanBuilderKit', () => {
     expect(kit.allowedValues.weightModeByTrackingType.duration).toEqual(['none']);
     expect(kit.allowedValues.weightModeByTrackingType.weight_reps).toContain('per_hand');
   });
+
+  it('documents cardio: tracking type, modalities, equipment and a cardio example', () => {
+    const kit = buildPlanBuilderKit();
+    expect(kit.allowedValues.trackingType).toContain('cardio');
+    expect(kit.allowedValues.cardioModality).toContain('running');
+    expect(kit.allowedValues.equipment).toContain('treadmill');
+    expect(kit.allowedValues.weightModeByTrackingType.cardio).toEqual(['none']);
+
+    const parsed = planPackageSchema.parse(kit.example);
+    const cardioExercise = parsed.exercises.find((e) => e.trackingType === 'cardio');
+    expect(cardioExercise?.cardioModality).toBe('running');
+    expect(cardioExercise?.defaultEquipment).toBe('treadmill');
+    // The example includes a cardio interval position with a distance target.
+    const cardioPos = parsed.plans[0].days
+      .flatMap((day) => day.exercises)
+      .find((pe) => pe.exerciseKey === cardioExercise?.exerciseKey);
+    expect(cardioPos?.targetDistanceMeters).toBe(1000);
+    expect(cardioPos?.targetRpe).toBe(7);
+  });
 });
