@@ -21,7 +21,9 @@ import {
   deloadRemainingDays,
 } from '@/services/deload';
 import { planCycleWeek } from '@/services/home';
+import { buildCoachInsights } from '@/services/coachFeed';
 import { ActivePlanHero, type ActivePlanHeroData } from '@/features/home/ActivePlanHero';
+import { CoachFeed } from '@/features/home/CoachFeed';
 import {
   ActiveSessionExistsError,
   startFreeSession,
@@ -135,6 +137,8 @@ export default function HomePage() {
     return {
       analytics,
       weekAnalytics,
+      // Deterministic, explainable insights from the same local dataset.
+      insights: buildCoachInsights(dataset),
       lastSession: completed[0],
       totalSessions: completed.length,
       sessionsThisWeek: completed.filter(
@@ -385,6 +389,10 @@ export default function HomePage() {
           </ul>
         )}
       </section>
+
+      {hasHistory && overview?.insights ? (
+        <CoachFeed insights={overview.insights} />
+      ) : null}
 
       <section aria-labelledby="overview-heading">
         <h2 id="overview-heading" className="mb-3 text-base font-semibold">
