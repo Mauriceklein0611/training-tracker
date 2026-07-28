@@ -16,7 +16,7 @@ import {
   memberLabel,
 } from '@/services/grouping';
 import { isWorkingSet } from '@/services/metrics';
-import type { GroupRestMode, GroupType, TemplateExercise } from '@/types';
+import type { EffortInput, GroupRestMode, GroupType, TemplateExercise } from '@/types';
 
 /**
  * The exercise list of a running workout, laid out as superset/circuit blocks.
@@ -31,12 +31,14 @@ export function LiveExerciseList({
   targets,
   soundEnabled,
   vibrationEnabled,
+  effortInput,
 }: {
   detail: SessionDetail;
   sessionId: string;
   targets?: Map<string, TemplateExercise>;
   soundEnabled?: boolean;
   vibrationEnabled?: boolean;
+  effortInput?: EffortInput;
 }) {
   const entries = detail.exercises;
   const detailById = new Map(entries.map((entry) => [entry.sessionExercise.id, entry]));
@@ -86,6 +88,7 @@ export function LiveExerciseList({
                 highlightNext={progress?.nextMemberId === member.id}
                 soundEnabled={soundEnabled}
                 vibrationEnabled={vibrationEnabled}
+                effortInput={effortInput}
               />
               {grouped ? (
                 <button

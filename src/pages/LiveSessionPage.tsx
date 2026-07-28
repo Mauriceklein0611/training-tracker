@@ -195,6 +195,7 @@ export default function LiveSessionPage() {
           targets={templateTargets}
           soundEnabled={settings.restSoundEnabled}
           vibrationEnabled={settings.restVibrationEnabled}
+          effortInput={settings.effortInput ?? 'rir'}
         />
       )}
 

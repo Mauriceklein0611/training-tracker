@@ -890,6 +890,9 @@ export interface WeeklyGoals {
   exerciseGoals?: ExerciseWeeklyGoal[];
 }
 
+/** Which effort metric the set editor collects, or none (Phase G). */
+export type EffortInput = 'rpe' | 'rir' | 'none';
+
 export interface AppSettings {
   /** Singleton row. */
   id: 'app-settings';
@@ -903,6 +906,11 @@ export interface AppSettings {
   keepScreenAwake: boolean;
   /** Announce the end of a rest by voice, where the browser supports it. */
   voiceAnnouncementsEnabled: boolean;
+  /**
+   * Which effort metric the set editor asks for (Phase G). Absent on older
+   * settings rows → treated as the default; never blocks completing a set.
+   */
+  effortInput?: EffortInput;
   /** Optional context for the AI export; never used for calculations. */
   analysisContext?: AnalysisContext;
   /** Optional weekly training goals; absent means no goals are set. */

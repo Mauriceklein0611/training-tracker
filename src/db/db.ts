@@ -737,6 +737,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   restVibrationEnabled: true,
   keepScreenAwake: true,
   voiceAnnouncementsEnabled: false,
+  effortInput: 'rir',
   backupReminderDays: 14,
   schemaVersion: SCHEMA_VERSION,
   createdAt: '',

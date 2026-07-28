@@ -9,7 +9,8 @@ import { isIos, isStandalone } from '@/services/pwa';
 import { isWakeLockSupported } from '@/hooks/useWakeLock';
 import { playRestFinishedSound, primeAudio, vibrate } from '@/services/sound';
 import { isSpeechSupported, speak } from '@/services/speech';
-import type { AnalyticsRangeKey, AppSettings } from '@/types';
+import { EFFORT_INPUT_LABELS } from '@/services/effort';
+import type { AnalyticsRangeKey, AppSettings, EffortInput } from '@/types';
 import { formatDateTime } from '@/utils/date';
 
 export default function SettingsPage() {
@@ -43,6 +44,20 @@ export default function SettingsPage() {
               hint="Aktuell werden alle Gewichte in Kilogramm erfasst."
             >
               <option value="kg">Kilogramm (kg)</option>
+            </SelectField>
+            <SelectField
+              label="Anstrengung erfassen"
+              value={settings.effortInput ?? 'rir'}
+              hint="Welche Anstrengungsangabe der Satz-Editor anbietet. Optional — ein Satz kann immer ohne Angabe abgeschlossen werden."
+              onChange={(event) =>
+                void update({ effortInput: event.target.value as EffortInput })
+              }
+            >
+              {(Object.keys(EFFORT_INPUT_LABELS) as EffortInput[]).map((key) => (
+                <option key={key} value={key}>
+                  {EFFORT_INPUT_LABELS[key]}
+                </option>
+              ))}
             </SelectField>
           </div>
         </Card>

@@ -527,6 +527,8 @@ export const appSettingsSchema = z.object({
   keepScreenAwake: z.boolean().default(true),
   // Added in schema version 14; defaulted so older backups still validate.
   voiceAnnouncementsEnabled: z.boolean().default(false),
+  // Effort metric preference (Phase G); optional so older backups still validate.
+  effortInput: z.enum(['rpe', 'rir', 'none']).optional(),
   analysisContext: z
     .object({
       goal: z.string().max(300).optional(),

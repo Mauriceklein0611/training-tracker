@@ -40,7 +40,7 @@ import { ProgressionHint } from '@/features/session/ProgressionHint';
 import { db } from '@/db/db';
 import { TRACKING_TYPE_LABELS, formatKg } from '@/utils/format';
 import { formatDate } from '@/utils/date';
-import type { SessionExercise, TemplateExercise, WorkoutSet } from '@/types';
+import type { EffortInput, SessionExercise, TemplateExercise, WorkoutSet } from '@/types';
 
 export interface ExerciseTarget {
   targetSets?: number;
@@ -93,6 +93,7 @@ export function SessionExerciseCard({
   highlightNext,
   soundEnabled,
   vibrationEnabled,
+  effortInput,
 }: {
   detail: SessionExerciseDetail;
   sessionId: string;
@@ -106,6 +107,8 @@ export function SessionExerciseCard({
   highlightNext?: boolean;
   soundEnabled?: boolean;
   vibrationEnabled?: boolean;
+  /** Effort metric preference passed to the strength set editor. */
+  effortInput?: EffortInput;
 }) {
   const { sessionExercise, sets } = detail;
 
@@ -544,6 +547,7 @@ export function SessionExerciseCard({
           />
         ) : openSet ? (
           <SetEditor
+            effortInput={effortInput}
             // Remounting on a new set id resets the draft exactly once.
             key={openSet.id}
             set={openSet}

@@ -15,11 +15,13 @@ import { cn } from '@/utils/cn';
 import { useAutosave } from '@/hooks/useAutosave';
 import { useToast } from '@/hooks/useToast';
 import { ExerciseTimer } from '@/features/session/ExerciseTimer';
+import { EffortField } from '@/features/session/EffortField';
 import {
   compareSet,
   findPreviousSetForComparison,
   type RecordBaseline,
 } from '@/services/comparison';
+import type { EffortInput } from '@/types';
 
 interface Draft {
   setType: SetType;
@@ -86,6 +88,7 @@ export function SetEditor({
   targetDurationSeconds,
   soundEnabled = true,
   vibrationEnabled = true,
+  effortInput = 'rir',
 }: {
   set: WorkoutSet;
   sessionExercise: SessionExercise;
@@ -108,6 +111,8 @@ export function SetEditor({
   targetDurationSeconds?: number;
   soundEnabled?: boolean;
   vibrationEnabled?: boolean;
+  /** Which effort metric to collect (RPE, RIR or none). Defaults to RIR. */
+  effortInput?: EffortInput;
 }) {
   /*
    * The draft is seeded from the record once and then belongs to the user.
@@ -356,22 +361,17 @@ export function SetEditor({
           />
         ) : null}
 
-        <NumberField
-          label="RIR (optional)"
-          decimal
-          value={draft.rir}
-          error={visibleErrors.rir}
-          onChange={(event) => update('rir', event.target.value)}
-          onBlur={persist}
-        />
-        <NumberField
-          label="RPE (optional)"
-          decimal
-          value={draft.rpe}
-          error={visibleErrors.rpe}
-          onChange={(event) => update('rpe', event.target.value)}
-          onBlur={persist}
-        />
+        {effortInput !== 'none' ? (
+          <EffortField
+            mode={effortInput}
+            rir={draft.rir}
+            rpe={draft.rpe}
+            onChange={(next) =>
+              // Debounced autosave picks up the draft change; completion flushes.
+              setDraft((current) => ({ ...current, rir: next.rir, rpe: next.rpe }))
+            }
+          />
+        ) : null}
       </div>
 
       <Button
