@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildSetContexts,
   computeAnalytics,
+  computeExerciseCardioRecords,
   computeExerciseSeries,
   computeMuscleGroupLoad,
   computeWeeklySeries,
@@ -377,6 +378,69 @@ describe('computeExerciseSeries', () => {
     expect(bench.cardioDurationSeconds).toBeNull();
     expect(bench.cardioDistanceMeters).toBeNull();
     expect(bench.cardioPace).toBeNull();
+  });
+});
+
+describe('computeExerciseCardioRecords', () => {
+  function datasetWithRuns() {
+    const dataset = buildDataset();
+    dataset.exercises.push(
+      makeExercise({
+        id: 'ex-run',
+        name: 'Laufen',
+        trackingType: 'cardio',
+        cardioModality: 'running',
+        weightMode: 'none',
+      }),
+    );
+    const addRun = (
+      sessionId: string,
+      seId: string,
+      durationSeconds: number,
+      distanceMeters: number,
+    ) => {
+      dataset.sessionExercises.push(
+        makeSessionExercise({
+          id: seId,
+          sessionId,
+          exerciseId: 'ex-run',
+          order: 5,
+          exerciseNameSnapshot: 'Laufen',
+          trackingTypeSnapshot: 'cardio',
+          weightModeSnapshot: 'none',
+          cardioModalitySnapshot: 'running',
+        }),
+      );
+      dataset.sets.push(
+        makeSet({
+          sessionExerciseId: seId,
+          weightKg: undefined,
+          reps: undefined,
+          durationSeconds,
+          distanceMeters,
+          completedAt: '2026-07-06T11:00:00.000Z',
+        }),
+      );
+    };
+    // s-a and s-b already exist in buildDataset.
+    addRun('s-a', 'se-run-a', 1800, 6000); // 5:00 min/km
+    addRun('s-b', 'se-run-b', 1500, 6000); // 4:10 min/km — faster, same distance
+    return dataset;
+  }
+
+  it('reports the longest duration, greatest distance and fastest pace', () => {
+    const result = computeExerciseCardioRecords(datasetWithRuns(), 'ex-run');
+    expect(result).not.toBeNull();
+    expect(result!.modality).toBe('running');
+    expect(result!.records.longestDurationSeconds).toBe(1800);
+    expect(result!.records.greatestDistanceMeters).toBe(6000);
+    // 1500 s over 6 km → 25/6 ≈ 4:10 min/km, faster than the 5:00 run.
+    expect(result!.records.bestPace?.kind).toBe('min_per_km');
+    expect(result!.records.bestPace?.value).toBeCloseTo(25 / 6, 5);
+  });
+
+  it('returns null for an exercise with no completed cardio sets', () => {
+    expect(computeExerciseCardioRecords(buildDataset(), 'ex-bench')).toBeNull();
   });
 });
 

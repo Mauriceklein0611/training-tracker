@@ -20,10 +20,13 @@ import {
 } from '@/services/metrics';
 import {
   aggregateCardio,
+  computeCardioRecords,
   computePace,
+  type CardioRecords,
   type CardioTotals,
   type Pace,
 } from '@/services/cardioMetrics';
+import type { CardioModality } from '@/types';
 import { computeRestStatistics, type RestStatistics } from '@/services/rest';
 import {
   currentWeeklyStreak,
@@ -479,6 +482,34 @@ export function computeExerciseSeries(
   }
 
   return points.sort((a, b) => a.startedAt.localeCompare(b.startedAt));
+}
+
+/**
+ * Cardio bests for one exercise, with the modality needed to format them. All
+ * of the exercise's completed cardio sets are compared — but only within this
+ * one exercise (hence one modality), so a short run is never weighed against a
+ * long ride. Returns null when the exercise has no completed cardio sections.
+ */
+export function computeExerciseCardioRecords(
+  dataset: AnalyticsDataset,
+  exerciseId: string,
+  range: DateRange | null = null,
+): { modality: CardioModality | undefined; records: CardioRecords } | null {
+  const contexts = filterContextsByRange(buildSetContexts(dataset), range).filter(
+    (context) =>
+      context.sessionExercise.exerciseId === exerciseId &&
+      isCompleted(context.set) &&
+      isCardio(context.set, context.sessionExercise),
+  );
+  if (contexts.length === 0) return null;
+  const last = contexts[contexts.length - 1];
+  const modality =
+    last.set.cardioModalitySnapshot ?? last.sessionExercise.cardioModalitySnapshot;
+  const records = computeCardioRecords(
+    modality,
+    contexts.map((context) => ({ set: context.set, context: context.sessionExercise })),
+  );
+  return { modality, records };
 }
 
 /** Exercises that appear in the data, for the progression picker. */

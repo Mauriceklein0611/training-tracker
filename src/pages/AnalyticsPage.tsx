@@ -21,12 +21,14 @@ import {
 } from '@/services/analysisFilters';
 import {
   computeAnalytics,
+  computeExerciseCardioRecords,
   computeExerciseSeries,
   listTrackedExercises,
   type ExerciseSeriesPoint,
 } from '@/services/analytics';
 import { analyzePlateau } from '@/services/plateau';
 import { PlateauHint } from '@/features/analytics/PlateauHint';
+import { CardioRecordsCard } from '@/features/analytics/CardioRecordsCard';
 import { ONE_RM_MAX_REPS, ONE_RM_MIN_REPS } from '@/services/metrics';
 import { useSettings } from '@/hooks/useSettings';
 import type { AnalyticsRangeKey } from '@/types';
@@ -132,6 +134,12 @@ export default function AnalyticsPage() {
               computeExerciseSeries(dataset, exerciseId, null),
               selected.trackingType,
             )
+          : null,
+      // Cardio bests over the whole history of this exercise (one modality), so
+      // the picked range never hides an earlier personal best.
+      cardioRecords:
+        exerciseId && selected?.trackingType === 'cardio'
+          ? computeExerciseCardioRecords(dataset, exerciseId, null)
           : null,
     };
   }, [range, exerciseId, deloadFilter]);
@@ -507,6 +515,12 @@ export default function AnalyticsPage() {
                 >
                   <SimpleLineChart data={seriesPoints} formatValue={metricFormatter} />
                 </ChartFrame>
+                {data?.cardioRecords ? (
+                  <CardioRecordsCard
+                    modality={data.cardioRecords.modality}
+                    records={data.cardioRecords.records}
+                  />
+                ) : null}
                 {data?.plateau ? <PlateauHint analysis={data.plateau} /> : null}
               </div>
             ) : null}
