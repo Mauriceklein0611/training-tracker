@@ -27,6 +27,7 @@ import { useSettings } from '@/hooks/useSettings';
 import { useToast } from '@/hooks/useToast';
 import { loadAnalyticsDataset } from '@/services/dataset';
 import { summarizeSession } from '@/services/sessionSummary';
+import { workoutProgress } from '@/services/sessionProgress';
 import { formatDuration } from '@/utils/date';
 
 /**
@@ -104,6 +105,17 @@ export default function LiveSessionPage() {
     [detail],
   );
 
+  const progress = useMemo(
+    () =>
+      workoutProgress(
+        (detail?.exercises ?? []).map((entry) => ({
+          targetSets: entry.sessionExercise.targetSetsSnapshot,
+          sets: entry.sets,
+        })),
+      ),
+    [detail],
+  );
+
   if (detail === undefined) {
     return (
       <p className="p-6 text-center text-sm text-muted" role="status">
@@ -153,7 +165,30 @@ export default function LiveSessionPage() {
             </h1>
             <p className="numeric text-sm text-muted">
               {formatDuration(elapsedSeconds)} · {completedSetCount} Sätze
+              {progress.totalExercises > 0
+                ? ` · Übung ${Math.min(
+                    progress.doneExercises + 1,
+                    progress.totalExercises,
+                  )} von ${progress.totalExercises}`
+                : ''}
             </p>
+            {progress.totalExercises > 0 ? (
+              <div
+                className="mt-1.5 h-1 overflow-hidden rounded-full bg-surface-3"
+                role="progressbar"
+                aria-valuemin={0}
+                aria-valuemax={progress.totalExercises}
+                aria-valuenow={progress.doneExercises}
+                aria-label="Fortschritt der Übungen"
+              >
+                <div
+                  className="h-full rounded-full bg-accent transition-[width] duration-300"
+                  style={{
+                    width: `${(progress.doneExercises / progress.totalExercises) * 100}%`,
+                  }}
+                />
+              </div>
+            ) : null}
           </div>
           <IconButton
             label="Training verwerfen"
