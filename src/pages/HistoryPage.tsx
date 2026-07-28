@@ -11,6 +11,7 @@ import { useSettings } from '@/hooks/useSettings';
 import { loadAnalyticsDataset } from '@/services/dataset';
 import { buildSetContexts, type AnalyticsDataset } from '@/services/analytics';
 import { buildDayActivity, hasAnyWeeklyGoal } from '@/services/calendar';
+import { listBodyWeightEntries } from '@/db/repositories/bodyWeight';
 import { aggregateVolume } from '@/services/metrics';
 import {
   dayKey,
@@ -36,11 +37,14 @@ interface HistoryRow {
 interface HistoryData {
   rows: HistoryRow[];
   dataset: AnalyticsDataset;
+  /** Local day keys carrying a body measurement, for the calendar's violet days. */
+  bodyDays: string[];
 }
 
 const EMPTY_DATA: HistoryData = {
   rows: [],
   dataset: { sessions: [], sessionExercises: [], sets: [], exercises: [] },
+  bodyDays: [],
 };
 
 export default function HistoryPage() {
@@ -53,6 +57,7 @@ export default function HistoryPage() {
     async (): Promise<HistoryData> => {
       const dataset = await loadAnalyticsDataset();
       const contexts = buildSetContexts(dataset);
+      const bodyDays = (await listBodyWeightEntries()).map((entry) => entry.date);
 
       const rows = dataset.sessions
         .filter((session) => session.status === 'completed')
@@ -83,7 +88,7 @@ export default function HistoryPage() {
           };
         });
 
-      return { rows, dataset };
+      return { rows, dataset, bodyDays };
     },
     [],
     EMPTY_DATA,
@@ -92,6 +97,7 @@ export default function HistoryPage() {
   const { rows, dataset } = data;
 
   const activity = useMemo(() => buildDayActivity(dataset), [dataset]);
+  const bodyDays = useMemo(() => new Set(data.bodyDays), [data.bodyDays]);
   const showGoals = hasAnyWeeklyGoal(settings.weeklyGoals);
 
   const filtered = useMemo(() => {
@@ -129,6 +135,7 @@ export default function HistoryPage() {
         <div className="mb-4 grid gap-4">
           <CalendarHeatmap
             activity={activity}
+            bodyDays={bodyDays}
             selectedDay={selectedDay}
             onSelectDay={setSelectedDay}
           />

@@ -20,13 +20,41 @@ export interface DayActivity {
   day: string;
   /** Completed sessions started on this day. */
   sessionCount: number;
-  /** Completed working sets performed on this day. */
+  /** Completed working sets performed on this day (strength and cardio). */
   workingSets: number;
+  /** Completed strength working sets only (cardio excluded) — for type colour. */
+  strengthSets: number;
+  /** Cardio minutes performed on this day. */
+  cardioMinutes: number;
+  /** Whether any session on this day was a deload session. */
+  isDeload: boolean;
   /** Summed session durations in seconds (0 when no session had a finish time). */
   durationSeconds: number;
   /** Kilogram volume from working sets where volume is meaningful. */
   volumeKg: number;
   sessionIds: string[];
+}
+
+/** The discipline that colours a calendar day. */
+export type DayColorKind = 'deload' | 'strength' | 'cardio' | 'mixed' | 'body' | 'none';
+
+/**
+ * How a day should be coloured: deload wins (a planned reduction, marked
+ * distinctly), then the disciplines trained, then a body-measurement-only day.
+ * Never invents a kind — a day with nothing is 'none'.
+ */
+export function dayColorKind(
+  activity: DayActivity | null | undefined,
+  hasBody = false,
+): DayColorKind {
+  if (!activity || activity.sessionCount === 0) return hasBody ? 'body' : 'none';
+  if (activity.isDeload) return 'deload';
+  const strength = activity.strengthSets > 0;
+  const cardio = activity.cardioMinutes > 0;
+  if (strength && cardio) return 'mixed';
+  if (cardio) return 'cardio';
+  // Strength, or a session with only warm-ups — still a strength day.
+  return 'strength';
 }
 
 /** Which quantity drives the heatmap colour. */
@@ -61,6 +89,9 @@ export function buildDayActivity(dataset: AnalyticsDataset): Map<string, DayActi
       day,
       sessionCount: 0,
       workingSets: 0,
+      strengthSets: 0,
+      cardioMinutes: 0,
+      isDeload: false,
       durationSeconds: 0,
       volumeKg: 0,
       sessionIds: [],
@@ -73,6 +104,7 @@ export function buildDayActivity(dataset: AnalyticsDataset): Map<string, DayActi
     if (session.status !== 'completed') continue;
     const activity = ensure(dayKey(session.startedAt));
     activity.sessionCount += 1;
+    if (session.deloadIntensity != null) activity.isDeload = true;
     activity.durationSeconds += sessionDurationSeconds(
       session.startedAt,
       session.finishedAt,
@@ -81,10 +113,18 @@ export function buildDayActivity(dataset: AnalyticsDataset): Map<string, DayActi
   }
 
   for (const context of buildSetContexts(dataset)) {
-    if (!isCompleted(context.set) || !isWorkingSet(context.set)) continue;
+    if (!isCompleted(context.set)) continue;
     const activity = ensure(dayKey(context.session.startedAt));
+    const cardio = isCardio(context.set, context.sessionExercise);
+    if (cardio) activity.cardioMinutes += (context.set.durationSeconds ?? 0) / 60;
+    if (!isWorkingSet(context.set)) continue;
+    // workingSets keeps its established meaning (all working sets); strengthSets
+    // and volume are the strength-only figures used for the day's colour.
     activity.workingSets += 1;
-    activity.volumeKg += setVolumeKg(context.set, context.sessionExercise) ?? 0;
+    if (!cardio) {
+      activity.strengthSets += 1;
+      activity.volumeKg += setVolumeKg(context.set, context.sessionExercise) ?? 0;
+    }
   }
 
   return days;

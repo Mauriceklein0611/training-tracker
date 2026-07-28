@@ -3,6 +3,7 @@ import type { AnalyticsDataset } from '@/services/analytics';
 import {
   buildCalendarCells,
   buildDayActivity,
+  dayColorKind,
   computeCurrentWeekExerciseProgress,
   computeWeekProgress,
   goalReached,
@@ -323,12 +324,46 @@ describe('goal helpers', () => {
   });
 });
 
+describe('dayColorKind', () => {
+  const base = {
+    day: '2026-07-20',
+    sessionCount: 1,
+    workingSets: 0,
+    strengthSets: 0,
+    cardioMinutes: 0,
+    isDeload: false,
+    durationSeconds: 0,
+    volumeKg: 0,
+    sessionIds: ['s1'],
+  };
+
+  it('classifies strength, cardio and mixed days', () => {
+    expect(dayColorKind({ ...base, strengthSets: 5 })).toBe('strength');
+    expect(dayColorKind({ ...base, cardioMinutes: 30 })).toBe('cardio');
+    expect(dayColorKind({ ...base, strengthSets: 5, cardioMinutes: 30 })).toBe('mixed');
+  });
+
+  it('lets a deload day win over its disciplines', () => {
+    expect(dayColorKind({ ...base, strengthSets: 5, isDeload: true })).toBe('deload');
+  });
+
+  it('is body for a measurement-only day and none for an empty one', () => {
+    expect(dayColorKind(null, true)).toBe('body');
+    expect(dayColorKind(null, false)).toBe('none');
+    // A day with a body measurement but no session also reads as body.
+    expect(dayColorKind({ ...base, sessionCount: 0 }, true)).toBe('body');
+  });
+});
+
 describe('metricValue', () => {
   it('selects the field matching the metric', () => {
     const activity = {
       day: '2026-07-20',
       sessionCount: 1,
       workingSets: 7,
+      strengthSets: 7,
+      cardioMinutes: 0,
+      isDeload: false,
       durationSeconds: 3600,
       volumeKg: 100,
       sessionIds: ['s1'],
