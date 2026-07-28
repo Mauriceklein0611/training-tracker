@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Archive, ArchiveRestore, Pencil, Plus, Trash2 } from 'lucide-react';
 import { PageHeader } from '@/components/layout/PageHeader';
@@ -196,7 +197,12 @@ export default function ExercisesPage() {
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <p className="flex flex-wrap items-center gap-2 font-medium">
-                    <span className="truncate">{exercise.name}</span>
+                    <Link
+                      to={`/mehr/uebungen/${exercise.id}`}
+                      className="truncate text-accent underline-offset-2 hover:underline"
+                    >
+                      {exercise.name}
+                    </Link>
                     {exercise.origin === 'system' ? (
                       <Badge tone="accent">System</Badge>
                     ) : null}

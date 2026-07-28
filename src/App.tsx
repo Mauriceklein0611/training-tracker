@@ -22,6 +22,7 @@ const MorePage = lazy(() => import('@/pages/MorePage'));
 const WorkoutUnitsPage = lazy(() => import('@/pages/WorkoutUnitsPage'));
 const WorkoutUnitEditPage = lazy(() => import('@/pages/WorkoutUnitEditPage'));
 const ExercisesPage = lazy(() => import('@/pages/ExercisesPage'));
+const ExerciseDetailPage = lazy(() => import('@/pages/ExerciseDetailPage'));
 const EquipmentProfilesPage = lazy(() => import('@/pages/EquipmentProfilesPage'));
 const BodyWeightPage = lazy(() => import('@/pages/BodyWeightPage'));
 const DataPage = lazy(() => import('@/pages/DataPage'));
@@ -64,6 +65,7 @@ export default function App() {
           />
           <Route path="/mehr" element={<MorePage />} />
           <Route path="/mehr/uebungen" element={<ExercisesPage />} />
+          <Route path="/mehr/uebungen/:exerciseId" element={<ExerciseDetailPage />} />
           <Route path="/mehr/equipment" element={<EquipmentProfilesPage />} />
           <Route path="/mehr/koerpergewicht" element={<BodyWeightPage />} />
           <Route path="/mehr/daten" element={<DataPage />} />
