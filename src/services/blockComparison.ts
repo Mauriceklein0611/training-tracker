@@ -4,7 +4,7 @@ import {
   computeAnalytics,
   filterContextsByRange,
 } from '@/services/analytics';
-import { isCompleted, isWorkingSet } from '@/services/metrics';
+import { isCardio, isCompleted, isWorkingSet } from '@/services/metrics';
 import type { BodyWeightEntry } from '@/types';
 import { dayKey, rateWeeks, weeksInRange, type DateRange } from '@/utils/date';
 
@@ -41,6 +41,13 @@ export interface BlockMetrics {
   workingSetsPerWeek: number;
   volumePerWeekKg: number;
   durationPerWeekSeconds: number;
+  // Cardio, kept apart from the strength metrics above (never merged).
+  cardioActivities: number;
+  cardioDurationSeconds: number;
+  cardioDistanceMeters: number;
+  cardioActivitiesPerWeek: number;
+  cardioMinutesPerWeek: number;
+  cardioDistancePerWeekMeters: number;
 }
 
 function average(values: number[]): number | null {
@@ -63,7 +70,10 @@ export function computeBlockMetrics(
   const perWeekDivisor = rateWeeks(range);
 
   const contexts = filterContextsByRange(buildSetContexts(dataset), range).filter(
-    (context) => isCompleted(context.set) && isWorkingSet(context.set),
+    (context) =>
+      isCompleted(context.set) &&
+      isWorkingSet(context.set) &&
+      !isCardio(context.set, context.sessionExercise),
   );
   const rirValues = contexts
     .map((context) => context.set.rir)
@@ -113,6 +123,12 @@ export function computeBlockMetrics(
     workingSetsPerWeek: analytics.workingSetCount / perWeekDivisor,
     volumePerWeekKg: analytics.volume.volumeKg / perWeekDivisor,
     durationPerWeekSeconds: analytics.totalDurationSeconds / perWeekDivisor,
+    cardioActivities: analytics.cardio.activities,
+    cardioDurationSeconds: analytics.cardio.totalDurationSeconds,
+    cardioDistanceMeters: analytics.cardio.totalDistanceMeters,
+    cardioActivitiesPerWeek: analytics.cardio.activities / perWeekDivisor,
+    cardioMinutesPerWeek: analytics.cardio.totalDurationSeconds / 60 / perWeekDivisor,
+    cardioDistancePerWeekMeters: analytics.cardio.totalDistanceMeters / perWeekDivisor,
   };
 }
 
@@ -168,6 +184,17 @@ export function buildBlockComparisonExport(
       workingSets: round(metrics.workingSetsPerWeek),
       volumeKg: round(metrics.volumePerWeekKg),
       durationMinutes: round(metrics.durationPerWeekSeconds / 60, 1),
+    },
+    // Cardio is a separate section — never added to the strength figures above.
+    cardio: {
+      activities: metrics.cardioActivities,
+      durationMinutes: round(metrics.cardioDurationSeconds / 60, 1),
+      distanceMeters: round(metrics.cardioDistanceMeters, 0),
+      perWeek: {
+        activities: round(metrics.cardioActivitiesPerWeek),
+        minutes: round(metrics.cardioMinutesPerWeek, 1),
+        distanceMeters: round(metrics.cardioDistancePerWeekMeters, 0),
+      },
     },
     averages: {
       rir: round(metrics.avgRir),
