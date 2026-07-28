@@ -44,6 +44,34 @@ export interface SessionSummary {
    * a mixed run+row session never reports a meaningless combined pace.
    */
   cardioPace: Pace | null;
+  /**
+   * Comparison against the most recent earlier session of the *same* plan day or
+   * workout unit, or null when there is no comparable prior session (e.g. a free
+   * workout, or the first time this unit was trained). Deltas are only set when
+   * both sides have a meaningful value.
+   */
+  previousComparable: PreviousComparable | null;
+}
+
+export interface PreviousComparable {
+  sessionId: string;
+  name: string;
+  startedAt: string;
+  /** (current − previous) / previous × 100 for kg volume; null when not comparable. */
+  volumeDeltaPercent: number | null;
+  /** Same, for total cardio duration; null when not comparable. */
+  cardioDurationDeltaPercent: number | null;
+}
+
+/** Signed percentage change, only when both sides are positive. */
+function percentDelta(previous: number, current: number): number | null {
+  if (!(previous > 0) || !(current > 0)) return null;
+  return ((current - previous) / previous) * 100;
+}
+
+/** What makes two sessions comparable: the same plan day or the same library unit. */
+function comparableKey(session: WorkoutSession): string | null {
+  return session.workoutUnitTemplateId ?? session.templateId ?? null;
 }
 
 /**
@@ -112,6 +140,46 @@ export function summarizeSession(
     (end.getTime() - new Date(session.startedAt).getTime()) / 1000,
   );
 
+  // Comparison to the most recent earlier session of the same plan day / unit.
+  const key = comparableKey(session);
+  const previous = key
+    ? dataset.sessions
+        .filter(
+          (candidate) =>
+            candidate.id !== sessionId &&
+            candidate.status === 'completed' &&
+            candidate.startedAt < session.startedAt &&
+            comparableKey(candidate) === key,
+        )
+        .sort((a, b) => b.startedAt.localeCompare(a.startedAt))[0]
+    : undefined;
+
+  let previousComparable: PreviousComparable | null = null;
+  if (previous) {
+    const prevContexts = allContexts.filter(
+      (context) => context.session.id === previous.id && isCompleted(context.set),
+    );
+    const prevVolume = aggregateVolume(
+      prevContexts
+        .filter((context) => isWorkingSet(context.set))
+        .map(({ set, sessionExercise }) => ({ set, sessionExercise })),
+      { includeWarmup: true, requireCompleted: false },
+    );
+    const prevCardio = aggregateCardio(
+      prevContexts.map(({ set, sessionExercise }) => ({ set, context: sessionExercise })),
+    );
+    previousComparable = {
+      sessionId: previous.id,
+      name: previous.name,
+      startedAt: previous.startedAt,
+      volumeDeltaPercent: percentDelta(prevVolume.volumeKg, volume.volumeKg),
+      cardioDurationDeltaPercent: percentDelta(
+        prevCardio.totalDurationSeconds,
+        cardio.totalDurationSeconds,
+      ),
+    };
+  }
+
   return {
     session,
     durationSeconds: Number.isFinite(durationSeconds) ? durationSeconds : null,
@@ -127,5 +195,6 @@ export function summarizeSession(
     hasStrength: volume.setCount > 0 || volume.totalReps > 0 || volume.volumeKg > 0,
     cardioModality,
     cardioPace,
+    previousComparable,
   };
 }

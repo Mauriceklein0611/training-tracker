@@ -7,7 +7,7 @@ import {
   formatDuration as formatCardioDuration,
   formatPace,
 } from '@/services/cardioMetrics';
-import { formatDurationLong } from '@/utils/date';
+import { formatDate, formatDurationLong } from '@/utils/date';
 import {
   formatKg,
   formatNumber,
@@ -26,6 +26,15 @@ export function SessionSummaryView({ summary }: { summary: SessionSummary }) {
 
   const duration =
     summary.durationSeconds == null ? '–' : formatDurationLong(summary.durationSeconds);
+
+  // Comparison to the last comparable session — only shown when a delta exists.
+  const prev = summary.previousComparable;
+  const comparisonDelta =
+    prev?.volumeDeltaPercent != null
+      ? { value: prev.volumeDeltaPercent, unit: 'Volumen' }
+      : prev?.cardioDurationDeltaPercent != null
+        ? { value: prev.cardioDurationDeltaPercent, unit: 'Cardio-Dauer' }
+        : null;
 
   const cardioBlock = summary.hasCardio ? (
     <div className="rounded-2xl border border-border bg-surface p-3">
@@ -77,6 +86,31 @@ export function SessionSummaryView({ summary }: { summary: SessionSummary }) {
 
   return (
     <div className="grid gap-3">
+      {comparisonDelta ? (
+        <div
+          className={
+            comparisonDelta.value >= 0
+              ? 'rounded-2xl border border-success/40 bg-surface p-3 text-sm'
+              : 'rounded-2xl border border-border bg-surface p-3 text-sm'
+          }
+        >
+          <span
+            className={
+              comparisonDelta.value >= 0
+                ? 'numeric font-semibold text-success'
+                : 'numeric font-semibold text-warning'
+            }
+          >
+            {comparisonDelta.value >= 0 ? '+' : '−'}
+            {formatNumber(Math.abs(comparisonDelta.value), 0)} % {comparisonDelta.unit}
+          </span>{' '}
+          <span className="text-muted">
+            gegenüber der letzten vergleichbaren Einheit
+            {prev ? ` (${formatDate(prev.startedAt)})` : ''}
+          </span>
+        </div>
+      ) : null}
+
       {cardioOnly ? (
         <>
           <div className="grid grid-cols-2 gap-2">

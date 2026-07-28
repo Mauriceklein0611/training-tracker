@@ -99,6 +99,62 @@ describe('summarizeSession — strength and cardio stay separate', () => {
     expect(summary.newRecords).toEqual([]);
   });
 
+  it('compares against the last session of the same plan day', () => {
+    // Two Bankdrücken sessions of the same plan day (templateId "day-a").
+    const bench = makeExercise({ id: 'ex-bench', name: 'Bankdrücken' });
+    const older = makeSession({
+      id: 's-old',
+      templateId: 'day-a',
+      startedAt: '2026-07-01T10:00:00.000Z',
+    });
+    const newer = makeSession({
+      id: 's-new',
+      templateId: 'day-a',
+      startedAt: '2026-07-08T10:00:00.000Z',
+    });
+    const dataset: AnalyticsDataset = {
+      exercises: [bench],
+      sessions: [older, newer],
+      sessionExercises: [
+        makeSessionExercise({ id: 'se-old', sessionId: 's-old', exerciseId: 'ex-bench' }),
+        makeSessionExercise({ id: 'se-new', sessionId: 's-new', exerciseId: 'ex-bench' }),
+      ],
+      sets: [
+        // Older: 50 × 10 = 500 kg volume.
+        makeSet({
+          id: 'set-old',
+          sessionExerciseId: 'se-old',
+          weightKg: 50,
+          reps: 10,
+          completedAt: '2026-07-01T10:05:00.000Z',
+        }),
+        // Newer: 55 × 10 = 550 kg → +10 %.
+        makeSet({
+          id: 'set-new',
+          sessionExerciseId: 'se-new',
+          weightKg: 55,
+          reps: 10,
+          completedAt: '2026-07-08T10:05:00.000Z',
+        }),
+      ],
+    };
+
+    const summary = summarizeSession(dataset, 's-new')!;
+    expect(summary.previousComparable?.sessionId).toBe('s-old');
+    expect(summary.previousComparable?.volumeDeltaPercent).toBeCloseTo(10, 5);
+
+    // The first-ever session of a day has nothing comparable before it.
+    const first = summarizeSession(dataset, 's-old')!;
+    expect(first.previousComparable).toBeNull();
+  });
+
+  it('has no comparable for a free workout (no plan day / unit)', () => {
+    const dataset = mixedDataset();
+    // The factory session has no templateId/workoutUnitTemplateId → not comparable.
+    const summary = summarizeSession(dataset, 's1')!;
+    expect(summary.previousComparable).toBeNull();
+  });
+
   it('reports no session pace when cardio modalities differ', () => {
     const dataset = mixedDataset();
     dataset.sets = dataset.sets.filter((set) => set.id !== 'set-bench');
