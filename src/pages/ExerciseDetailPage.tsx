@@ -13,6 +13,7 @@ import {
   computeExerciseSeries,
 } from '@/services/analytics';
 import { summarizeExerciseHistory } from '@/services/exerciseHistory';
+import { distinctExerciseVariants } from '@/services/exerciseVariants';
 import {
   formatCardioDistance,
   formatDuration as formatCardioDuration,
@@ -38,6 +39,7 @@ export default function ExerciseDetailPage() {
       exercise,
       series: computeExerciseSeries(dataset, exerciseId, null),
       recent8w: computeExerciseSeries(dataset, exerciseId, lastDaysRange(56)),
+      variants: distinctExerciseVariants(dataset, exerciseId),
       cardioRecords:
         exercise.trackingType === 'cardio'
           ? computeExerciseCardioRecords(dataset, exerciseId, null)
@@ -106,6 +108,29 @@ export default function ExerciseDetailPage() {
                 <li key={index}>{cue}</li>
               ))}
             </ul>
+          </Card>
+        ) : null}
+
+        {data.variants.length > 0 || exercise.targetRir != null ? (
+          <Card>
+            <CardHeader title="Ausführung & Ziel" as="h2" />
+            {data.variants.length > 0 ? (
+              <div className="flex flex-wrap gap-1.5">
+                {data.variants.map((variant) => (
+                  <span
+                    key={variant}
+                    className="rounded-lg bg-surface-2 px-2 py-0.5 text-xs text-muted"
+                  >
+                    {variant}
+                  </span>
+                ))}
+              </div>
+            ) : null}
+            {exercise.targetRir != null ? (
+              <p className="mt-2 text-sm text-muted">
+                Ziel für die nächste Einheit: RIR {exercise.targetRir}
+              </p>
+            ) : null}
           </Card>
         ) : null}
 
