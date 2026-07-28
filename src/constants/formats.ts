@@ -39,5 +39,6 @@ export const PLAN_BUILDER_KIT_VERSION = 3;
 
 /** Portable package for sharing one or more library workout units (Phase 7.6). */
 export const WORKOUT_UNIT_PACKAGE_FORMAT = 'training-workout-unit-package';
-export const WORKOUT_UNIT_PACKAGE_SCHEMA_VERSION = 1;
-export const SUPPORTED_WORKOUT_UNIT_PACKAGE_VERSIONS = [1] as const;
+/** Version 2 mirrors plan-package v4: structured equipment + cardio fields. */
+export const WORKOUT_UNIT_PACKAGE_SCHEMA_VERSION = 2;
+export const SUPPORTED_WORKOUT_UNIT_PACKAGE_VERSIONS = [1, 2] as const;
