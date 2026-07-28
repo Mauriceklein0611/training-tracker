@@ -29,6 +29,7 @@ import {
 import { analyzePlateau } from '@/services/plateau';
 import { PlateauHint } from '@/features/analytics/PlateauHint';
 import { CardioRecordsCard } from '@/features/analytics/CardioRecordsCard';
+import { BodyMap } from '@/features/muscles/BodyMap';
 import { ONE_RM_MAX_REPS, ONE_RM_MIN_REPS } from '@/services/metrics';
 import { useSettings } from '@/hooks/useSettings';
 import type { AnalyticsRangeKey } from '@/types';
@@ -174,6 +175,18 @@ export default function AnalyticsPage() {
       })),
     [analytics],
   );
+
+  // For the body map: directly-worked muscles are primary, indirect-only ones
+  // secondary — a heatmap of what the selected range actually trained.
+  const trainedMuscles = useMemo(() => {
+    const groups = analytics?.muscleGroups ?? [];
+    return {
+      primary: groups.filter((g) => g.directSets > 0).map((g) => g.muscleGroup),
+      secondary: groups
+        .filter((g) => g.directSets === 0 && g.indirectSets > 0)
+        .map((g) => g.muscleGroup),
+    };
+  }, [analytics]);
 
   const musclePoints = useMemo(
     () =>
@@ -447,6 +460,14 @@ export default function AnalyticsPage() {
             }
           >
             <HorizontalBarChart data={musclePoints} formatValue={formatNumber} />
+            {trainedMuscles.primary.length > 0 ? (
+              <div className="mt-3 border-t border-border pt-3">
+                <BodyMap
+                  primary={trainedMuscles.primary}
+                  secondary={trainedMuscles.secondary}
+                />
+              </div>
+            ) : null}
           </ChartFrame>
 
           <Card>
