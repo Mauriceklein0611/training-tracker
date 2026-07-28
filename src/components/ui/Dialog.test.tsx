@@ -35,9 +35,7 @@ describe('Dialog accessible labelling', () => {
 
     // Each dialog is reachable by its own accessible name.
     expect(screen.getByRole('dialog', { name: 'Training beenden?' })).toBeInTheDocument();
-    expect(
-      screen.getByRole('dialog', { name: 'Ausführung ändern' }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Ausführung ändern' })).toBeInTheDocument();
   });
 
   it('wires aria-describedby to the description only when one is given', () => {
