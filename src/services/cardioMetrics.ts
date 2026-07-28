@@ -1,7 +1,7 @@
 import type { CardioModality, SessionExercise, WorkoutSet } from '@/types';
 import { effectiveSetExecution } from '@/services/equipment';
 import { isCompleted } from '@/services/metrics';
-import { paceKindFor, type PaceKind } from '@/services/cardio';
+import { paceKindFor, prefersMeters, type PaceKind } from '@/services/cardio';
 
 /**
  * Pure cardio metrics — deliberately kept apart from the strength metrics
@@ -209,4 +209,71 @@ export function computeCardioRecords(
     }
   }
   return records;
+}
+
+// ---- formatting -------------------------------------------------------
+
+/** Whole seconds as "M:SS" (or "H:MM:SS" past an hour). */
+export function formatDuration(totalSeconds: number): string {
+  const s = Math.max(0, Math.round(totalSeconds));
+  const hours = Math.floor(s / 3600);
+  const minutes = Math.floor((s % 3600) / 60);
+  const seconds = s % 60;
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return hours > 0
+    ? `${hours}:${pad(minutes)}:${pad(seconds)}`
+    : `${minutes}:${pad(seconds)}`;
+}
+
+/** Distance in the modality's display unit (km, or m for rowing/swimming). */
+export function formatCardioDistance(
+  meters: number,
+  modality: CardioModality | undefined,
+): string {
+  if (prefersMeters(modality)) return `${Math.round(meters)} m`;
+  const km = meters / 1000;
+  // Trim to at most two decimals without trailing zeros.
+  return `${parseFloat(km.toFixed(2))} km`;
+}
+
+/** A pace/speed in its convention's unit, e.g. "5:00 min/km", "30 km/h". */
+export function formatPace(pace: Pace): string {
+  switch (pace.kind) {
+    case 'min_per_km': {
+      const minutes = Math.floor(pace.value);
+      const seconds = Math.round((pace.value - minutes) * 60);
+      const shown =
+        seconds === 60
+          ? `${minutes + 1}:00`
+          : `${minutes}:${String(seconds).padStart(2, '0')}`;
+      return `${shown} min/km`;
+    }
+    case 'per_500m':
+      return `${formatDuration(pace.value)} /500 m`;
+    case 'per_100m':
+      return `${formatDuration(pace.value)} /100 m`;
+    case 'km_per_h':
+      return `${parseFloat(pace.value.toFixed(1))} km/h`;
+  }
+}
+
+/**
+ * One-line summary of a completed cardio section: duration, distance and — when
+ * both are present — the modality's pace/speed. Missing values are simply
+ * omitted; nothing is invented.
+ */
+export function describeCardioSet(
+  set: Pick<WorkoutSet, 'durationSeconds' | 'distanceMeters'>,
+  modality: CardioModality | undefined,
+): string {
+  const parts: string[] = [];
+  if (set.durationSeconds != null && set.durationSeconds > 0) {
+    parts.push(formatDuration(set.durationSeconds));
+  }
+  if (set.distanceMeters != null && set.distanceMeters > 0) {
+    parts.push(formatCardioDistance(set.distanceMeters, modality));
+  }
+  const pace = computePace(modality, set.durationSeconds, set.distanceMeters);
+  if (pace) parts.push(formatPace(pace));
+  return parts.length > 0 ? parts.join(' · ') : '–';
 }

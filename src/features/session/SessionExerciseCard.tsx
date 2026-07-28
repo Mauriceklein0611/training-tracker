@@ -5,6 +5,10 @@ import { Badge } from '@/components/ui/Card';
 import { Button, IconButton } from '@/components/ui/Button';
 import { TextAreaField } from '@/components/ui/Field';
 import { CompletedSetRow, SetEditor, type SetValues } from '@/features/session/SetEditor';
+import {
+  CardioSetEditor,
+  type CardioSetValues,
+} from '@/features/session/CardioSetEditor';
 import { ExecutionChangeDialog } from '@/features/session/ExecutionChangeDialog';
 import { EditSetDialog } from '@/features/session/EditSetDialog';
 import {
@@ -304,6 +308,7 @@ export function SessionExerciseCard({
     () => effectiveSetExecution({}, sessionExercise),
     [sessionExercise],
   );
+  const isCardio = currentExecution.trackingType === 'cardio';
   const isTemporaryExecution = useMemo(() => {
     if (!exercise) return currentExecution.equipment !== 'unspecified';
     return (
@@ -352,6 +357,25 @@ export function SessionExerciseCard({
       reps: values.reps,
       durationSeconds: values.durationSeconds,
     });
+  };
+
+  const handleCompleteCardio = async (setId: string, values: CardioSetValues) => {
+    primeAudio();
+    const workingAfter = completedWorkingSets + 1;
+    const reachedGoal = targetSets != null && workingAfter >= targetSets;
+    // A continuous cardio (no further interval) starts no strength rest; a
+    // planned interval with another to go and a rest target uses the timer.
+    const startRest =
+      !reachedGoal && targetSets != null && targetSets > 1 && restTarget > 0;
+
+    const { newlyCompleted } = await completeSet(setId, values, { startRest });
+    if (!newlyCompleted) return;
+    if (reachedGoal) return;
+
+    // Only queue a next interval when the plan calls for more than one.
+    if (targetSets != null && targetSets > 1) {
+      await addSet(sessionExercise.id, { restTargetSeconds: restTarget });
+    }
   };
 
   return (
@@ -482,7 +506,19 @@ export function SessionExerciseCard({
       ) : null}
 
       <div className="mt-3">
-        {openSet ? (
+        {openSet && isCardio ? (
+          <CardioSetEditor
+            key={openSet.id}
+            set={openSet}
+            sessionExercise={sessionExercise}
+            targetDurationSeconds={effectiveTarget?.targetDurationSeconds}
+            soundEnabled={soundEnabled}
+            vibrationEnabled={vibrationEnabled}
+            onPersist={(values) => void updateSet(openSet.id, values)}
+            onComplete={(values) => handleCompleteCardio(openSet.id, values)}
+            onDelete={() => void deleteSet(openSet.id)}
+          />
+        ) : openSet ? (
           <SetEditor
             // Remounting on a new set id resets the draft exactly once.
             key={openSet.id}
@@ -524,15 +560,19 @@ export function SessionExerciseCard({
             onClick={() => void handleAddSet()}
           >
             <Plus size={18} aria-hidden="true" />
-            {completedSets.length === 0
-              ? 'Ersten Satz erfassen'
-              : 'Weiteren Satz erfassen'}
+            {isCardio
+              ? completedSets.length === 0
+                ? 'Cardio erfassen'
+                : 'Weiteren Abschnitt erfassen'
+              : completedSets.length === 0
+                ? 'Ersten Satz erfassen'
+                : 'Weiteren Satz erfassen'}
           </Button>
         )}
       </div>
 
-      {/* Only once the work is done for today — not while entering sets. */}
-      {progression && setGoalReached && !openSet ? (
+      {/* Strength takeaway only — cardio is not progressed by this rule. */}
+      {progression && setGoalReached && !openSet && !isCardio ? (
         <ProgressionHint suggestion={progression} />
       ) : null}
 

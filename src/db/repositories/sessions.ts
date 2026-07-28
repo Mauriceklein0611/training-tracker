@@ -76,6 +76,9 @@ function buildSessionExercise(
     targetRepMin?: number;
     targetRepMax?: number;
     targetDurationSeconds?: number;
+    /** Cardio plan targets frozen at start (cardio only). */
+    targetDistanceMeters?: number;
+    targetRpe?: number;
     /** Superset/circuit grouping carried over from the plan. */
     grouping?: ExerciseGrouping;
   } = {},
@@ -89,6 +92,8 @@ function buildSessionExercise(
     // Snapshots keep old sessions readable even if the exercise changes later.
     exerciseNameSnapshot: exercise.name,
     trackingTypeSnapshot: exercise.trackingType,
+    // Cardio activity snapshot (cardio only); the default for new cardio sets.
+    cardioModalitySnapshot: exercise.cardioModality,
     weightModeSnapshot: exercise.weightMode,
     weightMultiplierSnapshot: exercise.weightMultiplier,
     // Structured equipment starts from the exercise default (absent → the set
@@ -104,6 +109,8 @@ function buildSessionExercise(
     targetRepMinSnapshot: context.targetRepMin,
     targetRepMaxSnapshot: context.targetRepMax,
     targetDurationSecondsSnapshot: context.targetDurationSeconds,
+    targetDistanceMetersSnapshot: context.targetDistanceMeters,
+    targetRpeSnapshot: context.targetRpe,
     groupId: context.grouping?.groupId,
     groupType: context.grouping?.groupType,
     groupRestMode: context.grouping?.groupRestMode,
@@ -664,6 +671,13 @@ export interface NewSetInput {
   durationSeconds?: number;
   rir?: number;
   rpe?: number;
+  // Cardio metrics (cardio sets only); all optional.
+  distanceMeters?: number;
+  averageHeartRateBpm?: number;
+  caloriesKcal?: number;
+  elevationGainMeters?: number;
+  cadenceRpm?: number;
+  resistanceLevel?: number;
   restTargetSeconds: number;
 }
 
@@ -697,6 +711,12 @@ export async function addSet(
       durationSeconds: input.durationSeconds,
       rir: input.rir,
       rpe: input.rpe,
+      distanceMeters: input.distanceMeters,
+      averageHeartRateBpm: input.averageHeartRateBpm,
+      caloriesKcal: input.caloriesKcal,
+      elevationGainMeters: input.elevationGainMeters,
+      cadenceRpm: input.cadenceRpm,
+      resistanceLevel: input.resistanceLevel,
       restTargetSeconds: input.restTargetSeconds,
       createdAt: timestamp,
       updatedAt: timestamp,
@@ -870,7 +890,21 @@ export async function closeOpenRests(
 export async function completeSet(
   setId: string,
   values: Partial<
-    Pick<WorkoutSet, 'weightKg' | 'reps' | 'durationSeconds' | 'rir' | 'rpe' | 'setType'>
+    Pick<
+      WorkoutSet,
+      | 'weightKg'
+      | 'reps'
+      | 'durationSeconds'
+      | 'rir'
+      | 'rpe'
+      | 'setType'
+      | 'distanceMeters'
+      | 'averageHeartRateBpm'
+      | 'caloriesKcal'
+      | 'elevationGainMeters'
+      | 'cadenceRpm'
+      | 'resistanceLevel'
+    >
   >,
   options: { startRest?: boolean } = {},
 ): Promise<{ newlyCompleted: boolean }> {
@@ -916,6 +950,9 @@ export async function completeSet(
         set.weightMultiplierSnapshot ?? sessionExercise?.weightMultiplierSnapshot,
       trackingTypeSnapshot:
         set.trackingTypeSnapshot ?? sessionExercise?.trackingTypeSnapshot,
+      // Freeze the cardio modality the section was performed with (cardio only).
+      cardioModalitySnapshot:
+        set.cardioModalitySnapshot ?? sessionExercise?.cardioModalitySnapshot,
       completedAt: timestamp,
       restStartedAt: startRest ? timestamp : undefined,
       restEndedAt: undefined,
