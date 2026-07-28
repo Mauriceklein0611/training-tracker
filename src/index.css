@@ -19,6 +19,12 @@
   --accent: #22d3ee;
   --accent-strong: #06b6d4;
   --accent-contrast: #04222a;
+  /* Semantic discipline colours: strength = accent (cyan), cardio = emerald,
+   * body data = violet, deload/pause = amber (warning). Reserved for meaning,
+   * never decoration, and each validated for ≥AA contrast on the surfaces. */
+  --cardio: #34d399;
+  --cardio-strong: #10b981;
+  --body: #a78bfa;
   --danger: #f87171;
   --danger-contrast: #300f0f;
   --success: #4ade80;
@@ -37,6 +43,9 @@
   --accent: #0e7490;
   --accent-strong: #155e75;
   --accent-contrast: #ecfeff;
+  --cardio: #047857;
+  --cardio-strong: #065f46;
+  --body: #7c3aed;
   --danger: #b91c1c;
   --danger-contrast: #fef2f2;
   --success: #15803d;
@@ -55,6 +64,9 @@
   --color-accent: var(--accent);
   --color-accent-strong: var(--accent-strong);
   --color-accent-contrast: var(--accent-contrast);
+  --color-cardio: var(--cardio);
+  --color-cardio-strong: var(--cardio-strong);
+  --color-body: var(--body);
   --color-danger: var(--danger);
   --color-danger-contrast: var(--danger-contrast);
   --color-success: var(--success);
@@ -80,11 +92,30 @@
   body {
     margin: 0;
     background-color: var(--bg);
+    /* A restrained radial cyan glow at the top gives the page depth without a
+     * flat single fill. Fixed so it does not scroll, and subtle enough never to
+     * cost contrast on the surfaces above it. */
+    background-image: radial-gradient(
+      120% 45% at 50% -10%,
+      color-mix(in oklab, var(--accent) 14%, transparent),
+      transparent 60%
+    );
+    background-attachment: fixed;
+    background-repeat: no-repeat;
     color: var(--text);
     font-family: var(--font-sans);
     /* Avoid rubber-band scrolling behind the fixed bottom navigation. */
     overscroll-behavior-y: none;
     -webkit-font-smoothing: antialiased;
+  }
+
+  :root.light body {
+    /* Lighter touch in daylight mode so text keeps its contrast. */
+    background-image: radial-gradient(
+      120% 45% at 50% -10%,
+      color-mix(in oklab, var(--accent) 8%, transparent),
+      transparent 55%
+    );
   }
 
   /* Visible focus for every interactive element — never removed. */

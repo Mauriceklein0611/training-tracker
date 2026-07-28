@@ -41,9 +41,9 @@ export function CardioRecordsCard({
   return (
     <section
       aria-label="Cardio-Bestwerte"
-      className="mt-3 rounded-2xl border border-border bg-surface p-3"
+      className="mt-3 rounded-2xl border border-cardio/40 bg-surface p-3"
     >
-      <h4 className="text-sm font-semibold">Bestwerte</h4>
+      <h4 className="text-sm font-semibold text-cardio">Bestwerte</h4>
       <dl className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
         {rows.map((row) => (
           <div key={row.label} className="rounded-xl border border-border px-3 py-2">

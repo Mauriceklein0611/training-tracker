@@ -37,9 +37,9 @@ export function SessionSummaryView({ summary }: { summary: SessionSummary }) {
         : null;
 
   const cardioBlock = summary.hasCardio ? (
-    <div className="rounded-2xl border border-border bg-surface p-3">
+    <div className="rounded-2xl border border-cardio/40 bg-surface p-3">
       <h3 className="flex items-center gap-2 text-sm font-semibold">
-        <Activity size={18} aria-hidden="true" className="text-accent" />
+        <Activity size={18} aria-hidden="true" className="text-cardio" />
         Cardio
       </h3>
       <div className="mt-2 grid grid-cols-2 gap-2">
