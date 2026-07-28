@@ -291,3 +291,66 @@ describe('undoAiAnalysis', () => {
     expect((await db.aiAnalyses.get(analysis.id))?.undoneAt).toBeTruthy();
   });
 });
+
+describe('commitAiAnalysis — cardio target changes (response v2)', () => {
+  it('applies a cardio duration/distance/RPE change and freezes a restore point', async () => {
+    const template = await createTemplate('Ausdauer', '');
+    const running = await createExercise({
+      name: 'Laufen',
+      primaryMuscleGroup: 'Ganzkörper',
+      secondaryMuscleGroups: [],
+      equipment: '',
+      defaultEquipment: 'treadmill',
+      trackingType: 'cardio',
+      cardioModality: 'running',
+      weightMode: 'none',
+      weightMultiplier: 1,
+      defaultRestSeconds: 60,
+      notes: '',
+    });
+    const row = await addExerciseToTemplate(template.id, running);
+    await updateTemplateExercise(row.id, {
+      targetSets: 4,
+      targetDurationSeconds: 600,
+      targetDistanceMeters: 2000,
+      targetRpe: 7,
+    });
+    const context = await buildPlanContext();
+    await recordAiExport('exp', context.currentFingerprint);
+
+    const file = JSON.stringify({
+      format: 'training-ai-response',
+      schemaVersion: 2,
+      sourceExport: { exportId: 'exp', fingerprint: context.currentFingerprint },
+      feedback: { summary: 'Ausdauer ausbauen' },
+      proposals: [
+        {
+          proposalId: 'p1',
+          operation: 'update_template_exercise_target',
+          target: { templateId: template.id, templateExerciseId: row.id },
+          expected: { durationSeconds: 600, distanceMeters: 2000, rpe: 7 },
+          changes: { durationSeconds: 900, distanceMeters: 3000, rpe: 8 },
+          reason: 'Cardio-Umfang erhöhen',
+        },
+      ],
+    });
+
+    const result = await importAiResponse(file);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const analysis = await commitAiAnalysis(result.value, ['p1']);
+
+    // The cardio targets were updated…
+    const updated = await db.templateExercises.get(row.id);
+    expect(updated?.targetDurationSeconds).toBe(900);
+    expect(updated?.targetDistanceMeters).toBe(3000);
+    expect(updated?.targetRpe).toBe(8);
+
+    // …and a restore point was frozen that still carries the old cardio targets.
+    expect(analysis.restoreVersionIds?.length).toBe(1);
+    const version = await db.templateVersions.get(analysis.restoreVersionIds![0]);
+    const snap = version?.snapshot.exercises.find((e) => e.exerciseId === running.id);
+    expect(snap?.targetDistanceMeters).toBe(2000);
+    expect(snap?.targetRpe).toBe(7);
+  });
+});

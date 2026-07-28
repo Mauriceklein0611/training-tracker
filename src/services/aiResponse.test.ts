@@ -200,14 +200,46 @@ describe('validateAiResponse — file-level checks', () => {
     expect(result.proposalsApplicable).toBe(false);
   });
 
-  it('rejects a response whose schemaVersion is not exactly supported', () => {
+  it('rejects a response whose schemaVersion is newer than supported', () => {
     const bad = JSON.stringify({
       format: 'training-ai-response',
-      schemaVersion: 2,
+      schemaVersion: 3,
       feedback: { summary: 'x' },
       proposals: [],
     });
     expect(parseAiResponse(bad).ok).toBe(false);
+  });
+
+  it('accepts both the legacy v1 and the current v2 response', () => {
+    for (const schemaVersion of [1, 2]) {
+      const file = JSON.stringify({
+        format: 'training-ai-response',
+        schemaVersion,
+        feedback: { summary: 'ok' },
+        proposals: [],
+      });
+      expect(parseAiResponse(file).ok).toBe(true);
+    }
+  });
+
+  it('accepts a v2 cardio/duration target change', () => {
+    const file = JSON.stringify({
+      format: 'training-ai-response',
+      schemaVersion: 2,
+      feedback: { summary: 'ok' },
+      proposals: [
+        {
+          proposalId: 'p1',
+          operation: 'update_template_exercise_target',
+          target: { templateId: 't1', templateExerciseId: 'te1' },
+          expected: { durationSeconds: 600, distanceMeters: 2000, rpe: 7 },
+          changes: { durationSeconds: 900, distanceMeters: 3000, rpe: 8 },
+          reason: 'Cardio-Umfang erhöhen',
+        },
+      ],
+    });
+    const parsed = parseAiResponse(file);
+    expect(parsed.ok).toBe(true);
   });
 
   it('rejects unknown top-level fields instead of dropping them', () => {

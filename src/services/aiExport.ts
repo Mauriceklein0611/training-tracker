@@ -54,7 +54,8 @@ import { customRange, dayKey, lastDaysRange, type DateRange } from '@/utils/date
 // file stays export-only, so nothing parses this version — it is informational.
 /** Version 3 adds structured cardio per set and the heart-rate opt-in. */
 export const AI_EXPORT_VERSION = 3;
-export const AI_RESPONSE_SCHEMA_VERSION = 1;
+/** v2 lets the AI response also change cardio/duration targets (see aiResponse). */
+export const AI_RESPONSE_SCHEMA_VERSION = 2;
 
 export interface PlanExportExercise {
   id: string;
@@ -137,9 +138,10 @@ export const AI_RESPONSE_CONTRACT = {
   ],
   allowedOperations: {
     update_template_exercise_target:
-      'Ändert Ziel-Sätze, Wiederholungsbereich oder Pause einer Planübung. ' +
-      'target: { templateId, templateExerciseId }. Felder in expected/changes: ' +
-      'sets (1–50), repMin (0–1000), repMax (0–1000), restSeconds (0–3600).',
+      'Ändert Zielwerte einer Planübung. target: { templateId, templateExerciseId }. ' +
+      'Felder in expected/changes: sets (1–50), repMin (0–1000), repMax (0–1000), ' +
+      'restSeconds (0–3600) sowie für Cardio/Zeit: durationSeconds (0–36000), ' +
+      'distanceMeters (0–1000000), rpe (1–10). Bei Cardio keine repMin/repMax ändern.',
     update_template_note:
       'Ergänzt oder ändert die Beschreibung/den Fokus eines Plans. ' +
       'target: { templateId }. Feld in expected/changes: description (Text).',
