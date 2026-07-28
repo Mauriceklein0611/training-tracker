@@ -84,8 +84,26 @@ export function SessionSummaryView({ summary }: { summary: SessionSummary }) {
     </div>
   ) : null;
 
+  const recordCount = summary.newRecords.length;
+
   return (
     <div className="grid gap-3">
+      {recordCount > 0 ? (
+        <div className="celebrate overflow-hidden rounded-2xl border border-success/50 bg-surface p-4">
+          <div className="celebrate-sheen">
+            <p className="flex items-center gap-2 text-base font-semibold text-success">
+              <Trophy size={20} aria-hidden="true" />
+              {recordCount === 1
+                ? 'Neue persönliche Bestleistung!'
+                : `${recordCount} neue persönliche Bestleistungen!`}
+            </p>
+            <p className="mt-0.5 text-sm text-muted">
+              Starke Einheit — die Details stehen unten.
+            </p>
+          </div>
+        </div>
+      ) : null}
+
       {comparisonDelta ? (
         <div
           className={
