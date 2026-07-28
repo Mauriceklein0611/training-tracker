@@ -61,6 +61,45 @@ describe('target snapshots frozen at start', () => {
     expect(second.sessionExercise.templateExerciseIdSnapshot).toBe(rowB.id);
   });
 
+  it('freezes cardio targets (distance, RPE, intervals) at start', async () => {
+    const template = await createTemplate('Cardio-Plan');
+    const running = await createExercise({
+      name: 'Laufen',
+      primaryMuscleGroup: 'Ganzkörper',
+      secondaryMuscleGroups: [],
+      equipment: '',
+      defaultEquipment: 'treadmill',
+      trackingType: 'cardio',
+      cardioModality: 'running',
+      weightMode: 'none',
+      weightMultiplier: 1,
+      defaultRestSeconds: 60,
+      notes: '',
+    });
+    const row = await addExerciseToTemplate(template.id, running);
+    await updateTemplateExercise(row.id, {
+      targetSets: 4,
+      targetDurationSeconds: 600,
+      targetDistanceMeters: 2000,
+      targetRpe: 7,
+    });
+
+    const session = await startSessionFromTemplate(template.id);
+    const detail = await getSessionDetail(session.id);
+    const snapshot = detail!.exercises[0].sessionExercise;
+
+    expect(snapshot.cardioModalitySnapshot).toBe('running');
+    expect(snapshot.targetSetsSnapshot).toBe(4);
+    expect(snapshot.targetDurationSecondsSnapshot).toBe(600);
+    expect(snapshot.targetDistanceMetersSnapshot).toBe(2000);
+    expect(snapshot.targetRpeSnapshot).toBe(7);
+
+    // A later plan edit does not change the running workout.
+    await updateTemplateExercise(row.id, { targetDistanceMeters: 9000 });
+    const after = await getSessionDetail(session.id);
+    expect(after!.exercises[0].sessionExercise.targetDistanceMetersSnapshot).toBe(2000);
+  });
+
   it('does not change a running workout when the plan is edited afterwards', async () => {
     const template = await createTemplate('Plan');
     const exercise = await makeExerciseRow();

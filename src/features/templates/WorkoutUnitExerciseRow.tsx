@@ -1,6 +1,5 @@
 import { ArrowDown, ArrowUp, Link2, Link2Off, Trash2 } from 'lucide-react';
 import { IconButton } from '@/components/ui/Button';
-import { NumberField, TextField } from '@/components/ui/Field';
 import {
   attachWorkoutUnitExerciseToPrevious,
   detachWorkoutUnitExercise,
@@ -8,7 +7,7 @@ import {
   removeWorkoutUnitExercise,
   updateWorkoutUnitExercise,
 } from '@/db/repositories/workoutUnits';
-import { parseNumberInput } from '@/services/validation';
+import { ExerciseTargetFields } from '@/features/templates/ExerciseTargetFields';
 import type { Exercise, WorkoutUnitTemplateExercise } from '@/types';
 import { TRACKING_TYPE_LABELS } from '@/utils/format';
 
@@ -35,7 +34,6 @@ export function WorkoutUnitExerciseRow({
   grouped: boolean;
   canGroupWithPrevious: boolean;
 }) {
-  const isDuration = exercise?.trackingType === 'duration';
   const name = exercise?.name ?? 'Gelöschte Übung';
 
   return (
@@ -96,89 +94,11 @@ export function WorkoutUnitExerciseRow({
         </button>
       ) : null}
 
-      <div className="mt-3 grid grid-cols-2 gap-2">
-        <NumberField
-          label="Sätze"
-          value={String(entry.targetSets)}
-          onChange={(event) =>
-            void updateWorkoutUnitExercise(entry.id, {
-              targetSets: Math.max(
-                1,
-                Math.round(parseNumberInput(event.target.value) ?? 1),
-              ),
-            })
-          }
-        />
-        <NumberField
-          label="Pause (s)"
-          value={String(entry.restSeconds)}
-          onChange={(event) =>
-            void updateWorkoutUnitExercise(entry.id, {
-              restSeconds: Math.max(
-                0,
-                Math.round(parseNumberInput(event.target.value) ?? 0),
-              ),
-            })
-          }
-        />
-        {isDuration ? (
-          <NumberField
-            label="Zieldauer (s)"
-            containerClassName="col-span-2"
-            value={String(entry.targetDurationSeconds ?? '')}
-            onChange={(event) =>
-              void updateWorkoutUnitExercise(entry.id, {
-                targetDurationSeconds:
-                  parseNumberInput(event.target.value) == null
-                    ? undefined
-                    : Math.max(0, Math.round(parseNumberInput(event.target.value) ?? 0)),
-              })
-            }
-          />
-        ) : (
-          <>
-            <NumberField
-              label="Wdh. von"
-              value={String(entry.targetRepMin ?? '')}
-              onChange={(event) =>
-                void updateWorkoutUnitExercise(entry.id, {
-                  targetRepMin:
-                    parseNumberInput(event.target.value) == null
-                      ? undefined
-                      : Math.max(
-                          0,
-                          Math.round(parseNumberInput(event.target.value) ?? 0),
-                        ),
-                })
-              }
-            />
-            <NumberField
-              label="Wdh. bis"
-              value={String(entry.targetRepMax ?? '')}
-              onChange={(event) =>
-                void updateWorkoutUnitExercise(entry.id, {
-                  targetRepMax:
-                    parseNumberInput(event.target.value) == null
-                      ? undefined
-                      : Math.max(
-                          0,
-                          Math.round(parseNumberInput(event.target.value) ?? 0),
-                        ),
-                })
-              }
-            />
-          </>
-        )}
-        <TextField
-          label="Notiz"
-          containerClassName="col-span-2"
-          value={entry.notes}
-          placeholder="Optional"
-          onChange={(event) =>
-            void updateWorkoutUnitExercise(entry.id, { notes: event.target.value })
-          }
-        />
-      </div>
+      <ExerciseTargetFields
+        trackingType={exercise?.trackingType ?? 'weight_reps'}
+        values={entry}
+        onChange={(patch) => void updateWorkoutUnitExercise(entry.id, patch)}
+      />
     </div>
   );
 }

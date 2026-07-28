@@ -6,6 +6,8 @@ export interface EffectiveTarget {
   targetRepMin?: number;
   targetRepMax?: number;
   targetDurationSeconds?: number;
+  targetDistanceMeters?: number;
+  targetRpe?: number;
   restSeconds?: number;
 }
 
@@ -16,6 +18,8 @@ type TargetSnapshotFields = Pick<
   | 'targetRepMinSnapshot'
   | 'targetRepMaxSnapshot'
   | 'targetDurationSecondsSnapshot'
+  | 'targetDistanceMetersSnapshot'
+  | 'targetRpeSnapshot'
   | 'restSecondsSnapshot'
 >;
 
@@ -43,6 +47,8 @@ export function resolveEffectiveTarget(
       targetRepMin: sessionExercise.targetRepMinSnapshot,
       targetRepMax: sessionExercise.targetRepMaxSnapshot,
       targetDurationSeconds: sessionExercise.targetDurationSecondsSnapshot,
+      targetDistanceMeters: sessionExercise.targetDistanceMetersSnapshot,
+      targetRpe: sessionExercise.targetRpeSnapshot,
       restSeconds: sessionExercise.restSecondsSnapshot,
     };
   }
@@ -54,6 +60,11 @@ export function resolveEffectiveTarget(
     targetRepMin: planTarget?.targetRepMin,
     targetRepMax: planTarget?.targetRepMax,
     targetDurationSeconds: planTarget?.targetDurationSeconds,
+    // Cardio targets come from the per-position snapshot; the legacy plan lookup
+    // (v14 sessions) never carried them, so they fall back field-wise.
+    targetDistanceMeters:
+      sessionExercise.targetDistanceMetersSnapshot ?? planTarget?.targetDistanceMeters,
+    targetRpe: sessionExercise.targetRpeSnapshot ?? planTarget?.targetRpe,
     restSeconds: sessionExercise.restSecondsSnapshot ?? planTarget?.restSeconds,
   };
 }

@@ -192,6 +192,8 @@ export async function startSessionFromWorkoutUnit(
           targetRepMin: row.targetRepMin,
           targetRepMax: row.targetRepMax,
           targetDurationSeconds: row.targetDurationSeconds,
+          targetDistanceMeters: row.targetDistanceMeters,
+          targetRpe: row.targetRpe,
           grouping: {
             groupId: row.groupId,
             groupType: row.groupType,
@@ -242,6 +244,15 @@ export async function startSessionFromTemplate(
       ? deloadDuration(seconds, activeDeload.durationReductionPercent)
       : seconds;
   };
+  // Cardio deload (Phase 4.3): the plan's durationReductionPercent is reused to
+  // reduce the cardio target distance too (its extended, documented semantics).
+  // Intervals fall under the set reduction; RPE and heart rate are never touched.
+  const effectiveDistance = (meters: number | undefined): number | undefined => {
+    if (meters == null) return undefined;
+    return activeDeload
+      ? deloadDuration(meters, activeDeload.durationReductionPercent)
+      : meters;
+  };
 
   return db.transaction(
     'rw',
@@ -280,6 +291,8 @@ export async function startSessionFromTemplate(
           targetRepMin: row.targetRepMin,
           targetRepMax: row.targetRepMax,
           targetDurationSeconds: effectiveDuration(row.targetDurationSeconds),
+          targetDistanceMeters: effectiveDistance(row.targetDistanceMeters),
+          targetRpe: row.targetRpe,
           grouping: {
             groupId: row.groupId,
             groupType: row.groupType,

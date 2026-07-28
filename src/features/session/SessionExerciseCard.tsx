@@ -32,6 +32,7 @@ import {
 } from '@/db/repositories/sessions';
 import { primeAudio } from '@/services/sound';
 import { effectiveLoadKg, isWorkingSet } from '@/services/metrics';
+import { formatCardioDistance, formatDuration } from '@/services/cardioMetrics';
 import { buildRecordBaseline } from '@/services/comparison';
 import { resolveEffectiveTarget } from '@/services/sessionTargets';
 import { suggestProgression } from '@/services/progression';
@@ -46,12 +47,30 @@ export interface ExerciseTarget {
   targetRepMin?: number;
   targetRepMax?: number;
   targetDurationSeconds?: number;
+  targetDistanceMeters?: number;
+  targetRpe?: number;
   restSeconds?: number;
 }
 
-function describeTarget(target: ExerciseTarget | undefined): string | null {
+function describeTarget(
+  target: ExerciseTarget | undefined,
+  isCardio: boolean,
+): string | null {
   if (!target) return null;
   const parts: string[] = [];
+  if (isCardio) {
+    if (target.targetSets && target.targetSets > 1) {
+      parts.push(`${target.targetSets} Intervalle`);
+    }
+    if (target.targetDurationSeconds) {
+      parts.push(formatDuration(target.targetDurationSeconds));
+    }
+    if (target.targetDistanceMeters) {
+      parts.push(formatCardioDistance(target.targetDistanceMeters, undefined));
+    }
+    if (target.targetRpe) parts.push(`RPE ${target.targetRpe}`);
+    return parts.length > 0 ? parts.join(' · ') : null;
+  }
   if (target.targetSets) parts.push(`${target.targetSets} Sätze`);
   if (target.targetDurationSeconds) parts.push(`${target.targetDurationSeconds} s`);
   else if (target.targetRepMin && target.targetRepMax) {
@@ -397,8 +416,8 @@ export function SessionExerciseCard({
           <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted">
             {highlightNext ? <Badge tone="accent">Als Nächstes</Badge> : null}
             <Badge>{TRACKING_TYPE_LABELS[sessionExercise.trackingTypeSnapshot]}</Badge>
-            {describeTarget(effectiveTarget) ? (
-              <span>Ziel: {describeTarget(effectiveTarget)}</span>
+            {describeTarget(effectiveTarget, isCardio) ? (
+              <span>Ziel: {describeTarget(effectiveTarget, isCardio)}</span>
             ) : null}
             <span>Pause {restTarget}s</span>
             {showExecutionBadge ? (
