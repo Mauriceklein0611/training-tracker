@@ -27,8 +27,10 @@ import {
   type ExerciseSeriesPoint,
 } from '@/services/analytics';
 import { analyzePlateau } from '@/services/plateau';
+import { buildPeriodReview } from '@/services/periodReview';
 import { PlateauHint } from '@/features/analytics/PlateauHint';
 import { CardioRecordsCard } from '@/features/analytics/CardioRecordsCard';
+import { PeriodReviewCard } from '@/features/analytics/PeriodReviewCard';
 import { BodyMap } from '@/features/muscles/BodyMap';
 import { ONE_RM_MAX_REPS, ONE_RM_MIN_REPS } from '@/services/metrics';
 import { useSettings } from '@/hooks/useSettings';
@@ -142,6 +144,9 @@ export default function AnalyticsPage() {
         exerciseId && selected?.trackingType === 'cardio'
           ? computeExerciseCardioRecords(dataset, exerciseId, null)
           : null,
+      // Local "wrapped" for the selected range vs the equal period before it.
+      // Only for a bounded range — "Gesamt" has no meaningful previous period.
+      review: range ? buildPeriodReview(dataset, range) : null,
     };
   }, [range, exerciseId, deloadFilter]);
 
@@ -367,6 +372,7 @@ export default function AnalyticsPage() {
         />
       ) : (
         <div className="grid gap-4">
+          {data?.review ? <PeriodReviewCard review={data.review} /> : null}
           <section aria-label="Kennzahlen" className="grid grid-cols-2 gap-2">
             <Stat
               label="Einheiten"

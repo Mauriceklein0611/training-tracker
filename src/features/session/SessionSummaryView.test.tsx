@@ -18,9 +18,12 @@ function summary(overrides: Partial<SessionSummary> = {}): SessionSummary {
       setsWithoutVolume: 0,
       setCount: 9,
       totalReps: 90,
+      totalDurationSeconds: 0,
     },
     restStatistics: {
       evaluatedSets: 0,
+      averageActualSeconds: null,
+      averageTargetSeconds: null,
       targetMetRatio: null,
       averageDeviationSeconds: null,
     },
