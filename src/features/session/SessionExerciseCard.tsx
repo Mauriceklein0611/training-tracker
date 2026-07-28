@@ -328,6 +328,11 @@ export function SessionExerciseCard({
     [sessionExercise],
   );
   const isCardio = currentExecution.trackingType === 'cardio';
+  // A pause is only meaningful for strength sets and for interval cardio (more
+  // than one planned section). Continuous free cardio shows no interval pause
+  // and never starts a rest timer (A8).
+  const isIntervalCardio = isCardio && targetSets != null && targetSets > 1;
+  const showRest = restTarget > 0 && (!isCardio || isIntervalCardio);
   const isTemporaryExecution = useMemo(() => {
     if (!exercise) return currentExecution.equipment !== 'unspecified';
     return (
@@ -419,7 +424,7 @@ export function SessionExerciseCard({
             {describeTarget(effectiveTarget, isCardio) ? (
               <span>Ziel: {describeTarget(effectiveTarget, isCardio)}</span>
             ) : null}
-            <span>Pause {restTarget}s</span>
+            {showRest ? <span>Pause {restTarget}s</span> : null}
             {showExecutionBadge ? (
               <Badge tone={isTemporaryExecution ? 'accent' : 'default'}>
                 {equipmentLabel(currentExecution.equipment)}
@@ -559,7 +564,8 @@ export function SessionExerciseCard({
           <div className="grid gap-2">
             <p className="flex items-center justify-center gap-2 rounded-xl bg-surface-2 py-2 text-sm font-medium text-success">
               <Check size={16} aria-hidden="true" />
-              Satzziel erreicht ({completedWorkingSets} von {targetSets})
+              {isCardio ? 'Intervallziel' : 'Satzziel'} erreicht ({completedWorkingSets}{' '}
+              von {targetSets})
             </p>
             <Button
               variant="secondary"
@@ -568,7 +574,7 @@ export function SessionExerciseCard({
               onClick={() => void handleAddSet()}
             >
               <Plus size={18} aria-hidden="true" />
-              Extrasatz hinzufügen
+              {isCardio ? 'Weiteren Abschnitt erfassen' : 'Extrasatz hinzufügen'}
             </Button>
           </div>
         ) : (

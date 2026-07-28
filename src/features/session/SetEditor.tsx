@@ -450,7 +450,7 @@ export function CompletedSetRow({
     <button
       type="button"
       onClick={onEdit}
-      aria-label={`Satz ${set.position + 1} bearbeiten`}
+      aria-label={`${isCardio ? 'Abschnitt' : 'Satz'} ${set.position + 1} bearbeiten`}
       className="flex min-h-[44px] w-full items-center gap-2 rounded-xl bg-surface-2 px-2 py-1.5 text-left active:bg-surface-3"
     >
       {content}

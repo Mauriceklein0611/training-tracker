@@ -200,19 +200,11 @@ export function CardioSetEditor({
           targetSeconds={targetDurationSeconds}
           soundEnabled={soundEnabled}
           vibrationEnabled={vibrationEnabled}
-          onApply={(seconds, { complete }) => {
-            const nextDraft = { ...draft, duration: String(seconds) };
-            setDraft(nextDraft);
-            if (complete) {
-              const next = draftToValues(nextDraft, distanceInMeters);
-              setTouched(true);
-              if (
-                cardioSectionComplete(next) &&
-                !hasErrors(validateCardioSetInput(next))
-              ) {
-                void runComplete(next);
-              }
-            }
+          // The timer only fills the duration; completing the cardio section is
+          // the single "Cardio abschließen" action below (A7 — no double finish).
+          showComplete={false}
+          onApply={(seconds) => {
+            setDraft((current) => ({ ...current, duration: String(seconds) }));
           }}
         />
       </div>

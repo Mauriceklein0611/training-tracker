@@ -35,6 +35,7 @@ export function ExerciseTimer({
   onApply,
   soundEnabled,
   vibrationEnabled,
+  showComplete = true,
 }: {
   setId: string;
   /** Plan target, prefilled as the countdown duration. */
@@ -43,6 +44,12 @@ export function ExerciseTimer({
   onApply: (seconds: number, options: { complete: boolean }) => void;
   soundEnabled: boolean;
   vibrationEnabled: boolean;
+  /**
+   * Whether the timer offers its own "apply and complete" action. Strength
+   * time-based sets keep it as a one-tap finish; cardio hides it so the single
+   * completion is the editor's "Cardio abschließen" (A7 — no double completion).
+   */
+  showComplete?: boolean;
 }) {
   // Restore a running measurement after an accidental reload.
   const [state, setState] = useState<ExerciseTimerState>(
@@ -155,25 +162,40 @@ export function ExerciseTimer({
         </Button>
       </div>
 
-      <Button
-        variant="success"
-        fullWidth
-        className="mt-2"
-        disabled={seconds === 0}
-        onClick={() => handleApply(true)}
-      >
-        <Check size={18} aria-hidden="true" />
-        Zeit übernehmen und Satz abschließen
-      </Button>
-      <Button
-        variant="ghost"
-        fullWidth
-        className="mt-1"
-        disabled={seconds === 0}
-        onClick={() => handleApply(false)}
-      >
-        Nur Zeit übernehmen
-      </Button>
+      {showComplete ? (
+        <>
+          <Button
+            variant="success"
+            fullWidth
+            className="mt-2"
+            disabled={seconds === 0}
+            onClick={() => handleApply(true)}
+          >
+            <Check size={18} aria-hidden="true" />
+            Zeit übernehmen und Satz abschließen
+          </Button>
+          <Button
+            variant="ghost"
+            fullWidth
+            className="mt-1"
+            disabled={seconds === 0}
+            onClick={() => handleApply(false)}
+          >
+            Nur Zeit übernehmen
+          </Button>
+        </>
+      ) : (
+        <Button
+          variant="secondary"
+          fullWidth
+          className="mt-2"
+          disabled={seconds === 0}
+          onClick={() => handleApply(false)}
+        >
+          <Check size={18} aria-hidden="true" />
+          Zeit übernehmen
+        </Button>
+      )}
 
       <div className="mt-3">
         <NumberField
