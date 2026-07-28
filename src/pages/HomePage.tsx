@@ -21,6 +21,7 @@ import {
   deloadRemainingDays,
 } from '@/services/deload';
 import { planCycleWeek } from '@/services/home';
+import { estimateUnitMinutes } from '@/services/sessionEstimate';
 import { buildCoachInsights } from '@/services/coachFeed';
 import { ActivePlanHero, type ActivePlanHeroData } from '@/features/home/ActivePlanHero';
 import { CoachFeed } from '@/features/home/CoachFeed';
@@ -112,12 +113,43 @@ export default function HomePage() {
         }
       : undefined;
 
+    // Details for the "Als Nächstes" hero: exercise count, a rough duration
+    // estimate, and when this unit was last completed.
+    let nextUnit: ActivePlanHeroData['nextUnit'];
+    if (next) {
+      const rows = await db.templateExercises
+        .where('templateId')
+        .equals(next.id)
+        .toArray();
+      const dataset = await loadAnalyticsDataset();
+      const lastDone = dataset.sessions
+        .filter((s) => s.status === 'completed' && s.templateId === next.id)
+        .sort((a, b) => b.startedAt.localeCompare(a.startedAt))[0];
+      const lastDoneDaysAgo = lastDone
+        ? Math.max(
+            0,
+            Math.floor(
+              (new Date(dayKey(new Date())).getTime() -
+                new Date(dayKey(lastDone.startedAt)).getTime()) /
+                86400000,
+            ),
+          )
+        : null;
+      nextUnit = {
+        templateId: next.id,
+        name: next.name,
+        exerciseCount: rows.length,
+        estimatedMinutes: estimateUnitMinutes(rows),
+        lastDoneDaysAgo,
+      };
+    }
+
     return {
       planId: plan.id,
       planName: plan.name,
       goalText: plan.goalText,
       dayNames: days.map((day) => day.name),
-      nextUnit: next ? { templateId: next.id, name: next.name } : undefined,
+      nextUnit,
       cycleWeek,
       deload,
     };

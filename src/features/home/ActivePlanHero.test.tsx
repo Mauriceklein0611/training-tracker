@@ -17,7 +17,13 @@ const base: ActivePlanHeroData = {
   planId: 'p1',
   planName: 'Muskelaufbau 3er-Split',
   dayNames: ['Push', 'Pull', 'Beine'],
-  nextUnit: { templateId: 'd3', name: 'Beine' },
+  nextUnit: {
+    templateId: 'd3',
+    name: 'Beine',
+    exerciseCount: 6,
+    estimatedMinutes: 55,
+    lastDoneDaysAgo: 6,
+  },
   cycleWeek: { current: 4, total: 8 },
 };
 
@@ -28,6 +34,11 @@ describe('ActivePlanHero', () => {
     expect(screen.getByText('Woche 4 / 8')).toBeInTheDocument();
     // "Beine" appears as the next-unit line and as its split chip.
     expect(screen.getAllByText('Beine').length).toBeGreaterThanOrEqual(1);
+
+    // The "Als Nächstes" details: exercise count, estimate and last-done.
+    expect(
+      screen.getByText(/6 Übungen · ca\. 55 Min\. · zuletzt vor 6 Tagen/),
+    ).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('button', { name: /Training starten/ }));
     expect(onStart).toHaveBeenCalledWith('d3');

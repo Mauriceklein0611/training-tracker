@@ -11,7 +11,14 @@ export interface ActivePlanHeroData {
   /** Day names of the split, for the chips (e.g. Push · Pull · Beine). */
   dayNames: string[];
   /** The unit the schedule says to do next, if any. */
-  nextUnit?: { templateId: string; name: string };
+  nextUnit?: {
+    templateId: string;
+    name: string;
+    exerciseCount: number;
+    estimatedMinutes: number;
+    /** Days since this unit was last completed, or null if never. */
+    lastDoneDaysAgo: number | null;
+  };
   /** Name of the most recently completed unit, if any. */
   lastUnitName?: string;
   /** Cycle week, 1-based, and the planned total. */
@@ -107,9 +114,25 @@ export function ActivePlanHero({
       <div className="mt-3">
         {data.nextUnit ? (
           <>
-            <p className="mb-1 text-sm">
+            <p className="mb-0.5 text-sm">
               <span className="text-muted">Als Nächstes: </span>
               <span className="font-semibold">{data.nextUnit.name}</span>
+            </p>
+            <p className="mb-2 text-xs text-muted">
+              {data.nextUnit.exerciseCount}{' '}
+              {data.nextUnit.exerciseCount === 1 ? 'Übung' : 'Übungen'}
+              {data.nextUnit.estimatedMinutes > 0
+                ? ` · ca. ${data.nextUnit.estimatedMinutes} Min.`
+                : ''}
+              {data.nextUnit.lastDoneDaysAgo != null
+                ? ` · zuletzt ${
+                    data.nextUnit.lastDoneDaysAgo === 0
+                      ? 'heute'
+                      : data.nextUnit.lastDoneDaysAgo === 1
+                        ? 'gestern'
+                        : `vor ${data.nextUnit.lastDoneDaysAgo} Tagen`
+                  }`
+                : ''}
             </p>
             <Button
               variant="primary"
