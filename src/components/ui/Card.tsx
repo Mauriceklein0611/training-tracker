@@ -41,11 +41,14 @@ export function Stat({
   value,
   hint,
   tone = 'default',
+  sparkline,
 }: {
   label: string;
   value: ReactNode;
   hint?: ReactNode;
   tone?: 'default' | 'accent' | 'muted';
+  /** Optional trend values for a tiny sparkline under the number (decorative). */
+  sparkline?: number[];
 }) {
   return (
     <div className="rounded-2xl border border-border bg-surface p-3">
@@ -61,8 +64,48 @@ export function Stat({
       >
         {value}
       </div>
+      {sparkline && sparkline.length > 1 ? <Sparkline values={sparkline} /> : null}
       {hint ? <div className="mt-1 text-xs text-muted">{hint}</div> : null}
     </div>
+  );
+}
+
+/**
+ * A tiny inline trend line — decorative (the KPI number carries the meaning), so
+ * it is hidden from screen readers. Scales to the value range; a flat series
+ * draws a flat line rather than dividing by zero.
+ */
+function Sparkline({ values }: { values: number[] }) {
+  const width = 100;
+  const height = 24;
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const span = max - min || 1;
+  const step = width / (values.length - 1);
+  const points = values
+    .map((value, index) => {
+      const x = index * step;
+      const y = height - ((value - min) / span) * (height - 4) - 2;
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    })
+    .join(' ');
+  return (
+    <svg
+      viewBox={`0 0 ${width} ${height}`}
+      className="mt-1.5 h-6 w-full"
+      preserveAspectRatio="none"
+      aria-hidden="true"
+    >
+      <polyline
+        points={points}
+        fill="none"
+        stroke="var(--accent)"
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        vectorEffect="non-scaling-stroke"
+      />
+    </svg>
   );
 }
 

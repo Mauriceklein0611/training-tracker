@@ -443,12 +443,14 @@ export default function AnalyticsPage() {
                 <Stat
                   label="Arbeitssätze"
                   value={formatNumber(analytics.workingSetCount)}
+                  sparkline={analytics.weekly.map((week) => week.workingSets)}
                 />
                 <Stat label="Wiederholungen" value={formatNumber(analytics.totalReps)} />
                 <Stat
                   label="Volumen"
                   value={formatVolume(analytics.volume.volumeKg)}
                   hint="nur gewichtete Übungen"
+                  sparkline={analytics.weekly.map((week) => week.volumeKg)}
                 />
                 <Stat
                   label="Serie"
