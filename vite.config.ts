@@ -32,7 +32,7 @@ export default defineConfig({
               name: 'Training Tracker',
               short_name: 'Training',
               description:
-                'Private Trainingsdokumentation. Alle Daten bleiben auf diesem Gerät.',
+                'Private Trainingsdokumentation für Kraft und Cardio. Alle Daten bleiben auf diesem Gerät.',
               lang: 'de',
               dir: 'ltr',
               start_url: '/',

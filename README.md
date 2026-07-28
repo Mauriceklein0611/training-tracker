@@ -1,7 +1,7 @@
 # Training Tracker
 
-A private, offline-first strength training tracker, built as an installable
-Progressive Web App for a single user on a single phone.
+A private, offline-first strength **and cardio** training tracker, built as an
+installable Progressive Web App for a single user on a single phone.
 
 There is no account, no backend, no sync and no analytics. Every workout you
 record stays in the browser's local database on the device you recorded it on.
@@ -35,20 +35,28 @@ are in English.
 
 The app covers a full training loop:
 
-- **Exercises** — create your own exercises; nothing is preinstalled. For each
-  one you decide how it is tracked (weight, bodyweight, assisted, reps only or
-  time) and what an entered weight means (per hand, total, added, assistance).
-- **Plans** — reusable workout templates with target sets, target rep ranges and
-  per-exercise rest times. Reorderable with buttons *and* drag and drop.
-- **Free workouts** — start without a template and add exercises as you go,
-  including creating a brand-new exercise mid-workout.
+- **Exercises** — a curated library of common exercises is seeded on first start
+  (re-seeded idempotently, so it never duplicates), and you can add your own
+  alongside them. For each exercise you decide how it is tracked (weight,
+  bodyweight, assisted, reps only, time or **cardio**), its muscle groups, its
+  default equipment, and — for cardio — its modality (running, cycling, rowing,
+  swimming …). Your own exercises and the system ones stay clearly distinguished.
+- **Plans** — reusable workout units and multi-day split plans with target sets,
+  target rep ranges, per-exercise rest times and, for cardio, target duration,
+  distance and RPE. Reorderable with buttons _and_ drag and drop, with an
+  optional weekly / rotating / cycle schedule and time-boxed deload weeks.
+- **Free workouts** — start without a plan and add exercises as you go, including
+  creating a brand-new exercise mid-workout; a free cardio session is one tap.
 - **Live view** — the screen you actually use in the gym: large touch targets,
-  numeric keypads, the previous performance as a suggestion, and a rest timer
-  that survives a locked screen.
+  numeric keypads, the previous performance as a suggestion, a rest timer that
+  survives a locked screen, and a dedicated cardio section with a timer, live
+  pace/speed and RPE.
 - **History** — a diary grouped by day, searchable, with after-the-fact
   corrections that update every statistic immediately.
 - **Analytics** — frequency, volume, sets per muscle group, progression per
-  exercise, estimated 1RM, rest discipline, streaks — all computed locally.
+  exercise, estimated 1RM and rest discipline for strength; duration, distance,
+  pace/speed and personal bests for cardio; plus streaks and time-block, plan and
+  workout-unit comparisons — all computed locally.
 - **Body data** — an optional daily diary of weight, body fat percentage and
   thirteen circumference measurements.
 - **Data & backup** — full JSON backup and restore, a curated export for a
@@ -112,20 +120,20 @@ src/
 
 ## Technology
 
-| Concern | Choice |
-|---|---|
-| Framework | React 18 + TypeScript 5.7 |
-| Build | Vite 6 |
-| Styling | Tailwind CSS 4 (`@tailwindcss/vite`), system fonts only |
+| Concern    | Choice                                                              |
+| ---------- | ------------------------------------------------------------------- |
+| Framework  | React 18 + TypeScript 5.7                                           |
+| Build      | Vite 6                                                              |
+| Styling    | Tailwind CSS 4 (`@tailwindcss/vite`), system fonts only             |
 | Components | Hand-built accessible primitives (native `<dialog>`, semantic HTML) |
-| Database | Dexie 4 over IndexedDB, `dexie-react-hooks` for live queries |
-| Routing | React Router 6 with lazy-loaded routes |
-| Charts | Recharts (loaded only on the analytics page) |
-| Validation | Zod (import files and entity schemas) |
-| Dates | date-fns with the German locale |
-| PWA | vite-plugin-pwa (Workbox `generateSW`) |
-| Testing | Vitest, React Testing Library, fake-indexeddb |
-| Quality | ESLint 9 (flat config), Prettier |
+| Database   | Dexie 4 over IndexedDB, `dexie-react-hooks` for live queries        |
+| Routing    | React Router 6 with lazy-loaded routes                              |
+| Charts     | Recharts (loaded only on the analytics page)                        |
+| Validation | Zod (import files and entity schemas)                               |
+| Dates      | date-fns with the German locale                                     |
+| PWA        | vite-plugin-pwa (Workbox `generateSW`)                              |
+| Testing    | Vitest, React Testing Library, fake-indexeddb                       |
+| Quality    | ESLint 9 (flat config), Prettier                                    |
 
 Nothing is loaded from a CDN at runtime. No web fonts are fetched. No external
 API is called.
@@ -157,17 +165,17 @@ npm run preview
 
 ## npm scripts
 
-| Script | Purpose |
-|---|---|
-| `npm run dev` | Development server with hot reloading |
-| `npm run build` | Type-checks and produces the production build in `dist/` |
-| `npm run preview` | Serves the production build locally |
-| `npm run typecheck` | TypeScript, no emit |
-| `npm run lint` | ESLint over the whole project |
-| `npm run format` | Prettier, writing changes |
-| `npm run test` | Full test suite, once |
-| `npm run test:watch` | Tests in watch mode |
-| `npm run icons` | Regenerates the PWA PNG icons from `scripts/generate-icons.mjs` |
+| Script               | Purpose                                                         |
+| -------------------- | --------------------------------------------------------------- |
+| `npm run dev`        | Development server with hot reloading                           |
+| `npm run build`      | Type-checks and produces the production build in `dist/`        |
+| `npm run preview`    | Serves the production build locally                             |
+| `npm run typecheck`  | TypeScript, no emit                                             |
+| `npm run lint`       | ESLint over the whole project                                   |
+| `npm run format`     | Prettier, writing changes                                       |
+| `npm run test`       | Full test suite, once                                           |
+| `npm run test:watch` | Tests in watch mode                                             |
+| `npm run icons`      | Regenerates the PWA PNG icons from `scripts/generate-icons.mjs` |
 
 ---
 
@@ -178,12 +186,12 @@ All timestamps are ISO-8601 strings; all ids are UUIDs; every record carries
 
 ### Exercise
 
-| Field | Notes |
-|---|---|
-| `trackingType` | `weight_reps`, `bodyweight_reps`, `assisted_bodyweight_reps`, `reps_only`, `duration` |
-| `weightMode` | `per_hand`, `total`, `added_weight`, `assistance`, `none` |
-| `weightMultiplier` | Factor for volume. Two 20 kg dumbbells → multiplier `2` → 40 kg total load |
-| `archived` | Archived exercises stay in history but disappear from pickers |
+| Field              | Notes                                                                                 |
+| ------------------ | ------------------------------------------------------------------------------------- |
+| `trackingType`     | `weight_reps`, `bodyweight_reps`, `assisted_bodyweight_reps`, `reps_only`, `duration` |
+| `weightMode`       | `per_hand`, `total`, `added_weight`, `assistance`, `none`                             |
+| `weightMultiplier` | Factor for volume. Two 20 kg dumbbells → multiplier `2` → 40 kg total load            |
+| `archived`         | Archived exercises stay in history but disappear from pickers                         |
 
 An exercise that appears in any recorded workout **cannot be deleted** — the app
 requires archiving it instead, so history stays intact.
@@ -209,9 +217,14 @@ and `weightMultiplierSnapshot` — the frozen configuration described above.
 
 `setType` is `warmup`, `working`, `drop` or `failure`. Rest is stored as
 `restTargetSeconds`, `restStartedAt`, `restEndedAt` and `restActualSeconds`.
+A cardio set instead carries raw cardio metrics — `distanceMeters`,
+`averageHeartRateBpm`, `caloriesKcal`, `elevationGainMeters`, `cadenceRpm`,
+`resistanceLevel` and a `cardioModalitySnapshot` — all optional; pace and speed
+are always derived from duration and distance, never stored.
 
 Validation: weight not negative, reps whole numbers, RIR 0–10, RPE 1–10,
-durations not negative, and the required fields follow the tracking type.
+durations and distances not negative, and the required fields follow the
+tracking type.
 
 ### BodyWeightEntry — body data
 
@@ -246,6 +259,10 @@ database schema version.
 - **Estimated 1RM** uses Epley: `load × (1 + reps / 30)`, restricted to 1–12
   repetitions and weighted exercises, always labelled as an estimate.
 - **Warm-up sets** are excluded from working volume, records and 1RM by default.
+- **Cardio** is kept strictly apart from strength: it is never added to kilogram
+  volume or working-set counts. Pace/speed follow the modality's convention
+  (min/km, /500 m, km/h …) and are only computed when both duration and distance
+  are present; a cross-modality aggregate pace is never invented.
 
 ---
 
@@ -257,13 +274,13 @@ one thing: remembering the theme so the first paint is not a bright flash.
 
 The schema is versioned, and every version is documented in `MIGRATIONS` in
 [`src/db/db.ts`](src/db/db.ts) and shown in the app under
-*Mehr → Lokale Speicherung*. Migrations are covered by tests that assert no data
+_Mehr → Lokale Speicherung_. Migrations are covered by tests that assert no data
 is lost across an upgrade.
 
 ### Persistent storage
 
 On first launch the app calls `navigator.storage.persist()`. Under
-*Mehr → Lokale Speicherung* you can see:
+_Mehr → Lokale Speicherung_ you can see:
 
 - whether persistent storage was granted (`navigator.storage.persisted()`),
 - roughly how much space is used (`navigator.storage.estimate()`),
@@ -276,7 +293,7 @@ situation and keeps working.
 
 ## Backup and restore
 
-Under *Mehr → Daten & Sicherung*.
+Under _Mehr → Daten & Sicherung_.
 
 ### Creating a backup
 
@@ -307,7 +324,7 @@ template exercises, sessions, session exercises, sets and body data entries.
 ## AI analysis export
 
 A separate, deliberately different export from the technical backup. It is
-*self-describing*, so a language model does not have to guess at conventions.
+_self-describing_, so a language model does not have to guess at conventions.
 
 You choose the period (all / 30 days / 90 days / custom) and whether to include
 notes, body data (weight, body fat, measurements) and warm-up sets. **The file
@@ -362,7 +379,7 @@ Four UTF-8 files (with BOM, CRLF line endings, RFC 4180 quoting):
 It then runs full screen, works entirely offline after the first load, and keeps
 its own database.
 
-The app shows these steps under *Einstellungen* when it detects iOS outside
+The app shows these steps under _Einstellungen_ when it detects iOS outside
 standalone mode.
 
 ### Notes for iOS
@@ -402,7 +419,7 @@ standalone mode.
 - **SPA routing needs no configuration.** Cloudflare Pages already serves
   `index.html` for any path that does not match a file, so a direct hit on
   `/analyse` or `/verlauf/<id>` resolves. A Netlify-style
-  `/* /index.html 200` rule is *not* wanted here — Pages rejects it as an
+  `/* /index.html 200` rule is _not_ wanted here — Pages rejects it as an
   infinite loop and ignores it.
 - [`public/_headers`](public/_headers) — a strict CSP locked to `'self'`
   (`connect-src 'self'` blocks outgoing requests), `nosniff`, `no-referrer`,
@@ -429,7 +446,7 @@ banner; you decide when to reload, so an update never interrupts a set.
   training history. Take backups.
 - The AI export is generated locally and only shared if you share it.
 
-The same information is in the app under *Mehr → Datenschutz*.
+The same information is in the app under _Mehr → Datenschutz_.
 
 ---
 
@@ -439,13 +456,16 @@ The same information is in the app under *Mehr → Datenschutz*.
 npm run test
 ```
 
-193 tests across 13 files. IndexedDB is mocked with `fake-indexeddb`; the real
-app always uses the browser's IndexedDB.
+A broad unit and component suite runs with Vitest (`npm run test` prints the
+current count). IndexedDB is mocked with `fake-indexeddb`; the real app always
+uses the browser's IndexedDB.
 
 **Unit tests** cover volume calculation, the weight multiplier, estimated 1RM,
-muscle group evaluation, rest evaluation, date and week aggregation, backup
-export, backup validation, merge import, replace import, transactional rollback,
-the AI export, CSV escaping, input validation and schema migrations.
+muscle group evaluation, rest evaluation, cardio metrics (pace/speed, records)
+and cardio-vs-strength separation, date and week aggregation, backup export,
+backup validation, merge import, replace import, transactional rollback, the AI
+export/response round-trip, the plan and workout-unit packages, CSV escaping,
+input validation and schema migrations.
 
 **Integration tests** cover the central flows: create an exercise → create a
 plan → start a workout → complete a set → end the rest → finish the workout →
