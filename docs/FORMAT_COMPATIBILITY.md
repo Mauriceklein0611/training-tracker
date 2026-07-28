@@ -5,12 +5,13 @@ any change that could touch a format** (see `AGENTS.md` for the rule). Format
 names and versions are centralised in `src/constants/formats.ts` or the format's
 own established constant.
 
-Last full matrix audit (2026-07-27): every version in the table below was
-cross-checked against its code constant (`SCHEMA_VERSION` 27, `AI_EXPORT_VERSION`
-2, `AI_RESPONSE_SCHEMA_VERSION` 1, `PLAN_BUILDER_KIT_VERSION` 2,
-`PLAN_PACKAGE_SCHEMA_VERSION` 3, `SUPPORTED_WORKOUT_UNIT_PACKAGE_VERSIONS` [1]),
-and the backup was confirmed to cover all 20 Dexie stores + settings (guarded by
-test).
+Last full matrix audit (2026-07-28): every version in the table below was
+cross-checked against its code constant (`SCHEMA_VERSION` 28, `AI_EXPORT_VERSION`
+3, `SUPPORTED_RESPONSE_SCHEMA_VERSION` 2, `PLAN_BUILDER_KIT_VERSION` 3,
+`PLAN_PACKAGE_SCHEMA_VERSION` 4 with `SUPPORTED_PLAN_PACKAGE_VERSIONS` [1, 2, 3,
+4], `WORKOUT_UNIT_PACKAGE_SCHEMA_VERSION` 2 with
+`SUPPORTED_WORKOUT_UNIT_PACKAGE_VERSIONS` [1, 2], `BACKUP_FORMAT_VERSION` 1), and
+the backup was confirmed to cover all Dexie stores + settings (guarded by test).
 
 General rules:
 
@@ -149,7 +150,11 @@ never reinterpreted as cardio.
 - Export carries `exportId`, `sourceExport {exportId, fingerprint}`,
   `analysisRequest`, `responseContract`, and a `plans` block (only place with
   plan/plan-exercise ids). No workout history ids.
-- **exportVersion 2 (Phase 7.1):** adds an optional descriptive `trainingContext`
+- **exportVersion 3 (cardio):** each exported set carries its `trackingType`, and
+  a cardio set adds a structured `cardio` object with a clearly-derived pace;
+  average heart rate ships only on the opt-in `includeHeartRate` (default off).
+  The export states which values are measured and which are derived.
+- **exportVersion 2 (Phase 7.1):** added an optional descriptive `trainingContext`
   block (active plan, per-plan goals/metadata, `trainingBlocks` from usage
   periods, `activeDeload`), marks deload sessions with `deloadIntensity` on each
   workout, and adds per-workout `plan`/`workoutUnit` attribution snapshots (name
@@ -172,38 +177,43 @@ never reinterpreted as cardio.
 
 ## Training plan package — `src/services/planPackage/*`
 
-- Format `training-plan-package`, **schema version 3** (`src/constants/formats.ts`;
-  `SUPPORTED_PLAN_PACKAGE_VERSIONS = [1, 2, 3]`). One package holds one or more
+- Format `training-plan-package`, **schema version 4** (`src/constants/formats.ts`;
+  `SUPPORTED_PLAN_PACKAGE_VERSIONS = [1, 2, 3, 4]`). One package holds one or more
   plans; each plan has a `splitType`, a list of **days** (each holding its own
-  plan-exercises) and, since v3, an optional **schedule**. All relationships use
-  portable keys (`exerciseKey`, `planKey`, `dayKey`, `planExerciseKey`,
-  `groupKey`) — never internal Dexie ids.
-- **Schedule (schema version 3):** `plan.schedule` carries the mode
+  plan-exercises), since v3 an optional **schedule** and since v4 structured
+  default equipment and cardio fields. All relationships use portable keys
+  (`exerciseKey`, `planKey`, `dayKey`, `planExerciseKey`, `groupKey`) — never
+  internal Dexie ids.
+- **Schedule (added in schema version 3, carried in v4):** `plan.schedule` carries the mode
   (`free-rotation` | `repeating-cycle` | `weekly`) and ordered `entries`
   (workout entries reference a `dayKey` of the same plan; weekly entries carry a
   `weekday` 0–6; rest entries carry an optional label). free-rotation stores no
   entries. On import the schedule is recreated and entries are re-pointed onto
   the new day ids; a reference that cannot be mapped is dropped, never dangling.
-- **Version 2** (no schedule) is still accepted and imports with a default
-  free-rotation. **Version 1** (a single implicit day, `plan.exercises`) is
-  validated against `planPackageSchemaV1` and upgraded (`upgradeV1`) to a plan
+- **Version 3** (no structured equipment/cardio) and **version 2** (also no
+  schedule) are still accepted; a v2 file imports with a default free-rotation,
+  and the v4-only structured-equipment/cardio fields are simply absent in a v3
+  file (never guessed). **Version 1** (a single implicit day, `plan.exercises`)
+  is validated against `planPackageSchemaV1` and upgraded (`upgradeV1`) to a plan
   with one day named "Tag A"; the parser reports `migratedFromVersion` and the
   import preview shows a migration note. A newer unknown version is rejected.
-- Schema: `planPackageSchema` (strict Zod; `schemaVersion` accepts 2 or 3, both
-  share the schema since `schedule` is optional). Parser `parsePlanPackage`.
-  Exporter `buildPlanPackage` (always writes v3, carrying the live schedule).
-  Import (transactional, conflict-aware) `importPlanPackage` with preview
-  `analyzePlanPackageImport`. Each imported plan becomes a `TrainingPlan` with
-  its days and schedule.
+- Schema: `planPackageSchema` (strict Zod; `schemaVersion` accepts 2, 3 or 4, all
+  share the schema since `schedule` and the structured-equipment/cardio fields
+  are optional). Parser `parsePlanPackage`. Exporter `buildPlanPackage` (always
+  writes v4, carrying the live schedule, structured default equipment and
+  cardio). Import (transactional, conflict-aware) `importPlanPackage` with
+  preview `analyzePlanPackageImport`. Each imported plan becomes a `TrainingPlan`
+  with its days and schedule.
 - Excludes all private data: no history, past sets/weights, PRs, body data,
   check-ins, AI analyses, settings, internal ids. `includeNotes: false` also
   strips plan/exercise notes before sharing.
-- **Structured `defaultEquipment` (schema 27) is deliberately NOT carried** in the
-  package or the builder kit: the free-text `equipment` string is already shared,
-  and the structured default is local metadata. A shared exercise imports with no
-  structured default (→ `unspecified`), which the user can set locally. This keeps
-  the package at v3 with no strict-schema break — a follow-up could add it as an
-  optional field behind a version bump if sharing it becomes worthwhile.
+- **Structured `defaultEquipment` and cardio ARE carried since v4** (behind the
+  version bump): `buildPlanPackage` writes an exercise's `defaultEquipment` and
+  `cardioModality` when set, and plan-exercises carry `targetDistanceMeters` /
+  `targetRpe`. A v1–v3 file has none of these, so a shared exercise from an older
+  package still imports with no structured default (→ `unspecified`) and no
+  cardio target; the fields are never guessed. The free-text `equipment` string
+  continues to travel as before.
 - Import never overwrites local data: a same-name compatible exercise is reused,
   an incompatible one is created as a copy, plans are always created new with a
   de-duplicated name. Everything runs in one Dexie transaction (full rollback).
@@ -222,15 +232,19 @@ never reinterpreted as cardio.
 
 ## Workout unit package — `src/services/unitPackage.ts`
 
-- Format `training-workout-unit-package`, **schema version 1**
-  (`src/constants/formats.ts`; `SUPPORTED_WORKOUT_UNIT_PACKAGE_VERSIONS = [1]`).
+- Format `training-workout-unit-package`, **schema version 2**
+  (`src/constants/formats.ts`; `SUPPORTED_WORKOUT_UNIT_PACKAGE_VERSIONS = [1, 2]`).
   Carries one or more library workout units, their exercises and target
   values/groups — no plans, history, sets, body data or internal ids. Reuses the
   plan-package exercise/plan-exercise schemas (portable keys only), strict Zod.
-- Build `buildWorkoutUnitPackage` (always v1; `includeNotes: false` strips
+  v2 mirrors plan-package v4: structured `defaultEquipment`, `cardioModality` and
+  cardio targets (`targetDistanceMeters`/`targetRpe`); a v1 file has none of them
+  and imports with those fields absent (never guessed).
+- Build `buildWorkoutUnitPackage` (always v2; `includeNotes: false` strips
   exercise/unit notes). Parse `parseWorkoutUnitPackage` (size limit, newer
-  version rejected, unknown fields rejected, positions must reference a defined
-  `exerciseKey`). Import `importWorkoutUnitPackage` in one Dexie transaction: a
+  version rejected, v1 still accepted, unknown fields rejected, positions must
+  reference a defined `exerciseKey`). Import `importWorkoutUnitPackage` in one
+  Dexie transaction: a
   same-name compatible exercise is reused, an incompatible one is created as a
   de-duplicated copy; units and their exercises are created new. Existing units,
   plans, sessions and history are never touched.
@@ -241,16 +255,18 @@ never reinterpreted as cardio.
 
 ## Plan builder kit — `src/services/planPackage/builderKit.ts`
 
-- Format `training-plan-builder-kit`, **version 2** (multi-day). A
-  self-describing, data-free file handed to ChatGPT so it can produce a valid
-  `training-plan-package` (schema version 3): it carries the target contract, the
-  allowed enums (`splitType`, plus weight-mode-per-tracking rules from
-  `exerciseRules.ts`), the muscle-group catalog and a two-day example. The
-  example now includes an optional `schedule` (a `repeating-cycle` with workout
-  and rest entries), and the rules explain all three modes, so a kit-built plan
-  can carry a schedule; omitting `schedule` still imports as free-rotation.
+- Format `training-plan-builder-kit`, **version 3** (structured equipment +
+  cardio). A self-describing, data-free file handed to ChatGPT so it can produce
+  a valid `training-plan-package` (schema version 4): it carries the target
+  contract, the allowed enums (`splitType`, the `cardioModality` list, plus
+  weight-mode-per-tracking rules from `exerciseRules.ts`), the muscle-group
+  catalog and a worked example. The example includes an optional `schedule` (a
+  `repeating-cycle` with workout and rest entries) and a cardio day with
+  structured `defaultEquipment`, `cardioModality` and a cardio target, so a
+  kit-built plan can carry a schedule and cardio; omitting `schedule` still
+  imports as free-rotation and omitting the cardio fields is valid.
 - Export/share only; never imported. The example is validated against the real
-  `planPackageSchema` (v2) by test so the two can never drift.
+  `planPackageSchema` by test so the two can never drift.
 
 ## Block comparison export — `src/services/blockComparison.ts`
 
