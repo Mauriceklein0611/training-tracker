@@ -20,6 +20,7 @@ import {
 import {
   addSet,
   completeSet,
+  reopenSet,
   deleteSet,
   getExerciseHistorySets,
   getLastPerformance,
@@ -31,6 +32,7 @@ import {
   type SessionExerciseDetail,
 } from '@/db/repositories/sessions';
 import { primeAudio } from '@/services/sound';
+import { useToast } from '@/hooks/useToast';
 import { effectiveLoadKg, isWorkingSet } from '@/services/metrics';
 import { formatCardioDistance, formatDuration } from '@/services/cardioMetrics';
 import { buildRecordBaseline } from '@/services/comparison';
@@ -114,6 +116,7 @@ export function SessionExerciseCard({
   expertLabels?: boolean;
 }) {
   const { sessionExercise, sets } = detail;
+  const toast = useToast();
 
   /*
    * Targets come first from this session-exercise's own frozen snapshots (see
@@ -370,6 +373,16 @@ export function SessionExerciseCard({
     // A double / racing tap that did not actually complete the set must not
     // queue another set — otherwise two "next" drafts would appear.
     if (!newlyCompleted) return;
+
+    // Time-limited undo: reopening clears the completion and any rest it started,
+    // keeping the entered values, so a mistap is fully reversible and data-safe.
+    toast.show('Satz erfasst.', 'success', {
+      durationMs: 6000,
+      action: {
+        label: 'Rückgängig',
+        onClick: () => void reopenSet(setId),
+      },
+    });
 
     // Would this set reach the goal? Warm-ups do not count towards it.
     const workingAfter = completedWorkingSets + (values.setType === 'warmup' ? 0 : 1);

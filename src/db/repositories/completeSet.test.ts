@@ -5,6 +5,7 @@ import {
   addExerciseToSession,
   addSet,
   completeSet,
+  reopenSet,
   startFreeSession,
 } from '@/db/repositories/sessions';
 import { resetDatabase } from '@/tests/dbTestUtils';
@@ -76,6 +77,32 @@ describe('completeSet idempotency', () => {
     expect(stored?.completedAt).toBe(completedAt);
     expect(stored?.weightKg).toBe(80);
     expect(stored?.reps).toBe(8);
+  });
+
+  it('reopens a completed set, keeping its values and clearing the rest (undo)', async () => {
+    const { sessionExerciseId } = await seed();
+    const set = await addSet(sessionExerciseId, { restTargetSeconds: 120 });
+    await completeSet(set.id, { weightKg: 80, reps: 8 }, { startRest: true });
+
+    const completed = await db.workoutSets.get(set.id);
+    expect(completed?.completedAt).toBeTruthy();
+    expect(completed?.restStartedAt).toBeTruthy();
+
+    await reopenSet(set.id);
+
+    const reopened = await db.workoutSets.get(set.id);
+    // The set is open again, its rest cleared, its entered values kept.
+    expect(reopened?.completedAt).toBeUndefined();
+    expect(reopened?.restStartedAt).toBeUndefined();
+    expect(reopened?.weightKg).toBe(80);
+    expect(reopened?.reps).toBe(8);
+  });
+
+  it('does nothing when reopening a set that is not completed', async () => {
+    const { sessionExerciseId } = await seed();
+    const set = await addSet(sessionExerciseId, { restTargetSeconds: 120 });
+    await reopenSet(set.id);
+    expect((await db.workoutSets.get(set.id))?.completedAt).toBeUndefined();
   });
 });
 

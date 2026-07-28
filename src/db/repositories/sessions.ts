@@ -1034,6 +1034,24 @@ export async function completeSet(
 }
 
 /**
+ * Reopens a just-completed set (the "Rückgängig" undo after completion): clears
+ * its completion and any rest it started, keeping every entered value so the set
+ * simply becomes the open set again. Only touches a completed set, so it is safe
+ * to call late — an already-reopened or never-completed set is left untouched.
+ */
+export async function reopenSet(setId: string): Promise<void> {
+  const set = await db.workoutSets.get(setId);
+  if (!set?.completedAt) return;
+  await db.workoutSets.update(setId, {
+    completedAt: undefined,
+    restStartedAt: undefined,
+    restEndedAt: undefined,
+    restActualSeconds: undefined,
+    updatedAt: nowIso(),
+  });
+}
+
+/**
  * Ends the current rest period and records how long it actually lasted.
  * Idempotent: an already closed rest keeps its recorded duration.
  */
