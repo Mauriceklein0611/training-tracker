@@ -16,13 +16,19 @@ import { normalizeMuscleQuery } from '@/constants/muscleGroups';
 import { MuscleGroupChips } from '@/features/exercises/MuscleGroupChips';
 import { MuscleGroupPicker } from '@/features/exercises/MuscleGroupPicker';
 import type {
+  CardioModality,
   Equipment,
   Exercise,
   ProgressionMethod,
   TrackingType,
   WeightMode,
 } from '@/types';
-import { EQUIPMENT_LABELS, EQUIPMENT_VALUES } from '@/services/equipment';
+import { EQUIPMENT_LABELS, equipmentValuesFor } from '@/services/equipment';
+import {
+  CARDIO_MODALITY_LABELS,
+  CARDIO_MODALITY_VALUES,
+  defaultEquipmentForModality,
+} from '@/services/cardio';
 import {
   EQUIPMENT_SUGGESTIONS,
   TRACKING_TYPE_HELP,
@@ -39,6 +45,7 @@ interface FormState {
   equipment: string;
   defaultEquipment: Equipment;
   trackingType: TrackingType;
+  cardioModality: CardioModality;
   weightMode: WeightMode;
   weightMultiplier: string;
   defaultRestSeconds: string;
@@ -100,6 +107,7 @@ function toFormState(
     equipment: exercise?.equipment ?? '',
     defaultEquipment: exercise?.defaultEquipment ?? 'unspecified',
     trackingType: exercise?.trackingType ?? 'weight_reps',
+    cardioModality: exercise?.cardioModality ?? 'running',
     weightMode: exercise?.weightMode ?? 'total',
     weightMultiplier: String(exercise?.weightMultiplier ?? 1),
     defaultRestSeconds: String(exercise?.defaultRestSeconds ?? defaultRest),
@@ -164,11 +172,16 @@ export function ExerciseFormDialog({
     }
   }, [open, exercise, defaultRestSeconds, initialName]);
 
+  const isCardio = form.trackingType === 'cardio';
   const weightModes = useMemo(
     () => allowedWeightModes(form.trackingType),
     [form.trackingType],
   );
-  const showMultiplier = form.weightMode === 'per_hand';
+  const showMultiplier = !isCardio && form.weightMode === 'per_hand';
+  const equipmentOptions = useMemo(
+    () => equipmentValuesFor(form.trackingType),
+    [form.trackingType],
+  );
 
   const update = <K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm((current) => ({ ...current, [key]: value }));
@@ -177,6 +190,8 @@ export function ExerciseFormDialog({
   const handleTrackingTypeChange = (trackingType: TrackingType) => {
     setForm((current) => {
       const allowed = allowedWeightModes(trackingType);
+      const switchingToCardio = trackingType === 'cardio';
+      const leavingCardio = current.trackingType === 'cardio' && !switchingToCardio;
       return {
         ...current,
         trackingType,
@@ -184,8 +199,24 @@ export function ExerciseFormDialog({
         weightMode: allowed.includes(current.weightMode)
           ? current.weightMode
           : defaultWeightModeFor(trackingType),
+        // Cardio suggests its modality's device; leaving cardio clears the
+        // (now inapplicable) cardio device rather than keeping a stale one.
+        defaultEquipment: switchingToCardio
+          ? defaultEquipmentForModality(current.cardioModality)
+          : leavingCardio
+            ? 'unspecified'
+            : current.defaultEquipment,
       };
     });
+  };
+
+  const handleModalityChange = (cardioModality: CardioModality) => {
+    setForm((current) => ({
+      ...current,
+      cardioModality,
+      // Suggest — never force — the matching device for the chosen activity.
+      defaultEquipment: defaultEquipmentForModality(cardioModality),
+    }));
   };
 
   const handleSubmit = async () => {
@@ -224,6 +255,9 @@ export function ExerciseFormDialog({
       defaultEquipment:
         form.defaultEquipment === 'unspecified' ? undefined : form.defaultEquipment,
       trackingType: form.trackingType,
+      // The modality is only meaningful for cardio; cleared otherwise so a
+      // strength exercise never carries a stray activity.
+      cardioModality: form.trackingType === 'cardio' ? form.cardioModality : undefined,
       weightMode: form.weightMode,
       // The multiplier only has a meaning for the "per hand" convention.
       weightMultiplier: form.weightMode === 'per_hand' ? multiplier : 1,
@@ -350,21 +384,6 @@ export function ExerciseFormDialog({
           </datalist>
 
           <SelectField
-            label="Standardausrüstung"
-            value={form.defaultEquipment}
-            hint="Ausgangswert für neue Trainings. Im laufenden Training lässt sich die Ausführung temporär wechseln, ohne die Übung zu ändern."
-            onChange={(event) =>
-              update('defaultEquipment', event.target.value as Equipment)
-            }
-          >
-            {EQUIPMENT_VALUES.map((value) => (
-              <option key={value} value={value}>
-                {EQUIPMENT_LABELS[value]}
-              </option>
-            ))}
-          </SelectField>
-
-          <SelectField
             label="Tracking-Typ"
             value={form.trackingType}
             hint={TRACKING_TYPE_HELP[form.trackingType]}
@@ -379,19 +398,54 @@ export function ExerciseFormDialog({
             ))}
           </SelectField>
 
+          {isCardio ? (
+            <SelectField
+              label="Cardio-Aktivität"
+              value={form.cardioModality}
+              hint="Bestimmt die Auswertung (z. B. Pace-Einheit). Das Gerät wird separat gewählt."
+              onChange={(event) =>
+                handleModalityChange(event.target.value as CardioModality)
+              }
+            >
+              {CARDIO_MODALITY_VALUES.map((value) => (
+                <option key={value} value={value}>
+                  {CARDIO_MODALITY_LABELS[value]}
+                </option>
+              ))}
+            </SelectField>
+          ) : null}
+
           <SelectField
-            label="Gewichtskonvention"
-            value={form.weightMode}
-            hint={WEIGHT_MODE_HELP[form.weightMode]}
-            disabled={weightModes.length <= 1}
-            onChange={(event) => update('weightMode', event.target.value as WeightMode)}
+            label={isCardio ? 'Standardgerät' : 'Standardausrüstung'}
+            value={form.defaultEquipment}
+            hint="Ausgangswert für neue Trainings. Im laufenden Training lässt sich die Ausführung temporär wechseln, ohne die Übung zu ändern."
+            onChange={(event) =>
+              update('defaultEquipment', event.target.value as Equipment)
+            }
           >
-            {weightModes.map((mode) => (
-              <option key={mode} value={mode}>
-                {WEIGHT_MODE_LABELS[mode]}
+            {equipmentOptions.map((value) => (
+              <option key={value} value={value}>
+                {EQUIPMENT_LABELS[value]}
               </option>
             ))}
           </SelectField>
+
+          {/* Weight convention and multiplier are meaningless for cardio. */}
+          {!isCardio ? (
+            <SelectField
+              label="Gewichtskonvention"
+              value={form.weightMode}
+              hint={WEIGHT_MODE_HELP[form.weightMode]}
+              disabled={weightModes.length <= 1}
+              onChange={(event) => update('weightMode', event.target.value as WeightMode)}
+            >
+              {weightModes.map((mode) => (
+                <option key={mode} value={mode}>
+                  {WEIGHT_MODE_LABELS[mode]}
+                </option>
+              ))}
+            </SelectField>
+          ) : null}
 
           {showMultiplier ? (
             <NumberField
@@ -405,60 +459,66 @@ export function ExerciseFormDialog({
           ) : null}
 
           <NumberField
-            label="Standardpause (Sekunden)"
+            label={
+              isCardio
+                ? 'Standardpause zwischen Intervallen (Sekunden)'
+                : 'Standardpause (Sekunden)'
+            }
             value={form.defaultRestSeconds}
             error={errors.defaultRestSeconds}
             onChange={(event) => update('defaultRestSeconds', event.target.value)}
           />
 
-          {/* Optional throughout — the suggestion simply says so when unset. */}
-          <details className="rounded-xl border border-border bg-surface-2 p-3">
-            <summary className="min-h-[44px] cursor-pointer list-none py-2 text-sm font-medium text-accent">
-              Progression (optional)
-            </summary>
-            <div className="mt-3 grid gap-3">
-              <p className="text-xs leading-relaxed text-muted">
-                Diese Angaben verbessern die lokale Progressionsempfehlung. Ohne sie wird
-                eine Standardsteigerung angenommen — es wird nichts geschätzt oder
-                automatisch geändert.
-              </p>
+          {/* Strength progression settings do not apply to cardio. */}
+          {!isCardio ? (
+            <details className="rounded-xl border border-border bg-surface-2 p-3">
+              <summary className="min-h-[44px] cursor-pointer list-none py-2 text-sm font-medium text-accent">
+                Progression (optional)
+              </summary>
+              <div className="mt-3 grid gap-3">
+                <p className="text-xs leading-relaxed text-muted">
+                  Diese Angaben verbessern die lokale Progressionsempfehlung. Ohne sie
+                  wird eine Standardsteigerung angenommen — es wird nichts geschätzt oder
+                  automatisch geändert.
+                </p>
 
-              <NumberField
-                label="Kleinste Gewichtssteigerung (kg)"
-                decimal
-                value={form.weightIncrementKg}
-                placeholder="Standard: 2,5"
-                onChange={(event) => update('weightIncrementKg', event.target.value)}
-              />
+                <NumberField
+                  label="Kleinste Gewichtssteigerung (kg)"
+                  decimal
+                  value={form.weightIncrementKg}
+                  placeholder="Standard: 2,5"
+                  onChange={(event) => update('weightIncrementKg', event.target.value)}
+                />
 
-              <TextField
-                label="Verfügbare Gewichte (kg)"
-                value={form.availableWeightsKg}
-                hint="Durch Komma trennen, z. B. 10, 12.5, 15, 17.5. Dann wird nur ein tatsächlich vorhandenes Gewicht vorgeschlagen."
-                onChange={(event) => update('availableWeightsKg', event.target.value)}
-              />
+                <TextField
+                  label="Verfügbare Gewichte (kg)"
+                  value={form.availableWeightsKg}
+                  hint="Durch Komma trennen, z. B. 10, 12.5, 15, 17.5. Dann wird nur ein tatsächlich vorhandenes Gewicht vorgeschlagen."
+                  onChange={(event) => update('availableWeightsKg', event.target.value)}
+                />
 
-              <SelectField
-                label="Bevorzugte Progression"
-                value={form.progressionMethod}
-                onChange={(event) =>
-                  update('progressionMethod', event.target.value as ProgressionMethod)
-                }
-              >
-                <option value="auto">Automatisch (nach Tracking-Typ)</option>
-                <option value="weight">Zuerst Gewicht steigern</option>
-                <option value="reps">Zuerst Wiederholungen steigern</option>
-              </SelectField>
+                <SelectField
+                  label="Bevorzugte Progression"
+                  value={form.progressionMethod}
+                  onChange={(event) =>
+                    update('progressionMethod', event.target.value as ProgressionMethod)
+                  }
+                >
+                  <option value="auto">Automatisch (nach Tracking-Typ)</option>
+                  <option value="weight">Zuerst Gewicht steigern</option>
+                  <option value="reps">Zuerst Wiederholungen steigern</option>
+                </SelectField>
 
-              <NumberField
-                label="Ziel-RIR"
-                decimal
-                value={form.targetRir}
-                hint="Verbleibende Wiederholungen im Tank. Höher heißt leichter. Leer lassen, wenn du RIR nicht nutzt."
-                onChange={(event) => update('targetRir', event.target.value)}
-              />
-            </div>
-          </details>
+                <NumberField
+                  label="Ziel-RIR"
+                  decimal
+                  value={form.targetRir}
+                  hint="Verbleibende Wiederholungen im Tank. Höher heißt leichter. Leer lassen, wenn du RIR nicht nutzt."
+                  onChange={(event) => update('targetRir', event.target.value)}
+                />
+              </div>
+            </details>
+          ) : null}
 
           <TextAreaField
             label="Technik-Hinweise (optional)"
