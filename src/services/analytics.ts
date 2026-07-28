@@ -11,12 +11,14 @@ import {
   computePersonalRecords,
   effectiveLoadKg,
   estimatedOneRepMax,
+  isCardio,
   isCompleted,
   isWorkingSet,
   setVolumeKg,
   type PersonalRecords,
   type VolumeTotals,
 } from '@/services/metrics';
+import { aggregateCardio, type CardioTotals } from '@/services/cardioMetrics';
 import { computeRestStatistics, type RestStatistics } from '@/services/rest';
 import {
   currentWeeklyStreak,
@@ -125,6 +127,8 @@ export interface AnalyticsResult {
   weekly: WeeklyPoint[];
   restStatistics: RestStatistics;
   personalRecords: PersonalRecords[];
+  /** Cardio totals for the range, computed apart from every strength metric. */
+  cardio: CardioTotals;
   streakWeeks: number;
   /** Share of weeks in the range that contain at least one workout, 0..1. */
   consistency: number;
@@ -155,8 +159,19 @@ export function computeAnalytics(
 
   const allContexts = buildSetContexts(dataset);
   const contexts = filterContextsByRange(allContexts, range);
+  // Strength metrics exclude cardio entirely: cardio must never add to volume,
+  // muscle-group load, working-set counts or the strength rest statistics.
   const countedContexts = contexts.filter(
-    (context) => isCompleted(context.set) && (includeWarmup || isWorkingSet(context.set)),
+    (context) =>
+      isCompleted(context.set) &&
+      (includeWarmup || isWorkingSet(context.set)) &&
+      !isCardio(context.set, context.sessionExercise),
+  );
+  // Cardio is aggregated separately from its own completed sets in range.
+  const cardio = aggregateCardio(
+    contexts
+      .filter((context) => isCompleted(context.set))
+      .map(({ set, sessionExercise }) => ({ set, context: sessionExercise })),
   );
 
   const sessionsInRange = dataset.sessions.filter(
@@ -201,6 +216,7 @@ export function computeAnalytics(
     muscleGroups: computeMuscleGroupLoad(countedContexts, exercisesById),
     weekly: computeWeeklySeries(countedContexts, sessionsInRange),
     restStatistics: computeRestStatistics(countedContexts.map((context) => context.set)),
+    cardio,
     personalRecords: [
       ...computePersonalRecords(contexts, { includeWarmup }).values(),
     ].sort((a, b) => a.exerciseName.localeCompare(b.exerciseName, 'de')),

@@ -44,6 +44,10 @@ import {
   formatSignedSeconds,
   formatVolume,
 } from '@/utils/format';
+import {
+  formatCardioDistance,
+  formatDuration as formatCardioDuration,
+} from '@/services/cardioMetrics';
 
 const RANGE_OPTIONS: { value: AnalyticsRangeKey; label: string }[] = [
   { value: '7d', label: '7 T.' },
@@ -445,6 +449,59 @@ export default function AnalyticsPage() {
               Eine positive Abweichung bedeutet eine längere Pause als geplant.
             </p>
           </Card>
+
+          {analytics.cardio.activities > 0 ? (
+            <Card>
+              <CardHeader
+                title="Cardio"
+                subtitle="Getrennt von Kraft ausgewertet"
+                as="h3"
+              />
+              <div className="grid grid-cols-2 gap-2">
+                <Stat
+                  label="Aktivitäten"
+                  value={formatNumber(analytics.cardio.activities)}
+                />
+                <Stat
+                  label="Cardio-Dauer"
+                  value={formatCardioDuration(analytics.cardio.totalDurationSeconds)}
+                />
+                {analytics.cardio.totalDistanceMeters > 0 ? (
+                  <Stat
+                    label="Distanz"
+                    value={formatCardioDistance(
+                      analytics.cardio.totalDistanceMeters,
+                      undefined,
+                    )}
+                  />
+                ) : null}
+                {analytics.cardio.averageHeartRateBpm != null ? (
+                  <Stat
+                    label="Ø Herzfrequenz"
+                    value={`${Math.round(analytics.cardio.averageHeartRateBpm)} bpm`}
+                    hint="aufgezeichnet"
+                  />
+                ) : null}
+                {analytics.cardio.totalCaloriesKcal > 0 ? (
+                  <Stat
+                    label="Kalorien"
+                    value={`${formatNumber(analytics.cardio.totalCaloriesKcal)} kcal`}
+                    hint="erfasst"
+                  />
+                ) : null}
+                {analytics.cardio.totalElevationGainMeters > 0 ? (
+                  <Stat
+                    label="Höhenmeter"
+                    value={`${formatNumber(analytics.cardio.totalElevationGainMeters)} m`}
+                  />
+                ) : null}
+              </div>
+              <p className="mt-2 text-xs leading-relaxed text-muted">
+                Cardio fließt nicht in Kraftvolumen, 1RM oder Arbeitssätze ein. Pace und
+                Geschwindigkeit werden nur je Aktivität und Modalität ausgewertet.
+              </p>
+            </Card>
+          ) : null}
 
           <Card>
             <CardHeader title="Persönliche Bestleistungen" as="h3" />

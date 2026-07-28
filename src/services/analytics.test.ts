@@ -172,6 +172,52 @@ describe('computeAnalytics', () => {
     expect(analytics.setsWithoutVolume).toBe(1);
   });
 
+  it('keeps cardio out of the strength metrics but reports it separately', () => {
+    const dataset = buildDataset();
+    const running = makeExercise({
+      id: 'ex-run',
+      name: 'Laufen',
+      trackingType: 'cardio',
+      cardioModality: 'running',
+      weightMode: 'none',
+    });
+    dataset.exercises.push(running);
+    dataset.sessionExercises.push(
+      makeSessionExercise({
+        id: 'se-run',
+        sessionId: 's-a',
+        exerciseId: 'ex-run',
+        order: 5,
+        exerciseNameSnapshot: 'Laufen',
+        trackingTypeSnapshot: 'cardio',
+        weightModeSnapshot: 'none',
+        cardioModalitySnapshot: 'running',
+      }),
+    );
+    dataset.sets.push(
+      makeSet({
+        sessionExerciseId: 'se-run',
+        weightKg: undefined,
+        reps: undefined,
+        durationSeconds: 1800,
+        distanceMeters: 6000,
+        completedAt: '2026-07-06T11:00:00.000Z',
+      }),
+    );
+
+    const analytics = computeAnalytics(dataset, null);
+    // Strength metrics are unchanged by the cardio set…
+    expect(analytics.volume.volumeKg).toBe(1120);
+    expect(analytics.workingSetCount).toBe(3);
+    // …and the cardio activity is not counted into any muscle group.
+    expect(
+      analytics.muscleGroups.some((group) => group.muscleGroup === 'Ganzkörper'),
+    ).toBe(false);
+    // Cardio is reported in its own block.
+    expect(analytics.cardio.activities).toBe(1);
+    expect(analytics.cardio.totalDistanceMeters).toBe(6000);
+  });
+
   it('includes warm-up sets when asked to', () => {
     const analytics = computeAnalytics(buildDataset(), null, { includeWarmup: true });
     expect(analytics.volume.volumeKg).toBe(1520);
