@@ -1,7 +1,15 @@
 import { useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { AlertTriangle, ClipboardList, Play, Plus, RotateCcw, Zap } from 'lucide-react';
+import {
+  Activity,
+  AlertTriangle,
+  ClipboardList,
+  Play,
+  Plus,
+  RotateCcw,
+  Zap,
+} from 'lucide-react';
 import { db } from '@/db/db';
 import { listTemplates } from '@/db/repositories/templates';
 import { listPlansWithDays } from '@/db/repositories/plans';
@@ -119,6 +127,24 @@ export default function HomePage() {
     }
   }, [navigate, toast]);
 
+  // Quick cardio entry: a free session (or the existing one) with the exercise
+  // picker opened straight onto cardio activities — no second session model.
+  const startCardio = useCallback(async () => {
+    try {
+      const session = await startFreeSession();
+      navigate(`/training/${session.id}?add=cardio`);
+    } catch (error) {
+      if (error instanceof ActiveSessionExistsError) {
+        navigate(`/training/${error.activeSessionId}?add=cardio`);
+        return;
+      }
+      toast.show(
+        error instanceof Error ? error.message : 'Start fehlgeschlagen.',
+        'error',
+      );
+    }
+  }, [navigate, toast]);
+
   const repeatLast = useCallback(async () => {
     const lastId = overview?.lastSession?.id;
     if (!lastId) return;
@@ -202,6 +228,10 @@ export default function HomePage() {
             <Button variant="primary" size="lg" fullWidth onClick={startFree}>
               <Zap size={20} aria-hidden="true" />
               Freies Training starten
+            </Button>
+            <Button variant="secondary" fullWidth onClick={() => void startCardio()}>
+              <Activity size={18} aria-hidden="true" />
+              Cardio starten
             </Button>
             {/* Quick actions: repeat the last workout or restart its plan. */}
             {overview?.lastSession ? (

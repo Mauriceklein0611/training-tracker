@@ -23,11 +23,14 @@ export function ExercisePickerDialog({
   onClose,
   onSelect,
   title = 'Übung hinzufügen',
+  trackingTypeFilter,
 }: {
   open: boolean;
   onClose: () => void;
   onSelect: (exercise: Exercise) => void;
   title?: string;
+  /** When set, only exercises of this tracking type are listed (e.g. cardio). */
+  trackingTypeFilter?: Exercise['trackingType'];
 }) {
   const { settings } = useSettings();
   const [search, setSearch] = useState('');
@@ -41,10 +44,15 @@ export function ExercisePickerDialog({
   }, [settings.activeEquipmentProfileId]);
 
   const visible = useMemo(() => {
-    const bySearch = filterExercises(exercises, { search, showArchived: false });
+    let bySearch = filterExercises(exercises, { search, showArchived: false });
+    if (trackingTypeFilter) {
+      bySearch = bySearch.filter(
+        (exercise) => exercise.trackingType === trackingTypeFilter,
+      );
+    }
     if (!activeProfile || !onlyAvailable) return bySearch;
     return bySearch.filter((exercise) => isExerciseAvailable(exercise, activeProfile));
-  }, [exercises, search, activeProfile, onlyAvailable]);
+  }, [exercises, search, activeProfile, onlyAvailable, trackingTypeFilter]);
 
   const existingNames = useMemo(
     () => exercises.map((exercise) => exercise.name),
