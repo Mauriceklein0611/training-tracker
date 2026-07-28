@@ -131,8 +131,11 @@ export function SimpleBarChart({
   formatValue: (value: number) => string;
 }) {
   return (
+    // left:0, never negative — a negative left margin pulls the Y axis off the
+    // frame and clips wide tick labels ("12 min" → "2 min", "1,5 km" → ".5 km").
+    // The YAxis width below reserves the room the labels actually need.
     <ResponsiveContainer width="100%" height={190}>
-      <BarChart data={data} margin={{ top: 4, right: 4, bottom: 0, left: -18 }}>
+      <BarChart data={data} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
         <CartesianGrid stroke={GRID_COLOR} vertical={false} />
         <XAxis
           dataKey="label"
@@ -201,7 +204,7 @@ export function SimpleLineChart({
 }) {
   return (
     <ResponsiveContainer width="100%" height={200}>
-      <LineChart data={data} margin={{ top: 8, right: 10, bottom: 0, left: -18 }}>
+      <LineChart data={data} margin={{ top: 8, right: 10, bottom: 0, left: 0 }}>
         <CartesianGrid stroke={GRID_COLOR} vertical={false} />
         <XAxis
           dataKey="label"
@@ -257,7 +260,7 @@ export function TrendLineChart({
 }) {
   return (
     <ResponsiveContainer width="100%" height={210}>
-      <LineChart data={data} margin={{ top: 8, right: 10, bottom: 0, left: -18 }}>
+      <LineChart data={data} margin={{ top: 8, right: 10, bottom: 0, left: 0 }}>
         <CartesianGrid stroke={GRID_COLOR} vertical={false} />
         <XAxis
           dataKey="label"
