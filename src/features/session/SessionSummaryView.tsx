@@ -5,6 +5,7 @@ import type { SessionSummary } from '@/services/sessionSummary';
 import {
   formatCardioDistance,
   formatDuration as formatCardioDuration,
+  formatPace,
 } from '@/services/cardioMetrics';
 import { formatDurationLong } from '@/utils/date';
 import {
@@ -18,97 +19,113 @@ import {
 /** Shared summary block, used both when finishing and when reviewing a workout. */
 export function SessionSummaryView({ summary }: { summary: SessionSummary }) {
   const { restStatistics: rest } = summary;
+  // A pure-cardio session leads with cardio; the strength grid (which would be
+  // all zeros and dashes) is suppressed so it never dominates before Dauer,
+  // Distanz, Pace and the cardio figures.
+  const cardioOnly = summary.hasCardio && !summary.hasStrength;
+
+  const duration =
+    summary.durationSeconds == null ? '–' : formatDurationLong(summary.durationSeconds);
+
+  const cardioBlock = summary.hasCardio ? (
+    <div className="rounded-2xl border border-border bg-surface p-3">
+      <h3 className="flex items-center gap-2 text-sm font-semibold">
+        <Activity size={18} aria-hidden="true" className="text-accent" />
+        Cardio
+      </h3>
+      <div className="mt-2 grid grid-cols-2 gap-2">
+        <Stat label="Aktivitäten" value={formatNumber(summary.cardio.activities)} />
+        <Stat
+          label="Cardio-Dauer"
+          value={formatCardioDuration(summary.cardio.totalDurationSeconds)}
+        />
+        {summary.cardio.totalDistanceMeters > 0 ? (
+          <Stat
+            label="Distanz"
+            value={formatCardioDistance(
+              summary.cardio.totalDistanceMeters,
+              summary.cardioModality,
+            )}
+          />
+        ) : null}
+        {summary.cardioPace ? (
+          <Stat label="Pace / Tempo" value={formatPace(summary.cardioPace)} />
+        ) : null}
+        {summary.cardio.averageHeartRateBpm != null ? (
+          <Stat
+            label="Ø Herzfrequenz"
+            value={`${Math.round(summary.cardio.averageHeartRateBpm)} bpm`}
+            hint="aufgezeichnet"
+          />
+        ) : null}
+        {summary.cardio.totalCaloriesKcal > 0 ? (
+          <Stat
+            label="Kalorien"
+            value={`${formatNumber(summary.cardio.totalCaloriesKcal)} kcal`}
+            hint="erfasst"
+          />
+        ) : null}
+        {summary.cardio.totalElevationGainMeters > 0 ? (
+          <Stat
+            label="Höhenmeter"
+            value={`${formatNumber(summary.cardio.totalElevationGainMeters)} m`}
+          />
+        ) : null}
+      </div>
+    </div>
+  ) : null;
 
   return (
     <div className="grid gap-3">
-      <div className="grid grid-cols-2 gap-2">
-        <Stat
-          label="Dauer"
-          value={
-            summary.durationSeconds == null
-              ? '–'
-              : formatDurationLong(summary.durationSeconds)
-          }
-          tone="accent"
-        />
-        <Stat label="Übungen" value={formatNumber(summary.exerciseCount)} />
-        <Stat label="Arbeitssätze" value={formatNumber(summary.workingSetCount)} />
-        <Stat label="Wiederholungen" value={formatNumber(summary.totalReps)} />
-        <Stat
-          label="Volumen"
-          value={formatVolume(summary.volume.volumeKg)}
-          hint="nur gewichtete Übungen"
-        />
-        <Stat
-          label="Ø Pausenabw."
-          value={formatSignedSeconds(rest.averageDeviationSeconds)}
-          hint={
-            rest.evaluatedSets > 0
-              ? `${formatPercent(rest.targetMetRatio)} erreicht`
-              : 'keine Pausen erfasst'
-          }
-        />
-      </div>
-
-      {summary.volume.addedWeightVolumeKg > 0 ? (
-        <p className="text-xs text-muted">
-          Zusätzlich {formatKg(summary.volume.addedWeightVolumeKg)} Zusatzgewichtsvolumen
-          bei Körpergewichtsübungen.
-        </p>
-      ) : null}
-
-      {summary.volume.setsWithoutVolume > 0 ? (
-        <p className="text-xs text-muted">
-          {summary.volume.setsWithoutVolume} Sätze ohne berechenbares Kilogramm-Volumen
-          (Körpergewicht, unterstützt oder zeitbasiert). Diese werden bewusst nicht in kg
-          bewertet.
-        </p>
-      ) : null}
-
-      {summary.hasCardio ? (
-        <div className="rounded-2xl border border-border bg-surface p-3">
-          <h3 className="flex items-center gap-2 text-sm font-semibold">
-            <Activity size={18} aria-hidden="true" className="text-accent" />
-            Cardio
-          </h3>
-          <div className="mt-2 grid grid-cols-2 gap-2">
-            <Stat label="Aktivitäten" value={formatNumber(summary.cardio.activities)} />
-            <Stat
-              label="Cardio-Dauer"
-              value={formatCardioDuration(summary.cardio.totalDurationSeconds)}
-            />
-            {summary.cardio.totalDistanceMeters > 0 ? (
-              <Stat
-                label="Distanz"
-                value={formatCardioDistance(
-                  summary.cardio.totalDistanceMeters,
-                  undefined,
-                )}
-              />
-            ) : null}
-            {summary.cardio.averageHeartRateBpm != null ? (
-              <Stat
-                label="Ø Herzfrequenz"
-                value={`${Math.round(summary.cardio.averageHeartRateBpm)} bpm`}
-                hint="aufgezeichnet"
-              />
-            ) : null}
-            {summary.cardio.totalCaloriesKcal > 0 ? (
-              <Stat
-                label="Kalorien"
-                value={`${formatNumber(summary.cardio.totalCaloriesKcal)} kcal`}
-                hint="erfasst"
-              />
-            ) : null}
-            {summary.cardio.totalElevationGainMeters > 0 ? (
-              <Stat
-                label="Höhenmeter"
-                value={`${formatNumber(summary.cardio.totalElevationGainMeters)} m`}
-              />
-            ) : null}
+      {cardioOnly ? (
+        <>
+          <div className="grid grid-cols-2 gap-2">
+            <Stat label="Dauer" value={duration} tone="accent" />
+            <Stat label="Übungen" value={formatNumber(summary.exerciseCount)} />
           </div>
-        </div>
-      ) : null}
+          {cardioBlock}
+        </>
+      ) : (
+        <>
+          <div className="grid grid-cols-2 gap-2">
+            <Stat label="Dauer" value={duration} tone="accent" />
+            <Stat label="Übungen" value={formatNumber(summary.exerciseCount)} />
+            <Stat label="Arbeitssätze" value={formatNumber(summary.workingSetCount)} />
+            <Stat label="Wiederholungen" value={formatNumber(summary.totalReps)} />
+            <Stat
+              label="Volumen"
+              value={formatVolume(summary.volume.volumeKg)}
+              hint="nur gewichtete Übungen"
+            />
+            <Stat
+              label="Ø Pausenabw."
+              value={formatSignedSeconds(rest.averageDeviationSeconds)}
+              hint={
+                rest.evaluatedSets > 0
+                  ? `${formatPercent(rest.targetMetRatio)} erreicht`
+                  : 'keine Pausen erfasst'
+              }
+            />
+          </div>
+
+          {summary.volume.addedWeightVolumeKg > 0 ? (
+            <p className="text-xs text-muted">
+              Zusätzlich {formatKg(summary.volume.addedWeightVolumeKg)}{' '}
+              Zusatzgewichtsvolumen bei Körpergewichtsübungen.
+            </p>
+          ) : null}
+
+          {summary.volume.setsWithoutVolume > 0 ? (
+            <p className="text-xs text-muted">
+              {summary.volume.setsWithoutVolume} Sätze ohne berechenbares
+              Kilogramm-Volumen (Körpergewicht, unterstützt oder zeitbasiert). Diese
+              werden bewusst nicht in kg bewertet.
+            </p>
+          ) : null}
+
+          {cardioBlock}
+        </>
+      )}
 
       {summary.newRecords.length > 0 ? (
         <div className="rounded-2xl border border-success/50 bg-surface p-3">

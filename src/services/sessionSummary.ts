@@ -9,8 +9,14 @@ import {
   type VolumeTotals,
 } from '@/services/metrics';
 import { computeRestStatistics, type RestStatistics } from '@/services/rest';
-import { aggregateCardio, type CardioTotals } from '@/services/cardioMetrics';
-import type { WorkoutSession } from '@/types';
+import {
+  aggregateCardio,
+  aggregatePace,
+  isCardioSet,
+  type CardioTotals,
+  type Pace,
+} from '@/services/cardioMetrics';
+import type { CardioModality, WorkoutSession } from '@/types';
 
 export interface SessionSummary {
   session: WorkoutSession;
@@ -26,6 +32,18 @@ export interface SessionSummary {
   cardio: CardioTotals;
   /** Whether the session contained any completed cardio section. */
   hasCardio: boolean;
+  /**
+   * Whether the session has any strength content (a working set, reps or kg
+   * volume). False for a pure-cardio session, which then leads with cardio.
+   */
+  hasStrength: boolean;
+  /** The single cardio modality of the session, or undefined when mixed/none. */
+  cardioModality: CardioModality | undefined;
+  /**
+   * Session pace/speed — only when every cardio section shares one modality, so
+   * a mixed run+row session never reports a meaningless combined pace.
+   */
+  cardioPace: Pace | null;
 }
 
 /**
@@ -68,6 +86,26 @@ export function summarizeSession(
     })),
   );
 
+  // A single modality lets us report a session pace; a mixed session (e.g. run
+  // + row) reports none rather than an averaged, meaningless number.
+  const cardioModalities = new Set(
+    sessionContexts
+      .filter(({ set, sessionExercise }) => isCardioSet(set, sessionExercise))
+      .map(
+        ({ set, sessionExercise }) =>
+          set.cardioModalitySnapshot ?? sessionExercise.cardioModalitySnapshot,
+      ),
+  );
+  const cardioModality =
+    cardioModalities.size === 1 ? [...cardioModalities][0] : undefined;
+  const cardioPace = cardioModality
+    ? aggregatePace(
+        cardioModality,
+        cardio.totalDurationSeconds,
+        cardio.totalDistanceMeters,
+      )
+    : null;
+
   const end = session.finishedAt ? new Date(session.finishedAt) : now;
   const durationSeconds = Math.max(
     0,
@@ -86,5 +124,8 @@ export function summarizeSession(
     newRecords: findNewRecords(sessionContexts, historyContexts),
     cardio,
     hasCardio: cardio.activities > 0,
+    hasStrength: volume.setCount > 0 || volume.totalReps > 0 || volume.volumeKg > 0,
+    cardioModality,
+    cardioPace,
   };
 }

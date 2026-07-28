@@ -76,9 +76,14 @@ describe('summarizeSession — strength and cardio stay separate', () => {
     expect(summary.cardio.totalDurationSeconds).toBe(1800);
     expect(summary.cardio.totalDistanceMeters).toBe(6000);
     expect(summary.cardio.averageHeartRateBpm).toBe(150);
+    // A mixed session has strength content, so it does not lead with cardio.
+    expect(summary.hasStrength).toBe(true);
+    // Single modality → a session pace is reported (1800 s / 6 km = 5:00 min/km).
+    expect(summary.cardioModality).toBe('running');
+    expect(summary.cardioPace).toEqual({ kind: 'min_per_km', value: 5 });
   });
 
-  it('a cardio-only session still counts (zero strength working sets)', () => {
+  it('a cardio-only session leads with cardio and reports a pace', () => {
     const dataset = mixedDataset();
     // Drop the strength set → cardio-only session.
     dataset.sets = dataset.sets.filter((set) => set.id !== 'set-bench');
@@ -86,8 +91,53 @@ describe('summarizeSession — strength and cardio stay separate', () => {
     expect(summary.workingSetCount).toBe(0);
     expect(summary.volume.volumeKg).toBe(0);
     expect(summary.hasCardio).toBe(true);
+    // No strength content → the view leads with cardio and hides the 0/– grid.
+    expect(summary.hasStrength).toBe(false);
     expect(summary.cardio.activities).toBe(1);
+    expect(summary.cardioPace).toEqual({ kind: 'min_per_km', value: 5 });
     // No fabricated strength records.
     expect(summary.newRecords).toEqual([]);
+  });
+
+  it('reports no session pace when cardio modalities differ', () => {
+    const dataset = mixedDataset();
+    dataset.sets = dataset.sets.filter((set) => set.id !== 'set-bench');
+    // Add a second cardio activity of a different modality (rowing).
+    dataset.exercises.push(
+      makeExercise({
+        id: 'ex-row',
+        name: 'Rudern',
+        trackingType: 'cardio',
+        cardioModality: 'rowing',
+        weightMode: 'none',
+      }),
+    );
+    dataset.sessionExercises.push(
+      makeSessionExercise({
+        id: 'se-row',
+        sessionId: 's1',
+        exerciseId: 'ex-row',
+        order: 2,
+        exerciseNameSnapshot: 'Rudern',
+        trackingTypeSnapshot: 'cardio',
+        weightModeSnapshot: 'none',
+        cardioModalitySnapshot: 'rowing',
+      }),
+    );
+    dataset.sets.push(
+      makeSet({
+        id: 'set-row',
+        sessionExerciseId: 'se-row',
+        weightKg: undefined,
+        reps: undefined,
+        durationSeconds: 1200,
+        distanceMeters: 5000,
+        completedAt: '2026-07-06T11:10:00.000Z',
+      }),
+    );
+    const summary = summarizeSession(dataset, 's1')!;
+    expect(summary.cardio.activities).toBe(2);
+    expect(summary.cardioModality).toBeUndefined();
+    expect(summary.cardioPace).toBeNull();
   });
 });
