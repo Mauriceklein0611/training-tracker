@@ -74,6 +74,8 @@ describe('computeBlockMetrics', () => {
     expect(metrics.workingSetsPerWeek).toBe(3);
     expect(metrics.avgRir).toBe(2);
     expect(metrics.distinctExercises).toBe(1);
+    // 100 kg × 10 → Epley e1RM 100 × (1 + 10/30) ≈ 133.3.
+    expect(metrics.bestEstimatedOneRepMax).toBeCloseTo(133.33, 1);
   });
 
   it('keeps cardio in its own block section, out of the strength metrics', () => {

@@ -16,6 +16,7 @@ function metrics(overrides: Partial<BlockMetrics> = {}): BlockMetrics {
     totalReps: 400,
     volumeKg: 12000,
     distinctExercises: 6,
+    bestEstimatedOneRepMax: null,
     avgRir: null,
     avgRpe: null,
     restTargetMetRatio: null,

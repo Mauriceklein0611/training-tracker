@@ -4,7 +4,12 @@ import {
   computeAnalytics,
   filterContextsByRange,
 } from '@/services/analytics';
-import { isCardio, isCompleted, isWorkingSet } from '@/services/metrics';
+import {
+  estimatedOneRepMax,
+  isCardio,
+  isCompleted,
+  isWorkingSet,
+} from '@/services/metrics';
 import type { BodyWeightEntry } from '@/types';
 import { dayKey, rateWeeks, weeksInRange, type DateRange } from '@/utils/date';
 
@@ -30,6 +35,8 @@ export interface BlockMetrics {
   totalReps: number;
   volumeKg: number;
   distinctExercises: number;
+  /** Highest estimated 1RM in the block (Epley), or null when none is valid. */
+  bestEstimatedOneRepMax: number | null;
   avgRir: number | null;
   avgRpe: number | null;
   restTargetMetRatio: number | null;
@@ -84,6 +91,12 @@ export function computeBlockMetrics(
   const distinctExercises = new Set(
     contexts.map((context) => context.sessionExercise.exerciseId),
   ).size;
+  // Best estimated 1RM in the block (Epley, weighted 1–12 rep sets only), so a
+  // strength comparison can show peak estimated strength side by side.
+  const oneRmValues = contexts
+    .map((context) => estimatedOneRepMax(context.set, context.sessionExercise))
+    .filter((value): value is number => value != null);
+  const bestEstimatedOneRepMax = oneRmValues.length > 0 ? Math.max(...oneRmValues) : null;
 
   const fromKey = dayKey(range.from);
   const toKey = dayKey(range.to);
@@ -113,6 +126,7 @@ export function computeBlockMetrics(
     totalReps: analytics.totalReps,
     volumeKg: analytics.volume.volumeKg,
     distinctExercises,
+    bestEstimatedOneRepMax,
     avgRir: average(rirValues),
     avgRpe: average(rpeValues),
     restTargetMetRatio: analytics.restStatistics.targetMetRatio,
@@ -178,6 +192,7 @@ export function buildBlockComparisonExport(
       totalReps: metrics.totalReps,
       volumeKg: round(metrics.volumeKg),
       distinctExercises: metrics.distinctExercises,
+      bestEstimatedOneRepMaxKg: round(metrics.bestEstimatedOneRepMax),
     },
     perWeek: {
       sessions: round(metrics.sessionsPerWeek),

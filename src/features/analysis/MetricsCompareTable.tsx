@@ -141,6 +141,12 @@ export function MetricsCompareTable({
       b: b.distinctExercises,
       format: n(),
     },
+    {
+      label: 'Bestes e1RM',
+      a: a.bestEstimatedOneRepMax,
+      b: b.bestEstimatedOneRepMax,
+      format: (value) => formatKg(value),
+    },
   ];
 
   const perWeek: MetricRow[] = [
