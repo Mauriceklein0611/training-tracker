@@ -24,14 +24,48 @@ General rules:
 
 | Format                             | Direction               | Name (in content)                       | Version field                           | Version              | Supported imports |
 | ---------------------------------- | ----------------------- | --------------------------------------- | --------------------------------------- | -------------------- | ----------------- |
-| Full backup                        | export + import         | `app: training-tracker`                 | `exportFormatVersion` / `schemaVersion` | format 1 / schema 27 | schema ≤ 27       |
-| AI analysis export                 | export                  | (AI export doc)                         | `exportVersion`                         | 2                    | —                 |
-| AI response import                 | import                  | `format: training-ai-response`          | `schemaVersion`                         | 1                    | exactly 1         |
-| Plan builder kit                   | export                  | `format: training-plan-builder-kit`     | `version`                               | 2                    | —                 |
-| Training plan package              | export + import + share | `format: training-plan-package`         | `schemaVersion`                         | 3                    | 1, 2, 3           |
-| Workout unit package               | export + import + share | `format: training-workout-unit-package` | `schemaVersion`                         | 1                    | 1                 |
+| Full backup                        | export + import         | `app: training-tracker`                 | `exportFormatVersion` / `schemaVersion` | format 1 / schema 28 | schema ≤ 28       |
+| AI analysis export                 | export                  | (AI export doc)                         | `exportVersion`                         | 3                    | —                 |
+| AI response import                 | import                  | `format: training-ai-response`          | `schemaVersion`                         | 2                    | 1, 2              |
+| Plan builder kit                   | export                  | `format: training-plan-builder-kit`     | `version`                               | 3                    | —                 |
+| Training plan package              | export + import + share | `format: training-plan-package`         | `schemaVersion`                         | 4                    | 1, 2, 3, 4        |
+| Workout unit package               | export + import + share | `format: training-workout-unit-package` | `schemaVersion`                         | 2                    | 1, 2              |
 | Block comparison export            | export                  | (comparison doc)                        | —                                       | —                    | —                 |
 | CSV (sets/sessions/exercises/body) | export                  | header row                              | header (by test)                        | —                    | —                 |
+
+## Cardio + structured equipment (schema 28)
+
+Cardio is a first-class tracking type kept strictly apart from strength; all
+fields are optional and additive, so every older record, backup and package
+still reads unchanged and a `duration` (time-based strength hold) exercise is
+never reinterpreted as cardio.
+
+- **Schema 28 (additive, no backfill, no index/store change):** `TrackingType`
+  gains `cardio`; new `CardioModality` enum; `Equipment` gains cardio devices
+  (`treadmill`, `ergometer`, `rowing_machine`, `elliptical`, `stair_climber`,
+  `pool`, `jump_rope`). `Exercise.cardioModality`; `SessionExercise` cardio
+  snapshots (`cardioModalitySnapshot`, `targetDistanceMetersSnapshot`,
+  `targetRpeSnapshot`); `WorkoutSet` cardio metrics (`distanceMeters`,
+  `averageHeartRateBpm`, `caloriesKcal`, `elevationGainMeters`, `cadenceRpm`,
+  `resistanceLevel`, `cardioModalitySnapshot`); plan/unit items + snapshots gain
+  `targetDistanceMeters`/`targetRpe`.
+- **Full backup:** roundtrips all cardio via the shared Zod schemas; outer
+  `exportFormatVersion` stays **1** (wire contract unchanged), `schemaVersion` is
+  **28**. A newer schema is rejected. Old backups (no cardio fields) import.
+- **CSV:** cardio columns are **appended** to the sets export (modality,
+  distance, a clearly-derived pace/speed, avg heart rate, calories, elevation,
+  cadence, resistance) and a modality column to the exercises export; existing
+  columns keep order/meaning and strength rows leave the cardio cells blank.
+- **Plan package v4 / unit package v2:** carry structured `defaultEquipment` and
+  cardio (`cardioModality`, `targetDistanceMeters`/`targetRpe`); older versions
+  import with those fields absent (never guessed). Fingerprints cover them.
+- **AI export v3:** each set carries `trackingType`; cardio sets add a structured
+  `cardio` object with a derived pace; average heart rate only ships on the
+  opt-in `includeHeartRate` (default off). **AI response v2:** target proposals
+  may change `durationSeconds`/`distanceMeters`/`rpe`; v1 still imports and the
+  restore point snapshots the cardio targets. **Builder kit v3** documents the
+  cardio tracking type, modalities and structured equipment with a cardio
+  example.
 
 ## Full backup — `src/services/backup.ts`
 
