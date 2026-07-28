@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card, CardHeader, EmptyState, Stat } from '@/components/ui/Card';
+import { SkeletonCard } from '@/components/ui/Skeleton';
 import { ChartFrame, DataTable, SimpleLineChart } from '@/features/analytics/Charts';
 import { CardioRecordsCard } from '@/features/analytics/CardioRecordsCard';
 import { BodyMap } from '@/features/muscles/BodyMap';
@@ -65,9 +66,13 @@ export default function ExerciseDetailPage() {
 
   if (data === undefined) {
     return (
-      <p className="p-6 text-center text-sm text-muted" role="status">
-        Wird geladen …
-      </p>
+      <>
+        <PageHeader title="Übung" backTo="/mehr/uebungen" />
+        <div className="grid gap-3" aria-busy="true">
+          <SkeletonCard />
+          <SkeletonCard />
+        </div>
+      </>
     );
   }
 

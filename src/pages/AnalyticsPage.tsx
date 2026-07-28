@@ -32,6 +32,7 @@ import { buildRegionExerciseUsage } from '@/services/regionUsage';
 import { PlateauHint } from '@/features/analytics/PlateauHint';
 import { CardioRecordsCard } from '@/features/analytics/CardioRecordsCard';
 import { PeriodReviewCard } from '@/features/analytics/PeriodReviewCard';
+import { SkeletonStats } from '@/components/ui/Skeleton';
 import { BodyMap } from '@/features/muscles/BodyMap';
 import { BODY_REGIONS_BY_ID, regionForMuscle } from '@/features/muscles/muscleRegions';
 import { ONE_RM_MAX_REPS, ONE_RM_MIN_REPS } from '@/services/metrics';
@@ -398,9 +399,9 @@ export default function AnalyticsPage() {
       ) : null}
 
       {!analytics ? (
-        <p className="text-sm text-muted" role="status">
-          Auswertung wird berechnet …
-        </p>
+        <div aria-busy="true">
+          <SkeletonStats count={6} />
+        </div>
       ) : !hasData ? (
         <EmptyState
           title="Noch keine Auswertung möglich"

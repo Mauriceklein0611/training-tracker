@@ -242,6 +242,21 @@
   animation: rest-pulse 1.6s ease-in-out infinite;
 }
 
+/* Loading placeholder shimmer; disabled by the reduced-motion rule above. */
+@keyframes skeleton-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.skeleton {
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+
 /* A brief, restrained celebration for a real personal best — a single pop plus
  * a sweeping sheen, then still. Never a loop, never after every set. Disabled
  * entirely by the reduced-motion rule above. */
