@@ -31,6 +31,18 @@ export function isWorkingSet(set: WorkoutSet): boolean {
   return WORKING_SET_TYPES.includes(set.setType);
 }
 
+/**
+ * Whether a set is a cardio activity by its effective tracking type (per-set
+ * snapshot over the session-exercise). Cardio is deliberately excluded from
+ * every strength aggregate (volume, records, working-set counts).
+ */
+export function isCardio(
+  set: Pick<WorkoutSet, 'trackingTypeSnapshot'>,
+  context: Pick<SessionExercise, 'trackingTypeSnapshot'>,
+): boolean {
+  return (set.trackingTypeSnapshot ?? context.trackingTypeSnapshot) === 'cardio';
+}
+
 export function isCompleted(set: WorkoutSet): boolean {
   return Boolean(set.completedAt);
 }
@@ -138,18 +150,23 @@ export function requiredFieldsFor(trackingType: TrackingType): {
   weight: boolean;
   reps: boolean;
   duration: boolean;
+  cardio: boolean;
 } {
   switch (trackingType) {
     case 'weight_reps':
-      return { weight: true, reps: true, duration: false };
+      return { weight: true, reps: true, duration: false, cardio: false };
     case 'bodyweight_reps':
     case 'assisted_bodyweight_reps':
       // Added weight / assistance is optional: a clean bodyweight set is valid.
-      return { weight: false, reps: true, duration: false };
+      return { weight: false, reps: true, duration: false, cardio: false };
     case 'reps_only':
-      return { weight: false, reps: true, duration: false };
+      return { weight: false, reps: true, duration: false, cardio: false };
     case 'duration':
-      return { weight: false, reps: false, duration: true };
+      return { weight: false, reps: false, duration: true, cardio: false };
+    case 'cardio':
+      // Cardio requires neither weight nor reps nor a *required* duration — a
+      // section is valid with duration OR distance (see validateSetInput).
+      return { weight: false, reps: false, duration: false, cardio: true };
   }
 }
 
@@ -213,6 +230,8 @@ export function aggregateVolume(
   for (const { set, sessionExercise } of entries) {
     if (requireCompleted && !isCompleted(set)) continue;
     if (!includeWarmup && !isWorkingSet(set)) continue;
+    // Cardio never contributes to strength volume, rep or duration totals.
+    if (isCardio(set, sessionExercise)) continue;
 
     totals.setCount += 1;
     const volume = setVolumeKg(set, sessionExercise);
@@ -314,6 +333,8 @@ export function computePersonalRecords(
   for (const { set, sessionExercise, session } of entries) {
     if (!isCompleted(set)) continue;
     if (!includeWarmup && !isWorkingSet(set)) continue;
+    // Cardio bests are computed separately (cardioMetrics); never a strength PR.
+    if (isCardio(set, sessionExercise)) continue;
 
     const execution = effectiveSetExecution(set, sessionExercise);
     const key = recordKey(sessionExercise.exerciseId, execution);

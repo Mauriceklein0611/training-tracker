@@ -224,16 +224,25 @@ describe('isWorkingSet and required fields', () => {
       weight: true,
       reps: true,
       duration: false,
+      cardio: false,
     });
     expect(requiredFieldsFor('duration')).toEqual({
       weight: false,
       reps: false,
       duration: true,
+      cardio: false,
     });
     expect(requiredFieldsFor('reps_only')).toEqual({
       weight: false,
       reps: true,
       duration: false,
+      cardio: false,
+    });
+    expect(requiredFieldsFor('cardio')).toEqual({
+      weight: false,
+      reps: false,
+      duration: false,
+      cardio: true,
     });
   });
 });

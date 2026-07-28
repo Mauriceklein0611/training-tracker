@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
+  cardioSectionComplete,
   hasErrors,
   parseNumberInput,
+  validateCardioSetInput,
   validateExerciseForm,
   validateSetInput,
 } from '@/services/validation';
@@ -128,5 +130,62 @@ describe('validateExerciseForm', () => {
     expect(
       validateExerciseForm({ ...valid, defaultRestSeconds: 4000 }).defaultRestSeconds,
     ).toBeTruthy();
+  });
+});
+
+describe('validateCardioSetInput & cardioSectionComplete', () => {
+  it('accepts a section with only a duration', () => {
+    expect(cardioSectionComplete({ durationSeconds: 600 })).toBe(true);
+    expect(hasErrors(validateCardioSetInput({ durationSeconds: 600 }))).toBe(false);
+  });
+
+  it('accepts a section with only a distance', () => {
+    expect(cardioSectionComplete({ distanceMeters: 3000 })).toBe(true);
+  });
+
+  it('accepts duration plus distance', () => {
+    expect(cardioSectionComplete({ durationSeconds: 600, distanceMeters: 3000 })).toBe(
+      true,
+    );
+  });
+
+  it('rejects a section with neither duration nor distance', () => {
+    expect(cardioSectionComplete({})).toBe(false);
+    expect(cardioSectionComplete({ durationSeconds: 0, distanceMeters: 0 })).toBe(false);
+    expect(cardioSectionComplete({ averageHeartRateBpm: 150 })).toBe(false);
+  });
+
+  it('leaves a missing value missing (0 is never invented)', () => {
+    const errors = validateCardioSetInput({ durationSeconds: 600 });
+    expect(errors.caloriesKcal).toBeUndefined();
+    expect(errors.averageHeartRateBpm).toBeUndefined();
+  });
+
+  it('rejects negative, NaN and infinite values', () => {
+    expect(validateCardioSetInput({ distanceMeters: -1 }).distanceMeters).toBeTruthy();
+    expect(validateCardioSetInput({ durationSeconds: NaN }).durationSeconds).toBeTruthy();
+    expect(
+      validateCardioSetInput({ distanceMeters: Infinity }).distanceMeters,
+    ).toBeTruthy();
+    expect(validateCardioSetInput({ caloriesKcal: -50 }).caloriesKcal).toBeTruthy();
+  });
+
+  it('rejects an implausible heart rate but accepts a normal one', () => {
+    expect(
+      validateCardioSetInput({ durationSeconds: 600, averageHeartRateBpm: 5 })
+        .averageHeartRateBpm,
+    ).toBeTruthy();
+    expect(
+      hasErrors(
+        validateCardioSetInput({ durationSeconds: 600, averageHeartRateBpm: 150 }),
+      ),
+    ).toBe(false);
+  });
+
+  it('validates RPE range and requires no weight or reps', () => {
+    expect(validateCardioSetInput({ durationSeconds: 600, rpe: 11 }).rpe).toBeTruthy();
+    expect(hasErrors(validateCardioSetInput({ durationSeconds: 600, rpe: 7 }))).toBe(
+      false,
+    );
   });
 });

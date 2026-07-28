@@ -32,7 +32,7 @@ import { ensureSchedulesForPlans } from '@/db/scheduleMigration';
  * Bump this together with a new `.version()` block below and record the change
  * in MIGRATIONS so the settings screen can show what the database went through.
  */
-export const SCHEMA_VERSION = 27;
+export const SCHEMA_VERSION = 28;
 
 export const MIGRATIONS: { version: number; description: string }[] = [
   { version: 1, description: 'Initiales Schema: Übungen, Pläne, Einheiten, Sätze.' },
@@ -215,6 +215,16 @@ export const MIGRATIONS: { version: number; description: string }[] = [
       'und jeder Satz kann seine tatsächlich genutzte Ausführung (Ausrüstung, ' +
       'Gewichtsmodus, Multiplikator) als Snapshot festhalten. Alles optional; ' +
       'bestehende Daten bleiben unverändert und werden nie aus dem Namen geraten.',
+  },
+  {
+    version: 28,
+    description:
+      'Cardio als eigener Trainingstyp: Übungen können eine Cardio-Modalität ' +
+      'erhalten, Sätze optionale Cardio-Werte (Distanz, Herzfrequenz, Kalorien, ' +
+      'Höhenmeter, Kadenz, Widerstand) und Plan-/Einheitenziele eine Zieldistanz ' +
+      'und Ziel-RPE. Alles optional und rein additiv; bestehende Daten – auch ' +
+      'zeitbasierte Kraftübungen (duration) – bleiben unverändert und werden nie ' +
+      'zu Cardio umgedeutet.',
   },
 ];
 
@@ -694,6 +704,22 @@ export class TrainingDatabase extends Dexie {
         .toCollection()
         .modify((settings) => {
           settings.schemaVersion = 27;
+        });
+    });
+
+    // ---- v28 ------------------------------------------------------------
+    // Cardio tracking type + cardio fields (exercises gain optional
+    // cardioModality; sessionExercises gain optional cardio snapshots; sets gain
+    // optional cardio metrics; plan/unit items gain optional targetDistance/RPE).
+    // Purely additive: no store or index change and NO backfill — old rows keep
+    // their strength execution, and an existing `duration` exercise is never
+    // reclassified as cardio. Only the recorded schema version is bumped.
+    this.version(28).upgrade(async (tx) => {
+      await tx
+        .table<AppSettings>('settings')
+        .toCollection()
+        .modify((settings) => {
+          settings.schemaVersion = 28;
         });
     });
   }

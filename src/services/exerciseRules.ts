@@ -17,8 +17,10 @@ export function allowedWeightModes(trackingType: TrackingType): WeightMode[] {
       return ['added_weight', 'none'];
     case 'assisted_bodyweight_reps':
       return ['assistance', 'none'];
+    // Cardio never records a weight either: the mode is always `none`.
     case 'reps_only':
     case 'duration':
+    case 'cardio':
       return ['none'];
   }
 }
@@ -41,6 +43,7 @@ export function defaultWeightModeFor(trackingType: TrackingType): WeightMode {
       return 'assistance';
     case 'reps_only':
     case 'duration':
+    case 'cardio':
       return 'none';
   }
 }

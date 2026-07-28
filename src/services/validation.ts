@@ -74,6 +74,103 @@ export function hasErrors(errors: SetFieldErrors): boolean {
   return Object.keys(errors).length > 0;
 }
 
+export interface CardioSetInputValues {
+  durationSeconds?: number | null;
+  distanceMeters?: number | null;
+  averageHeartRateBpm?: number | null;
+  caloriesKcal?: number | null;
+  elevationGainMeters?: number | null;
+  cadenceRpm?: number | null;
+  resistanceLevel?: number | null;
+  rpe?: number | null;
+}
+
+export type CardioFieldErrors = Partial<Record<keyof CardioSetInputValues, string>>;
+
+/** Plausibility bounds for cardio inputs (technical, never medical). */
+const CARDIO_BOUNDS = {
+  durationSeconds: { max: 86400, label: 'Dauer' },
+  distanceMeters: { max: 1_000_000, label: 'Distanz' },
+  averageHeartRateBpm: { min: 20, max: 300, label: 'Herzfrequenz' },
+  caloriesKcal: { max: 100_000, label: 'Kalorien' },
+  elevationGainMeters: { max: 100_000, label: 'Höhenmeter' },
+  cadenceRpm: { max: 400, label: 'Kadenz' },
+  resistanceLevel: { max: 100, label: 'Widerstand' },
+} as const;
+
+/**
+ * Validates a cardio section. It may be completed once it carries a duration
+ * OR a distance greater than zero; weight and repetitions are never required.
+ * Every optional metric is only bounds-checked when present — a missing value
+ * stays missing and is never invented as 0. All numbers must be finite and
+ * non-negative.
+ */
+export function validateCardioSetInput(values: CardioSetInputValues): CardioFieldErrors {
+  const errors: CardioFieldErrors = {};
+
+  const checkNonNegative = (
+    key: keyof CardioSetInputValues,
+    value: number | null | undefined,
+    bound: { min?: number; max: number; label: string },
+  ) => {
+    if (value == null) return;
+    if (!Number.isFinite(value)) {
+      errors[key] = 'Bitte eine gültige Zahl eingeben.';
+    } else if (value < (bound.min ?? 0)) {
+      errors[key] =
+        bound.min != null
+          ? `${bound.label} muss mindestens ${bound.min} betragen.`
+          : `${bound.label} darf nicht negativ sein.`;
+    } else if (value > bound.max) {
+      errors[key] = `${bound.label} wirkt unrealistisch.`;
+    }
+  };
+
+  checkNonNegative(
+    'durationSeconds',
+    values.durationSeconds,
+    CARDIO_BOUNDS.durationSeconds,
+  );
+  checkNonNegative('distanceMeters', values.distanceMeters, CARDIO_BOUNDS.distanceMeters);
+  checkNonNegative(
+    'averageHeartRateBpm',
+    values.averageHeartRateBpm,
+    CARDIO_BOUNDS.averageHeartRateBpm,
+  );
+  checkNonNegative('caloriesKcal', values.caloriesKcal, CARDIO_BOUNDS.caloriesKcal);
+  checkNonNegative(
+    'elevationGainMeters',
+    values.elevationGainMeters,
+    CARDIO_BOUNDS.elevationGainMeters,
+  );
+  checkNonNegative('cadenceRpm', values.cadenceRpm, CARDIO_BOUNDS.cadenceRpm);
+  checkNonNegative(
+    'resistanceLevel',
+    values.resistanceLevel,
+    CARDIO_BOUNDS.resistanceLevel,
+  );
+
+  if (values.rpe != null && Number.isFinite(values.rpe)) {
+    if (values.rpe < 1 || values.rpe > 10)
+      errors.rpe = 'RPE muss zwischen 1 und 10 liegen.';
+  } else if (values.rpe != null) {
+    errors.rpe = 'Bitte eine gültige Zahl eingeben.';
+  }
+
+  return errors;
+}
+
+/**
+ * Whether a cardio section carries enough to be completed: a positive duration
+ * or a positive distance. Field-level errors (validateCardioSetInput) are a
+ * separate concern; both must pass before a section is stored.
+ */
+export function cardioSectionComplete(values: CardioSetInputValues): boolean {
+  const positive = (value: number | null | undefined) =>
+    value != null && Number.isFinite(value) && value > 0;
+  return positive(values.durationSeconds) || positive(values.distanceMeters);
+}
+
 export interface ExerciseFormValues {
   name: string;
   weightMultiplier: number;

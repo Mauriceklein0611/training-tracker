@@ -1,4 +1,5 @@
 import type {
+  CardioModality,
   Equipment,
   SessionExercise,
   TrackingType,
@@ -17,8 +18,8 @@ import { allowedWeightModes, defaultWeightModeFor } from '@/services/exerciseRul
  * sets keep the execution they were actually performed with.
  */
 
-/** Selectable equipment in display order (unspecified first as the neutral default). */
-export const EQUIPMENT_VALUES: Equipment[] = [
+/** Strength equipment in display order (unspecified first as the neutral default). */
+export const STRENGTH_EQUIPMENT_VALUES: Equipment[] = [
   'unspecified',
   'barbell',
   'dumbbells',
@@ -31,6 +32,33 @@ export const EQUIPMENT_VALUES: Equipment[] = [
   'other',
 ];
 
+/** Cardio devices, offered when the tracking type is cardio. */
+export const CARDIO_EQUIPMENT_VALUES: Equipment[] = [
+  'unspecified',
+  'treadmill',
+  'ergometer',
+  'rowing_machine',
+  'elliptical',
+  'stair_climber',
+  'pool',
+  'jump_rope',
+  'other',
+];
+
+/** All selectable equipment in display order. */
+export const EQUIPMENT_VALUES: Equipment[] = [
+  ...STRENGTH_EQUIPMENT_VALUES.filter((value) => value !== 'other'),
+  ...CARDIO_EQUIPMENT_VALUES.filter(
+    (value) => value !== 'unspecified' && value !== 'other',
+  ),
+  'other',
+];
+
+/** Equipment offered for a tracking type: cardio devices for cardio, else strength. */
+export function equipmentValuesFor(trackingType: TrackingType): Equipment[] {
+  return trackingType === 'cardio' ? CARDIO_EQUIPMENT_VALUES : STRENGTH_EQUIPMENT_VALUES;
+}
+
 export const EQUIPMENT_LABELS: Record<Equipment, string> = {
   unspecified: 'Nicht festgelegt',
   barbell: 'Langhantel',
@@ -41,6 +69,13 @@ export const EQUIPMENT_LABELS: Record<Equipment, string> = {
   bodyweight: 'Körpergewicht',
   band: 'Widerstandsband',
   trx: 'TRX',
+  treadmill: 'Laufband',
+  ergometer: 'Ergometer/Fahrrad',
+  rowing_machine: 'Rudermaschine',
+  elliptical: 'Crosstrainer',
+  stair_climber: 'Stair Climber',
+  pool: 'Pool',
+  jump_rope: 'Springseil',
   other: 'Sonstige',
 };
 
@@ -75,6 +110,8 @@ export interface EffectiveExecution {
   weightMode: WeightMode;
   weightMultiplier: number;
   equipment: Equipment;
+  /** The cardio activity (cardio sets only); absent for strength/duration. */
+  cardioModality?: CardioModality;
 }
 
 type SetExecutionFields = Pick<
@@ -83,6 +120,7 @@ type SetExecutionFields = Pick<
   | 'weightModeSnapshot'
   | 'weightMultiplierSnapshot'
   | 'equipmentSnapshot'
+  | 'cardioModalitySnapshot'
 >;
 
 type ContextExecutionFields = Pick<
@@ -91,6 +129,7 @@ type ContextExecutionFields = Pick<
   | 'weightModeSnapshot'
   | 'weightMultiplierSnapshot'
   | 'equipmentSnapshot'
+  | 'cardioModalitySnapshot'
 >;
 
 /**
@@ -108,6 +147,7 @@ export function effectiveSetExecution(
     weightMultiplier:
       set.weightMultiplierSnapshot ?? context.weightMultiplierSnapshot ?? 1,
     equipment: set.equipmentSnapshot ?? context.equipmentSnapshot ?? 'unspecified',
+    cardioModality: set.cardioModalitySnapshot ?? context.cardioModalitySnapshot,
   };
 }
 
@@ -131,17 +171,21 @@ export function executionKey(
   exerciseId: string,
   execution: Pick<
     EffectiveExecution,
-    'trackingType' | 'equipment' | 'weightMode' | 'weightMultiplier'
+    'trackingType' | 'equipment' | 'weightMode' | 'weightMultiplier' | 'cardioModality'
   >,
 ): string {
   const multiplierPart =
     execution.weightMode === 'per_hand' ? `x${execution.weightMultiplier}` : 'x1';
+  // For cardio the modality (not the weight mode) is what separates executions.
+  const cardioPart =
+    execution.trackingType === 'cardio' ? (execution.cardioModality ?? 'other') : '-';
   return [
     exerciseId,
     execution.trackingType,
     execution.equipment,
     execution.weightMode,
     multiplierPart,
+    cardioPart,
   ].join('|');
 }
 
