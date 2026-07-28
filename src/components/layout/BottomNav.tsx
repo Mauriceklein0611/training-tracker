@@ -29,18 +29,19 @@ export function BottomNav() {
             <NavLink
               to={to}
               end={end}
-              className={({ isActive }) =>
-                cn(
-                  'flex min-h-[56px] flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] font-medium transition-colors',
-                  isActive ? 'text-accent' : 'text-muted',
-                )
-              }
+              className="flex min-h-[56px] flex-col items-center justify-center px-1 py-1.5"
             >
               {({ isActive }) => (
-                <>
+                <span
+                  className={cn(
+                    'flex flex-col items-center gap-1 rounded-2xl px-3 py-1.5 text-[11px] font-medium transition-colors',
+                    // A calm, soft pill marks the active tab — not colour alone.
+                    isActive ? 'bg-accent/12 text-accent' : 'text-muted',
+                  )}
+                >
                   <Icon size={22} strokeWidth={isActive ? 2.4 : 1.8} aria-hidden="true" />
                   <span>{label}</span>
-                </>
+                </span>
               )}
             </NavLink>
           </li>
