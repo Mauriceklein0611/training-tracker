@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import { BodyMap } from '@/features/muscles/BodyMap';
+import userEvent from '@testing-library/user-event';
+import { vi } from 'vitest';
 import {
   BODY_REGIONS_BY_ID,
   MUSCLE_LABEL_TO_REGION,
+  musclesForRegion,
   regionForMuscle,
 } from '@/features/muscles/muscleRegions';
 import { MUSCLE_GROUPS } from '@/constants/muscleGroups';
@@ -21,6 +24,16 @@ describe('muscle region mapping', () => {
     for (const id of new Set(Object.values(MUSCLE_LABEL_TO_REGION))) {
       expect(BODY_REGIONS_BY_ID[id], `region "${id}" is defined`).toBeTruthy();
     }
+  });
+
+  it('inverts the mapping so a region lists its muscles', () => {
+    // The trapezius region collects all three catalog trapezius labels.
+    expect(musclesForRegion('traps').sort()).toEqual([
+      'Trapezmuskel mittig',
+      'Trapezmuskel oben',
+      'Trapezmuskel unten',
+    ]);
+    expect(musclesForRegion('does-not-exist')).toEqual([]);
   });
 });
 
@@ -46,5 +59,18 @@ describe('BodyMap', () => {
     render(<BodyMap primary={['Eigenerfundener Muskel']} />);
     const primaryRow = screen.getByText('Primär:').closest('div')!;
     expect(within(primaryRow).getByText('Eigenerfundener Muskel')).toBeInTheDocument();
+  });
+
+  it('makes regions tappable and reports the id when a handler is given', async () => {
+    const onSelect = vi.fn();
+    render(<BodyMap primary={['Brust']} onSelectRegion={onSelect} />);
+    // The chest region becomes an accessible button.
+    await userEvent.click(screen.getByRole('button', { name: 'Brust anzeigen' }));
+    expect(onSelect).toHaveBeenCalledWith('chest');
+  });
+
+  it('has no region buttons when not interactive', () => {
+    render(<BodyMap primary={['Brust']} />);
+    expect(screen.queryByRole('button', { name: /anzeigen/ })).not.toBeInTheDocument();
   });
 });

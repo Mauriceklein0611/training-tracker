@@ -51,10 +51,26 @@ function emphasisByRegion(primary: string[], secondary: string[]): Map<string, E
   return map;
 }
 
-function Shape({ shape, fill }: { shape: RegionShape; fill: string }) {
+function Shape({
+  shape,
+  fill,
+  stroke,
+}: {
+  shape: RegionShape;
+  fill: string;
+  stroke?: string;
+}) {
+  const strokeProps = stroke ? { stroke, strokeWidth: 0.6 } : {};
   if (shape.kind === 'ellipse') {
     return (
-      <ellipse cx={shape.cx} cy={shape.cy} rx={shape.rx} ry={shape.ry} fill={fill} />
+      <ellipse
+        cx={shape.cx}
+        cy={shape.cy}
+        rx={shape.rx}
+        ry={shape.ry}
+        fill={fill}
+        {...strokeProps}
+      />
     );
   }
   return (
@@ -65,6 +81,7 @@ function Shape({ shape, fill }: { shape: RegionShape; fill: string }) {
       height={shape.h}
       rx={shape.r ?? 3}
       fill={fill}
+      {...strokeProps}
     />
   );
 }
@@ -88,10 +105,14 @@ function Figure({
   view,
   emphasis,
   title,
+  selectedRegion,
+  onSelectRegion,
 }: {
   view: BodyView;
   emphasis: Map<string, Emphasis>;
   title: string;
+  selectedRegion?: string;
+  onSelectRegion?: (regionId: string) => void;
 }) {
   const regions = BODY_REGIONS.filter((region: BodyRegion) => region.view === view);
   return (
@@ -109,11 +130,41 @@ function Figure({
       {regions.map((region) => {
         const level = emphasis.get(region.id) ?? 'none';
         if (level === 'none') return null;
+        const interactive = onSelectRegion != null;
+        const selected = selectedRegion === region.id;
         return (
-          <g key={region.id}>
+          <g
+            key={region.id}
+            role={interactive ? 'button' : undefined}
+            tabIndex={interactive ? 0 : undefined}
+            aria-label={interactive ? `${region.label} anzeigen` : undefined}
+            aria-pressed={interactive ? selected : undefined}
+            className={interactive ? 'cursor-pointer' : undefined}
+            style={
+              selected
+                ? { outline: '1.5px solid var(--accent)', outlineOffset: 0 }
+                : undefined
+            }
+            onClick={interactive ? () => onSelectRegion(region.id) : undefined}
+            onKeyDown={
+              interactive
+                ? (event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      onSelectRegion(region.id);
+                    }
+                  }
+                : undefined
+            }
+          >
             <title>{region.label}</title>
             {region.shapes.map((shape, index) => (
-              <Shape key={index} shape={shape} fill={FILL[level]} />
+              <Shape
+                key={index}
+                shape={shape}
+                fill={FILL[level]}
+                stroke={selected ? 'var(--accent)' : undefined}
+              />
             ))}
           </g>
         );
@@ -138,9 +189,14 @@ function Swatch({ level, label }: { level: Emphasis; label: string }) {
 export function BodyMap({
   primary,
   secondary = [],
+  selectedRegion,
+  onSelectRegion,
 }: {
   primary: string[];
   secondary?: string[];
+  /** When set, regions become tappable and report their id upwards. */
+  selectedRegion?: string;
+  onSelectRegion?: (regionId: string) => void;
 }) {
   const headingId = useId();
   const emphasis = emphasisByRegion(primary, secondary);
@@ -156,11 +212,23 @@ export function BodyMap({
       </h3>
       <div className="grid grid-cols-2 gap-3">
         <div className="text-center">
-          <Figure view="front" emphasis={emphasis} title="Vorderansicht" />
+          <Figure
+            view="front"
+            emphasis={emphasis}
+            title="Vorderansicht"
+            selectedRegion={selectedRegion}
+            onSelectRegion={onSelectRegion}
+          />
           <p className="mt-1 text-xs text-muted">Vorne</p>
         </div>
         <div className="text-center">
-          <Figure view="back" emphasis={emphasis} title="Rückansicht" />
+          <Figure
+            view="back"
+            emphasis={emphasis}
+            title="Rückansicht"
+            selectedRegion={selectedRegion}
+            onSelectRegion={onSelectRegion}
+          />
           <p className="mt-1 text-xs text-muted">Hinten</p>
         </div>
       </div>

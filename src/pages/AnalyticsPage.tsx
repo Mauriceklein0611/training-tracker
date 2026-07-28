@@ -32,6 +32,7 @@ import { PlateauHint } from '@/features/analytics/PlateauHint';
 import { CardioRecordsCard } from '@/features/analytics/CardioRecordsCard';
 import { PeriodReviewCard } from '@/features/analytics/PeriodReviewCard';
 import { BodyMap } from '@/features/muscles/BodyMap';
+import { BODY_REGIONS_BY_ID, regionForMuscle } from '@/features/muscles/muscleRegions';
 import { ONE_RM_MAX_REPS, ONE_RM_MIN_REPS } from '@/services/metrics';
 import { useSettings } from '@/hooks/useSettings';
 import type { AnalyticsRangeKey } from '@/types';
@@ -103,6 +104,7 @@ export default function AnalyticsPage() {
   const [exerciseId, setExerciseId] = useState('');
   const [metric, setMetric] = useState<Metric>('volume');
   const [deloadFilter, setDeloadFilter] = useState<DeloadFilter>('include');
+  const [selectedRegion, setSelectedRegion] = useState<string | undefined>();
 
   const range = useMemo(() => {
     switch (rangeKey) {
@@ -192,6 +194,19 @@ export default function AnalyticsPage() {
         .map((g) => g.muscleGroup),
     };
   }, [analytics]);
+
+  // Breakdown of the tapped body region: the catalog muscle groups it covers
+  // that were trained in the selected range, with their sets and volume.
+  const regionDetail = useMemo(() => {
+    if (!selectedRegion) return null;
+    const label = BODY_REGIONS_BY_ID[selectedRegion]?.label ?? '';
+    const groups = (analytics?.muscleGroups ?? []).filter(
+      (group) =>
+        regionForMuscle(group.muscleGroup) === selectedRegion &&
+        (group.directSets > 0 || group.indirectSets > 0),
+    );
+    return { label, groups };
+  }, [selectedRegion, analytics]);
 
   const musclePoints = useMemo(
     () =>
@@ -471,7 +486,41 @@ export default function AnalyticsPage() {
                 <BodyMap
                   primary={trainedMuscles.primary}
                   secondary={trainedMuscles.secondary}
+                  selectedRegion={selectedRegion}
+                  onSelectRegion={(regionId) =>
+                    setSelectedRegion((current) =>
+                      current === regionId ? undefined : regionId,
+                    )
+                  }
                 />
+                <p className="mt-1 text-center text-xs text-muted">
+                  Tippe eine Region an für Details.
+                </p>
+                {regionDetail ? (
+                  <div className="mt-2 rounded-xl border border-border bg-surface-2 p-3 text-sm">
+                    <p className="font-medium">{regionDetail.label}</p>
+                    {regionDetail.groups.length > 0 ? (
+                      <ul className="mt-1 grid gap-1">
+                        {regionDetail.groups.map((group) => (
+                          <li
+                            key={group.muscleGroup}
+                            className="flex justify-between gap-2"
+                          >
+                            <span className="text-muted">{group.muscleGroup}</span>
+                            <span className="numeric">
+                              {formatNumber(group.directSets)} direkt ·{' '}
+                              {formatVolume(group.volumeKg)}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="mt-1 text-muted">
+                        In diesem Zeitraum keine Sätze für diese Region.
+                      </p>
+                    )}
+                  </div>
+                ) : null}
               </div>
             ) : null}
           </ChartFrame>

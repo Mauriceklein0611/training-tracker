@@ -149,3 +149,17 @@ export const MUSCLE_LABEL_TO_REGION: Record<string, string> = {
 export function regionForMuscle(label: string): string | undefined {
   return MUSCLE_LABEL_TO_REGION[label.trim()];
 }
+
+/** Reverse map: the catalog muscle labels that make up each region. */
+export const MUSCLES_BY_REGION: Record<string, string[]> = (() => {
+  const map: Record<string, string[]> = {};
+  for (const [label, region] of Object.entries(MUSCLE_LABEL_TO_REGION)) {
+    (map[region] ??= []).push(label);
+  }
+  return map;
+})();
+
+/** The catalog muscle labels represented by a region (empty for unknown ids). */
+export function musclesForRegion(regionId: string): string[] {
+  return MUSCLES_BY_REGION[regionId] ?? [];
+}
