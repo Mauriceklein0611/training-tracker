@@ -1,4 +1,5 @@
 import { cn } from '@/utils/cn';
+import { InfoHint } from '@/components/ui/InfoHint';
 import {
   RIR_CHIP_VALUES,
   RPE_CHIP_VALUES,
@@ -60,8 +61,11 @@ export function EffortField({
 
   return (
     <div className="col-span-2">
-      <span className="mb-1 block text-sm font-medium text-muted">
-        {label} <span className="font-normal">(optional)</span>
+      <span className="mb-1 flex items-center gap-1 text-sm font-medium text-muted">
+        <span>
+          {label} <span className="font-normal">(optional)</span>
+        </span>
+        <InfoHint term={rpeMode ? 'rpe' : 'rir'} />
       </span>
       <div className="flex flex-wrap gap-1.5" role="group" aria-label={label}>
         {values.map((value) => {

@@ -29,6 +29,7 @@ const AiAnalysesPage = lazy(() => import('@/pages/AiAnalysesPage'));
 const SettingsPage = lazy(() => import('@/pages/SettingsPage'));
 const StoragePage = lazy(() => import('@/pages/StoragePage'));
 const PrivacyPage = lazy(() => import('@/pages/PrivacyPage'));
+const GlossaryPage = lazy(() => import('@/pages/GlossaryPage'));
 const LiveSessionPage = lazy(() => import('@/pages/LiveSessionPage'));
 
 function PageFallback() {
@@ -70,6 +71,7 @@ export default function App() {
           <Route path="/mehr/einstellungen" element={<SettingsPage />} />
           <Route path="/mehr/speicher" element={<StoragePage />} />
           <Route path="/mehr/datenschutz" element={<PrivacyPage />} />
+          <Route path="/mehr/glossar" element={<GlossaryPage />} />
           <Route path="/training/:sessionId" element={<LiveSessionPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>

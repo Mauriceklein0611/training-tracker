@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import {
+  BookOpen,
   ChevronRight,
   Database,
   Dumbbell,
@@ -67,6 +68,12 @@ const ITEMS = [
     label: 'Datenschutz',
     description: 'Was gespeichert wird — und was nicht',
     Icon: ShieldCheck,
+  },
+  {
+    to: '/mehr/glossar',
+    label: 'Glossar',
+    description: 'Fachbegriffe wie RPE, RIR, e1RM und Volumen erklärt',
+    Icon: BookOpen,
   },
 ];
 
