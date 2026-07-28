@@ -12,8 +12,16 @@ import {
 } from 'lucide-react';
 import { db } from '@/db/db';
 import { listTemplates } from '@/db/repositories/templates';
-import { listPlansWithDays } from '@/db/repositories/plans';
+import { getPlanWithDays, listPlansWithDays } from '@/db/repositories/plans';
 import { getPlanScheduleState } from '@/db/repositories/schedules';
+import { getActiveDeload } from '@/db/repositories/planDeload';
+import {
+  DELOAD_INTENSITY_LABELS,
+  DELOAD_PERCENT,
+  deloadRemainingDays,
+} from '@/services/deload';
+import { planCycleWeek } from '@/services/home';
+import { ActivePlanHero, type ActivePlanHeroData } from '@/features/home/ActivePlanHero';
 import {
   ActiveSessionExistsError,
   startFreeSession,
@@ -29,7 +37,16 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { loadAnalyticsDataset } from '@/services/dataset';
 import { computeAnalytics } from '@/services/analytics';
 import { isBackupOverdue } from '@/services/storage';
-import { lastDaysRange, formatDateTime, formatDurationLong, weekKey } from '@/utils/date';
+import {
+  customRange,
+  dayKey,
+  formatDate,
+  formatDateTime,
+  formatDurationLong,
+  lastDaysRange,
+  startOfWeekDate,
+  weekKey,
+} from '@/utils/date';
 import { formatNumber, formatVolume } from '@/utils/format';
 
 /**
@@ -73,9 +90,43 @@ export default function HomePage() {
     [],
   );
 
+  const activePlanId = settings.activePlanId;
+  const activePlan = useLiveQuery<ActivePlanHeroData | null>(async () => {
+    if (!activePlanId) return null;
+    const withDays = await getPlanWithDays(activePlanId);
+    if (!withDays) return null;
+    const { plan, days } = withDays;
+    const state = await getPlanScheduleState(activePlanId);
+    const deloadPeriod = await getActiveDeload(activePlanId);
+
+    const next = state.nextWorkout?.template;
+    const cycleWeek = planCycleWeek(plan.startDate, plan.plannedWeeks) ?? undefined;
+    const deload = deloadPeriod
+      ? {
+          remainingDays: deloadRemainingDays(deloadPeriod, new Date()),
+          endDate: formatDate(deloadPeriod.endDate),
+          intensityLabel: DELOAD_INTENSITY_LABELS[deloadPeriod.intensity],
+          percent: DELOAD_PERCENT[deloadPeriod.intensity],
+        }
+      : undefined;
+
+    return {
+      planId: plan.id,
+      planName: plan.name,
+      goalText: plan.goalText,
+      dayNames: days.map((day) => day.name),
+      nextUnit: next ? { templateId: next.id, name: next.name } : undefined,
+      cycleWeek,
+      deload,
+    };
+  }, [activePlanId]);
+
   const overview = useLiveQuery(async () => {
     const dataset = await loadAnalyticsDataset();
     const analytics = computeAnalytics(dataset, lastDaysRange(30));
+    // This week's figures for the week-progress card (Mon–today, local).
+    const weekRange = customRange(dayKey(startOfWeekDate()), dayKey(new Date()));
+    const weekAnalytics = computeAnalytics(dataset, weekRange);
     const completed = dataset.sessions
       .filter((session) => session.status === 'completed')
       .sort((a, b) => b.startedAt.localeCompare(a.startedAt));
@@ -83,6 +134,7 @@ export default function HomePage() {
     const currentWeek = weekKey(new Date());
     return {
       analytics,
+      weekAnalytics,
       lastSession: completed[0],
       totalSessions: completed.length,
       sessionsThisWeek: completed.filter(
@@ -197,6 +249,15 @@ export default function HomePage() {
         </Card>
       ) : null}
 
+      {/* The active plan is the headline: where you are and what to do next. */}
+      {activePlan ? (
+        <ActivePlanHero
+          data={activePlan}
+          disabled={Boolean(activeSession)}
+          onStartNext={(templateId) => void startTemplate(templateId)}
+        />
+      ) : null}
+
       {backupOverdue && hasHistory ? (
         <Link
           to="/mehr/daten"
@@ -283,40 +344,44 @@ export default function HomePage() {
           />
         ) : (
           <ul className="grid gap-2">
-            {plans.slice(0, 5).map((entry) => {
-              const multiDay = entry.dayCount > 1;
-              return (
-                <li key={entry.plan.id} className="min-w-0">
-                  <div className="flex items-center gap-2 rounded-2xl border border-border bg-surface p-3">
-                    <Link to={`/plaene/${entry.plan.id}`} className="min-w-0 flex-1">
-                      <p className="truncate font-medium">{entry.plan.name}</p>
-                      {entry.restToday ? (
-                        <p className="truncate text-xs text-muted">
-                          Heute: {entry.restToday}
-                        </p>
-                      ) : null}
-                      {multiDay && entry.nextDayName ? (
-                        <p className="truncate text-xs text-accent">
-                          Als Nächstes: {entry.nextDayName}
-                        </p>
-                      ) : null}
-                    </Link>
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      className="shrink-0"
-                      disabled={Boolean(activeSession) || !entry.nextDayId}
-                      onClick={() =>
-                        entry.nextDayId && void startTemplate(entry.nextDayId)
-                      }
-                    >
-                      <Play size={16} aria-hidden="true" />
-                      Starten
-                    </Button>
-                  </div>
-                </li>
-              );
-            })}
+            {/* The active plan already has its hero above — don't repeat it here. */}
+            {plans
+              .filter((entry) => entry.plan.id !== activePlanId)
+              .slice(0, 5)
+              .map((entry) => {
+                const multiDay = entry.dayCount > 1;
+                return (
+                  <li key={entry.plan.id} className="min-w-0">
+                    <div className="flex items-center gap-2 rounded-2xl border border-border bg-surface p-3">
+                      <Link to={`/plaene/${entry.plan.id}`} className="min-w-0 flex-1">
+                        <p className="truncate font-medium">{entry.plan.name}</p>
+                        {entry.restToday ? (
+                          <p className="truncate text-xs text-muted">
+                            Heute: {entry.restToday}
+                          </p>
+                        ) : null}
+                        {multiDay && entry.nextDayName ? (
+                          <p className="truncate text-xs text-accent">
+                            Als Nächstes: {entry.nextDayName}
+                          </p>
+                        ) : null}
+                      </Link>
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        className="shrink-0"
+                        disabled={Boolean(activeSession) || !entry.nextDayId}
+                        onClick={() =>
+                          entry.nextDayId && void startTemplate(entry.nextDayId)
+                        }
+                      >
+                        <Play size={16} aria-hidden="true" />
+                        Starten
+                      </Button>
+                    </div>
+                  </li>
+                );
+              })}
           </ul>
         )}
       </section>
@@ -344,6 +409,20 @@ export default function HomePage() {
                 label="Serie"
                 value={formatNumber(overview?.analytics.streakWeeks)}
                 hint="Wochen in Folge"
+              />
+              <Stat
+                label="Arbeitssätze Wo."
+                value={formatNumber(overview?.weekAnalytics.workingSetCount)}
+                hint="diese Woche"
+              />
+              <Stat
+                label="Cardio Wo."
+                value={`${formatNumber(
+                  Math.round(
+                    (overview?.weekAnalytics.cardio.totalDurationSeconds ?? 0) / 60,
+                  ),
+                )} min`}
+                hint="diese Woche"
               />
               <Stat
                 label="30 Tage"
