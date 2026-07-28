@@ -12,6 +12,8 @@ import {
 } from '@/services/validation';
 import { effectiveSetExecution } from '@/services/equipment';
 import { cardioModalityLabel, prefersMeters } from '@/services/cardio';
+import { computePace, formatPace } from '@/services/cardioMetrics';
+import { cn } from '@/utils/cn';
 import { useAutosave } from '@/hooks/useAutosave';
 import { useToast } from '@/hooks/useToast';
 import { ExerciseTimer } from '@/features/session/ExerciseTimer';
@@ -144,6 +146,14 @@ export function CardioSetEditor({
   const errors = useMemo(() => validateCardioSetInput(values), [values]);
   const canComplete = cardioSectionComplete(values) && !hasErrors(errors);
 
+  // Live pace/speed from the values entered so far — shown only when both
+  // duration and distance are present (never invented).
+  const livePace = useMemo(
+    () => computePace(modality, values.durationSeconds, values.distanceMeters),
+    [modality, values.durationSeconds, values.distanceMeters],
+  );
+  const rpeValue = draft.rpe === '' ? null : Number(draft.rpe);
+
   const update = (key: keyof Draft, value: string) =>
     setDraft((current) => ({ ...current, [key]: value }));
 
@@ -225,15 +235,40 @@ export function CardioSetEditor({
           onChange={(event) => update('distance', event.target.value)}
           onBlur={persist}
         />
-        <NumberField
-          label="RPE (optional)"
-          decimal
-          containerClassName="col-span-2"
-          value={draft.rpe}
-          error={fieldError(errors, touched, 'rpe')}
-          onChange={(event) => update('rpe', event.target.value)}
-          onBlur={persist}
-        />
+      </div>
+
+      {livePace ? (
+        <p className="mt-2 text-sm text-muted">
+          <span className="font-medium text-text">Pace / Tempo: </span>
+          <span className="numeric">{formatPace(livePace)}</span>
+        </p>
+      ) : null}
+
+      <div className="mt-3">
+        <span className="mb-1 block text-sm font-medium text-muted">
+          Anstrengung (RPE) <span className="font-normal">(optional)</span>
+        </span>
+        <div className="flex flex-wrap gap-1.5" role="group" aria-label="RPE">
+          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((value) => {
+            const active = rpeValue === value;
+            return (
+              <button
+                key={value}
+                type="button"
+                aria-pressed={active}
+                onClick={() => update('rpe', active ? '' : String(value))}
+                className={cn(
+                  'min-h-[44px] min-w-[44px] rounded-xl border px-3 text-sm font-medium',
+                  active
+                    ? 'border-cardio bg-cardio/15 text-cardio'
+                    : 'border-border bg-surface-2 text-text active:bg-surface-3',
+                )}
+              >
+                {value}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <details
