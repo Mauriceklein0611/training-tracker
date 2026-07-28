@@ -28,6 +28,7 @@ import {
 } from '@/services/analytics';
 import { analyzePlateau } from '@/services/plateau';
 import { buildPeriodReview } from '@/services/periodReview';
+import { buildRegionExerciseUsage } from '@/services/regionUsage';
 import { PlateauHint } from '@/features/analytics/PlateauHint';
 import { CardioRecordsCard } from '@/features/analytics/CardioRecordsCard';
 import { PeriodReviewCard } from '@/features/analytics/PeriodReviewCard';
@@ -152,6 +153,8 @@ export default function AnalyticsPage() {
       // Local "wrapped" for the selected range vs the equal period before it.
       // Only for a bounded range — "Gesamt" has no meaningful previous period.
       review: range ? buildPeriodReview(dataset, range) : null,
+      // Exercises per body region for the tappable muscle map.
+      regionExercises: buildRegionExerciseUsage(dataset, range),
     };
   }, [range, exerciseId, deloadFilter]);
 
@@ -551,6 +554,29 @@ export default function AnalyticsPage() {
                             In diesem Zeitraum keine Sätze für diese Region.
                           </p>
                         )}
+                        {(data?.regionExercises[selectedRegion!] ?? []).length > 0 ? (
+                          <div className="mt-2 border-t border-border pt-2">
+                            <p className="mb-1 text-xs font-medium uppercase tracking-wide text-muted">
+                              Übungen
+                            </p>
+                            <ul className="grid gap-1">
+                              {(data?.regionExercises[selectedRegion!] ?? [])
+                                .slice(0, 6)
+                                .map((usage) => (
+                                  <li
+                                    key={usage.exerciseName}
+                                    className="flex justify-between gap-2"
+                                  >
+                                    <span className="truncate">{usage.exerciseName}</span>
+                                    <span className="numeric shrink-0 text-muted">
+                                      {formatNumber(usage.sets)} Sätze ·{' '}
+                                      {formatNumber(usage.sessions)}×
+                                    </span>
+                                  </li>
+                                ))}
+                            </ul>
+                          </div>
+                        ) : null}
                       </div>
                     ) : null}
                   </div>
