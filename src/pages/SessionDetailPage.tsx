@@ -18,6 +18,7 @@ import {
 import { CompletedSetRow } from '@/features/session/SetEditor';
 import { PostCheckInCard, PreCheckInCard } from '@/features/checkin/CheckInCards';
 import { SessionSummaryView } from '@/features/session/SessionSummaryView';
+import { ShareResultButton } from '@/features/session/ShareResultButton';
 import { SetEditDialog } from '@/features/history/SetEditDialog';
 import { loadAnalyticsDataset } from '@/services/dataset';
 import { summarizeSession } from '@/services/sessionSummary';
@@ -98,8 +99,9 @@ export default function SessionDetailPage() {
       />
 
       {summary ? (
-        <div className="mb-4">
+        <div className="mb-4 grid gap-3">
           <SessionSummaryView summary={summary} />
+          <ShareResultButton summary={summary} />
         </div>
       ) : null}
 
