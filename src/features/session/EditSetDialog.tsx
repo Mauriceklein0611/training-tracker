@@ -14,6 +14,7 @@ import {
 import { requiredFieldsFor, weightFieldLabel } from '@/services/metrics';
 import { hasErrors, parseNumberInput, validateSetInput } from '@/services/validation';
 import { SET_TYPE_LABELS, WEIGHT_MODE_LABELS } from '@/utils/format';
+import { EditCardioSetDialog } from '@/features/session/EditCardioSetDialog';
 import { useToast } from '@/hooks/useToast';
 import type {
   Equipment,
@@ -57,6 +58,9 @@ export function EditSetDialog({
   onClose: () => void;
 }) {
   const toast = useToast();
+  // Cardio sections have their own field set and repository path.
+  const isCardio = effectiveSetExecution(set, sessionExercise).trackingType === 'cardio';
+
   const [draft, setDraft] = useState<Draft>(() => seed());
   const [touched, setTouched] = useState(false);
   const [multiplierError, setMultiplierError] = useState<string | undefined>();
@@ -154,6 +158,17 @@ export function EditSetDialog({
       setSaving(false);
     }
   };
+
+  if (isCardio) {
+    return (
+      <EditCardioSetDialog
+        open={open}
+        set={set}
+        sessionExercise={sessionExercise}
+        onClose={onClose}
+      />
+    );
+  }
 
   return (
     <Dialog

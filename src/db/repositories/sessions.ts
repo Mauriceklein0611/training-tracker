@@ -1,5 +1,6 @@
 import { db, ensureSettings } from '@/db/db';
 import type {
+  CardioModality,
   Equipment,
   Exercise,
   ExerciseGrouping,
@@ -758,6 +759,62 @@ export interface EditCompletedSetValues {
   weightMode: WeightMode;
   weightMultiplier: number;
   trackingType: TrackingType;
+}
+
+/** Cardio-section correction values; cardio uses its own field set. */
+export interface EditCompletedCardioValues {
+  durationSeconds?: number;
+  distanceMeters?: number;
+  averageHeartRateBpm?: number;
+  caloriesKcal?: number;
+  elevationGainMeters?: number;
+  cadenceRpm?: number;
+  resistanceLevel?: number;
+  rpe?: number;
+  cardioModality?: CardioModality;
+}
+
+/**
+ * Corrects an already-completed cardio section in place. Like
+ * {@link editCompletedSet} it preserves the id, position, rest data and
+ * completion time and never creates a duplicate; it rewrites only the cardio
+ * metrics and freezes the cardio execution (tracking type + modality). Strength
+ * fields are cleared so a section corrected from a mis-entry stays pure cardio.
+ */
+export async function editCompletedCardioSet(
+  setId: string,
+  values: EditCompletedCardioValues,
+): Promise<void> {
+  await db.transaction(
+    'rw',
+    db.workoutSets,
+    db.sessionExercises,
+    db.workoutSessions,
+    async () => {
+      const set = await db.workoutSets.get(setId);
+      if (!set) throw new Error('Der Satz wurde nicht gefunden.');
+      await db.workoutSets.update(setId, {
+        weightKg: undefined,
+        reps: undefined,
+        rir: undefined,
+        durationSeconds: values.durationSeconds,
+        distanceMeters: values.distanceMeters,
+        averageHeartRateBpm: values.averageHeartRateBpm,
+        caloriesKcal: values.caloriesKcal,
+        elevationGainMeters: values.elevationGainMeters,
+        cadenceRpm: values.cadenceRpm,
+        resistanceLevel: values.resistanceLevel,
+        rpe: values.rpe,
+        trackingTypeSnapshot: 'cardio',
+        weightModeSnapshot: 'none',
+        weightMultiplierSnapshot: 1,
+        cardioModalitySnapshot: values.cardioModality,
+        updatedAt: nowIso(),
+      });
+      const sessionExercise = await db.sessionExercises.get(set.sessionExerciseId);
+      if (sessionExercise) await touchSession(sessionExercise.sessionId);
+    },
+  );
 }
 
 /**

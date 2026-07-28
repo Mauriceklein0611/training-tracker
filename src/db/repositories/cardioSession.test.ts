@@ -6,6 +6,7 @@ import {
   addExerciseToSession,
   addSet,
   completeSet,
+  editCompletedCardioSet,
   startFreeSession,
 } from '@/db/repositories/sessions';
 import { effectiveSetExecution } from '@/services/equipment';
@@ -73,6 +74,34 @@ describe('cardio live tracking', () => {
     const stored = (await db.workoutSets.get(set.id))!;
     expect(stored.distanceMeters).toBe(5000);
     expect(stored.durationSeconds).toBeUndefined();
+  });
+
+  it('corrects a completed cardio section in place, preserving metadata', async () => {
+    const exercise = await runningExercise();
+    const session = await startFreeSession('Cardio');
+    const se = await addExerciseToSession(session.id, exercise);
+    const set = await addSet(se.id, { restTargetSeconds: 60 });
+    await completeSet(set.id, { durationSeconds: 1800, distanceMeters: 6000 });
+    const before = (await db.workoutSets.get(set.id))!;
+
+    await editCompletedCardioSet(set.id, {
+      durationSeconds: 1500,
+      distanceMeters: 5500,
+      averageHeartRateBpm: 148,
+      cardioModality: 'running',
+    });
+
+    const after = (await db.workoutSets.get(set.id))!;
+    expect(after.durationSeconds).toBe(1500);
+    expect(after.distanceMeters).toBe(5500);
+    expect(after.averageHeartRateBpm).toBe(148);
+    // Identity and completion metadata are preserved.
+    expect(after.id).toBe(before.id);
+    expect(after.position).toBe(before.position);
+    expect(after.completedAt).toBe(before.completedAt);
+    // Stays pure cardio — no strength fields sneak in.
+    expect(after.weightKg).toBeUndefined();
+    expect(after.trackingTypeSnapshot).toBe('cardio');
   });
 
   it('completing a cardio section is idempotent under a double tap', async () => {
