@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, type ReactNode } from 'react';
+import { useCallback, useEffect, useId, useRef, type ReactNode } from 'react';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/utils/cn';
 
@@ -24,6 +24,12 @@ export function Dialog({
   size?: 'md' | 'lg';
 }) {
   const ref = useRef<HTMLDialogElement>(null);
+  // A stable, per-instance id so concurrently mounted or sequentially opened
+  // dialogs never share `dialog-title`; aria-labelledby then points at the
+  // right heading (e.g. "Training beenden?" is never announced as another
+  // dialog's title).
+  const titleId = useId();
+  const descriptionId = useId();
 
   useEffect(() => {
     const dialog = ref.current;
@@ -52,7 +58,8 @@ export function Dialog({
     <dialog
       ref={ref}
       onClick={handleClick}
-      aria-labelledby="dialog-title"
+      aria-labelledby={titleId}
+      aria-describedby={description ? descriptionId : undefined}
       className={cn(
         'w-[min(100vw-1.5rem,32rem)] rounded-2xl border border-border bg-surface p-0 text-text',
         'backdrop:bg-black/70 open:flex open:flex-col',
@@ -60,11 +67,13 @@ export function Dialog({
       )}
     >
       <div className="max-h-[85vh] overflow-y-auto p-4">
-        <h2 id="dialog-title" className="text-lg font-semibold">
+        <h2 id={titleId} className="text-lg font-semibold">
           {title}
         </h2>
         {description ? (
-          <p className="mt-1 text-sm leading-relaxed text-muted">{description}</p>
+          <p id={descriptionId} className="mt-1 text-sm leading-relaxed text-muted">
+            {description}
+          </p>
         ) : null}
         {children ? <div className="mt-4">{children}</div> : null}
       </div>
