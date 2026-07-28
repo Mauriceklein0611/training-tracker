@@ -878,8 +878,14 @@ export interface ExerciseWeeklyGoal {
 export interface WeeklyGoals {
   /** Training sessions (distinct training days) per calendar week. */
   sessionsPerWeek?: number;
-  /** Total working sets per calendar week. */
+  /** Total working sets per calendar week. Strength only; cardio never counts. */
   workingSetsPerWeek?: number;
+  /** Cardio minutes per calendar week (optional). */
+  cardioMinutesPerWeek?: number;
+  /** Cardio distance in metres per calendar week (optional). */
+  cardioDistancePerWeekMeters?: number;
+  /** Cardio sessions (distinct days with a cardio activity) per week (optional). */
+  cardioSessionsPerWeek?: number;
   /** Per-exercise weekly targets. */
   exerciseGoals?: ExerciseWeeklyGoal[];
 }

@@ -202,6 +202,66 @@ describe('computeWeekProgress', () => {
     expect(previous.sessions).toBe(1);
     expect(previous.workingSets).toBe(4);
   });
+
+  it('aggregates cardio minutes, distance and sessions apart from strength', () => {
+    const now = new Date('2026-07-22T12:00:00');
+    const dataset: AnalyticsDataset = {
+      exercises: [
+        makeExercise({ id: 'e-str', name: 'Bankdrücken' }),
+        makeExercise({
+          id: 'e-run',
+          name: 'Laufen',
+          trackingType: 'cardio',
+          cardioModality: 'running',
+          weightMode: 'none',
+        }),
+      ],
+      sessions: [
+        makeSession({
+          id: 'c1',
+          startedAt: '2026-07-20T18:00:00',
+          finishedAt: '2026-07-20T19:00:00',
+        }),
+      ],
+      sessionExercises: [
+        makeSessionExercise({ id: 'se-str', sessionId: 'c1', exerciseId: 'e-str' }),
+        makeSessionExercise({
+          id: 'se-run',
+          sessionId: 'c1',
+          exerciseId: 'e-run',
+          order: 1,
+          exerciseNameSnapshot: 'Laufen',
+          trackingTypeSnapshot: 'cardio',
+          weightModeSnapshot: 'none',
+          cardioModalitySnapshot: 'running',
+        }),
+      ],
+      sets: [
+        makeSet({
+          sessionExerciseId: 'se-str',
+          weightKg: 80,
+          reps: 8,
+          completedAt: '2026-07-20T18:10:00',
+        }),
+        makeSet({
+          sessionExerciseId: 'se-run',
+          weightKg: undefined,
+          reps: undefined,
+          durationSeconds: 1800,
+          distanceMeters: 6000,
+          completedAt: '2026-07-20T18:40:00',
+        }),
+      ],
+    };
+
+    const current = computeWeekProgress(dataset, 4, now).at(-1)!;
+    // The cardio set is not a strength working set…
+    expect(current.workingSets).toBe(1);
+    // …and is counted in the cardio figures instead.
+    expect(current.cardioMinutes).toBe(30);
+    expect(current.cardioDistanceMeters).toBe(6000);
+    expect(current.cardioSessions).toBe(1);
+  });
 });
 
 describe('computeCurrentWeekExerciseProgress', () => {

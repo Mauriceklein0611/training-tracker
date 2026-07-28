@@ -1,6 +1,6 @@
 import type { AnalyticsDataset } from '@/services/analytics';
 import { buildSetContexts } from '@/services/analytics';
-import { isCompleted, isWorkingSet, setVolumeKg } from '@/services/metrics';
+import { isCardio, isCompleted, isWorkingSet, setVolumeKg } from '@/services/metrics';
 import type { ExerciseWeeklyGoal, WeeklyGoals } from '@/types';
 import { dayKey, recentWeekStarts, weekKey } from '@/utils/date';
 
@@ -180,6 +180,12 @@ export interface WeekProgress {
   isCurrentWeek: boolean;
   sessions: number;
   workingSets: number;
+  /** Cardio minutes completed in the week (from cardio sets only). */
+  cardioMinutes: number;
+  /** Cardio distance in metres completed in the week. */
+  cardioDistanceMeters: number;
+  /** Distinct days in the week with at least one completed cardio activity. */
+  cardioSessions: number;
 }
 
 /**
@@ -194,12 +200,16 @@ export function computeWeekProgress(
   const weekKeys = recentWeekStarts(weekCount, now);
   const currentWeek = weekKeys[weekKeys.length - 1];
   const byWeek = new Map<string, WeekProgress>();
+  const cardioDaysByWeek = new Map<string, Set<string>>();
   for (const week of weekKeys) {
     byWeek.set(week, {
       weekStart: week,
       isCurrentWeek: week === currentWeek,
       sessions: 0,
       workingSets: 0,
+      cardioMinutes: 0,
+      cardioDistanceMeters: 0,
+      cardioSessions: 0,
     });
   }
 
@@ -210,9 +220,24 @@ export function computeWeekProgress(
   }
 
   for (const context of buildSetContexts(dataset)) {
-    if (!isCompleted(context.set) || !isWorkingSet(context.set)) continue;
-    const entry = byWeek.get(weekKey(context.session.startedAt));
-    if (entry) entry.workingSets += 1;
+    if (!isCompleted(context.set)) continue;
+    const week = weekKey(context.session.startedAt);
+    const entry = byWeek.get(week);
+    if (!entry) continue;
+    // Cardio is counted apart from strength working sets.
+    if (isCardio(context.set, context.sessionExercise)) {
+      entry.cardioMinutes += (context.set.durationSeconds ?? 0) / 60;
+      entry.cardioDistanceMeters += context.set.distanceMeters ?? 0;
+      const days = cardioDaysByWeek.get(week) ?? new Set<string>();
+      days.add(dayKey(context.session.startedAt));
+      cardioDaysByWeek.set(week, days);
+    } else if (isWorkingSet(context.set)) {
+      entry.workingSets += 1;
+    }
+  }
+  for (const [week, days] of cardioDaysByWeek) {
+    const entry = byWeek.get(week);
+    if (entry) entry.cardioSessions = days.size;
   }
 
   return weekKeys.map((week) => byWeek.get(week) as WeekProgress);
@@ -265,7 +290,15 @@ export function goalReached(actual: number, goal: number | undefined): boolean {
 /** True when the settings contain at least one usable goal. */
 export function hasAnyWeeklyGoal(goals: WeeklyGoals | undefined): boolean {
   if (!goals) return false;
-  if (goals.sessionsPerWeek != null || goals.workingSetsPerWeek != null) return true;
+  if (
+    goals.sessionsPerWeek != null ||
+    goals.workingSetsPerWeek != null ||
+    goals.cardioMinutesPerWeek != null ||
+    goals.cardioDistancePerWeekMeters != null ||
+    goals.cardioSessionsPerWeek != null
+  ) {
+    return true;
+  }
   return (goals.exerciseGoals ?? []).some(
     (goal) => goal.sessionsPerWeek != null || goal.workingSetsPerWeek != null,
   );

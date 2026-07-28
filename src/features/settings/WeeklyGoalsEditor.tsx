@@ -102,12 +102,54 @@ export function WeeklyGoalsEditor({
       />
       <NumberField
         label="Arbeitssätze pro Woche"
+        hint="Nur Kraft — Cardio zählt hier nicht mit."
         value={
           current.workingSetsPerWeek != null ? String(current.workingSetsPerWeek) : ''
         }
         placeholder="kein Ziel"
         onChange={(event) =>
           update({ workingSetsPerWeek: toGoalValue(event.target.value, 500) })
+        }
+      />
+      <NumberField
+        label="Cardio-Minuten pro Woche"
+        value={
+          current.cardioMinutesPerWeek != null ? String(current.cardioMinutesPerWeek) : ''
+        }
+        placeholder="kein Ziel"
+        onChange={(event) =>
+          update({ cardioMinutesPerWeek: toGoalValue(event.target.value, 10000) })
+        }
+      />
+      <NumberField
+        label="Cardio-Distanz pro Woche (km)"
+        decimal
+        value={
+          current.cardioDistancePerWeekMeters != null
+            ? String(current.cardioDistancePerWeekMeters / 1000)
+            : ''
+        }
+        placeholder="kein Ziel"
+        onChange={(event) => {
+          const km = parseNumberInput(event.target.value);
+          update({
+            cardioDistancePerWeekMeters:
+              km == null || !Number.isFinite(km) || km <= 0
+                ? undefined
+                : Math.round(km * 1000),
+          });
+        }}
+      />
+      <NumberField
+        label="Cardio-Einheiten pro Woche"
+        value={
+          current.cardioSessionsPerWeek != null
+            ? String(current.cardioSessionsPerWeek)
+            : ''
+        }
+        placeholder="kein Ziel"
+        onChange={(event) =>
+          update({ cardioSessionsPerWeek: toGoalValue(event.target.value, 14) })
         }
       />
 

@@ -96,7 +96,11 @@ export function WeeklyGoalsCard({
   const current = weeks[weeks.length - 1] as WeekProgress;
   const finishedWeeks = weeks.slice(0, -1).reverse();
   const hasOverallGoal =
-    goals.sessionsPerWeek != null || goals.workingSetsPerWeek != null;
+    goals.sessionsPerWeek != null ||
+    goals.workingSetsPerWeek != null ||
+    goals.cardioMinutesPerWeek != null ||
+    goals.cardioDistancePerWeekMeters != null ||
+    goals.cardioSessionsPerWeek != null;
 
   return (
     <Card>
@@ -118,6 +122,30 @@ export function WeeklyGoalsCard({
                 label="Arbeitssätze"
                 actual={current.workingSets}
                 goal={goals.workingSetsPerWeek}
+                isCurrentWeek
+              />
+            ) : null}
+            {goals.cardioMinutesPerWeek != null ? (
+              <GoalProgress
+                label="Cardio-Minuten"
+                actual={Math.round(current.cardioMinutes)}
+                goal={goals.cardioMinutesPerWeek}
+                isCurrentWeek
+              />
+            ) : null}
+            {goals.cardioDistancePerWeekMeters != null ? (
+              <GoalProgress
+                label="Cardio-Distanz (km)"
+                actual={Math.round(current.cardioDistanceMeters / 100) / 10}
+                goal={Math.round(goals.cardioDistancePerWeekMeters / 100) / 10}
+                isCurrentWeek
+              />
+            ) : null}
+            {goals.cardioSessionsPerWeek != null ? (
+              <GoalProgress
+                label="Cardio-Einheiten"
+                actual={current.cardioSessions}
+                goal={goals.cardioSessionsPerWeek}
                 isCurrentWeek
               />
             ) : null}

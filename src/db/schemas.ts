@@ -546,6 +546,11 @@ export const appSettingsSchema = z.object({
     .object({
       sessionsPerWeek: z.number().int().min(1).max(14).optional(),
       workingSetsPerWeek: z.number().int().min(1).max(500).optional(),
+      // Cardio weekly goals (added with the cardio tracking type); all optional
+      // so older settings still validate and absent means "no cardio goal".
+      cardioMinutesPerWeek: z.number().int().min(1).max(10000).optional(),
+      cardioDistancePerWeekMeters: z.number().min(1).max(1_000_000).optional(),
+      cardioSessionsPerWeek: z.number().int().min(1).max(14).optional(),
       exerciseGoals: z
         .array(
           z.object({
