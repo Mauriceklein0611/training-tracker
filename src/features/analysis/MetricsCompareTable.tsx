@@ -10,52 +10,97 @@ import {
 } from '@/utils/format';
 import { formatCardioDistance } from '@/services/cardioMetrics';
 import { formatDurationLong } from '@/utils/date';
+import { cn } from '@/utils/cn';
 
-/** One comparison row; a missing value is shown honestly rather than as zero. */
-function Row({ label, a, b }: { label: string; a: string; b: string }) {
+/**
+ * One comparison metric. `a`/`b` are the raw numbers (null = no data, shown
+ * honestly rather than as zero); `format` renders a value. A delta (b − a) is
+ * shown only when both sides have a value and `delta` is not disabled — never an
+ * estimate or a judgement.
+ */
+interface MetricRow {
+  label: string;
+  a: number | null;
+  b: number | null;
+  format: (value: number) => string;
+  delta?: boolean;
+}
+
+/** Signed b − a in the row's own unit, following the ±/+/− house convention. */
+function formatDelta(row: MetricRow): string | null {
+  if (row.delta === false || row.a == null || row.b == null) return null;
+  const d = row.b - row.a;
+  if (Math.abs(d) < 1e-9) return `±${row.format(0)}`;
+  return `${d > 0 ? '+' : '−'}${row.format(Math.abs(d))}`;
+}
+
+/** One value in a row: a small caption (mobile only) above the right-aligned value. */
+function Cell({
+  caption,
+  text,
+  muted,
+}: {
+  caption: string;
+  text: string;
+  muted?: boolean;
+}) {
   return (
-    <div className="grid grid-cols-[1.4fr_1fr_1fr] items-baseline gap-2 border-t border-border py-1.5 first:border-0">
-      <span className="text-sm text-muted">{label}</span>
-      <span className="numeric text-right text-sm font-medium">{a}</span>
-      <span className="numeric text-right text-sm font-medium">{b}</span>
+    <span className="flex flex-col sm:block sm:text-right">
+      <span className="text-[10px] font-medium uppercase tracking-wide text-muted sm:hidden">
+        {caption}
+      </span>
+      <span className={cn('numeric text-sm font-medium', muted && 'text-muted')}>
+        {text}
+      </span>
+    </span>
+  );
+}
+
+/** The 4-column grid template shared by the header and every row (sm and up). */
+const GRID = 'sm:grid-cols-[1.4fr_repeat(3,minmax(0,1fr))]';
+
+function Row({ row }: { row: MetricRow }) {
+  const aText = row.a == null ? 'keine Daten' : row.format(row.a);
+  const bText = row.b == null ? 'keine Daten' : row.format(row.b);
+  const delta = formatDelta(row);
+  return (
+    <div className="border-t border-border py-2 first:border-0">
+      {/* Mobile: the metric name on its own line above the A/B/Δ columns. */}
+      <div className="mb-1 text-sm text-muted sm:hidden">{row.label}</div>
+      <div className={cn('grid grid-cols-3 gap-2 sm:items-baseline', GRID)}>
+        <span className="hidden text-sm text-muted sm:block">{row.label}</span>
+        <Cell caption="A" text={aText} />
+        <Cell caption="B" text={bText} />
+        <Cell caption="Δ" text={delta ?? '–'} muted />
+      </div>
     </div>
   );
 }
 
-function num(
-  value: number | null | undefined,
-  format: (value: number) => string,
-): string {
-  return value == null ? 'keine Daten' : format(value);
-}
-
-function Section({
-  title,
-  a,
-  b,
-  rows,
-}: {
-  title: string;
-  a: BlockMetrics;
-  b: BlockMetrics;
-  rows: { label: string; get: (metrics: BlockMetrics) => string }[];
-}) {
+function Section({ title, rows }: { title: string; rows: MetricRow[] }) {
   return (
     <div className="mt-3">
       <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted">
         {title}
       </h3>
       {rows.map((row) => (
-        <Row key={row.label} label={row.label} a={row.get(a)} b={row.get(b)} />
+        <Row key={row.label} row={row} />
       ))}
     </div>
   );
 }
 
+/** Distance for a cardio total: null (→ "keine Daten") when nothing was recorded. */
+function distanceOrNull(meters: number): number | null {
+  return meters > 0 ? meters : null;
+}
+
 /**
- * Side-by-side metrics table shared by the block and plan comparison screens.
- * Purely presentational: it renders the two already-computed {@link BlockMetrics}
- * and never estimates a missing value or draws a conclusion.
+ * Side-by-side metrics shared by the block, plan and workout-unit comparison
+ * screens. Purely presentational: it renders the two already-computed
+ * {@link BlockMetrics}, a plain b − a delta where comparable, and never
+ * estimates a missing value or draws a conclusion. Responsive — on a phone each
+ * metric stacks into an A/B/Δ card instead of a squeezed three-column table.
  */
 export function MetricsCompareTable({
   a,
@@ -72,142 +117,181 @@ export function MetricsCompareTable({
   subA?: ReactNode;
   subB?: ReactNode;
 }) {
+  const kg = formatVolume;
+  const n =
+    (digits = 0) =>
+    (value: number) =>
+      formatNumber(value, digits);
+
+  const absolute: MetricRow[] = [
+    { label: 'Einheiten', a: a.sessions, b: b.sessions, format: n() },
+    { label: 'Trainingstage', a: a.trainingDays, b: b.trainingDays, format: n() },
+    {
+      label: 'Dauer gesamt',
+      a: a.durationSeconds,
+      b: b.durationSeconds,
+      format: formatDurationLong,
+    },
+    { label: 'Arbeitssätze', a: a.workingSets, b: b.workingSets, format: n() },
+    { label: 'Wiederholungen', a: a.totalReps, b: b.totalReps, format: n() },
+    { label: 'Volumen', a: a.volumeKg, b: b.volumeKg, format: kg },
+    {
+      label: 'Versch. Übungen',
+      a: a.distinctExercises,
+      b: b.distinctExercises,
+      format: n(),
+    },
+  ];
+
+  const perWeek: MetricRow[] = [
+    {
+      label: 'Einheiten / Wo.',
+      a: a.sessionsPerWeek,
+      b: b.sessionsPerWeek,
+      format: n(1),
+    },
+    {
+      label: 'Sätze / Wo.',
+      a: a.workingSetsPerWeek,
+      b: b.workingSetsPerWeek,
+      format: n(1),
+    },
+    { label: 'Volumen / Wo.', a: a.volumePerWeekKg, b: b.volumePerWeekKg, format: kg },
+    {
+      label: 'Dauer / Wo.',
+      a: a.durationPerWeekSeconds,
+      b: b.durationPerWeekSeconds,
+      format: formatDurationLong,
+    },
+  ];
+
+  const distance = (m: number) => formatCardioDistance(m, undefined);
+  const hasCardio = a.cardioActivities > 0 || b.cardioActivities > 0;
+  const cardio: MetricRow[] = [
+    { label: 'Einheiten', a: a.cardioActivities, b: b.cardioActivities, format: n() },
+    {
+      label: 'Dauer gesamt',
+      a: a.cardioDurationSeconds,
+      b: b.cardioDurationSeconds,
+      format: formatDurationLong,
+    },
+    {
+      label: 'Distanz gesamt',
+      a: distanceOrNull(a.cardioDistanceMeters),
+      b: distanceOrNull(b.cardioDistanceMeters),
+      format: distance,
+    },
+    {
+      label: 'Ø Dauer / Einheit',
+      a: a.cardioActivities > 0 ? a.cardioDurationSeconds / a.cardioActivities : null,
+      b: b.cardioActivities > 0 ? b.cardioDurationSeconds / b.cardioActivities : null,
+      format: formatDurationLong,
+    },
+    {
+      label: 'Ø Distanz / Einheit',
+      a:
+        a.cardioActivities > 0 && a.cardioDistanceMeters > 0
+          ? a.cardioDistanceMeters / a.cardioActivities
+          : null,
+      b:
+        b.cardioActivities > 0 && b.cardioDistanceMeters > 0
+          ? b.cardioDistanceMeters / b.cardioActivities
+          : null,
+      format: distance,
+    },
+    {
+      label: 'Einheiten / Wo.',
+      a: a.cardioActivitiesPerWeek,
+      b: b.cardioActivitiesPerWeek,
+      format: n(1),
+    },
+    {
+      label: 'Minuten / Wo.',
+      a: a.cardioMinutesPerWeek,
+      b: b.cardioMinutesPerWeek,
+      format: (value) => `${formatNumber(value, 0)} min`,
+    },
+    {
+      label: 'Distanz / Wo.',
+      a: distanceOrNull(a.cardioDistancePerWeekMeters),
+      b: distanceOrNull(b.cardioDistancePerWeekMeters),
+      format: distance,
+    },
+  ];
+
+  const averages: MetricRow[] = [
+    { label: 'Ø RIR', a: a.avgRir, b: b.avgRir, format: n(1) },
+    { label: 'Ø RPE', a: a.avgRpe, b: b.avgRpe, format: n(1) },
+    {
+      label: 'Pausenziel erreicht',
+      a: a.restTargetMetRatio,
+      b: b.restTargetMetRatio,
+      format: formatPercent,
+    },
+    {
+      label: 'Ø Pausenabweichung',
+      a: a.avgRestDeviationSeconds,
+      b: b.avgRestDeviationSeconds,
+      // Already a signed value; a delta of a signed deviation would mislead.
+      format: formatSignedSeconds,
+      delta: false,
+    },
+    {
+      label: 'Ø Körpergewicht',
+      a: a.avgBodyWeightKg,
+      b: b.avgBodyWeightKg,
+      format: (v) => formatKg(v),
+    },
+    {
+      label: 'Ø Körperfett',
+      a: a.avgBodyFatPercent,
+      b: b.avgBodyFatPercent,
+      format: formatPercentValue,
+    },
+  ];
+
+  const head = (label: string, sub?: ReactNode) => (
+    <span className="text-right font-semibold text-accent">
+      {label}
+      {sub ? (
+        <>
+          <br />
+          <span className="font-normal text-muted">{sub}</span>
+        </>
+      ) : null}
+    </span>
+  );
+
   return (
     <div>
-      <div className="grid grid-cols-[1.4fr_1fr_1fr] gap-2 text-xs">
-        <span />
-        <span className="text-right font-semibold text-accent">
-          {labelA}
-          {subA ? (
-            <>
-              <br />
-              <span className="font-normal text-muted">{subA}</span>
-            </>
-          ) : null}
-        </span>
-        <span className="text-right font-semibold text-accent">
-          {labelB}
-          {subB ? (
-            <>
-              <br />
-              <span className="font-normal text-muted">{subB}</span>
-            </>
-          ) : null}
-        </span>
+      {/* Mobile legend: which side is A and which is B (with their ranges). */}
+      <div className="mb-2 grid grid-cols-2 gap-2 sm:hidden">
+        <div className="rounded-lg bg-surface-2 px-2 py-1 text-xs">
+          <span className="font-semibold text-accent">A · {labelA}</span>
+          {subA ? <div className="text-muted">{subA}</div> : null}
+        </div>
+        <div className="rounded-lg bg-surface-2 px-2 py-1 text-xs">
+          <span className="font-semibold text-accent">B · {labelB}</span>
+          {subB ? <div className="text-muted">{subB}</div> : null}
+        </div>
       </div>
 
-      <Section
-        title="Absolut"
-        a={a}
-        b={b}
-        rows={[
-          { label: 'Einheiten', get: (m) => formatNumber(m.sessions) },
-          { label: 'Trainingstage', get: (m) => formatNumber(m.trainingDays) },
-          { label: 'Dauer gesamt', get: (m) => formatDurationLong(m.durationSeconds) },
-          { label: 'Arbeitssätze', get: (m) => formatNumber(m.workingSets) },
-          { label: 'Wiederholungen', get: (m) => formatNumber(m.totalReps) },
-          { label: 'Volumen', get: (m) => formatVolume(m.volumeKg) },
-          { label: 'Versch. Übungen', get: (m) => formatNumber(m.distinctExercises) },
-        ]}
-      />
+      {/* Desktop header row aligned with the metric grid. */}
+      <div className={cn('hidden gap-2 text-xs sm:grid', GRID)}>
+        <span />
+        {head(labelA, subA)}
+        {head(labelB, subB)}
+        <span className="text-right font-semibold text-muted">Δ</span>
+      </div>
 
-      <Section
-        title="Pro Woche (normalisiert)"
-        a={a}
-        b={b}
-        rows={[
-          { label: 'Einheiten / Wo.', get: (m) => formatNumber(m.sessionsPerWeek, 1) },
-          { label: 'Sätze / Wo.', get: (m) => formatNumber(m.workingSetsPerWeek, 1) },
-          { label: 'Volumen / Wo.', get: (m) => formatVolume(m.volumePerWeekKg) },
-          {
-            label: 'Dauer / Wo.',
-            get: (m) => formatDurationLong(m.durationPerWeekSeconds),
-          },
-        ]}
-      />
-
-      {a.cardioActivities > 0 || b.cardioActivities > 0 ? (
-        <Section
-          title="Cardio"
-          a={a}
-          b={b}
-          rows={[
-            { label: 'Einheiten', get: (m) => formatNumber(m.cardioActivities) },
-            {
-              label: 'Dauer gesamt',
-              get: (m) => formatDurationLong(m.cardioDurationSeconds),
-            },
-            {
-              label: 'Distanz gesamt',
-              get: (m) =>
-                m.cardioDistanceMeters > 0
-                  ? formatCardioDistance(m.cardioDistanceMeters, undefined)
-                  : 'keine Daten',
-            },
-            {
-              label: 'Ø Dauer / Einheit',
-              get: (m) =>
-                m.cardioActivities > 0
-                  ? formatDurationLong(m.cardioDurationSeconds / m.cardioActivities)
-                  : 'keine Daten',
-            },
-            {
-              label: 'Ø Distanz / Einheit',
-              get: (m) =>
-                m.cardioActivities > 0 && m.cardioDistanceMeters > 0
-                  ? formatCardioDistance(
-                      m.cardioDistanceMeters / m.cardioActivities,
-                      undefined,
-                    )
-                  : 'keine Daten',
-            },
-            {
-              label: 'Einheiten / Wo.',
-              get: (m) => formatNumber(m.cardioActivitiesPerWeek, 1),
-            },
-            {
-              label: 'Minuten / Wo.',
-              get: (m) => `${formatNumber(m.cardioMinutesPerWeek, 0)} min`,
-            },
-            {
-              label: 'Distanz / Wo.',
-              get: (m) =>
-                m.cardioDistancePerWeekMeters > 0
-                  ? formatCardioDistance(m.cardioDistancePerWeekMeters, undefined)
-                  : 'keine Daten',
-            },
-          ]}
-        />
-      ) : null}
-
-      <Section
-        title="Durchschnitte"
-        a={a}
-        b={b}
-        rows={[
-          { label: 'Ø RIR', get: (m) => num(m.avgRir, (v) => formatNumber(v, 1)) },
-          { label: 'Ø RPE', get: (m) => num(m.avgRpe, (v) => formatNumber(v, 1)) },
-          {
-            label: 'Pausenziel erreicht',
-            get: (m) => num(m.restTargetMetRatio, formatPercent),
-          },
-          {
-            label: 'Ø Pausenabweichung',
-            get: (m) => num(m.avgRestDeviationSeconds, formatSignedSeconds),
-          },
-          {
-            label: 'Ø Körpergewicht',
-            get: (m) => num(m.avgBodyWeightKg, (v) => formatKg(v)),
-          },
-          {
-            label: 'Ø Körperfett',
-            get: (m) => num(m.avgBodyFatPercent, formatPercentValue),
-          },
-        ]}
-      />
+      <Section title="Absolut" rows={absolute} />
+      <Section title="Pro Woche (normalisiert)" rows={perWeek} />
+      {hasCardio ? <Section title="Cardio" rows={cardio} /> : null}
+      <Section title="Durchschnitte" rows={averages} />
 
       <p className="mt-3 text-xs leading-relaxed text-muted">
-        „keine Daten" bedeutet, dass für diesen Zeitraum nichts erfasst wurde. Es werden
+        „keine Daten" bedeutet, dass für diesen Zeitraum nichts erfasst wurde. Δ ist die
+        reine Differenz B − A und wird nur bei vergleichbaren Werten gezeigt. Es werden
         keine Werte geschätzt und keine Schlüsse gezogen — die Einordnung bleibt dir
         überlassen.
       </p>

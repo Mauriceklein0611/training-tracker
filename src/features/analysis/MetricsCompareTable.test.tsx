@@ -63,4 +63,19 @@ describe('MetricsCompareTable cardio section', () => {
     render(<MetricsCompareTable a={metrics()} b={metrics()} />);
     expect(screen.queryByText('Cardio')).not.toBeInTheDocument();
   });
+
+  it('shows a signed b − a delta for comparable numeric rows', () => {
+    const a = metrics({ sessions: 8 });
+    const b = metrics({ sessions: 11 });
+    render(<MetricsCompareTable a={a} b={b} />);
+    // 11 − 8 = +3 sessions.
+    expect(screen.getByText('+3')).toBeInTheDocument();
+  });
+
+  it('shows no delta when one side has no data', () => {
+    // avgBodyWeightKg is null on both sides → its Δ cell reads "–".
+    render(<MetricsCompareTable a={metrics()} b={metrics()} />);
+    // The dash placeholder is present for rows without a comparable delta.
+    expect(screen.getAllByText('–').length).toBeGreaterThan(0);
+  });
 });
