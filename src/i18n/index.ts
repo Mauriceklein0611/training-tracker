@@ -28,6 +28,8 @@ interface CommunityStrings {
   bug: { label: string; description: string };
   privacyTitle: string;
   privacyText: string;
+  /** Visible label of the link to the external provider's privacy information. */
+  privacyLinkLabel: string;
 }
 
 interface Resources {
@@ -63,7 +65,8 @@ export const resources: Record<Language, Resources> = {
       },
       privacyTitle: 'Community-Links: Ko-fi und Feedback-Formular',
       privacyText:
-        'Die Einträge im Community-Bereich öffnen externe Dienste in einem neuen Tab (Ko-fi für freiwillige Unterstützung, Tally für Feedback). Dabei verlässt du die App; der jeweilige Anbieter verarbeitet deine Eingaben nach seinen eigenen Bedingungen. Es werden keine Trainings-, Körper- oder Gerätedaten automatisch übertragen und keine Parameter mit App-Daten angehängt. Zahlungen über Ko-fi sind freiwillige Unterstützung und keine steuerlich absetzbare Spende.',
+        'Die Einträge im Community-Bereich öffnen externe Dienste erst dann in einem neuen Tab, wenn du sie selbst auswählst (Ko-fi für freiwillige Unterstützung, Tally für Feedback). Beim normalen Start der App werden keine Ko-fi- oder Tally-Ressourcen geladen — keine Iframes, Widgets oder Skripte. Trainingsdaten, Körperdaten, Notizen und Sicherungen werden nicht automatisch übertragen, und es werden keine Parameter mit App-Daten angehängt. Was du freiwillig in das Formular einträgst, wird von Tally verarbeitet; Kontakt-E-Mail und Screenshot sind ausdrücklich freiwillig. Zahlungen über Ko-fi sind freiwillige Unterstützung und keine steuerlich absetzbare Spende.',
+      privacyLinkLabel: 'Datenschutzinformationen von Tally',
     },
   },
   en: {
@@ -92,10 +95,16 @@ export const resources: Record<Language, Resources> = {
       },
       privacyTitle: 'Community links: Ko-fi and feedback form',
       privacyText:
-        'The entries in the Community section open external services in a new tab (Ko-fi for voluntary support, Tally for feedback). You leave the app; the respective provider processes your input under its own terms. No training, body or device data is transferred automatically and no parameters carrying app data are appended. Payments via Ko-fi are voluntary support and not a tax-deductible donation.',
+        'The entries in the Community section only open an external service in a new tab once you choose them yourself (Ko-fi for voluntary support, Tally for feedback). Starting the app normally loads no Ko-fi or Tally resources — no iframes, widgets or scripts. Workout data, body data, notes and backups are never transferred automatically, and no parameters carrying app data are appended. Whatever you voluntarily enter in the form is processed by Tally; contact email and screenshot are explicitly optional. Payments via Ko-fi are voluntary support and not a tax-deductible donation.',
+      privacyLinkLabel: 'Tally privacy information',
     },
   },
 };
+
+/** Narrows an arbitrary tag to a supported language (exact match, no region). */
+export function isSupportedLanguage(tag: string): tag is Language {
+  return (SUPPORTED_LANGUAGES as readonly string[]).includes(tag);
+}
 
 /**
  * Picks the best supported language for an ordered list of BCP-47 tags

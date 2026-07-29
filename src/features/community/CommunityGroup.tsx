@@ -10,8 +10,8 @@ import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { communityStrings, getLanguage } from '@/i18n';
 import {
   KOFI_URL,
-  TALLY_FEEDBACK_URL,
   isConfiguredExternalUrl,
+  tallyFeedbackUrl,
 } from '@/config/externalLinks';
 
 interface CommunityLink {
@@ -29,14 +29,20 @@ interface CommunityLink {
  * public URL is configured (no dead links), and while offline it degrades to a
  * non-interactive row with a clear hint instead of a link that cannot open.
  *
+ * The feedback form follows the active language (German form for `de`, English
+ * form for `en` and any unsupported language).
+ *
  * URLs are injectable for tests; production uses the configured defaults.
  */
 export function CommunityGroup({
   kofiUrl = KOFI_URL,
-  tallyUrl = TALLY_FEEDBACK_URL,
+  tallyUrl,
 }: { kofiUrl?: string; tallyUrl?: string } = {}) {
   const online = useOnlineStatus();
-  const t = communityStrings(getLanguage());
+  const language = getLanguage();
+  const t = communityStrings(language);
+  // `??` (not `||`) so an explicitly empty URL stays "not configured".
+  const feedbackUrl = tallyUrl ?? tallyFeedbackUrl(language);
 
   const links: CommunityLink[] = [];
   if (isConfiguredExternalUrl(kofiUrl)) {
@@ -48,18 +54,18 @@ export function CommunityGroup({
       Icon: Heart,
     });
   }
-  if (isConfiguredExternalUrl(tallyUrl)) {
+  if (isConfiguredExternalUrl(feedbackUrl)) {
     // Both entries deliberately point at the same form (one category picker).
     links.push({
       key: 'feedback',
-      href: tallyUrl,
+      href: feedbackUrl,
       label: t.feedback.label,
       description: t.feedback.description,
       Icon: MessageSquarePlus,
     });
     links.push({
       key: 'bug',
-      href: tallyUrl,
+      href: feedbackUrl,
       label: t.bug.label,
       description: t.bug.description,
       Icon: Bug,

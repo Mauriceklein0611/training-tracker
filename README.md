@@ -493,24 +493,38 @@ start, and **no training, body or device data** is ever sent along.
   Ko-fi page. The app stays free forever; support is voluntary and **not a
   tax-deductible donation**.
 - **Feedback & Wünsche / Feedback & requests** and **Fehler melden / Report a
-  bug** — open a public Tally form (same form, category picker inside).
+  bug** — open the public Tally form for the active language (both entries lead
+  to the same form; the category is picked inside it).
 
 ### Configuration
 
-Both URLs live in a single typed config file, [`src/config/externalLinks.ts`](src/config/externalLinks.ts):
+All URLs live in a single typed config file, [`src/config/externalLinks.ts`](src/config/externalLinks.ts):
 
 - `KOFI_URL` is the public Ko-fi link and ships enabled.
-- `TALLY_FEEDBACK_URL` ships **empty**. Create the form first, then paste its
-  public URL here. While it is empty (or not a valid `https` URL), the feedback
-  and bug entries are simply not rendered — the app never ships a dead link.
+- `TALLY_FEEDBACK_URLS` maps each supported language to its own fully localised
+  public form: `de` → <https://tally.so/r/q4Xvp2>, `en` →
+  <https://tally.so/r/pbXv9V>. `tallyFeedbackUrl(language)` resolves the entry
+  and falls back to the English form for any unsupported language, matching the
+  #31 fallback rule.
+- `TALLY_PRIVACY_URL` points at Tally's public terms & privacy overview and is
+  linked from _Mehr → Datenschutz_.
+- If an entry is ever emptied or is not a valid `https` URL, the feedback and
+  bug entries are simply not rendered — the app never ships a dead link.
 
-Recommended Tally form fields: category (Feedback · Feature request · Bug ·
-Usability · Other), title, description, reproduction steps, expected vs. actual
-behaviour, optional device/OS/browser, optional screenshot **with a warning not
-to upload sensitive data**, optional contact e-mail, and a privacy-notice
-acknowledgement. Configure it in German and English, enable owner
-notifications, and manage responses in the Tally dashboard — copy relevant ones
-into GitHub issues manually, never publishing personal details.
+Both forms are structurally identical, one fully German and one fully English
+(no mixed bilingual form): required category (General feedback · Feature request
+· Bug report · Usability issue · Other), required short title and description,
+plus **steps to reproduce, expected behaviour and actual behaviour, shown and
+required by conditional logic only for the bug category**. Optional: device/OS,
+browser, contact e-mail, and a single image screenshot (max 5 MB) preceded by an
+explicit warning not to upload sensitive data. A required checkbox acknowledges
+the privacy notice, and Tally's CAPTCHA block guards against spam. The thank-you
+page confirms receipt without promising that every request will be implemented
+or answered personally.
+
+Manage responses in the Tally dashboard and copy relevant ones into GitHub
+issues manually, never publishing personal details. Owner e-mail notifications
+are a dashboard setting and are not configured from this repository.
 
 Ko-fi tip: use **Ko-fi Free**; for one-off tips you can disable the contributor
 mode. The payment provider's normal fees may still apply.
@@ -520,10 +534,11 @@ mode. The payment provider's normal fees may still apply.
 This feature needs **no webhook, no API and no access key**. Only public URLs
 are used. Following the project's static-SPA rule (see `vite.config.ts`), there
 are **no environment variables** and therefore no `VITE_*` values in the bundle:
-nothing secret is baked into the client. If a Tally admin tool such as the Tally
-MCP server is ever used, it is a local development tool only — its OAuth tokens
-or API keys must never enter the repository, commits, issues, logs, client code
-or build output, and the shipped PWA talks only to the public form URL.
+nothing secret is baked into the client. The forms were authored with the
+official Tally MCP server over OAuth — a local development tool only. Its OAuth
+tokens or API keys must never enter the repository, commits, issues, logs,
+client code or build output; no Tally API key is used at all, and the shipped
+PWA talks only to the public form URL.
 
 The language of these entries follows the system/browser language (German or
 English, English fallback); a full in-app language switch is tracked separately.
@@ -538,8 +553,12 @@ English, English fallback); a full in-app language switch is tracked separately.
 - No cookies, no tracking, no telemetry, no ads.
 - No external fonts, scripts or APIs at runtime.
 - The optional **Community** links (Ko-fi, Tally) only open an external page in a
-  new tab when you tap them. You then leave the app and that provider processes
-  your input under its own terms; no app data is transferred automatically.
+  new tab when you tap them. Starting the app normally loads **no** Tally or
+  Ko-fi resource. You then leave the app and that provider processes your input
+  under its own terms; training data, body data, notes and backups are never
+  transferred automatically, and no query parameters carrying app data are
+  appended. Contact e-mail and screenshot in the feedback form are optional.
+  Tally's own terms & privacy information: <https://tally.so/help/terms-and-privacy>.
 - Clearing browser site data — or deleting the installed app — can remove your
   training history. Take backups.
 - The AI export is generated locally and only shared if you share it.

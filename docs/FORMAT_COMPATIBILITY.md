@@ -306,3 +306,22 @@ Not a file format, but exported inside the builder kit and used by exercise
 data. Adding/renaming a catalog entry keeps existing stored strings valid
 (canonical German label stored in `primaryMuscleGroup` / `secondaryMuscleGroups`);
 unknown stored values are preserved as custom entries.
+
+## Recorded no-impact decisions
+
+Changes that were checked against this register and deliberately found **not**
+format-relevant. Listed so the #26 gate stays auditable.
+
+- **Community links — Ko-fi (#29) and Tally feedback (#30), 2026-07-29.** The
+  feature adds only presentation and a typed config of public URLs
+  (`src/config/externalLinks.ts`, `src/i18n`, `src/features/community`,
+  `PrivacyPage`). Checked and confirmed unaffected: IndexedDB domain data and
+  `SCHEMA_VERSION` (no new store, field or migration — no version bump for this
+  feature), full backup + restore, AI export / AI response import, plan package,
+  workout-unit package, plan builder kit, block-comparison export, all CSV
+  exports, share formats, persisted transient state, and every canonical stored
+  value (no enum, unit, range or validation rule touched; no stored value is
+  translated — localisation is presentation only). No user data of any kind is
+  sent to the external services: the entries are plain `target="_blank"` links
+  with no query parameters, and nothing is loaded from Tally or Ko-fi at app
+  start.

@@ -3,6 +3,7 @@ import {
   FALLBACK_LANGUAGE,
   SUPPORTED_LANGUAGES,
   communityStrings,
+  isSupportedLanguage,
   resolveLanguage,
   resources,
 } from '@/i18n';
@@ -23,6 +24,21 @@ describe('resolveLanguage', () => {
     expect(resolveLanguage(['fr-FR', 'es'])).toBe('en');
     expect(resolveLanguage([])).toBe(FALLBACK_LANGUAGE);
     expect(FALLBACK_LANGUAGE).toBe('en');
+  });
+});
+
+describe('isSupportedLanguage', () => {
+  it('accepts exactly the supported languages', () => {
+    for (const language of SUPPORTED_LANGUAGES) {
+      expect(isSupportedLanguage(language)).toBe(true);
+    }
+  });
+
+  it('rejects regional variants and unknown tags', () => {
+    // Regional mapping is `resolveLanguage`'s job, not this guard's.
+    expect(isSupportedLanguage('de-DE')).toBe(false);
+    expect(isSupportedLanguage('fr')).toBe(false);
+    expect(isSupportedLanguage('')).toBe(false);
   });
 });
 
