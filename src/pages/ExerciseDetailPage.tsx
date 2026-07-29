@@ -6,7 +6,7 @@ import { Card, CardHeader, EmptyState, Stat } from '@/components/ui/Card';
 import { SkeletonCard } from '@/components/ui/Skeleton';
 import { ChartFrame, DataTable, SimpleLineChart } from '@/features/analytics/Charts';
 import { CardioRecordsCard } from '@/features/analytics/CardioRecordsCard';
-import { BodyMap } from '@/features/muscles/BodyMap';
+import { AnatomyBodyMap } from '@/features/muscles/AnatomyBodyMap';
 import { getExercise } from '@/db/repositories/exercises';
 import { loadAnalyticsDataset } from '@/services/dataset';
 import {
@@ -98,7 +98,7 @@ export default function ExerciseDetailPage() {
       <div className="grid gap-3">
         {!isCardio ? (
           <Card>
-            <BodyMap
+            <AnatomyBodyMap
               primary={exercise.primaryMuscleGroup ? [exercise.primaryMuscleGroup] : []}
               secondary={exercise.secondaryMuscleGroups}
             />

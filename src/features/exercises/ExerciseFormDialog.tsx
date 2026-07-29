@@ -15,7 +15,7 @@ import { allowedWeightModes, defaultWeightModeFor } from '@/services/exerciseRul
 import { normalizeMuscleQuery } from '@/constants/muscleGroups';
 import { MuscleGroupChips } from '@/features/exercises/MuscleGroupChips';
 import { MuscleGroupPicker } from '@/features/exercises/MuscleGroupPicker';
-import { BodyMap } from '@/features/muscles/BodyMap';
+import { AnatomyBodyMap } from '@/features/muscles/AnatomyBodyMap';
 import type {
   CardioModality,
   Equipment,
@@ -373,7 +373,7 @@ export function ExerciseFormDialog({
 
           {form.primaryMuscleGroup || form.secondaryMuscleGroups.length > 0 ? (
             <div className="rounded-2xl border border-border bg-surface-2 p-3">
-              <BodyMap
+              <AnatomyBodyMap
                 primary={form.primaryMuscleGroup ? [form.primaryMuscleGroup] : []}
                 secondary={form.secondaryMuscleGroups}
               />
