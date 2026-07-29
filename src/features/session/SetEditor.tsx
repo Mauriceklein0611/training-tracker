@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
-import { Check, Trash2 } from 'lucide-react';
+import { ArrowDownToLine, Check, Trash2 } from 'lucide-react';
 import { Button, IconButton } from '@/components/ui/Button';
 import { NumberField, SelectField } from '@/components/ui/Field';
 import { Badge } from '@/components/ui/Card';
@@ -183,27 +183,38 @@ export function SetEditor({
     [sessionSets, draft.setType],
   );
 
+  const previousMatch = useMemo(
+    () =>
+      findPreviousSetForComparison(previousSets, {
+        setType: draft.setType,
+        ordinalWithinType,
+      }),
+    [previousSets, draft.setType, ordinalWithinType],
+  );
+
   const comparison = useMemo(() => {
-    const match = findPreviousSetForComparison(previousSets, {
-      setType: draft.setType,
-      ordinalWithinType,
-    });
-    if (!match) return null;
+    if (!previousMatch) return null;
     return compareSet(
       draftToValues(draft),
-      match,
+      previousMatch,
       sessionExercise,
       recordBaseline,
       previousContext ?? sessionExercise,
     );
-  }, [
-    previousSets,
-    draft,
-    ordinalWithinType,
-    sessionExercise,
-    recordBaseline,
-    previousContext,
-  ]);
+  }, [previousMatch, draft, sessionExercise, recordBaseline, previousContext]);
+
+  /** Fill the inputs from the previous workout's matching set (a tap suggestion). */
+  const applyPrevious = () => {
+    if (!previousMatch) return;
+    const prev = previousMatch.set;
+    setDraft((current) => ({
+      ...current,
+      weight: prev.weightKg != null ? String(prev.weightKg) : current.weight,
+      reps: prev.reps != null ? String(prev.reps) : current.reps,
+      duration:
+        prev.durationSeconds != null ? String(prev.durationSeconds) : current.duration,
+    }));
+  };
 
   // Live estimated 1RM from the values being entered — a weighted-set estimate,
   // always labelled "ca."/"geschätzt", never a measurement (Epley, 1–12 reps).
@@ -284,7 +295,16 @@ export function SetEditor({
           <span className="text-muted">
             {comparison.matchedBy === 'same-position' ? 'Letztes Mal' : 'Zuletzt'}:
           </span>
-          <span className="numeric font-medium">{comparison.previousSummary}</span>
+          {/* Tap the previous values to prefill the inputs (a suggestion chip). */}
+          <button
+            type="button"
+            onClick={applyPrevious}
+            aria-label="Letzte Werte übernehmen"
+            className="numeric inline-flex items-center gap-1 rounded-full bg-surface-3 px-2 py-0.5 font-medium text-accent active:bg-surface-2"
+          >
+            <ArrowDownToLine size={12} aria-hidden="true" />
+            {comparison.previousSummary}
+          </button>
 
           {!comparison.sameExecution ? (
             <span className="text-muted">(andere Ausführung – nur zur Referenz)</span>
