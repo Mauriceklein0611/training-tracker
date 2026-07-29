@@ -5,6 +5,14 @@ any change that could touch a format** (see `AGENTS.md` for the rule). Format
 names and versions are centralised in `src/constants/formats.ts` or the format's
 own established constant.
 
+**Change gate (#26):** every pull request must record an explicit Format-Impact
+decision via `.github/pull_request_template.md`. "Not affected" is only valid
+after a real check. A format-relevant change does not merge without an updated
+matrix entry here, matching version constants, and roundtrip tests covering the
+previous supported version, the current version, an invalid and an
+unsupported-future fixture. Raise a schema version only on a real persistence
+change; prefer optional/additive fields.
+
 Last full matrix audit (2026-07-28): every version in the table below was
 cross-checked against its code constant (`SCHEMA_VERSION` 28, `AI_EXPORT_VERSION`
 3, `SUPPORTED_RESPONSE_SCHEMA_VERSION` 2, `PLAN_BUILDER_KIT_VERSION` 3,
