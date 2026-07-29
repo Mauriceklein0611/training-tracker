@@ -30,8 +30,12 @@ const EXERCISE_STATUS_LABEL: Record<string, string> = {
   new: 'Wird neu angelegt',
 };
 
-/** Page-level tools under "Pläne": build a plan with AI, and import a package. */
-export function PlanPackageTools() {
+/**
+ * Tools to build a plan with AI or import a package. Rendered as a Card on the
+ * "Pläne" page; pass `embedded` to drop the Card chrome when it already lives
+ * inside a dialog (e.g. the home screen's "Trainingsplan importieren" modal).
+ */
+export function PlanPackageTools({ embedded = false }: { embedded?: boolean } = {}) {
   const toast = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -160,55 +164,63 @@ export function PlanPackageTools() {
     }
   };
 
+  const panel = (
+    <div className="grid gap-2">
+      <Button variant="primary" fullWidth onClick={() => setBuilderOpen(true)}>
+        <Sparkles size={18} aria-hidden="true" />
+        Mit KI Trainingsplan erstellen
+      </Button>
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="application/json,.json"
+        className="sr-only"
+        onChange={(event) => void handleFileSelected(event.target.files?.[0])}
+      />
+      <Button
+        variant="secondary"
+        fullWidth
+        disabled={busy !== null}
+        onClick={() => fileInputRef.current?.click()}
+      >
+        <Upload size={18} aria-hidden="true" />
+        Trainingsplan-Datei importieren
+      </Button>
+
+      {importErrors.length > 0 ? (
+        <div
+          role="alert"
+          className="rounded-xl border border-danger/50 bg-surface-2 p-3 text-sm"
+        >
+          <p className="font-semibold text-danger">
+            <span aria-hidden="true">⚠ </span>
+            Die Datei konnte nicht verwendet werden
+          </p>
+          <ul className="mt-1.5 list-disc pl-5 text-xs leading-relaxed text-muted">
+            {importErrors.map((message) => (
+              <li key={message}>{message}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+    </div>
+  );
+
   return (
     <>
-      <Card>
-        <CardHeader
-          title="Plan mit KI erstellen oder importieren"
-          subtitle="Erstelle mit ChatGPT einen Plan im passenden Format oder importiere ein geteiltes Trainingsplan-Paket. Beim Import wird nichts überschrieben — vorhandene Übungen werden wiederverwendet."
-          as="h2"
-        />
-        <div className="grid gap-2">
-          <Button variant="primary" fullWidth onClick={() => setBuilderOpen(true)}>
-            <Sparkles size={18} aria-hidden="true" />
-            Mit KI Trainingsplan erstellen
-          </Button>
-
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="application/json,.json"
-            className="sr-only"
-            onChange={(event) => void handleFileSelected(event.target.files?.[0])}
+      {embedded ? (
+        panel
+      ) : (
+        <Card>
+          <CardHeader
+            title="Plan mit KI erstellen oder importieren"
+            subtitle="Erstelle mit ChatGPT einen Plan im passenden Format oder importiere ein geteiltes Trainingsplan-Paket. Beim Import wird nichts überschrieben — vorhandene Übungen werden wiederverwendet."
+            as="h2"
           />
-          <Button
-            variant="secondary"
-            fullWidth
-            disabled={busy !== null}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <Upload size={18} aria-hidden="true" />
-            Trainingsplan importieren
-          </Button>
-
-          {importErrors.length > 0 ? (
-            <div
-              role="alert"
-              className="rounded-xl border border-danger/50 bg-surface-2 p-3 text-sm"
-            >
-              <p className="font-semibold text-danger">
-                <span aria-hidden="true">⚠ </span>
-                Die Datei konnte nicht verwendet werden
-              </p>
-              <ul className="mt-1.5 list-disc pl-5 text-xs leading-relaxed text-muted">
-                {importErrors.map((message) => (
-                  <li key={message}>{message}</li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-        </div>
-      </Card>
+          {panel}
+        </Card>
+      )}
 
       {/* Builder kit: hand a self-describing file + prompt to ChatGPT. */}
       <Dialog

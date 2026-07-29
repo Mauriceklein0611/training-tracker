@@ -34,11 +34,13 @@ import {
   startSessionFromWorkoutUnit,
 } from '@/db/repositories/sessions';
 import { StartFreeDialog } from '@/features/home/StartFreeDialog';
+import { PlanPackageTools } from '@/features/plans/PlanPackageTools';
 import { useActiveSession } from '@/hooks/useActiveSession';
 import { useSettings } from '@/hooks/useSettings';
 import { useToast } from '@/hooks/useToast';
 import { Button } from '@/components/ui/Button';
 import { Card, CardHeader, EmptyState, Stat } from '@/components/ui/Card';
+import { Dialog } from '@/components/ui/Dialog';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { loadAnalyticsDataset } from '@/services/dataset';
 import { computeAnalytics } from '@/services/analytics';
@@ -207,6 +209,7 @@ export default function HomePage() {
   // "Freies Training" opens a small chooser: an empty session, or one started
   // from a saved library unit.
   const [startFreeOpen, setStartFreeOpen] = useState(false);
+  const [importPlanOpen, setImportPlanOpen] = useState(false);
 
   const startFree = useCallback(async () => {
     try {
@@ -336,9 +339,9 @@ export default function HomePage() {
               <ClipboardList size={18} aria-hidden="true" />
               {plans.length > 0 ? 'Plan aktivieren' : 'Plan erstellen'}
             </Button>
-            <Button variant="secondary" onClick={() => navigate('/mehr/daten')}>
+            <Button variant="secondary" onClick={() => setImportPlanOpen(true)}>
               <Download size={18} aria-hidden="true" />
-              Planpaket oder KI-Datei importieren
+              Trainingsplan importieren
             </Button>
           </div>
         </Card>
@@ -568,6 +571,17 @@ export default function HomePage() {
           void startUnit(unitId);
         }}
       />
+
+      {/* Same two-way flow as the "Pläne" page, reachable when no plan is active:
+          import a shared plan file, or first build one with AI. */}
+      <Dialog
+        open={importPlanOpen}
+        onClose={() => setImportPlanOpen(false)}
+        title="Trainingsplan importieren"
+        description="Importiere ein geteiltes Trainingsplan-Paket oder eine KI-Datei. Hast du noch keine? Lass dir zuerst mit der KI einen Plan erstellen. Beim Import wird nichts überschrieben."
+      >
+        <PlanPackageTools embedded />
+      </Dialog>
     </>
   );
 }
