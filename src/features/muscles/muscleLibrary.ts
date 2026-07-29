@@ -41,6 +41,44 @@ const REGION_TO_SLUG: Record<string, Slug> = {
 /** Every slug the app can light up, for the "Ganzkörper" case and inactive fill. */
 export const USED_SLUGS: Slug[] = [...new Set(Object.values(REGION_TO_SLUG))];
 
+/**
+ * Slugs the library draws but the app never maps a muscle to (head, hands …).
+ * We still colour them (inactive) so the whole figure follows the theme instead
+ * of the library's fixed grey, and we never make them selectable.
+ */
+const DECORATIVE_SLUGS: Slug[] = ['head', 'hair', 'hands', 'feet', 'knees', 'ankles'];
+
+/** German labels for the slugs the app uses, for the tapped-region heading. */
+export const SLUG_LABELS: Partial<Record<Slug, string>> = {
+  chest: 'Brust',
+  'upper-back': 'Oberer Rücken',
+  trapezius: 'Trapezmuskel',
+  'lower-back': 'Unterer Rücken',
+  deltoids: 'Schultern',
+  biceps: 'Bizeps',
+  triceps: 'Trizeps',
+  forearm: 'Unterarme',
+  abs: 'Bauch',
+  obliques: 'Seitliche Bauchmuskeln',
+  neck: 'Nacken',
+  gluteal: 'Gesäß',
+  quadriceps: 'Quadrizeps',
+  adductors: 'Adduktoren',
+  hamstring: 'Beinbeuger',
+  calves: 'Waden',
+  tibialis: 'Schienbein',
+};
+
+/** The German label for a slug, falling back to the slug itself. */
+export function slugLabel(slug: Slug): string {
+  return SLUG_LABELS[slug] ?? slug;
+}
+
+/** True for slugs the app maps muscles to (and therefore makes tappable). */
+export function isUsedSlug(slug: Slug): boolean {
+  return USED_SLUGS.includes(slug);
+}
+
 const FULL_BODY = 'Ganzkörper';
 
 /** The library slug a catalog muscle label maps to, or undefined for custom ones. */
@@ -87,7 +125,7 @@ export function buildBodyData(
   apply(secondary, 'secondary');
   apply(primary, 'primary'); // primary applied last so it wins
 
-  return USED_SLUGS.map((slug) => {
+  return [...USED_SLUGS, ...DECORATIVE_SLUGS].map((slug) => {
     const emphasis = level.get(slug);
     const color =
       emphasis === 'primary'

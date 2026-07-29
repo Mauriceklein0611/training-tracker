@@ -24,15 +24,17 @@ to evaluate `react-muscle-highlighter` before integrating.
 
 ## Decision
 
-Adopt the library as the anatomical map. Integration is **staged** (masterprompt
-§14 step 8: proof of concept, then finalise):
+Adopt the library as the anatomical map. Done in two steps (masterprompt §14
+step 8: proof of concept, then finalise):
 
-1. **Done (PoC):** the non-interactive previews on the exercise detail page and
-   the exercise form now render `AnatomyBodyMap` (library-based). The old
-   schematic `BodyMap` still powers the interactive analysis map.
-2. **Next (finalise, after visual review):** migrate the interactive analysis
-   muscle map to the library (tap → slug), then remove the schematic figure so
-   the app has one body system.
+1. **PoC:** the non-interactive previews on the exercise detail page and the
+   exercise form render `AnatomyBodyMap` (library-based).
+2. **Finalised (after visual review):** the interactive analysis muscle map now
+   uses `AnatomyBodyMap` too — tapping a muscle selects its slug, outlines it,
+   and lists the exercises/sets that trained it. `buildRegionExerciseUsage` is
+   keyed by slug to match. The old schematic `BodyMap` was removed, so the app
+   has a single body system. `muscleRegions.ts` was slimmed to just the tested
+   label → region map that the slug adapter composes over.
 
 ## Data rule
 

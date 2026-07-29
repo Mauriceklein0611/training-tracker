@@ -1,7 +1,7 @@
 import type { AnalyticsDataset } from '@/services/analytics';
 import { buildSetContexts, filterContextsByRange } from '@/services/analytics';
 import { isCompleted, isWorkingSet } from '@/services/metrics';
-import { regionForMuscle } from '@/features/muscles/muscleRegions';
+import { slugForMuscle } from '@/features/muscles/muscleLibrary';
 import type { DateRange } from '@/utils/date';
 
 /** One exercise's contribution to a body region within a range. */
@@ -14,16 +14,17 @@ export interface RegionExerciseUsage {
 }
 
 /**
- * For each body region, the exercises that trained it in the range with their
- * working-set count and training frequency. An exercise trains a region when its
- * primary or a secondary muscle maps there. Pure and derived from the dataset;
- * an exercise with no mapped muscle simply contributes to no region.
+ * For each body region (a muscle-map slug), the exercises that trained it in the
+ * range with their working-set count and training frequency. An exercise trains
+ * a region when its primary or a secondary muscle maps to that slug. Pure and
+ * derived from the dataset; an exercise with no mapped muscle contributes to no
+ * region. Keyed by slug so it lines up with the anatomical map's tap targets.
  */
 export function buildRegionExerciseUsage(
   dataset: AnalyticsDataset,
   range: DateRange | null,
 ): Record<string, RegionExerciseUsage[]> {
-  // Precompute each exercise's regions from its muscle groups.
+  // Precompute each exercise's regions (slugs) from its muscle groups.
   const regionsByExercise = new Map<string, Set<string>>();
   for (const exercise of dataset.exercises) {
     const regions = new Set<string>();
@@ -31,8 +32,8 @@ export function buildRegionExerciseUsage(
       exercise.primaryMuscleGroup,
       ...exercise.secondaryMuscleGroups,
     ]) {
-      const region = label ? regionForMuscle(label) : undefined;
-      if (region) regions.add(region);
+      const slug = label ? slugForMuscle(label) : undefined;
+      if (slug) regions.add(slug);
     }
     if (regions.size > 0) regionsByExercise.set(exercise.id, regions);
   }

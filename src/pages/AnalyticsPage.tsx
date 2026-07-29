@@ -33,8 +33,9 @@ import { PlateauHint } from '@/features/analytics/PlateauHint';
 import { CardioRecordsCard } from '@/features/analytics/CardioRecordsCard';
 import { PeriodReviewCard } from '@/features/analytics/PeriodReviewCard';
 import { SkeletonStats } from '@/components/ui/Skeleton';
-import { BodyMap } from '@/features/muscles/BodyMap';
-import { BODY_REGIONS_BY_ID, regionForMuscle } from '@/features/muscles/muscleRegions';
+import { AnatomyBodyMap } from '@/features/muscles/AnatomyBodyMap';
+import { slugForMuscle, slugLabel } from '@/features/muscles/muscleLibrary';
+import type { Slug } from 'react-muscle-highlighter';
 import { ONE_RM_MAX_REPS, ONE_RM_MIN_REPS } from '@/services/metrics';
 import { useSettings } from '@/hooks/useSettings';
 import type { AnalyticsRangeKey } from '@/types';
@@ -107,7 +108,7 @@ export default function AnalyticsPage() {
   const [exerciseId, setExerciseId] = useState('');
   const [metric, setMetric] = useState<Metric>('volume');
   const [deloadFilter, setDeloadFilter] = useState<DeloadFilter>('include');
-  const [selectedRegion, setSelectedRegion] = useState<string | undefined>();
+  const [selectedSlug, setSelectedSlug] = useState<Slug | undefined>();
   const [view, setView] = useState<'overview' | 'strength' | 'cardio' | 'body'>(
     'overview',
   );
@@ -206,15 +207,15 @@ export default function AnalyticsPage() {
   // Breakdown of the tapped body region: the catalog muscle groups it covers
   // that were trained in the selected range, with their sets and volume.
   const regionDetail = useMemo(() => {
-    if (!selectedRegion) return null;
-    const label = BODY_REGIONS_BY_ID[selectedRegion]?.label ?? '';
+    if (!selectedSlug) return null;
+    const label = slugLabel(selectedSlug);
     const groups = (analytics?.muscleGroups ?? []).filter(
       (group) =>
-        regionForMuscle(group.muscleGroup) === selectedRegion &&
+        slugForMuscle(group.muscleGroup) === selectedSlug &&
         (group.directSets > 0 || group.indirectSets > 0),
     );
     return { label, groups };
-  }, [selectedRegion, analytics]);
+  }, [selectedSlug, analytics]);
 
   const musclePoints = useMemo(
     () =>
@@ -526,13 +527,13 @@ export default function AnalyticsPage() {
                 />
                 {trainedMuscles.primary.length > 0 ? (
                   <div className="mt-3 border-t border-border pt-3">
-                    <BodyMap
+                    <AnatomyBodyMap
                       primary={trainedMuscles.primary}
                       secondary={trainedMuscles.secondary}
-                      selectedRegion={selectedRegion}
-                      onSelectRegion={(regionId) =>
-                        setSelectedRegion((current) =>
-                          current === regionId ? undefined : regionId,
+                      selectedSlug={selectedSlug}
+                      onSelectSlug={(slug) =>
+                        setSelectedSlug((current) =>
+                          current === slug ? undefined : slug,
                         )
                       }
                     />
@@ -562,13 +563,13 @@ export default function AnalyticsPage() {
                             In diesem Zeitraum keine Sätze für diese Region.
                           </p>
                         )}
-                        {(data?.regionExercises[selectedRegion!] ?? []).length > 0 ? (
+                        {(data?.regionExercises[selectedSlug!] ?? []).length > 0 ? (
                           <div className="mt-2 border-t border-border pt-2">
                             <p className="mb-1 text-xs font-medium uppercase tracking-wide text-muted">
                               Übungen
                             </p>
                             <ul className="grid gap-1">
-                              {(data?.regionExercises[selectedRegion!] ?? [])
+                              {(data?.regionExercises[selectedSlug!] ?? [])
                                 .slice(0, 6)
                                 .map((usage) => (
                                   <li

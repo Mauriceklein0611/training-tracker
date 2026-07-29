@@ -1,6 +1,10 @@
 import { useId } from 'react';
-import Body from 'react-muscle-highlighter';
-import { buildBodyData, type SlugColors } from '@/features/muscles/muscleLibrary';
+import Body, { type ExtendedBodyPart, type Slug } from 'react-muscle-highlighter';
+import {
+  buildBodyData,
+  isUsedSlug,
+  type SlugColors,
+} from '@/features/muscles/muscleLibrary';
 
 /**
  * Anatomical muscle map (proof of concept) built on react-muscle-highlighter — a
@@ -35,10 +39,12 @@ function Figure({
   data,
   side,
   label,
+  onSelectSlug,
 }: {
-  data: ReturnType<typeof buildBodyData>;
+  data: ExtendedBodyPart[];
   side: 'front' | 'back';
   label: string;
+  onSelectSlug?: (slug: Slug) => void;
 }) {
   return (
     <div className="text-center">
@@ -51,6 +57,15 @@ function Figure({
           gender="male"
           border="var(--border)"
           defaultFill="var(--surface-3)"
+          onBodyPartPress={
+            onSelectSlug
+              ? (part) => {
+                  // Only muscles the app maps to are selectable; head/hands etc.
+                  // are decorative.
+                  if (part.slug && isUsedSlug(part.slug)) onSelectSlug(part.slug);
+                }
+              : undefined
+          }
         />
       </div>
       <p className="mt-1 text-xs text-muted">{label}</p>
@@ -61,12 +76,26 @@ function Figure({
 export function AnatomyBodyMap({
   primary,
   secondary = [],
+  selectedSlug,
+  onSelectSlug,
 }: {
   primary: string[];
   secondary?: string[];
+  /** When set, the muscles become tappable and this one gets a selected outline. */
+  selectedSlug?: Slug;
+  onSelectSlug?: (slug: Slug) => void;
 }) {
   const headingId = useId();
-  const data = buildBodyData(primary, secondary, COLORS);
+  const base = buildBodyData(primary, secondary, COLORS);
+  // Outline the selected muscle without changing its fill (styles.stroke only,
+  // so getColorToFill still uses the emphasis colour).
+  const data: ExtendedBodyPart[] = selectedSlug
+    ? base.map((part) =>
+        part.slug === selectedSlug
+          ? { ...part, styles: { stroke: 'var(--text)', strokeWidth: 4 } }
+          : part,
+      )
+    : base;
   const cleanPrimary = primary.map((m) => m.trim()).filter(Boolean);
   const cleanSecondary = secondary
     .map((m) => m.trim())
@@ -78,8 +107,8 @@ export function AnatomyBodyMap({
         Beteiligte Muskelgruppen
       </h3>
       <div className="grid grid-cols-2 gap-3">
-        <Figure data={data} side="front" label="Vorne" />
-        <Figure data={data} side="back" label="Hinten" />
+        <Figure data={data} side="front" label="Vorne" onSelectSlug={onSelectSlug} />
+        <Figure data={data} side="back" label="Hinten" onSelectSlug={onSelectSlug} />
       </div>
 
       <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
