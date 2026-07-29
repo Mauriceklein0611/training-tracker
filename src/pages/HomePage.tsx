@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { useTranslation } from 'react-i18next';
 import {
   Activity,
   AlertTriangle,
@@ -69,6 +70,7 @@ import { formatNumber, formatVolume } from '@/utils/format';
  */
 export default function HomePage() {
   const navigate = useNavigate();
+  const { t: tHome } = useTranslation('home');
   const toast = useToast();
   const activeSession = useActiveSession();
   const { settings, update } = useSettings();
@@ -122,7 +124,7 @@ export default function HomePage() {
         }
       : undefined;
 
-    // Details for the "Als Nächstes" hero: exercise count, a rough duration
+    // Details for the "up next" hero: exercise count, a rough duration
     // estimate, and when this unit was last completed.
     let nextUnit: ActivePlanHeroData['nextUnit'];
     if (next) {
@@ -195,17 +197,17 @@ export default function HomePage() {
         navigate(`/training/${session.id}`);
       } catch (error) {
         if (error instanceof ActiveSessionExistsError) {
-          toast.show('Es läuft bereits eine Trainingseinheit.', 'error');
+          toast.show(tHome('errors.sessionAlreadyRunning'), 'error');
           navigate(`/training/${error.activeSessionId}`);
           return;
         }
         toast.show(
-          error instanceof Error ? error.message : 'Start fehlgeschlagen.',
+          error instanceof Error ? error.message : tHome('errors.startFailed'),
           'error',
         );
       }
     },
-    [navigate, toast],
+    [navigate, toast, tHome],
   );
 
   // "Freies Training" opens a small chooser: an empty session, or one started
@@ -225,11 +227,11 @@ export default function HomePage() {
         return;
       }
       toast.show(
-        error instanceof Error ? error.message : 'Start fehlgeschlagen.',
+        error instanceof Error ? error.message : tHome('errors.startFailed'),
         'error',
       );
     }
-  }, [navigate, toast]);
+  }, [navigate, toast, tHome]);
 
   const startUnit = useCallback(
     async (unitId: string) => {
@@ -242,12 +244,12 @@ export default function HomePage() {
           return;
         }
         toast.show(
-          error instanceof Error ? error.message : 'Start fehlgeschlagen.',
+          error instanceof Error ? error.message : tHome('errors.startFailed'),
           'error',
         );
       }
     },
-    [navigate, toast],
+    [navigate, toast, tHome],
   );
 
   // Quick cardio entry: a free session (or the existing one) with the exercise
@@ -262,11 +264,11 @@ export default function HomePage() {
         return;
       }
       toast.show(
-        error instanceof Error ? error.message : 'Start fehlgeschlagen.',
+        error instanceof Error ? error.message : tHome('errors.startFailed'),
         'error',
       );
     }
-  }, [navigate, toast]);
+  }, [navigate, toast, tHome]);
 
   const repeatLast = useCallback(async () => {
     const lastId = overview?.lastSession?.id;
@@ -280,11 +282,11 @@ export default function HomePage() {
         return;
       }
       toast.show(
-        error instanceof Error ? error.message : 'Start fehlgeschlagen.',
+        error instanceof Error ? error.message : tHome('errors.startFailed'),
         'error',
       );
     }
-  }, [navigate, toast, overview?.lastSession?.id]);
+  }, [navigate, toast, tHome, overview?.lastSession?.id]);
 
   const exerciseCount = useLiveQuery(() => db.exercises.count(), [], 0);
   const backupOverdue = isBackupOverdue(
@@ -322,8 +324,11 @@ export default function HomePage() {
       {activeSession ? (
         <Card className="mb-4 border-accent/60 bg-surface">
           <CardHeader
-            title="Laufende Trainingseinheit"
-            subtitle={`${activeSession.name} · gestartet ${formatDateTime(activeSession.startedAt)}`}
+            title={tHome('activeSession.title')}
+            subtitle={tHome('activeSession.subtitle', {
+              name: activeSession.name,
+              startedAt: formatDateTime(activeSession.startedAt),
+            })}
           />
           <Button
             variant="primary"
@@ -332,7 +337,7 @@ export default function HomePage() {
             onClick={() => navigate(`/training/${activeSession.id}`)}
           >
             <Play size={20} aria-hidden="true" />
-            Training fortsetzen
+            {tHome('activeSession.resume')}
           </Button>
         </Card>
       ) : null}
@@ -348,21 +353,23 @@ export default function HomePage() {
       ) : !activeSession ? (
         <Card className="mb-4">
           <CardHeader
-            title="Kein aktiver Trainingsplan"
+            title={tHome('noActivePlan.title')}
             subtitle={
               plans.length > 0
-                ? 'Aktiviere einen Plan, damit dein Homescreen dir die nächste Einheit und den Zyklus zeigt.'
-                : 'Erstelle oder importiere einen Plan — oder trainiere gleich frei.'
+                ? tHome('noActivePlan.withPlans')
+                : tHome('noActivePlan.withoutPlans')
             }
           />
           <div className="grid gap-2">
             <Button variant="primary" onClick={() => navigate('/plaene')}>
               <ClipboardList size={18} aria-hidden="true" />
-              {plans.length > 0 ? 'Plan aktivieren' : 'Plan erstellen'}
+              {plans.length > 0
+                ? tHome('noActivePlan.activate')
+                : tHome('noActivePlan.create')}
             </Button>
             <Button variant="secondary" onClick={() => setImportPlanOpen(true)}>
               <Download size={18} aria-hidden="true" />
-              Trainingsplan importieren
+              {tHome('noActivePlan.import')}
             </Button>
           </div>
         </Card>
@@ -379,12 +386,16 @@ export default function HomePage() {
             aria-hidden="true"
           />
           <div>
-            <p className="text-sm font-semibold text-warning">Sicherung überfällig</p>
+            <p className="text-sm font-semibold text-warning">
+              {tHome('backupOverdue.title')}
+            </p>
             <p className="mt-0.5 text-xs leading-relaxed text-muted">
               {settings.lastBackupAt
-                ? `Letzte Sicherung: ${formatDateTime(settings.lastBackupAt)}.`
-                : 'Es wurde noch nie eine Sicherung erstellt.'}{' '}
-              Jetzt Backup erstellen →
+                ? tHome('backupOverdue.last', {
+                    date: formatDateTime(settings.lastBackupAt),
+                  })
+                : tHome('backupOverdue.never')}{' '}
+              {tHome('backupOverdue.cta')}
             </p>
           </div>
         </Link>
@@ -393,7 +404,7 @@ export default function HomePage() {
       {!activeSession ? (
         <section className="mb-6" aria-labelledby="start-heading">
           <h2 id="start-heading" className="sr-only">
-            Training starten
+            {tHome('start.heading')}
           </h2>
           <div className="grid gap-2">
             <Button
@@ -403,17 +414,17 @@ export default function HomePage() {
               onClick={() => setStartFreeOpen(true)}
             >
               <Zap size={20} aria-hidden="true" />
-              Freies Training starten
+              {tHome('start.free')}
             </Button>
             <Button variant="secondary" fullWidth onClick={() => void startCardio()}>
               <Activity size={18} aria-hidden="true" />
-              Cardio starten
+              {tHome('start.cardio')}
             </Button>
             {/* Quick actions: repeat the last workout or restart its plan. */}
             {overview?.lastSession ? (
               <Button variant="secondary" fullWidth onClick={() => void repeatLast()}>
                 <RotateCcw size={18} aria-hidden="true" />
-                Letztes Training wiederholen
+                {tHome('start.repeatLast')}
               </Button>
             ) : null}
             {lastTemplate ? (
@@ -422,13 +433,13 @@ export default function HomePage() {
                 fullWidth
                 onClick={() => void startTemplate(lastTemplate.id)}
               >
-                <Play size={18} aria-hidden="true" />„{lastTemplate.name}" erneut starten
+                <Play size={18} aria-hidden="true" />
+                {tHome('start.repeatNamed', { name: lastTemplate.name })}
               </Button>
             ) : null}
             {exerciseCount === 0 ? (
               <p className="text-xs leading-relaxed text-muted">
-                Du hast noch keine Übungen angelegt. Du kannst sie auch direkt während des
-                Trainings erstellen.
+                {tHome('start.noExercises')}
               </p>
             ) : null}
           </div>
@@ -438,22 +449,22 @@ export default function HomePage() {
       <section className="mb-6" aria-labelledby="templates-heading">
         <div className="mb-3 flex items-center justify-between">
           <h2 id="templates-heading" className="text-base font-semibold">
-            Trainingspläne
+            {tHome('plans.heading')}
           </h2>
           <Link to="/plaene" className="text-sm font-medium text-accent">
-            Alle ansehen
+            {tHome('plans.seeAll')}
           </Link>
         </div>
 
         {plans.length === 0 ? (
           <EmptyState
             icon={<ClipboardList size={28} aria-hidden="true" />}
-            title="Noch keine Trainingspläne"
-            description="Lege einen Plan an, um wiederkehrende Trainings mit festen Übungen, Ziel-Sätzen und Pausenzeiten zu starten. Für spontane Einheiten reicht das freie Training."
+            title={tHome('plans.emptyTitle')}
+            description={tHome('plans.emptyDescription')}
             action={
               <Button variant="secondary" onClick={() => navigate('/plaene')}>
                 <Plus size={18} aria-hidden="true" />
-                Plan erstellen
+                {tHome('noActivePlan.create')}
               </Button>
             }
           />
@@ -472,12 +483,12 @@ export default function HomePage() {
                         <p className="truncate font-medium">{entry.plan.name}</p>
                         {entry.restToday ? (
                           <p className="truncate text-xs text-muted">
-                            Heute: {entry.restToday}
+                            {tHome('plans.today', { name: entry.restToday })}
                           </p>
                         ) : null}
                         {multiDay && entry.nextDayName ? (
                           <p className="truncate text-xs text-accent">
-                            Als Nächstes: {entry.nextDayName}
+                            {tHome('plans.next', { name: entry.nextDayName })}
                           </p>
                         ) : null}
                       </Link>
@@ -491,7 +502,7 @@ export default function HomePage() {
                         }
                       >
                         <Play size={16} aria-hidden="true" />
-                        Starten
+                        {tHome('plans.startEntry')}
                       </Button>
                     </div>
                   </li>
@@ -521,51 +532,51 @@ export default function HomePage() {
 
       <section aria-labelledby="overview-heading">
         <h2 id="overview-heading" className="mb-3 text-base font-semibold">
-          Überblick
+          {tHome('overview.heading')}
         </h2>
 
         {!hasHistory ? (
           <EmptyState
-            title="Noch keine Trainingsdaten"
-            description="Sobald du deine erste Einheit abgeschlossen hast, erscheinen hier deine Wochenübersicht und die wichtigsten Kennzahlen. Alle Auswertungen entstehen ausschließlich aus deinen lokalen Daten."
+            title={tHome('overview.emptyTitle')}
+            description={tHome('overview.emptyDescription')}
           />
         ) : (
           <>
             <div className="grid grid-cols-2 gap-2">
               <Stat
-                label="Diese Woche"
+                label={tHome('overview.thisWeek')}
                 value={formatNumber(overview?.sessionsThisWeek)}
-                hint="Trainingseinheiten"
+                hint={tHome('overview.thisWeekHint')}
                 tone="accent"
               />
               <Stat
-                label="Serie"
+                label={tHome('overview.streak')}
                 value={formatNumber(overview?.analytics.streakWeeks)}
-                hint="Wochen in Folge"
+                hint={tHome('overview.streakHint')}
               />
               <Stat
-                label="Arbeitssätze Wo."
+                label={tHome('overview.workingSetsWeek')}
                 value={formatNumber(overview?.weekAnalytics.workingSetCount)}
-                hint="diese Woche"
+                hint={tHome('overview.hintThisWeek')}
               />
               <Stat
-                label="Cardio Wo."
+                label={tHome('overview.cardioWeek')}
                 value={`${formatNumber(
                   Math.round(
                     (overview?.weekAnalytics.cardio.totalDurationSeconds ?? 0) / 60,
                   ),
                 )} min`}
-                hint="diese Woche"
+                hint={tHome('overview.hintThisWeek')}
               />
               <Stat
-                label="30 Tage"
+                label={tHome('overview.days30')}
                 value={formatNumber(overview?.analytics.sessionCount)}
-                hint="Einheiten"
+                hint={tHome('overview.days30Hint')}
               />
               <Stat
-                label="Volumen 30 T."
+                label={tHome('overview.volume30')}
                 value={formatVolume(overview?.analytics.volume.volumeKg)}
-                hint="gewichtete Übungen"
+                hint={tHome('overview.volume30Hint')}
               />
             </div>
 
@@ -575,7 +586,7 @@ export default function HomePage() {
                 className="mt-2 block rounded-2xl border border-border bg-surface p-4"
               >
                 <p className="text-xs font-medium uppercase tracking-wide text-muted">
-                  Letzte Einheit
+                  {tHome('overview.lastSession')}
                 </p>
                 <p className="mt-1 font-medium">{overview.lastSession.name}</p>
                 <p className="text-sm text-muted">
@@ -612,8 +623,8 @@ export default function HomePage() {
       <Dialog
         open={importPlanOpen}
         onClose={() => setImportPlanOpen(false)}
-        title="Trainingsplan importieren"
-        description="Importiere ein geteiltes Trainingsplan-Paket oder eine KI-Datei. Hast du noch keine? Lass dir zuerst mit der KI einen Plan erstellen. Beim Import wird nichts überschrieben."
+        title={tHome('importDialog.title')}
+        description={tHome('importDialog.description')}
       >
         <PlanPackageTools embedded />
       </Dialog>
