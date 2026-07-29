@@ -61,6 +61,9 @@ export function SessionSummaryView({ summary }: { summary: SessionSummary }) {
         {summary.cardioPace ? (
           <Stat label="Pace / Tempo" value={formatPace(summary.cardioPace)} />
         ) : null}
+        {summary.cardioAvgRpe != null ? (
+          <Stat label="Ø RPE" value={formatNumber(summary.cardioAvgRpe, 1)} />
+        ) : null}
         {summary.cardio.averageHeartRateBpm != null ? (
           <Stat
             label="Ø Herzfrequenz"

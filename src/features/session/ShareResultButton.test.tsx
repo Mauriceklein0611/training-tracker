@@ -41,6 +41,7 @@ function summary(overrides: Partial<SessionSummary> = {}): SessionSummary {
     hasStrength: true,
     cardioModality: undefined,
     cardioPace: null,
+    cardioAvgRpe: null,
     previousComparable: null,
     ...overrides,
   };

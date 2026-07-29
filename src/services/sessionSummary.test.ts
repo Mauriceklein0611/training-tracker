@@ -56,6 +56,7 @@ function mixedDataset(): AnalyticsDataset {
         durationSeconds: 1800,
         distanceMeters: 6000,
         averageHeartRateBpm: 150,
+        rpe: 6,
         completedAt: '2026-07-06T10:40:00.000Z',
       }),
     ],
@@ -81,6 +82,8 @@ describe('summarizeSession — strength and cardio stay separate', () => {
     // Single modality → a session pace is reported (1800 s / 6 km = 5:00 min/km).
     expect(summary.cardioModality).toBe('running');
     expect(summary.cardioPace).toEqual({ kind: 'min_per_km', value: 5 });
+    // Cardio RPE is averaged from the cardio section only (strength has none).
+    expect(summary.cardioAvgRpe).toBe(6);
   });
 
   it('a cardio-only session leads with cardio and reports a pace', () => {

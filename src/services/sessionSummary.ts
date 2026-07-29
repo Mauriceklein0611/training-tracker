@@ -44,6 +44,8 @@ export interface SessionSummary {
    * a mixed run+row session never reports a meaningless combined pace.
    */
   cardioPace: Pace | null;
+  /** Mean RPE across the session's cardio sections, or null when none recorded. */
+  cardioAvgRpe: number | null;
   /**
    * Comparison against the most recent earlier session of the *same* plan day or
    * workout unit, or null when there is no comparable prior session (e.g. a free
@@ -134,6 +136,17 @@ export function summarizeSession(
       )
     : null;
 
+  // Mean cardio RPE from the recorded values only (a section without one is
+  // never counted as zero), kept apart from any strength effort.
+  const cardioRpeValues = sessionContexts
+    .filter(({ set, sessionExercise }) => isCardioSet(set, sessionExercise))
+    .map(({ set }) => set.rpe)
+    .filter((value): value is number => value != null);
+  const cardioAvgRpe =
+    cardioRpeValues.length > 0
+      ? cardioRpeValues.reduce((sum, value) => sum + value, 0) / cardioRpeValues.length
+      : null;
+
   const end = session.finishedAt ? new Date(session.finishedAt) : now;
   const durationSeconds = Math.max(
     0,
@@ -195,6 +208,7 @@ export function summarizeSession(
     hasStrength: volume.setCount > 0 || volume.totalReps > 0 || volume.volumeKg > 0,
     cardioModality,
     cardioPace,
+    cardioAvgRpe,
     previousComparable,
   };
 }

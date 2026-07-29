@@ -12,7 +12,11 @@ import {
   svgToPngBlob,
   type ShareCardInput,
 } from '@/services/shareCard';
-import { formatCardioDistance, formatDuration } from '@/services/cardioMetrics';
+import {
+  formatCardioDistance,
+  formatDuration,
+  formatPace,
+} from '@/services/cardioMetrics';
 import { formatDate, formatDurationLong } from '@/utils/date';
 import { formatNumber, formatVolume } from '@/utils/format';
 
@@ -28,7 +32,7 @@ function toInput(summary: SessionSummary, includeRecords: boolean): ShareCardInp
   }
   if (summary.hasCardio) {
     stats.push({
-      label: 'Cardio',
+      label: 'Cardio-Zeit',
       value: formatDuration(summary.cardio.totalDurationSeconds),
     });
     if (summary.cardio.totalDistanceMeters > 0) {
@@ -39,6 +43,12 @@ function toInput(summary: SessionSummary, includeRecords: boolean): ShareCardInp
           summary.cardioModality,
         ),
       });
+    }
+    if (summary.cardioPace) {
+      stats.push({ label: 'Ø Pace', value: formatPace(summary.cardioPace) });
+    }
+    if (summary.cardioAvgRpe != null) {
+      stats.push({ label: 'Ø RPE', value: formatNumber(summary.cardioAvgRpe, 1) });
     }
   }
 
