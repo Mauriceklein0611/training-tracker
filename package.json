@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "Offline-first personal strength training tracker (PWA). All data stays on device.",
+  "description": "Offline-first personal strength and cardio training tracker (PWA). All data stays on device.",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",

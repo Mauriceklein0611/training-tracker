@@ -21,13 +21,14 @@ are in English.
 6. [Data model](#data-model)
 7. [Local storage](#local-storage)
 8. [Backup and restore](#backup-and-restore)
-9. [AI analysis export](#ai-analysis-export)
-10. [CSV export](#csv-export)
-11. [Installing on iPhone](#installing-on-iphone)
-12. [Deployment on Cloudflare Pages](#deployment-on-cloudflare-pages)
-13. [Privacy](#privacy)
-14. [Testing](#testing)
-15. [Known limitations](#known-limitations)
+9. [AI analysis export and response import](#ai-analysis-export-and-response-import)
+10. [Local sharing and portable packages](#local-sharing-and-portable-packages)
+11. [CSV export](#csv-export)
+12. [Installing on iPhone](#installing-on-iphone)
+13. [Deployment on Cloudflare Pages](#deployment-on-cloudflare-pages)
+14. [Privacy](#privacy)
+15. [Testing](#testing)
+16. [Known limitations](#known-limitations)
 
 ---
 
@@ -35,6 +36,9 @@ are in English.
 
 The app covers a full training loop:
 
+- **Home** — an at-a-glance dashboard for the active plan, the next scheduled
+  unit, the current plan week, an active deload, backup reminders, repeat
+  actions, coaching hints and the most important strength and cardio totals.
 - **Exercises** — a curated library of common exercises is seeded on first start
   (re-seeded idempotently, so it never duplicates), and you can add your own
   alongside them. For each exercise you decide how it is tracked (weight,
@@ -52,15 +56,21 @@ The app covers a full training loop:
   survives a locked screen, and a dedicated cardio section with a timer, live
   pace/speed and RPE.
 - **History** — a diary grouped by day, searchable, with after-the-fact
-  corrections that update every statistic immediately.
+  corrections that update every statistic immediately, plus a type-coloured
+  calendar heatmap for strength, cardio, mixed days, deloads and body entries.
 - **Analytics** — frequency, volume, sets per muscle group, progression per
   exercise, estimated 1RM and rest discipline for strength; duration, distance,
-  pace/speed and personal bests for cardio; plus streaks and time-block, plan and
-  workout-unit comparisons — all computed locally.
+  pace/speed and personal bests for cardio; an interactive anatomical body map;
+  period reviews and streaks; plus time-block, plan and workout-unit comparisons
+  — all computed locally.
 - **Body data** — an optional daily diary of weight, body fat percentage and
   thirteen circumference measurements.
 - **Data & backup** — full JSON backup and restore, a curated export for a
-  language model, and CSV exports.
+  language model, a strictly validated AI response import with explicit
+  per-proposal approval and undo, plus CSV exports.
+- **Local sharing** — training plans and reusable workout units can be exported
+  as versioned packages, and finished workouts can create a local share graphic.
+  History, body data and internal ids stay out of plan/unit packages.
 
 ### Design principles
 
@@ -186,12 +196,12 @@ All timestamps are ISO-8601 strings; all ids are UUIDs; every record carries
 
 ### Exercise
 
-| Field              | Notes                                                                                 |
-| ------------------ | ------------------------------------------------------------------------------------- |
-| `trackingType`     | `weight_reps`, `bodyweight_reps`, `assisted_bodyweight_reps`, `reps_only`, `duration` |
-| `weightMode`       | `per_hand`, `total`, `added_weight`, `assistance`, `none`                             |
-| `weightMultiplier` | Factor for volume. Two 20 kg dumbbells → multiplier `2` → 40 kg total load            |
-| `archived`         | Archived exercises stay in history but disappear from pickers                         |
+| Field              | Notes                                                                                           |
+| ------------------ | ----------------------------------------------------------------------------------------------- |
+| `trackingType`     | `weight_reps`, `bodyweight_reps`, `assisted_bodyweight_reps`, `reps_only`, `duration`, `cardio` |
+| `weightMode`       | `per_hand`, `total`, `added_weight`, `assistance`, `none`                                       |
+| `weightMultiplier` | Factor for volume. Two 20 kg dumbbells → multiplier `2` → 40 kg total load                      |
+| `archived`         | Archived exercises stay in history but disappear from pickers                                   |
 
 An exercise that appears in any recorded workout **cannot be deleted** — the app
 requires archiving it instead, so history stays intact.
@@ -321,7 +331,7 @@ template exercises, sessions, session exercises, sets and body data entries.
 
 ---
 
-## AI analysis export
+## AI analysis export and response import
 
 A separate, deliberately different export from the technical backup. It is
 _self-describing_, so a language model does not have to guess at conventions.
@@ -351,6 +361,42 @@ values or judging unweighted exercises by a fictional kilogram volume.
 
 The file is created locally. It only leaves your device if you upload it
 yourself.
+
+### Response import
+
+The app can also import a `training-ai-response.json` under
+_Mehr → KI-Analysen_. This is not free-text execution:
+
+1. The response is parsed against a strict, versioned Zod schema.
+2. Feedback, warnings and every proposed plan change are shown before anything
+   is written.
+3. You explicitly choose which proposals to apply; no recommendation is accepted
+   automatically.
+4. A restore point is saved, so the latest applied import can be undone.
+5. Newer unsupported response versions and proposals that no longer match the
+   current plan are rejected instead of guessed.
+
+The app still has no direct model API and never sends data to an AI service by
+itself.
+
+---
+
+## Local sharing and portable packages
+
+Sharing is file-based and initiated by the user:
+
+- A complete multi-day plan can be exported or shared as a versioned
+  `training-plan-package`.
+- One or more reusable library workout units can be exported or shared as a
+  versioned `training-workout-unit-package`.
+- A finished workout can generate a local result graphic with the recorded
+  strength/cardio summary.
+- Imports show a preview and reuse matching local exercises where safe. They do
+  not overwrite existing training history.
+
+Plan and workout-unit packages contain their exercise definitions and targets,
+but no workout history, body data or internal ids. Files are generated locally;
+the operating system decides which apps appear in the share sheet.
 
 ---
 
