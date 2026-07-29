@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { openDatabase } from '@/db/db';
 import { seedSystemExercises } from '@/services/exerciseSeed';
 import { requestPersistentStorage } from '@/services/storage';
@@ -15,6 +16,7 @@ type State =
  * IndexedDB is unavailable.
  */
 export function DatabaseGate({ children }: { children: ReactNode }) {
+  const { t } = useTranslation();
   const [state, setState] = useState<State>({ status: 'loading' });
 
   useEffect(() => {
@@ -53,7 +55,7 @@ export function DatabaseGate({ children }: { children: ReactNode }) {
     return (
       <div className="flex min-h-dvh items-center justify-center p-6">
         <p className="text-sm text-muted" role="status">
-          Lokale Datenbank wird geöffnet …
+          {t('shell.openingDatabase')}
         </p>
       </div>
     );
@@ -64,20 +66,20 @@ export function DatabaseGate({ children }: { children: ReactNode }) {
       <div className="mx-auto max-w-md p-4">
         <div className="mt-8 rounded-2xl border border-danger/50 bg-surface p-5">
           <h1 className="text-lg font-semibold text-danger">
-            Lokaler Speicher nicht verfügbar
+            {t('shell.storageUnavailableTitle')}
           </h1>
           <p className="mt-2 text-sm leading-relaxed text-muted">{state.message}</p>
           <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-muted">
-            <li>Privaten Modus beenden und die App normal öffnen.</li>
-            <li>Prüfen, ob der Browser Websitedaten blockiert.</li>
-            <li>Genügend freien Speicher auf dem Gerät sicherstellen.</li>
+            <li>{t('shell.storageHintPrivateMode')}</li>
+            <li>{t('shell.storageHintBlocked')}</li>
+            <li>{t('shell.storageHintSpace')}</li>
           </ul>
           <Button
             variant="primary"
             className="mt-4"
             onClick={() => window.location.reload()}
           >
-            Erneut versuchen
+            {t('action.retry')}
           </Button>
         </div>
       </div>

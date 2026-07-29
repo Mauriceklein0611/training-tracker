@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import { applyServiceWorkerUpdate, onServiceWorkerUpdate } from '@/services/pwa';
 
@@ -10,6 +11,7 @@ import { applyServiceWorkerUpdate, onServiceWorkerUpdate } from '@/services/pwa'
  * recorded set would be jarring, so the user decides when it happens.
  */
 export function UpdatePrompt() {
+  const { t } = useTranslation();
   const [available, setAvailable] = useState(false);
   const [applying, setApplying] = useState(false);
 
@@ -27,9 +29,9 @@ export function UpdatePrompt() {
       <div className="flex items-start gap-3">
         <RefreshCw size={20} className="mt-0.5 shrink-0 text-accent" aria-hidden="true" />
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold">Neue Version verfügbar</p>
+          <p className="text-sm font-semibold">{t('shell.updateTitle')}</p>
           <p className="mt-0.5 text-xs leading-relaxed text-muted">
-            Deine Trainingsdaten bleiben beim Aktualisieren vollständig erhalten.
+            {t('shell.updateText')}
           </p>
         </div>
       </div>
@@ -43,10 +45,10 @@ export function UpdatePrompt() {
             void applyServiceWorkerUpdate();
           }}
         >
-          {applying ? 'Wird aktualisiert …' : 'Jetzt aktualisieren'}
+          {applying ? t('shell.updating') : t('shell.updateNow')}
         </Button>
         <Button size="sm" variant="ghost" onClick={() => setAvailable(false)}>
-          Später
+          {t('action.later')}
         </Button>
       </div>
     </div>

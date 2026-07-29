@@ -7,9 +7,11 @@
  */
 import { common as deCommon } from '@/i18n/locales/de/common';
 import { community as deCommunity } from '@/i18n/locales/de/community';
+import { more as deMore } from '@/i18n/locales/de/more';
 import { settings as deSettings } from '@/i18n/locales/de/settings';
 import { common as enCommon } from '@/i18n/locales/en/common';
 import { community as enCommunity } from '@/i18n/locales/en/community';
+import { more as enMore } from '@/i18n/locales/en/more';
 import { settings as enSettings } from '@/i18n/locales/en/settings';
 
 export type Language = 'de' | 'en';
@@ -25,11 +27,13 @@ export const resources = {
   de: {
     common: deCommon,
     community: deCommunity,
+    more: deMore,
     settings: deSettings,
   },
   en: {
     common: enCommon,
     community: enCommunity,
+    more: enMore,
     settings: enSettings,
   },
 } satisfies Record<Language, Record<string, object>>;

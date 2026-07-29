@@ -13,14 +13,24 @@ import {
   Wrench,
   type LucideIcon,
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import type { More } from '@/i18n/locales/de/more';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { CommunityGroup } from '@/features/community/CommunityGroup';
 import { SupportCard } from '@/features/community/SupportCard';
 
+/**
+ * Entry keys are derived from the translation resources, so the typed `t()`
+ * still catches a typo or a removed entry at compile time even though the label
+ * is looked up dynamically.
+ */
+type MoreEntryKey = Exclude<keyof More, 'title' | 'groups'>;
+type MoreGroupKey = `groups.${keyof More['groups']}`;
+
 interface MoreItem {
   to: string;
-  label: string;
-  description: string;
+  /** Key into the "more" namespace holding this entry's label + description. */
+  key: MoreEntryKey;
   Icon: LucideIcon;
 }
 
@@ -29,93 +39,46 @@ interface MoreItem {
  * undifferentiated list. The full reset stays inside "Daten & Sicherung" as a
  * deliberately guarded destructive action — never a top-level tap here.
  */
-const GROUPS: { title: string; items: MoreItem[] }[] = [
+const GROUPS: { titleKey: MoreGroupKey; items: MoreItem[] }[] = [
   {
-    title: 'Training',
+    titleKey: 'groups.training',
     items: [
-      {
-        to: '/bibliothek',
-        label: 'Bibliothek',
-        description: 'Übungseinheiten und Übungen — wiederverwendbar',
-        Icon: Layers,
-      },
-      {
-        to: '/mehr/uebungen',
-        label: 'Übungen',
-        description: 'Anlegen, bearbeiten, archivieren',
-        Icon: Dumbbell,
-      },
-      {
-        to: '/mehr/equipment',
-        label: 'Equipment-Profile',
-        description: 'Verfügbares Equipment je Ort — filtert die Übungsauswahl',
-        Icon: Wrench,
-      },
+      { to: '/bibliothek', key: 'library', Icon: Layers },
+      { to: '/mehr/uebungen', key: 'exercises', Icon: Dumbbell },
+      { to: '/mehr/equipment', key: 'equipment', Icon: Wrench },
     ],
   },
   {
-    title: 'Fortschritt',
+    titleKey: 'groups.progress',
     items: [
-      {
-        to: '/mehr/koerpergewicht',
-        label: 'Körperdaten',
-        description: 'Gewicht, Körperfett und Umfangsmaße',
-        Icon: Scale,
-      },
-      {
-        to: '/mehr/ki-analysen',
-        label: 'KI-Analysen',
-        description: 'Antwortdatei importieren, Feedback und geprüfte Vorschläge',
-        Icon: Sparkles,
-      },
+      { to: '/mehr/koerpergewicht', key: 'bodyData', Icon: Scale },
+      { to: '/mehr/ki-analysen', key: 'aiAnalyses', Icon: Sparkles },
     ],
   },
   {
-    title: 'Daten',
+    titleKey: 'groups.data',
     items: [
-      {
-        to: '/mehr/daten',
-        label: 'Daten & Sicherung',
-        description: 'Backup, Wiederherstellung, KI- und CSV-Export, Zurücksetzen',
-        Icon: Database,
-      },
-      {
-        to: '/mehr/speicher',
-        label: 'Lokale Speicherung',
-        description: 'Speicherstatus und Datenbankversion',
-        Icon: HardDrive,
-      },
+      { to: '/mehr/daten', key: 'backup', Icon: Database },
+      { to: '/mehr/speicher', key: 'storage', Icon: HardDrive },
     ],
   },
   {
-    title: 'App',
+    titleKey: 'groups.app',
     items: [
-      {
-        to: '/mehr/einstellungen',
-        label: 'Einstellungen',
-        description: 'Training, Pausen, Darstellung, Ton und Erinnerungen',
-        Icon: Settings,
-      },
-      {
-        to: '/mehr/glossar',
-        label: 'Glossar',
-        description: 'Fachbegriffe wie RPE, RIR, e1RM und Volumen erklärt',
-        Icon: BookOpen,
-      },
-      {
-        to: '/mehr/datenschutz',
-        label: 'Datenschutz',
-        description: 'Was gespeichert wird — und was nicht',
-        Icon: ShieldCheck,
-      },
+      { to: '/mehr/einstellungen', key: 'settings', Icon: Settings },
+      { to: '/mehr/glossar', key: 'glossary', Icon: BookOpen },
+      { to: '/mehr/datenschutz', key: 'privacy', Icon: ShieldCheck },
     ],
   },
 ];
 
 export default function MorePage() {
+  const { t } = useTranslation('more');
+  const { t: tCommon } = useTranslation();
+
   return (
     <>
-      <PageHeader title="Mehr" />
+      <PageHeader title={t('title')} />
 
       {/* The project card sits above the tool groups so voluntary support is
           findable — but it is never a training call to action (#32). */}
@@ -123,15 +86,15 @@ export default function MorePage() {
 
       <div className="grid gap-6">
         {GROUPS.map((group) => (
-          <section key={group.title} aria-labelledby={`more-${group.title}`}>
+          <section key={group.titleKey} aria-labelledby={`more-${group.titleKey}`}>
             <h2
-              id={`more-${group.title}`}
+              id={`more-${group.titleKey}`}
               className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted"
             >
-              {group.title}
+              {t(group.titleKey)}
             </h2>
             <ul className="grid gap-2">
-              {group.items.map(({ to, label, description, Icon }) => (
+              {group.items.map(({ to, key, Icon }) => (
                 <li key={to}>
                   <Link
                     to={to}
@@ -139,9 +102,9 @@ export default function MorePage() {
                   >
                     <Icon size={22} className="shrink-0 text-accent" aria-hidden="true" />
                     <span className="min-w-0 flex-1">
-                      <span className="block font-medium">{label}</span>
+                      <span className="block font-medium">{t(`${key}.label`)}</span>
                       <span className="block truncate text-sm text-muted">
-                        {description}
+                        {t(`${key}.description`)}
                       </span>
                     </span>
                     <ChevronRight
@@ -160,9 +123,9 @@ export default function MorePage() {
       </div>
 
       <p className="mt-6 text-center text-xs leading-relaxed text-muted">
-        Training Tracker — private, lokale Trainingsdokumentation.
+        {tCommon('footer.tagline')}
         <br />
-        Kein Konto, kein Server, keine Übertragung deiner Daten.
+        {tCommon('footer.privacy')}
       </p>
     </>
   );

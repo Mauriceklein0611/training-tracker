@@ -60,4 +60,19 @@ export const common: Common = {
     assistance: ' assist.',
     addedWeight: ' added',
   },
+  shell: {
+    openingDatabase: 'Opening the local database …',
+    storageUnavailableTitle: 'Local storage unavailable',
+    storageHintPrivateMode: 'Leave private browsing and open the app normally.',
+    storageHintBlocked: 'Check whether your browser blocks site data.',
+    storageHintSpace: 'Make sure the device has enough free storage.',
+    crashTitle: 'Something went unexpectedly wrong',
+    crashText:
+      'Your training data is not affected — it is still stored locally on this device. You can reload the view and carry on as usual.',
+    reloadApp: 'Reload app',
+    updateTitle: 'New version available',
+    updateText: 'Your training data is fully preserved when updating.',
+    updateNow: 'Update now',
+    updating: 'Updating …',
+  },
 };

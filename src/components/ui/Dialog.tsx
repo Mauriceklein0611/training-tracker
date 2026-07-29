@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useId, useRef, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/utils/cn';
 
@@ -96,8 +97,8 @@ export function ConfirmDialog({
   open,
   title,
   description,
-  confirmLabel = 'Bestätigen',
-  cancelLabel = 'Abbrechen',
+  confirmLabel,
+  cancelLabel,
   destructive = false,
   onConfirm,
   onCancel,
@@ -113,6 +114,7 @@ export function ConfirmDialog({
   onCancel: () => void;
   children?: ReactNode;
 }) {
+  const { t } = useTranslation();
   return (
     <Dialog
       open={open}
@@ -122,10 +124,10 @@ export function ConfirmDialog({
       footer={
         <>
           <Button variant="secondary" onClick={onCancel}>
-            {cancelLabel}
+            {cancelLabel ?? t('action.cancel')}
           </Button>
           <Button variant={destructive ? 'danger' : 'primary'} onClick={onConfirm}>
-            {confirmLabel}
+            {confirmLabel ?? t('action.confirm')}
           </Button>
         </>
       }

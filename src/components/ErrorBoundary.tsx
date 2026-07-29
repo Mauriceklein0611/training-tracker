@@ -1,5 +1,8 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { Button } from '@/components/ui/Button';
+// A class component cannot use hooks; the imperative `t` is fine here because a
+// crash screen is never re-rendered on a language switch anyway.
+import { t } from '@/i18n';
 
 interface Props {
   children: ReactNode;
@@ -41,21 +44,20 @@ export class ErrorBoundary extends Component<Props, State> {
       <div className="mx-auto max-w-md p-4">
         <div className="rounded-2xl border border-danger/50 bg-surface p-5">
           <h1 className="text-lg font-semibold text-danger">
-            {this.props.fallbackTitle ?? 'Es ist ein unerwarteter Fehler aufgetreten'}
+            {this.props.fallbackTitle ?? t('shell.crashTitle')}
           </h1>
           <p className="mt-2 text-sm leading-relaxed text-muted">
-            Deine Trainingsdaten sind davon nicht betroffen — sie liegen weiterhin lokal
-            auf diesem Gerät. Du kannst die Ansicht neu laden und normal weiterarbeiten.
+            {t('shell.crashText')}
           </p>
           <pre className="mt-3 max-h-40 overflow-auto rounded-xl bg-surface-2 p-3 text-xs text-muted">
             {error.message}
           </pre>
           <div className="mt-4 flex flex-wrap gap-2">
             <Button variant="primary" onClick={this.handleReset}>
-              Erneut versuchen
+              {t('action.retry')}
             </Button>
             <Button variant="secondary" onClick={() => window.location.reload()}>
-              App neu laden
+              {t('shell.reloadApp')}
             </Button>
           </div>
         </div>

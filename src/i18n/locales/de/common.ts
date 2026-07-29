@@ -71,6 +71,22 @@ export const common = {
     assistance: ' Unterst.',
     addedWeight: ' Zusatz',
   },
+  /** App shell: startup, update banner and the crash fallback. */
+  shell: {
+    openingDatabase: 'Lokale Datenbank wird geöffnet …',
+    storageUnavailableTitle: 'Lokaler Speicher nicht verfügbar',
+    storageHintPrivateMode: 'Privaten Modus beenden und die App normal öffnen.',
+    storageHintBlocked: 'Prüfen, ob der Browser Websitedaten blockiert.',
+    storageHintSpace: 'Genügend freien Speicher auf dem Gerät sicherstellen.',
+    crashTitle: 'Es ist ein unerwarteter Fehler aufgetreten',
+    crashText:
+      'Deine Trainingsdaten sind davon nicht betroffen — sie liegen weiterhin lokal auf diesem Gerät. Du kannst die Ansicht neu laden und normal weiterarbeiten.',
+    reloadApp: 'App neu laden',
+    updateTitle: 'Neue Version verfügbar',
+    updateText: 'Deine Trainingsdaten bleiben beim Aktualisieren vollständig erhalten.',
+    updateNow: 'Jetzt aktualisieren',
+    updating: 'Wird aktualisiert …',
+  },
 };
 
 export type Common = typeof common;
