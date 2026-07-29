@@ -1,4 +1,4 @@
-import { Check, Timer } from 'lucide-react';
+import { Check, Minus, Plus, Timer } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import type { ActiveRest } from '@/features/session/useActiveRest';
 import { cn } from '@/utils/cn';
@@ -14,9 +14,12 @@ import { formatDuration } from '@/utils/date';
 export function RestTimerBar({
   rest,
   onEndRest,
+  onAdjust,
 }: {
   rest: ActiveRest;
   onEndRest: () => void;
+  /** Nudge the rest target by ±seconds (the +15 / −15 controls). */
+  onAdjust: (deltaSeconds: number) => void;
 }) {
   const { progress } = rest;
   const reached = progress.targetReached;
@@ -32,7 +35,7 @@ export function RestTimerBar({
         reached ? 'border-success/60 bg-surface' : 'border-border bg-surface/95',
       )}
     >
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-2">
         <Timer
           size={22}
           aria-hidden="true"
@@ -58,7 +61,33 @@ export function RestTimerBar({
             </span>
           </p>
         </div>
-        <Button variant={reached ? 'success' : 'secondary'} onClick={onEndRest}>
+        <div className="flex shrink-0 items-center gap-1">
+          <Button
+            variant="secondary"
+            size="sm"
+            className="px-2"
+            aria-label="15 Sekunden weniger"
+            onClick={() => onAdjust(-15)}
+          >
+            <Minus size={16} aria-hidden="true" />
+            15
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            className="px-2"
+            aria-label="15 Sekunden mehr"
+            onClick={() => onAdjust(15)}
+          >
+            <Plus size={16} aria-hidden="true" />
+            15
+          </Button>
+        </div>
+        <Button
+          variant={reached ? 'success' : 'secondary'}
+          className="shrink-0"
+          onClick={onEndRest}
+        >
           <Check size={18} aria-hidden="true" />
           Pause beenden
         </Button>

@@ -5,6 +5,7 @@ import { CheckCircle2, Plus, Trash2, X } from 'lucide-react';
 import { db } from '@/db/db';
 import {
   addExerciseToSession,
+  adjustRestTarget,
   deleteSession,
   endRest,
   finishSession,
@@ -206,7 +207,11 @@ export default function LiveSessionPage() {
       </header>
 
       {rest ? (
-        <RestTimerBar rest={rest} onEndRest={() => void endRest(rest.set.id)} />
+        <RestTimerBar
+          rest={rest}
+          onEndRest={() => void endRest(rest.set.id)}
+          onAdjust={(delta) => void adjustRestTarget(rest.set.id, delta)}
+        />
       ) : null}
 
       <div className="mb-3">

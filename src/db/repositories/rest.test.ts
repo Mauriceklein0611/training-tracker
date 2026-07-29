@@ -4,6 +4,7 @@ import { createExercise } from '@/db/repositories/exercises';
 import {
   addExerciseToSession,
   addSet,
+  adjustRestTarget,
   closeOpenRests,
   completeSet,
   endRest,
@@ -180,6 +181,40 @@ describe('finishing a workout ends the running rest without counting it', () => 
       (await db.workoutSets.get(first.id))?.restActualSeconds,
     ).toBeGreaterThanOrEqual(0);
     expect((await db.workoutSets.get(second.id))?.restActualSeconds).toBeUndefined();
+  });
+});
+
+describe('adjusting the rest target live', () => {
+  it('adds and subtracts 15 seconds from a running rest', async () => {
+    const { sessionExercise } = await seed();
+    const set = await addSet(sessionExercise.id, { restTargetSeconds: 120 });
+    await completeSet(set.id, { weightKg: 80, reps: 8 });
+
+    await adjustRestTarget(set.id, 15);
+    expect((await db.workoutSets.get(set.id))?.restTargetSeconds).toBe(135);
+
+    await adjustRestTarget(set.id, -15);
+    expect((await db.workoutSets.get(set.id))?.restTargetSeconds).toBe(120);
+  });
+
+  it('never lets the target go negative', async () => {
+    const { sessionExercise } = await seed();
+    const set = await addSet(sessionExercise.id, { restTargetSeconds: 10 });
+    await completeSet(set.id, { weightKg: 80, reps: 8 });
+
+    await adjustRestTarget(set.id, -15);
+    expect((await db.workoutSets.get(set.id))?.restTargetSeconds).toBe(0);
+  });
+
+  it('does nothing once the rest has ended', async () => {
+    const { sessionExercise } = await seed();
+    const set = await addSet(sessionExercise.id, { restTargetSeconds: 120 });
+    await completeSet(set.id, { weightKg: 80, reps: 8 });
+    await endRest(set.id);
+
+    await adjustRestTarget(set.id, 15);
+    // A finished rest keeps its target — nudging only applies while it runs.
+    expect((await db.workoutSets.get(set.id))?.restTargetSeconds).toBe(120);
   });
 });
 

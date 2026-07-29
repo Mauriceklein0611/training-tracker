@@ -1066,6 +1066,23 @@ export async function endRest(setId: string, endedAt: Date = new Date()): Promis
   });
 }
 
+/**
+ * Nudges the target of a running rest by ±seconds (the live "+15 / −15"
+ * controls). Only affects a rest that is still running; the target is clamped to
+ * a sane range so it can never go negative or absurdly high.
+ */
+export async function adjustRestTarget(
+  setId: string,
+  deltaSeconds: number,
+): Promise<void> {
+  const set = await db.workoutSets.get(setId);
+  if (!set?.restStartedAt || set.restEndedAt) return;
+
+  const next = Math.max(0, Math.min(3600, (set.restTargetSeconds ?? 0) + deltaSeconds));
+  if (next === set.restTargetSeconds) return;
+  await db.workoutSets.update(setId, { restTargetSeconds: next, updatedAt: nowIso() });
+}
+
 export async function updateSession(
   sessionId: string,
   changes: Partial<Pick<WorkoutSession, 'name' | 'notes' | 'startedAt' | 'finishedAt'>>,
