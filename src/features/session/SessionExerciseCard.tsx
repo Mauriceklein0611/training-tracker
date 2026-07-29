@@ -1,6 +1,15 @@
 import { useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { ArrowDown, ArrowUp, Check, Plus, Repeat, Trash2 } from 'lucide-react';
+import {
+  ArrowDown,
+  ArrowUp,
+  Check,
+  ChevronDown,
+  ChevronUp,
+  Plus,
+  Repeat,
+  Trash2,
+} from 'lucide-react';
 import { Badge } from '@/components/ui/Card';
 import { Button, IconButton } from '@/components/ui/Button';
 import { TextAreaField } from '@/components/ui/Field';
@@ -40,7 +49,12 @@ import { resolveEffectiveTarget } from '@/services/sessionTargets';
 import { suggestProgression } from '@/services/progression';
 import { ProgressionHint } from '@/features/session/ProgressionHint';
 import { db } from '@/db/db';
-import { TRACKING_TYPE_LABELS, formatKg, formatSets } from '@/utils/format';
+import {
+  TRACKING_TYPE_LABELS,
+  formatKg,
+  formatSections,
+  formatSets,
+} from '@/utils/format';
 import { formatDate } from '@/utils/date';
 import type { EffortInput, SessionExercise, TemplateExercise, WorkoutSet } from '@/types';
 
@@ -131,6 +145,9 @@ export function SessionExerciseCard({
 
   const [notesOpen, setNotesOpen] = useState(Boolean(sessionExercise.notes));
   const [notes, setNotes] = useState(sessionExercise.notes);
+  // A finished exercise collapses to a compact "done" row; null follows that
+  // default, true/false is the user's explicit expand/collapse choice.
+  const [expandedOverride, setExpandedOverride] = useState<boolean | null>(null);
 
   const lastPerformance = useLiveQuery(
     () => getLastPerformance(sessionExercise.exerciseId, sessionId),
@@ -352,6 +369,11 @@ export function SessionExerciseCard({
   const showExecutionBadge =
     currentExecution.equipment !== 'unspecified' || isTemporaryExecution;
 
+  // "Done" = the set goal is met and nothing is mid-entry. Such an exercise
+  // collapses by default so the active one stands out; the user can still expand.
+  const isDone = setGoalReached && !openSet && completedSets.length > 0;
+  const expanded = expandedOverride ?? !isDone;
+
   const handleAddSet = async () => {
     if (isAdding) return;
     setIsAdding(true);
@@ -421,6 +443,42 @@ export function SessionExerciseCard({
     }
   };
 
+  if (!expanded) {
+    const doneSummary = isCardio
+      ? formatSections(completedSets.length)
+      : formatSets(completedWorkingSets);
+    return (
+      <section
+        aria-labelledby={`exercise-${sessionExercise.id}`}
+        className="rounded-2xl border border-border bg-surface"
+      >
+        <button
+          type="button"
+          onClick={() => setExpandedOverride(true)}
+          aria-expanded={false}
+          className="flex w-full items-center gap-3 p-3 text-left"
+        >
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-success/15 text-success">
+            <Check size={18} aria-hidden="true" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span
+              id={`exercise-${sessionExercise.id}`}
+              className="block truncate font-semibold leading-tight"
+            >
+              <span className="text-muted">{label ?? `${index + 1}.`} </span>
+              {sessionExercise.exerciseNameSnapshot}
+            </span>
+            <span className="block text-xs text-muted">
+              Abgeschlossen · {doneSummary}
+            </span>
+          </span>
+          <ChevronDown size={20} className="shrink-0 text-muted" aria-hidden="true" />
+        </button>
+      </section>
+    );
+  }
+
   return (
     <section
       aria-labelledby={`exercise-${sessionExercise.id}`}
@@ -457,6 +515,14 @@ export function SessionExerciseCard({
           </p>
         </div>
         <div className="flex shrink-0 gap-1">
+          {isDone ? (
+            <IconButton
+              label={`${sessionExercise.exerciseNameSnapshot} einklappen`}
+              onClick={() => setExpandedOverride(false)}
+            >
+              <ChevronUp size={18} aria-hidden="true" />
+            </IconButton>
+          ) : null}
           <IconButton
             label={`${sessionExercise.exerciseNameSnapshot} nach oben`}
             disabled={index === 0}
