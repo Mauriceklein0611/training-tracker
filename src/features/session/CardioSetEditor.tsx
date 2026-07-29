@@ -211,7 +211,7 @@ export function CardioSetEditor({
           soundEnabled={soundEnabled}
           vibrationEnabled={vibrationEnabled}
           // The timer only fills the duration; completing the cardio section is
-          // the single "Cardio abschließen" action below (A7 — no double finish).
+          // the single "Abschnitt abschließen" action below (A7 — no double finish).
           showComplete={false}
           onApply={(seconds) => {
             setDraft((current) => ({ ...current, duration: String(seconds) }));
@@ -328,7 +328,7 @@ export function CardioSetEditor({
         onClick={handleComplete}
       >
         <Check size={20} aria-hidden="true" />
-        {isCompleting ? 'Wird gespeichert …' : 'Cardio abschließen'}
+        {isCompleting ? 'Wird gespeichert …' : 'Abschnitt abschließen'}
       </Button>
     </div>
   );

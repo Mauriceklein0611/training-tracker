@@ -47,7 +47,7 @@ export function ExerciseTimer({
   /**
    * Whether the timer offers its own "apply and complete" action. Strength
    * time-based sets keep it as a one-tap finish; cardio hides it so the single
-   * completion is the editor's "Cardio abschließen" (A7 — no double completion).
+   * completion is the editor's "Abschnitt abschließen" (A7 — no double completion).
    */
   showComplete?: boolean;
 }) {

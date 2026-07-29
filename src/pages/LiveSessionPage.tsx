@@ -29,8 +29,9 @@ import { useToast } from '@/hooks/useToast';
 import { loadAnalyticsDataset } from '@/services/dataset';
 import { summarizeSession } from '@/services/sessionSummary';
 import { workoutProgress } from '@/services/sessionProgress';
+import { isCardio } from '@/services/metrics';
 import { formatDuration } from '@/utils/date';
-import { formatSets } from '@/utils/format';
+import { formatSections, formatSets } from '@/utils/format';
 
 /**
  * Live workout view.
@@ -107,6 +108,32 @@ export default function LiveSessionPage() {
     [detail],
   );
 
+  // A pure cardio session must never read in strength terms ("0 Sätze"): its
+  // headline and discard warning are derived from cardio sections instead.
+  // Kind is taken from the exercises present, so an empty run still says
+  // "Abschnitte" before the first section is completed; anything with a
+  // strength exercise stays on "Sätze" (matching the history list).
+  const isCardioOnly = useMemo(() => {
+    const exercises = detail?.exercises ?? [];
+    if (exercises.length === 0) return false;
+    return exercises.every(
+      (entry) => entry.sessionExercise.trackingTypeSnapshot === 'cardio',
+    );
+  }, [detail]);
+
+  const completedSectionCount = useMemo(
+    () =>
+      detail?.exercises.reduce(
+        (sum, entry) =>
+          sum +
+          entry.sets.filter(
+            (set) => set.completedAt && isCardio(set, entry.sessionExercise),
+          ).length,
+        0,
+      ) ?? 0,
+    [detail],
+  );
+
   const progress = useMemo(
     () =>
       workoutProgress(
@@ -166,7 +193,10 @@ export default function LiveSessionPage() {
               {detail.session.name}
             </h1>
             <p className="numeric text-sm text-muted">
-              {formatDuration(elapsedSeconds)} · {formatSets(completedSetCount)}
+              {formatDuration(elapsedSeconds)} ·{' '}
+              {isCardioOnly
+                ? formatSections(completedSectionCount)
+                : formatSets(completedSetCount)}
               {progress.totalExercises > 0
                 ? ` · Übung ${Math.min(
                     progress.doneExercises + 1,
@@ -300,7 +330,11 @@ export default function LiveSessionPage() {
         open={finishOpen}
         onClose={() => setFinishOpen(false)}
         title="Training beenden?"
-        description="Nicht abgeschlossene Sätze werden verworfen, alle erfassten Sätze bleiben gespeichert."
+        description={
+          isCardioOnly
+            ? 'Nicht abgeschlossene Abschnitte werden verworfen, alle erfassten Abschnitte bleiben gespeichert.'
+            : 'Nicht abgeschlossene Sätze werden verworfen, alle erfassten Sätze bleiben gespeichert.'
+        }
         footer={
           <>
             <Button variant="secondary" onClick={() => setFinishOpen(false)}>
@@ -324,7 +358,11 @@ export default function LiveSessionPage() {
         title="Training verwerfen?"
         description={
           completedSetCount > 0
-            ? `Diese Einheit enthält bereits ${completedSetCount} erfasste Sätze. Beim Verwerfen werden sie endgültig gelöscht. Möchtest du sie stattdessen speichern, brich ab und wähle „Beenden“.`
+            ? `Diese Einheit enthält bereits ${
+                isCardioOnly
+                  ? formatSections(completedSectionCount)
+                  : formatSets(completedSetCount)
+              }. Beim Verwerfen werden sie endgültig gelöscht. Möchtest du sie stattdessen speichern, brich ab und wähle „Beenden“.`
             : 'Die Einheit wird ohne Speichern verworfen.'
         }
         confirmLabel="Endgültig verwerfen"

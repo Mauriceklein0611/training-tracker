@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react';
 import { ExerciseTimer } from '@/features/session/ExerciseTimer';
 
 /**
- * A7: cardio has a single completion action ("Cardio abschließen" in the
+ * A7: cardio has a single completion action ("Abschnitt abschließen" in the
  * editor). The timer embedded in the cardio editor must therefore not offer its
  * own "apply and complete" action — only "apply the time".
  */
