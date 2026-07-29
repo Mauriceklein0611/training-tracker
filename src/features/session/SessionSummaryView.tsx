@@ -88,18 +88,27 @@ export function SessionSummaryView({ summary }: { summary: SessionSummary }) {
     </div>
   ) : null;
 
-  const recordCount = summary.newRecords.length;
+  // A first-ever value is a baseline, not an improvement: only real records
+  // (with something to beat) are celebrated; baselines get a calm note.
+  const realRecords = summary.newRecords.filter((record) => record.previousValue != null);
+  const baselineNames = [
+    ...new Set(
+      summary.newRecords
+        .filter((record) => record.previousValue == null)
+        .map((record) => record.exerciseName),
+    ),
+  ];
 
   return (
     <div className="grid gap-3">
-      {recordCount > 0 ? (
+      {realRecords.length > 0 ? (
         <div className="celebrate overflow-hidden rounded-2xl border border-success/50 bg-surface p-4">
           <div className="celebrate-sheen">
             <p className="flex items-center gap-2 text-base font-semibold text-success">
               <Trophy size={20} aria-hidden="true" />
-              {recordCount === 1
+              {realRecords.length === 1
                 ? 'Neue persönliche Bestleistung!'
-                : `${recordCount} neue persönliche Bestleistungen!`}
+                : `${realRecords.length} neue persönliche Bestleistungen!`}
             </p>
             <p className="mt-0.5 text-sm text-muted">
               Starke Einheit — die Details stehen unten.
@@ -183,14 +192,24 @@ export function SessionSummaryView({ summary }: { summary: SessionSummary }) {
         </>
       )}
 
-      {summary.newRecords.length > 0 ? (
+      {baselineNames.length > 0 ? (
+        <div className="rounded-2xl border border-border bg-surface p-3">
+          <h3 className="text-sm font-semibold">Ausgangswert erstellt</h3>
+          <p className="mt-0.5 text-sm text-muted">
+            Deine Basis für zukünftige Vergleiche wurde gespeichert:{' '}
+            {baselineNames.join(', ')}.
+          </p>
+        </div>
+      ) : null}
+
+      {realRecords.length > 0 ? (
         <div className="rounded-2xl border border-success/50 bg-surface p-3">
           <h3 className="flex items-center gap-2 text-sm font-semibold text-success">
             <Trophy size={18} aria-hidden="true" />
             Neue persönliche Bestleistungen
           </h3>
           <ul className="mt-2 grid gap-1.5">
-            {summary.newRecords.map((record) => (
+            {realRecords.map((record) => (
               <li
                 key={`${record.exerciseId} ${record.equipment} ${record.weightMode} ${record.kind}`}
                 className="text-sm"
@@ -221,9 +240,7 @@ export function SessionSummaryView({ summary }: { summary: SessionSummary }) {
                         : formatKg(record.previousValue)}
                     )
                   </span>
-                ) : (
-                  <span className="text-xs text-muted"> (erstmals erfasst)</span>
-                )}
+                ) : null}
               </li>
             ))}
           </ul>

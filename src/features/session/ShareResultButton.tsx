@@ -52,7 +52,11 @@ function toInput(summary: SessionSummary, includeRecords: boolean): ShareCardInp
     }
   }
 
-  const record = includeRecords ? summary.newRecords[0] : undefined;
+  // Only a real improvement (something to beat) is highlighted — never a
+  // first-time baseline.
+  const record = includeRecords
+    ? summary.newRecords.find((entry) => entry.previousValue != null)
+    : undefined;
   return {
     title: summary.session.name,
     subtitle: formatDate(summary.session.startedAt),

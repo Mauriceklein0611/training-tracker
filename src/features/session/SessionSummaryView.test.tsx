@@ -67,4 +67,29 @@ describe('SessionSummaryView celebration', () => {
     render(<SessionSummaryView summary={summary()} />);
     expect(screen.queryByText(/persönliche Bestleistung/)).not.toBeInTheDocument();
   });
+
+  it('treats first-time data as a baseline, not a celebrated record', () => {
+    const baseline: NewRecord = {
+      ...record,
+      exerciseName: 'Kniebeuge',
+      previousValue: null,
+    };
+    render(<SessionSummaryView summary={summary({ newRecords: [baseline] })} />);
+    // No celebration for a first-ever value…
+    expect(screen.queryByText(/persönliche Bestleistung/)).not.toBeInTheDocument();
+    // …but a calm baseline note naming the exercise.
+    expect(screen.getByText('Ausgangswert erstellt')).toBeInTheDocument();
+    expect(screen.getByText(/Kniebeuge/)).toBeInTheDocument();
+  });
+
+  it('celebrates real records while noting baselines separately', () => {
+    const baseline: NewRecord = {
+      ...record,
+      exerciseName: 'Kniebeuge',
+      previousValue: null,
+    };
+    render(<SessionSummaryView summary={summary({ newRecords: [record, baseline] })} />);
+    expect(screen.getByText('Neue persönliche Bestleistung!')).toBeInTheDocument();
+    expect(screen.getByText('Ausgangswert erstellt')).toBeInTheDocument();
+  });
 });
