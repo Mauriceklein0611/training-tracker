@@ -43,9 +43,11 @@ import { computeAnalytics } from '@/services/analytics';
 import { isBackupOverdue } from '@/services/storage';
 import {
   customRange,
+  dayGreeting,
   dayKey,
   formatDate,
   formatDateTime,
+  formatDayReference,
   formatDurationLong,
   lastDaysRange,
   startOfWeekDate,
@@ -265,7 +267,7 @@ export default function HomePage() {
 
   return (
     <>
-      <PageHeader title="Training" subtitle="Alle Daten bleiben auf diesem Gerät" />
+      <PageHeader title={dayGreeting()} subtitle={formatDayReference()} />
 
       {/* Resuming an interrupted workout is always the first thing offered. */}
       {activeSession ? (

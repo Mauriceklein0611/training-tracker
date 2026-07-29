@@ -49,6 +49,20 @@ export function formatWeekday(value: string | Date): string {
   return format(date, 'EEEE', { locale: de });
 }
 
+/** Home header day reference, e.g. "Mittwoch, 29. Juli". */
+export function formatDayReference(value: string | Date = new Date()): string {
+  const date = typeof value === 'string' ? parseISO(value) : value;
+  return format(date, 'EEEE, d. MMMM', { locale: de });
+}
+
+/** Time-of-day greeting for the home header. */
+export function dayGreeting(now: Date = new Date()): string {
+  const hour = now.getHours();
+  if (hour < 11) return 'Guten Morgen';
+  if (hour < 18) return 'Guten Tag';
+  return 'Guten Abend';
+}
+
 /**
  * Today as a local calendar day key ("2026-07-21").
  *

@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest';
 import {
   currentWeeklyStreak,
   customRange,
+  dayGreeting,
   dayKey,
   daysInRange,
+  formatDayReference,
   formatDuration,
   formatDurationLong,
   isWithinRange,
@@ -50,6 +52,19 @@ describe('todayKey — local calendar day', () => {
 
   it('pads month and day to two digits', () => {
     expect(todayKey(new Date(2026, 0, 5, 12, 0, 0))).toBe('2026-01-05');
+  });
+});
+
+describe('home header day reference', () => {
+  it('renders weekday and month name in German', () => {
+    // 2026-07-29 is a Wednesday.
+    expect(formatDayReference('2026-07-29T09:00:00')).toBe('Mittwoch, 29. Juli');
+  });
+
+  it('greets by time of day', () => {
+    expect(dayGreeting(new Date('2026-07-29T07:00:00'))).toBe('Guten Morgen');
+    expect(dayGreeting(new Date('2026-07-29T13:00:00'))).toBe('Guten Tag');
+    expect(dayGreeting(new Date('2026-07-29T20:00:00'))).toBe('Guten Abend');
   });
 });
 

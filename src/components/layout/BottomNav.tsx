@@ -2,14 +2,14 @@ import { NavLink } from 'react-router-dom';
 import {
   BarChart3,
   ClipboardList,
-  Dumbbell,
   History,
+  House,
   MoreHorizontal,
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 
 const ITEMS = [
-  { to: '/', label: 'Training', Icon: Dumbbell, end: true },
+  { to: '/', label: 'Home', Icon: House, end: true },
   { to: '/plaene', label: 'Pläne', Icon: ClipboardList, end: false },
   { to: '/verlauf', label: 'Verlauf', Icon: History, end: false },
   { to: '/analyse', label: 'Analyse', Icon: BarChart3, end: false },
