@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import {
@@ -31,7 +31,9 @@ import {
   startFreeSession,
   startSessionFromPreviousSession,
   startSessionFromTemplate,
+  startSessionFromWorkoutUnit,
 } from '@/db/repositories/sessions';
+import { StartFreeDialog } from '@/features/home/StartFreeDialog';
 import { useActiveSession } from '@/hooks/useActiveSession';
 import { useSettings } from '@/hooks/useSettings';
 import { useToast } from '@/hooks/useToast';
@@ -202,6 +204,10 @@ export default function HomePage() {
     [navigate, toast],
   );
 
+  // "Freies Training" opens a small chooser: an empty session, or one started
+  // from a saved library unit.
+  const [startFreeOpen, setStartFreeOpen] = useState(false);
+
   const startFree = useCallback(async () => {
     try {
       const session = await startFreeSession();
@@ -217,6 +223,25 @@ export default function HomePage() {
       );
     }
   }, [navigate, toast]);
+
+  const startUnit = useCallback(
+    async (unitId: string) => {
+      try {
+        const session = await startSessionFromWorkoutUnit(unitId);
+        navigate(`/training/${session.id}`);
+      } catch (error) {
+        if (error instanceof ActiveSessionExistsError) {
+          navigate(`/training/${error.activeSessionId}`);
+          return;
+        }
+        toast.show(
+          error instanceof Error ? error.message : 'Start fehlgeschlagen.',
+          'error',
+        );
+      }
+    },
+    [navigate, toast],
+  );
 
   // Quick cardio entry: a free session (or the existing one) with the exercise
   // picker opened straight onto cardio activities — no second session model.
@@ -347,7 +372,12 @@ export default function HomePage() {
             Training starten
           </h2>
           <div className="grid gap-2">
-            <Button variant="primary" size="lg" fullWidth onClick={startFree}>
+            <Button
+              variant="primary"
+              size="lg"
+              fullWidth
+              onClick={() => setStartFreeOpen(true)}
+            >
               <Zap size={20} aria-hidden="true" />
               Freies Training starten
             </Button>
@@ -525,6 +555,19 @@ export default function HomePage() {
           </>
         )}
       </section>
+
+      <StartFreeDialog
+        open={startFreeOpen}
+        onClose={() => setStartFreeOpen(false)}
+        onStartEmpty={() => {
+          setStartFreeOpen(false);
+          void startFree();
+        }}
+        onStartUnit={(unitId) => {
+          setStartFreeOpen(false);
+          void startUnit(unitId);
+        }}
+      />
     </>
   );
 }
