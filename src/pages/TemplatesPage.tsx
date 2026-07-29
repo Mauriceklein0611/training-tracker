@@ -1,11 +1,19 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { ClipboardList, Copy, Play, Plus, Share2, Trash2 } from 'lucide-react';
+import {
+  ClipboardList,
+  Copy,
+  MoreVertical,
+  Play,
+  Plus,
+  Share2,
+  Trash2,
+} from 'lucide-react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Button, IconButton } from '@/components/ui/Button';
 import { Badge, EmptyState } from '@/components/ui/Card';
-import { ConfirmDialog } from '@/components/ui/Dialog';
+import { ConfirmDialog, Dialog } from '@/components/ui/Dialog';
 import { db } from '@/db/db';
 import {
   deletePlan,
@@ -84,6 +92,9 @@ export default function TemplatesPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<TrainingPlan | null>(null);
   const [shareTarget, setShareTarget] = useState<PlanOverview | null>(null);
+  // The plan whose overflow action sheet is open. Secondary actions live here so
+  // they never compete with each card's single dominant start action.
+  const [menuTarget, setMenuTarget] = useState<PlanOverview | null>(null);
 
   const handleStart = async (dayId: string) => {
     try {
@@ -182,29 +193,13 @@ export default function TemplatesPage() {
                       </p>
                     ) : null}
                   </Link>
-                  <div className="flex shrink-0 gap-1">
-                    <IconButton
-                      label={`${entry.plan.name} duplizieren`}
-                      onClick={async () => {
-                        await duplicatePlan(entry.plan.id);
-                        toast.show('Plan dupliziert.', 'success');
-                      }}
-                    >
-                      <Copy size={18} aria-hidden="true" />
-                    </IconButton>
-                    <IconButton
-                      label={`${entry.plan.name} teilen`}
-                      onClick={() => setShareTarget(entry)}
-                    >
-                      <Share2 size={18} aria-hidden="true" />
-                    </IconButton>
-                    <IconButton
-                      label={`${entry.plan.name} löschen`}
-                      onClick={() => setDeleteTarget(entry.plan)}
-                    >
-                      <Trash2 size={18} aria-hidden="true" />
-                    </IconButton>
-                  </div>
+                  <IconButton
+                    label={`Aktionen für ${entry.plan.name}`}
+                    className="shrink-0"
+                    onClick={() => setMenuTarget(entry)}
+                  >
+                    <MoreVertical size={18} aria-hidden="true" />
+                  </IconButton>
                 </div>
                 <Button
                   variant="primary"
@@ -238,6 +233,55 @@ export default function TemplatesPage() {
           navigate(`/plaene/${planId}`);
         }}
       />
+
+      <Dialog
+        open={Boolean(menuTarget)}
+        onClose={() => setMenuTarget(null)}
+        title={menuTarget?.plan.name ?? ''}
+        description="Plan verwalten"
+      >
+        <div className="grid gap-2">
+          <Button
+            variant="secondary"
+            fullWidth
+            className="justify-start"
+            onClick={async () => {
+              if (!menuTarget) return;
+              const target = menuTarget;
+              setMenuTarget(null);
+              await duplicatePlan(target.plan.id);
+              toast.show('Plan dupliziert.', 'success');
+            }}
+          >
+            <Copy size={18} aria-hidden="true" />
+            Duplizieren
+          </Button>
+          <Button
+            variant="secondary"
+            fullWidth
+            className="justify-start"
+            onClick={() => {
+              setShareTarget(menuTarget);
+              setMenuTarget(null);
+            }}
+          >
+            <Share2 size={18} aria-hidden="true" />
+            Teilen
+          </Button>
+          <Button
+            variant="ghost"
+            fullWidth
+            className="justify-start text-danger"
+            onClick={() => {
+              setDeleteTarget(menuTarget?.plan ?? null);
+              setMenuTarget(null);
+            }}
+          >
+            <Trash2 size={18} aria-hidden="true" />
+            Löschen
+          </Button>
+        </div>
+      </Dialog>
 
       <PlanShareDialog
         planId={shareTarget ? shareTarget.plan.id : null}
