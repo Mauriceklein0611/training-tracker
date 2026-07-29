@@ -150,6 +150,30 @@ export function formatNumber(value: number | null | undefined, digits = 0): stri
   });
 }
 
+/**
+ * Correct German plurals for the two count nouns the app repeats everywhere.
+ * Strength is counted in "Sätze", cardio in "Abschnitte"; centralising them
+ * keeps a single "1 Satz" / "2 Sätze" rule instead of scattered inline checks
+ * that drifted into wrong forms like "1 Sätze".
+ */
+export function pluralSet(count: number): string {
+  return count === 1 ? 'Satz' : 'Sätze';
+}
+
+export function pluralSection(count: number): string {
+  return count === 1 ? 'Abschnitt' : 'Abschnitte';
+}
+
+/** "0 Sätze" / "1 Satz" / "2 Sätze". */
+export function formatSets(count: number): string {
+  return `${formatNumber(count)} ${pluralSet(count)}`;
+}
+
+/** "0 Abschnitte" / "1 Abschnitt" / "2 Abschnitte". */
+export function formatSections(count: number): string {
+  return `${formatNumber(count)} ${pluralSection(count)}`;
+}
+
 export function formatPercent(ratio: number | null | undefined): string {
   if (ratio == null || !Number.isFinite(ratio)) return '–';
   return `${Math.round(ratio * 100)} %`;

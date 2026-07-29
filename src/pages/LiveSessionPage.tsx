@@ -29,6 +29,7 @@ import { loadAnalyticsDataset } from '@/services/dataset';
 import { summarizeSession } from '@/services/sessionSummary';
 import { workoutProgress } from '@/services/sessionProgress';
 import { formatDuration } from '@/utils/date';
+import { formatSets } from '@/utils/format';
 
 /**
  * Live workout view.
@@ -164,7 +165,7 @@ export default function LiveSessionPage() {
               {detail.session.name}
             </h1>
             <p className="numeric text-sm text-muted">
-              {formatDuration(elapsedSeconds)} · {completedSetCount} Sätze
+              {formatDuration(elapsedSeconds)} · {formatSets(completedSetCount)}
               {progress.totalExercises > 0
                 ? ` · Übung ${Math.min(
                     progress.doneExercises + 1,

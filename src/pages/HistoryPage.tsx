@@ -20,7 +20,7 @@ import {
   formatDurationLong,
   formatTime,
 } from '@/utils/date';
-import { formatNumber, formatVolume } from '@/utils/format';
+import { formatSets, formatVolume } from '@/utils/format';
 
 interface HistoryRow {
   id: string;
@@ -218,7 +218,7 @@ export default function HistoryPage() {
                         {row.durationSeconds != null
                           ? `${formatDurationLong(row.durationSeconds)} · `
                           : ''}
-                        {formatNumber(row.workingSets)} Sätze
+                        {formatSets(row.workingSets)}
                         {row.volumeKg > 0 ? ` · ${formatVolume(row.volumeKg)}` : ''}
                       </p>
                       {row.exerciseNames.length > 0 ? (

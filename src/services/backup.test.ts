@@ -145,7 +145,8 @@ describe('validateBackupJson', () => {
 
     const result = validateBackupJson(raw);
     expect(result.ok).toBe(true);
-    if (result.ok) expect(result.warnings.join(' ')).toContain('Sätze');
+    // Exactly one set was orphaned, so the warning uses the correct singular.
+    if (result.ok) expect(result.warnings.join(' ')).toContain('1 Satz verweist');
   });
 
   it('warns when a file contains several active sessions', async () => {

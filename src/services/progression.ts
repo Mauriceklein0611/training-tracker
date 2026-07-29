@@ -247,9 +247,9 @@ export function suggestProgression(
       action: 'reduce_weight',
       headline: 'Eventuell Gewicht leicht reduzieren',
       reason:
-        `${belowMin} Sätze lagen unter der unteren Grenze von ${targetRepMin} ` +
-        `Wiederholungen.${rirNote} Etwas weniger Gewicht kann helfen, den ` +
-        'Zielbereich wieder zu treffen.',
+        `${belowMin} ${belowMin === 1 ? 'Satz lag' : 'Sätze lagen'} unter der ` +
+        `unteren Grenze von ${targetRepMin} Wiederholungen.${rirNote} Etwas ` +
+        'weniger Gewicht kann helfen, den Zielbereich wieder zu treffen.',
       consideredSets: basis.length,
     };
     if (weighted && topWeight != null) {

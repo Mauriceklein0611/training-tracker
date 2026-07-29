@@ -43,6 +43,7 @@ import { WorkoutUnitShareDialog } from '@/features/templates/WorkoutUnitShareDia
 import { readFileAsText } from '@/utils/download';
 import { useActiveSession } from '@/hooks/useActiveSession';
 import { useToast } from '@/hooks/useToast';
+import { formatSets } from '@/utils/format';
 
 /** Segmented links between the two library sub-areas. */
 function LibraryTabs({ active }: { active: 'units' | 'exercises' }) {
@@ -214,7 +215,7 @@ export default function WorkoutUnitsPage() {
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-semibold">{unit.name}</p>
                     <p className="text-xs text-muted">
-                      {summary.exerciseCount} Übungen · {summary.totalTargetSets} Sätze
+                      {summary.exerciseCount} Übungen · {formatSets(summary.totalTargetSets)}
                     </p>
                     {summary.muscleGroups.length > 0 ? (
                       <div className="mt-2 flex flex-wrap gap-1">

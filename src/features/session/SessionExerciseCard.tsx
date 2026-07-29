@@ -40,7 +40,7 @@ import { resolveEffectiveTarget } from '@/services/sessionTargets';
 import { suggestProgression } from '@/services/progression';
 import { ProgressionHint } from '@/features/session/ProgressionHint';
 import { db } from '@/db/db';
-import { TRACKING_TYPE_LABELS, formatKg } from '@/utils/format';
+import { TRACKING_TYPE_LABELS, formatKg, formatSets } from '@/utils/format';
 import { formatDate } from '@/utils/date';
 import type { EffortInput, SessionExercise, TemplateExercise, WorkoutSet } from '@/types';
 
@@ -73,7 +73,7 @@ function describeTarget(
     if (target.targetRpe) parts.push(`RPE ${target.targetRpe}`);
     return parts.length > 0 ? parts.join(' · ') : null;
   }
-  if (target.targetSets) parts.push(`${target.targetSets} Sätze`);
+  if (target.targetSets) parts.push(formatSets(target.targetSets));
   if (target.targetDurationSeconds) parts.push(`${target.targetDurationSeconds} s`);
   else if (target.targetRepMin && target.targetRepMax) {
     parts.push(`${target.targetRepMin}–${target.targetRepMax} Wdh.`);

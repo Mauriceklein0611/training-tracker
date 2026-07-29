@@ -50,6 +50,7 @@ import {
   formatKg,
   formatNumber,
   formatPercent,
+  formatSets,
   formatSignedSeconds,
   formatVolume,
 } from '@/utils/format';
@@ -500,7 +501,9 @@ export default function AnalyticsPage() {
                   musclePoints.length === 0
                     ? 'Keine Sätze mit zugeordneter Muskelgruppe im Zeitraum.'
                     : `Direkte Arbeitssätze pro Muskelgruppe. Am meisten trainiert: ` +
-                      `${musclePoints[0].label} mit ${musclePoints[0].value} Sätzen.`
+                      `${musclePoints[0].label} mit ${musclePoints[0].value} ${
+                        musclePoints[0].value === 1 ? 'Satz' : 'Sätzen'
+                      }.`
                 }
                 table={
                   <DataTable
@@ -570,7 +573,7 @@ export default function AnalyticsPage() {
                                   >
                                     <span className="truncate">{usage.exerciseName}</span>
                                     <span className="numeric shrink-0 text-muted">
-                                      {formatNumber(usage.sets)} Sätze ·{' '}
+                                      {formatSets(usage.sets)} ·{' '}
                                       {formatNumber(usage.sessions)}×
                                     </span>
                                   </li>

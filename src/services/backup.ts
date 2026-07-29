@@ -295,7 +295,11 @@ export function validateBackupJson(raw: unknown): BackupValidationResult {
     );
   }
   if (orphanSets > 0) {
-    warnings.push(`${orphanSets} Sätze verweisen auf fehlende Übungseinträge.`);
+    warnings.push(
+      orphanSets === 1
+        ? `1 Satz verweist auf einen fehlenden Übungseintrag.`
+        : `${orphanSets} Sätze verweisen auf fehlende Übungseinträge.`,
+    );
   }
 
   const activeSessions = backup.workoutSessions.filter(

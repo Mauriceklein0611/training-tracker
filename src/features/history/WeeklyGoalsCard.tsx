@@ -10,6 +10,7 @@ import {
 } from '@/services/calendar';
 import type { WeeklyGoals } from '@/types';
 import { formatWeekRange } from '@/utils/date';
+import { formatSets } from '@/utils/format';
 
 const WEEKS_SHOWN = 4;
 
@@ -212,7 +213,7 @@ export function WeeklyGoalsCard({
                         <span>{week.sessions} Einh.</span>
                       ) : null}
                       {goals.workingSetsPerWeek != null ? (
-                        <span>{week.workingSets} Sätze</span>
+                        <span>{formatSets(week.workingSets)}</span>
                       ) : null}
                       {allReached ? (
                         <Check

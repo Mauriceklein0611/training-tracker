@@ -12,6 +12,7 @@ import {
   formatKg,
   formatNumber,
   formatPercent,
+  formatSets,
   formatSignedSeconds,
   formatVolume,
 } from '@/utils/format';
@@ -169,7 +170,7 @@ export function SessionSummaryView({ summary }: { summary: SessionSummary }) {
 
           {summary.volume.setsWithoutVolume > 0 ? (
             <p className="text-xs text-muted">
-              {summary.volume.setsWithoutVolume} Sätze ohne berechenbares
+              {formatSets(summary.volume.setsWithoutVolume)} ohne berechenbares
               Kilogramm-Volumen (Körpergewicht, unterstützt oder zeitbasiert). Diese
               werden bewusst nicht in kg bewertet.
             </p>
