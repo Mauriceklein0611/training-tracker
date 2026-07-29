@@ -1,7 +1,7 @@
 import { ExternalLink } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card } from '@/components/ui/Card';
-import { communityStrings, getLanguage } from '@/i18n';
 import { TALLY_PRIVACY_URL } from '@/config/externalLinks';
 
 const SECTIONS = [
@@ -36,7 +36,7 @@ const SECTIONS = [
 ];
 
 export default function PrivacyPage() {
-  const community = communityStrings(getLanguage());
+  const { t } = useTranslation('community');
   return (
     <>
       <PageHeader title="Datenschutz" backTo="/mehr" />
@@ -48,17 +48,15 @@ export default function PrivacyPage() {
           </Card>
         ))}
         <Card>
-          <h2 className="text-sm font-semibold">{community.privacyTitle}</h2>
-          <p className="mt-1.5 text-sm leading-relaxed text-muted">
-            {community.privacyText}
-          </p>
+          <h2 className="text-sm font-semibold">{t('privacyTitle')}</h2>
+          <p className="mt-1.5 text-sm leading-relaxed text-muted">{t('privacyText')}</p>
           <a
             href={TALLY_PRIVACY_URL}
             target="_blank"
             rel="noopener noreferrer"
             className="mt-2 inline-flex min-h-[44px] items-center gap-1.5 text-sm text-accent"
           >
-            {community.privacyLinkLabel}
+            {t('privacyLinkLabel')}
             <ExternalLink size={16} aria-hidden="true" />
           </a>
         </Card>

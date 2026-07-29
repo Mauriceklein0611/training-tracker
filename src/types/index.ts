@@ -903,6 +903,13 @@ export interface AppSettings {
   defaultRestSeconds: number;
   defaultAnalyticsRange: AnalyticsRangeKey;
   darkMode: 'dark' | 'light' | 'system';
+  /**
+   * UI language preference (#31). 'auto' follows the device languages and falls
+   * back to English for anything unsupported. Purely presentational — it never
+   * changes stored data, enum values or any import/export format. Absent on
+   * older settings rows and older backups → 'auto'.
+   */
+  language: 'auto' | 'de' | 'en';
   restSoundEnabled: boolean;
   restVibrationEnabled: boolean;
   /** Keep the display on while a workout is running, where supported. */

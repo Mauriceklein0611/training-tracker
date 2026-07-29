@@ -521,6 +521,9 @@ export const appSettingsSchema = z.object({
   defaultRestSeconds: z.number().int().min(0).max(3600).default(120),
   defaultAnalyticsRange: z.enum(['7d', '30d', '90d', 'all', 'custom']).default('30d'),
   darkMode: z.enum(['dark', 'light', 'system']).default('dark'),
+  // Added with #31; defaulted so older settings rows and older backups still
+  // validate. Purely a UI preference — no format or domain data depends on it.
+  language: z.enum(['auto', 'de', 'en']).default('auto'),
   restSoundEnabled: z.boolean().default(true),
   restVibrationEnabled: z.boolean().default(true),
   // Added in schema version 5; defaulted so older backups still validate.

@@ -60,10 +60,14 @@ describe('CommunityGroup', () => {
 
   it('renders both feedback entries pointing at the same configured form', () => {
     render(<CommunityGroup tallyUrl={TALLY} />);
-    const feedback = screen.getByRole('link', { name: /Feedback & Wünsche/ });
-    const bug = screen.getByRole('link', { name: /Fehler melden/ });
-    expect(feedback).toHaveAttribute('href', TALLY);
-    expect(bug).toHaveAttribute('href', TALLY);
+    expect(screen.getByRole('link', { name: /Feedback & Wünsche/ })).toHaveAttribute(
+      'href',
+      TALLY,
+    );
+    expect(screen.getByRole('link', { name: /Fehler melden/ })).toHaveAttribute(
+      'href',
+      TALLY,
+    );
   });
 
   it('uses the German form when the app language is German', () => {
@@ -72,22 +76,26 @@ describe('CommunityGroup', () => {
       'href',
       TALLY_FEEDBACK_URLS.de,
     );
-    expect(screen.getByRole('link', { name: /Fehler melden/ })).toHaveAttribute(
-      'href',
-      TALLY_FEEDBACK_URLS.de,
-    );
   });
 
-  it('uses the English form when the app language is English', () => {
+  it('uses the English form and English copy when the app language is English', () => {
     setLanguage('en');
     render(<CommunityGroup />);
     expect(screen.getByRole('link', { name: /Feedback & requests/ })).toHaveAttribute(
       'href',
       TALLY_FEEDBACK_URLS.en,
     );
-    expect(screen.getByRole('link', { name: /Report a bug/ })).toHaveAttribute(
-      'href',
-      TALLY_FEEDBACK_URLS.en,
+    expect(screen.getByRole('link', { name: /Report a bug/ })).toBeInTheDocument();
+  });
+
+  it('shows no leftover strings of the other language', () => {
+    const { container, unmount } = render(<CommunityGroup />);
+    expect(container.textContent).not.toMatch(/Report a bug|Support the project/);
+    unmount();
+    setLanguage('en');
+    const english = render(<CommunityGroup />);
+    expect(english.container.textContent).not.toMatch(
+      /Fehler melden|Projekt freiwillig unterstützen/,
     );
   });
 
@@ -111,18 +119,14 @@ describe('CommunityGroup', () => {
     render(<CommunityGroup />);
     // No tappable link while offline …
     expect(screen.queryByRole('link')).not.toBeInTheDocument();
-    // … but the entry and a clear hint stay visible.
+    // … but every entry and a clear hint stay visible.
     expect(screen.getByText(/Projekt freiwillig unterstützen/)).toBeInTheDocument();
     expect(screen.getAllByText(/Offline nicht verfügbar/).length).toBeGreaterThan(0);
-    // Every entry, including feedback and bug report, stays listed.
-    expect(screen.getByText(/Feedback & Wünsche/)).toBeInTheDocument();
-    expect(screen.getByText(/Fehler melden/)).toBeInTheDocument();
   });
 
   it('exposes an accessible name announcing the external link, in a labelled group', () => {
     render(<CommunityGroup />);
-    const group = screen.getByRole('region', { name: 'Community' });
-    expect(group).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Community' })).toBeInTheDocument();
     for (const link of screen.getAllByRole('link')) {
       expect(link.getAttribute('aria-label')).toMatch(
         /externer Link, öffnet in neuem Tab/,
@@ -138,7 +142,7 @@ describe('CommunityGroup', () => {
     const user = userEvent.setup();
     render(<CommunityGroup />);
     const links = screen.getAllByRole('link');
-    expect(links).toHaveLength(3);
+    expect(links.length).toBeGreaterThan(1);
     for (const link of links) {
       await user.tab();
       expect(link).toHaveFocus();

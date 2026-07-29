@@ -1,3 +1,4 @@
+import { localeTag, t } from '@/i18n';
 import type { BodyMeasurements, SetType, TrackingType, WeightMode } from '@/types';
 
 /** German UI labels for the domain enums, in one place. */
@@ -112,7 +113,7 @@ export const BODY_MEASUREMENT_FIELDS: { key: keyof BodyMeasurements; label: stri
 /** Formats a circumference: "42,5 cm". */
 export function formatCm(value: number | null | undefined): string {
   if (value == null || !Number.isFinite(value)) return '–';
-  return `${(Math.round(value * 10) / 10).toLocaleString('de-DE', {
+  return `${(Math.round(value * 10) / 10).toLocaleString(localeTag(), {
     maximumFractionDigits: 1,
   })} cm`;
 }
@@ -120,7 +121,7 @@ export function formatCm(value: number | null | undefined): string {
 /** Formats a body fat percentage: "17,5 %". */
 export function formatPercentValue(value: number | null | undefined): string {
   if (value == null || !Number.isFinite(value)) return '–';
-  return `${(Math.round(value * 10) / 10).toLocaleString('de-DE', {
+  return `${(Math.round(value * 10) / 10).toLocaleString(localeTag(), {
     maximumFractionDigits: 1,
   })} %`;
 }
@@ -129,7 +130,7 @@ export function formatPercentValue(value: number | null | undefined): string {
 export function formatKg(value: number | null | undefined, withUnit = true): string {
   if (value == null || !Number.isFinite(value)) return '–';
   const rounded = Math.round(value * 10) / 10;
-  const text = rounded.toLocaleString('de-DE', { maximumFractionDigits: 1 });
+  const text = rounded.toLocaleString(localeTag(), { maximumFractionDigits: 1 });
   return withUnit ? `${text} kg` : text;
 }
 
@@ -137,31 +138,31 @@ export function formatKg(value: number | null | undefined, withUnit = true): str
 export function formatVolume(value: number | null | undefined): string {
   if (value == null || !Number.isFinite(value) || value === 0) return '–';
   if (value >= 10000) {
-    return `${(value / 1000).toLocaleString('de-DE', { maximumFractionDigits: 1 })} t`;
+    return `${(value / 1000).toLocaleString(localeTag(), { maximumFractionDigits: 1 })} t`;
   }
   return formatKg(value);
 }
 
 export function formatNumber(value: number | null | undefined, digits = 0): string {
   if (value == null || !Number.isFinite(value)) return '–';
-  return value.toLocaleString('de-DE', {
+  return value.toLocaleString(localeTag(), {
     minimumFractionDigits: digits,
     maximumFractionDigits: digits,
   });
 }
 
 /**
- * Correct German plurals for the two count nouns the app repeats everywhere.
- * Strength is counted in "Sätze", cardio in "Abschnitte"; centralising them
- * keeps a single "1 Satz" / "2 Sätze" rule instead of scattered inline checks
- * that drifted into wrong forms like "1 Sätze".
+ * Correct plurals for the two count nouns the app repeats everywhere. Strength
+ * is counted in sets, cardio in sections; centralising them keeps a single
+ * "1 Satz" / "2 Sätze" rule instead of scattered inline checks that drifted
+ * into wrong forms like "1 Sätze".
  */
 export function pluralSet(count: number): string {
-  return count === 1 ? 'Satz' : 'Sätze';
+  return count === 1 ? t('units.setOne') : t('units.setOther');
 }
 
 export function pluralSection(count: number): string {
-  return count === 1 ? 'Abschnitt' : 'Abschnitte';
+  return count === 1 ? t('units.sectionOne') : t('units.sectionOther');
 }
 
 /** "0 Sätze" / "1 Satz" / "2 Sätze". */
@@ -200,17 +201,17 @@ export function describeSet(
   if (trackingType === 'duration') {
     return set.durationSeconds != null ? `${Math.round(set.durationSeconds)} s` : '–';
   }
-  const reps = set.reps != null ? `${set.reps} Wdh.` : '–';
+  const reps = set.reps != null ? `${set.reps} ${t('units.reps')}` : '–';
   if (trackingType === 'reps_only' || weightMode === 'none' || set.weightKg == null)
     return reps;
 
   const suffix =
     weightMode === 'per_hand'
-      ? '/Hand'
+      ? t('setSuffix.perHand')
       : weightMode === 'assistance'
-        ? ' Unterst.'
+        ? t('setSuffix.assistance')
         : weightMode === 'added_weight'
-          ? ' Zusatz'
+          ? t('setSuffix.addedWeight')
           : '';
   return `${formatKg(set.weightKg)}${suffix} × ${reps}`;
 }

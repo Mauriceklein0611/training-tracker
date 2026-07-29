@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { CheckboxField, NumberField, SelectField } from '@/components/ui/Field';
@@ -15,6 +16,7 @@ import { formatDateTime } from '@/utils/date';
 
 export default function SettingsPage() {
   const { settings, update } = useSettings();
+  const { t: tSettings } = useTranslation('settings');
   const showIosHint = isIos() && !isStandalone();
 
   return (
@@ -124,6 +126,24 @@ export default function SettingsPage() {
             checked={settings.keepScreenAwake}
             onChange={(checked) => void update({ keepScreenAwake: checked })}
           />
+        </Card>
+
+        <Card>
+          <CardHeader title={tSettings('language.sectionTitle')} as="h2" />
+          <SelectField
+            label={tSettings('language.label')}
+            value={settings.language}
+            hint={tSettings('language.hint')}
+            onChange={(event) =>
+              void update({
+                language: event.target.value as AppSettings['language'],
+              })
+            }
+          >
+            <option value="auto">{tSettings('language.auto')}</option>
+            <option value="de">{tSettings('language.de')}</option>
+            <option value="en">{tSettings('language.en')}</option>
+          </SelectField>
         </Card>
 
         <Card>

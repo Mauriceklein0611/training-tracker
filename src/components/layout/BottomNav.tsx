@@ -1,24 +1,28 @@
 import { NavLink } from 'react-router-dom';
 import { BarChart3, ClipboardList, History, House, MoreHorizontal } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/utils/cn';
 
+// Routes stay German — they are stable, bookmarkable URLs, not UI text (#31).
 const ITEMS = [
-  { to: '/', label: 'Home', Icon: House, end: true },
-  { to: '/plaene', label: 'Pläne', Icon: ClipboardList, end: false },
-  { to: '/verlauf', label: 'Verlauf', Icon: History, end: false },
-  { to: '/analyse', label: 'Analyse', Icon: BarChart3, end: false },
-  { to: '/mehr', label: 'Mehr', Icon: MoreHorizontal, end: false },
-];
+  { to: '/', key: 'nav.home', Icon: House, end: true },
+  { to: '/plaene', key: 'nav.plans', Icon: ClipboardList, end: false },
+  { to: '/verlauf', key: 'nav.history', Icon: History, end: false },
+  { to: '/analyse', key: 'nav.analytics', Icon: BarChart3, end: false },
+  { to: '/mehr', key: 'nav.more', Icon: MoreHorizontal, end: false },
+] as const;
 
 /** Primary navigation, fixed to the bottom within reach of the thumb. */
 export function BottomNav() {
+  const { t } = useTranslation();
+
   return (
     <nav
-      aria-label="Hauptnavigation"
+      aria-label={t('nav.label')}
       className="inset-x-safe safe-bottom fixed inset-x-0 bottom-0 z-40 border-t border-border bg-surface/95 backdrop-blur"
     >
       <ul className="mx-auto flex max-w-2xl">
-        {ITEMS.map(({ to, label, Icon, end }) => (
+        {ITEMS.map(({ to, key, Icon, end }) => (
           <li key={to} className="flex-1">
             <NavLink
               to={to}
@@ -34,7 +38,7 @@ export function BottomNav() {
                   )}
                 >
                   <Icon size={22} strokeWidth={isActive ? 2.4 : 1.8} aria-hidden="true" />
-                  <span>{label}</span>
+                  <span>{t(key)}</span>
                 </span>
               )}
             </NavLink>

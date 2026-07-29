@@ -129,6 +129,17 @@ never reinterpreted as cardio.
   unchanged and a set without its own snapshot resolves its execution
   field-by-field from the session-exercise snapshot (`services/equipment.ts`
   `effectiveSetExecution`). No backfill: absent fields stay absent.
+- UI language preference (#31, **no schema bump**): `settings` gains
+  `language` (`auto` | `de` | `en`, Zod `.default('auto')`). Additive, purely
+  presentational and not indexed, so no Dexie version was raised: an existing
+  settings row and every older backup validate unchanged and restore as `auto`
+  (guarded by `backup.test.ts`). The preference is exported and restored like the
+  other UI settings — a `replace` import merges settings rather than wiping them,
+  so restoring an old backup on a device set to English resets the _preference_
+  to `auto` and nothing else. No label, enum value, key, unit or stored number is
+  ever translated: the same database exports byte-identical domain data in both
+  languages (guarded by test). Data keys (`dayKey`/`weekKey`, CSV headers, format
+  names) stay language independent by design.
 - AI import undo (schema 24): `aiAnalyses` gain optional `restoreVersionIds`
   (the `ai-import` `templateVersions` frozen before applying, one per changed
   plan) and `undoneAt` (set when the import was reverted). Optional/defaulted, so

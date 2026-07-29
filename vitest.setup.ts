@@ -2,11 +2,19 @@ import '@testing-library/jest-dom/vitest';
 // In-memory IndexedDB implementation for tests. The real application always
 // uses the browser's native IndexedDB.
 import 'fake-indexeddb/auto';
-import { afterEach } from 'vitest';
+import { afterEach, beforeEach } from 'vitest';
 import { cleanup } from '@testing-library/react';
+import { setLanguage } from '@/i18n';
+
+// The suite asserts German copy unless a test switches the language itself, so
+// every test starts from a defined language instead of jsdom's `en-US` default.
+beforeEach(() => {
+  setLanguage('de');
+});
 
 afterEach(() => {
   cleanup();
+  setLanguage('de');
 });
 
 // jsdom does not implement these; several components probe for them.

@@ -1,6 +1,8 @@
 import { Suspense, lazy } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { AppLayout } from '@/components/layout/AppLayout';
+import { useLanguage } from '@/hooks/useLanguage';
 import { useSettings } from '@/hooks/useSettings';
 import { useTheme } from '@/hooks/useTheme';
 import HomePage from '@/pages/HomePage';
@@ -34,9 +36,10 @@ const GlossaryPage = lazy(() => import('@/pages/GlossaryPage'));
 const LiveSessionPage = lazy(() => import('@/pages/LiveSessionPage'));
 
 function PageFallback() {
+  const { t } = useTranslation();
   return (
     <p className="p-6 text-center text-sm text-muted" role="status">
-      Wird geladen …
+      {t('state.loading')}
     </p>
   );
 }
@@ -44,6 +47,8 @@ function PageFallback() {
 export default function App() {
   const { settings } = useSettings();
   useTheme(settings.darkMode);
+  // Keeps the rendered language in sync with the stored preference (#31).
+  useLanguage(settings.language);
 
   return (
     <Suspense fallback={<PageFallback />}>

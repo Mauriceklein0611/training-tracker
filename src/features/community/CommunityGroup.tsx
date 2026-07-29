@@ -6,8 +6,8 @@ import {
   WifiOff,
   type LucideIcon,
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
-import { communityStrings, getLanguage } from '@/i18n';
 import {
   KOFI_URL,
   isConfiguredExternalUrl,
@@ -24,9 +24,12 @@ interface CommunityLink {
 
 /**
  * Community group for the "Mehr" hub: voluntary Ko-fi support (#29) and Tally
- * feedback (#30). Entries are plain external links — no widgets, iframes, SDKs
- * or query parameters carrying app data. A link is only rendered when its
- * public URL is configured (no dead links), and while offline it degrades to a
+ * feedback (#30). Both feedback entries open the same form — the category is
+ * picked inside it.
+ *
+ * Entries are plain external links — no widgets, iframes, SDKs or query
+ * parameters carrying app data. A link is only rendered when its public URL is
+ * configured (no dead links), and while offline it degrades to a
  * non-interactive row with a clear hint instead of a link that cannot open.
  *
  * The feedback form follows the active language (German form for `de`, English
@@ -39,18 +42,19 @@ export function CommunityGroup({
   tallyUrl,
 }: { kofiUrl?: string; tallyUrl?: string } = {}) {
   const online = useOnlineStatus();
-  const language = getLanguage();
-  const t = communityStrings(language);
+  const { t, i18n } = useTranslation('community');
+  const { t: tCommon } = useTranslation();
   // `??` (not `||`) so an explicitly empty URL stays "not configured".
-  const feedbackUrl = tallyUrl ?? tallyFeedbackUrl(language);
+  const feedbackUrl =
+    tallyUrl ?? tallyFeedbackUrl(i18n.resolvedLanguage ?? i18n.language);
 
   const links: CommunityLink[] = [];
   if (isConfiguredExternalUrl(kofiUrl)) {
     links.push({
       key: 'support',
       href: kofiUrl,
-      label: t.support.label,
-      description: t.support.description,
+      label: t('support.label'),
+      description: t('support.description'),
       Icon: Heart,
     });
   }
@@ -59,15 +63,15 @@ export function CommunityGroup({
     links.push({
       key: 'feedback',
       href: feedbackUrl,
-      label: t.feedback.label,
-      description: t.feedback.description,
+      label: t('feedback.label'),
+      description: t('feedback.description'),
       Icon: MessageSquarePlus,
     });
     links.push({
       key: 'bug',
       href: feedbackUrl,
-      label: t.bug.label,
-      description: t.bug.description,
+      label: t('bug.label'),
+      description: t('bug.description'),
       Icon: Bug,
     });
   }
@@ -81,7 +85,7 @@ export function CommunityGroup({
         id="more-community"
         className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted"
       >
-        {t.sectionTitle}
+        {t('sectionTitle')}
       </h2>
       <ul className="grid gap-2">
         {links.map((link) =>
@@ -91,7 +95,7 @@ export function CommunityGroup({
                 href={link.href}
                 target="_blank"
                 rel="noopener noreferrer"
-                aria-label={`${link.label} — ${t.opensExternalA11y}`}
+                aria-label={`${link.label} — ${tCommon('external.opensInNewTab')}`}
                 className="flex min-h-[64px] items-center gap-3 rounded-2xl border border-border bg-surface p-3 active:bg-surface-2"
               >
                 <link.Icon
@@ -122,7 +126,7 @@ export function CommunityGroup({
                 <span className="min-w-0 flex-1">
                   <span className="block font-medium">{link.label}</span>
                   <span className="block text-sm leading-relaxed text-muted">
-                    {t.offlineHint}
+                    {tCommon('external.offlineHint')}
                   </span>
                 </span>
                 <WifiOff size={18} className="shrink-0 text-muted" aria-hidden="true" />
@@ -132,9 +136,9 @@ export function CommunityGroup({
         )}
       </ul>
       {online ? (
-        <p className="mt-2 text-xs leading-relaxed text-muted">{t.externalHint}</p>
+        <p className="mt-2 text-xs leading-relaxed text-muted">{t('externalHint')}</p>
       ) : null}
-      <p className="mt-1 text-xs leading-relaxed text-muted">{t.freeNote}</p>
+      <p className="mt-1 text-xs leading-relaxed text-muted">{t('freeNote')}</p>
     </section>
   );
 }

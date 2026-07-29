@@ -12,9 +12,22 @@ import {
   subDays,
   subWeeks,
 } from 'date-fns';
-import { de } from 'date-fns/locale';
+import { de, enGB } from 'date-fns/locale';
+import { getLanguage, t } from '@/i18n';
 
-/** Week starts on Monday, as is customary in Germany. */
+/**
+ * Locale for the *rendered* language (#31). Data keys (`dayKey`, `weekKey`) are
+ * deliberately never localised — they stay `yyyy-MM-dd` in every language so
+ * grouping, exports and stored values cannot drift.
+ *
+ * English uses `en-GB`: the app is metric and Monday-first, and a British date
+ * order keeps day-before-month consistent with the German layout.
+ */
+function locale() {
+  return getLanguage() === 'de' ? de : enGB;
+}
+
+/** Week starts on Monday in both supported locales. */
 const WEEK_OPTIONS = { weekStartsOn: 1 as const, locale: de };
 
 /** Local calendar day key, e.g. "2026-07-21". Used for grouping. */
@@ -31,36 +44,46 @@ export function weekKey(value: string | Date): string {
 
 export function formatDate(value: string | Date): string {
   const date = typeof value === 'string' ? parseISO(value) : value;
-  return format(date, 'dd.MM.yyyy', { locale: de });
+  return format(date, getLanguage() === 'de' ? 'dd.MM.yyyy' : 'dd MMM yyyy', {
+    locale: locale(),
+  });
 }
 
 export function formatDateTime(value: string | Date): string {
   const date = typeof value === 'string' ? parseISO(value) : value;
-  return format(date, 'dd.MM.yyyy, HH:mm', { locale: de });
+  return format(
+    date,
+    getLanguage() === 'de' ? 'dd.MM.yyyy, HH:mm' : 'dd MMM yyyy, HH:mm',
+    {
+      locale: locale(),
+    },
+  );
 }
 
 export function formatTime(value: string | Date): string {
   const date = typeof value === 'string' ? parseISO(value) : value;
-  return format(date, 'HH:mm', { locale: de });
+  return format(date, 'HH:mm', { locale: locale() });
 }
 
 export function formatWeekday(value: string | Date): string {
   const date = typeof value === 'string' ? parseISO(value) : value;
-  return format(date, 'EEEE', { locale: de });
+  return format(date, 'EEEE', { locale: locale() });
 }
 
-/** Home header day reference, e.g. "Mittwoch, 29. Juli". */
+/** Home header day reference, e.g. "Mittwoch, 29. Juli" / "Wednesday, 29 July". */
 export function formatDayReference(value: string | Date = new Date()): string {
   const date = typeof value === 'string' ? parseISO(value) : value;
-  return format(date, 'EEEE, d. MMMM', { locale: de });
+  return format(date, getLanguage() === 'de' ? 'EEEE, d. MMMM' : 'EEEE, d MMMM', {
+    locale: locale(),
+  });
 }
 
 /** Time-of-day greeting for the home header. */
 export function dayGreeting(now: Date = new Date()): string {
   const hour = now.getHours();
-  if (hour < 11) return 'Guten Morgen';
-  if (hour < 18) return 'Guten Tag';
-  return 'Guten Abend';
+  if (hour < 11) return t('greeting.morning');
+  if (hour < 18) return t('greeting.day');
+  return t('greeting.evening');
 }
 
 /**
@@ -78,8 +101,8 @@ export function todayKey(now: Date = new Date()): string {
 export function formatDayHeading(value: string | Date, today: Date = new Date()): string {
   const date = typeof value === 'string' ? parseISO(value) : value;
   const diff = differenceInCalendarDays(today, date);
-  if (diff === 0) return 'Heute';
-  if (diff === 1) return 'Gestern';
+  if (diff === 0) return t('relativeDay.today');
+  if (diff === 1) return t('relativeDay.yesterday');
   return `${formatWeekday(date)}, ${formatDate(date)}`;
 }
 
@@ -170,14 +193,14 @@ export function recentWeekStarts(count: number, now: Date = new Date()): string[
 
 /** Short week label like "22.06." for the Monday of a week key. */
 export function formatWeekLabel(weekStartKey: string): string {
-  return format(parseISO(weekStartKey), 'dd.MM.', { locale: de });
+  return format(parseISO(weekStartKey), 'dd.MM.', { locale: locale() });
 }
 
 /** Human range label like "22.–28.06." for a week. */
 export function formatWeekRange(weekStartKey: string): string {
   const start = parseISO(weekStartKey);
   const end = endOfWeek(start, WEEK_OPTIONS);
-  return `${format(start, 'dd.', { locale: de })}–${format(end, 'dd.MM.', { locale: de })}`;
+  return `${format(start, 'dd.', { locale: locale() })}–${format(end, 'dd.MM.', { locale: locale() })}`;
 }
 
 /**
@@ -203,7 +226,7 @@ export function monthGridDays(anchor: Date): Date[][] {
 }
 
 export function formatMonthTitle(anchor: Date): string {
-  return format(anchor, 'MMMM yyyy', { locale: de });
+  return format(anchor, 'MMMM yyyy', { locale: locale() });
 }
 
 /** Formats a duration in seconds as "1:05:03" or "5:03". */

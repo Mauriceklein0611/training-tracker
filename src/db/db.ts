@@ -733,6 +733,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   defaultRestSeconds: 120,
   defaultAnalyticsRange: '30d',
   darkMode: 'dark',
+  language: 'auto',
   restSoundEnabled: true,
   restVibrationEnabled: true,
   keepScreenAwake: true,

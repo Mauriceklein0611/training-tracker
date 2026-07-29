@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { db, SCHEMA_VERSION } from '@/db/db';
+import { setLanguage } from '@/i18n';
 import {
   BACKUP_FORMAT_VERSION,
   backupFileName,
@@ -395,6 +396,47 @@ describe('weekly goals round trip', () => {
     expect(restored?.weeklyGoals?.exerciseGoals?.[0]?.exerciseNameSnapshot).toBe(
       'Kniebeuge',
     );
+  });
+
+  it('round trips the language preference and defaults older backups to auto', async () => {
+    await seedDatabase();
+    await updateSettings({ language: 'en' });
+
+    const backup = await createBackup();
+    expect(backup.settings?.language).toBe('en');
+
+    await resetDatabase();
+    await importBackup(backup, 'replace');
+    expect((await db.settings.get('app-settings'))?.language).toBe('en');
+
+    // A backup written before #31 carries no language at all → 'auto', never a
+    // rejected row and never a guessed language.
+    const legacy = JSON.parse(JSON.stringify(backup));
+    delete legacy.settings.language;
+    const result = validateBackupJson(legacy);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    await resetDatabase();
+    await importBackup(result.backup, 'replace');
+    expect((await db.settings.get('app-settings'))?.language).toBe('auto');
+  });
+
+  it('exports identical domain data regardless of the display language', async () => {
+    await seedDatabase();
+    setLanguage('de');
+    const german = await createBackup();
+    setLanguage('en');
+    const english = await createBackup();
+
+    // Language is presentation only: no stored value, label or key is translated.
+    // Only the export timestamp and the settings row (which legitimately holds
+    // the preference itself) may differ.
+    const strip = (backup: Awaited<ReturnType<typeof createBackup>>) => ({
+      ...backup,
+      exportedAt: '',
+      settings: null,
+    });
+    expect(strip(english)).toEqual(strip(german));
   });
 
   it('accepts a backup written before weekly goals existed', async () => {

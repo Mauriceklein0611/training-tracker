@@ -1,109 +1,60 @@
 /**
- * Lightweight, offline-first i18n for the Community section (#29 Ko-fi, #30
- * Tally). All strings are bundled locally — no translation CDN, no runtime
- * request. Deliberately small: the full app-wide i18next migration is #31, and
- * this module is shaped so it can be folded into it later (stable `Language`
- * type, `resolveLanguage`, namespaced resources) without reworking callers.
+ * App-wide i18n (#31): i18next with locally bundled resources, no CDN and no
+ * runtime request, so both languages are fully available offline.
  *
- * Only presentation is localised; no stored data, enum value or format contract
- * is ever translated.
+ * Language resolution has two layers:
+ *  - the stored *preference* (`auto` | `de` | `en`) lives with the other UI
+ *    settings in IndexedDB and is mirrored into localStorage so the very first
+ *    paint after a cold start is already in the right language;
+ *  - the *active* language is the resolved result — with `auto` it follows the
+ *    device languages and falls back to English for anything unsupported.
+ *
+ * Only presentation is localised. No stored value, enum, format contract or
+ * user content is ever translated (see docs/FORMAT_COMPATIBILITY.md).
  */
+import i18next from 'i18next';
+import { initReactI18next } from 'react-i18next';
+import {
+  FALLBACK_LANGUAGE,
+  SUPPORTED_LANGUAGES,
+  type Language,
+  defaultNS,
+  resources,
+} from '@/i18n/resources';
 
-export type Language = 'de' | 'en';
+export {
+  FALLBACK_LANGUAGE,
+  SUPPORTED_LANGUAGES,
+  resources,
+  type Language,
+  type Namespace,
+} from '@/i18n/resources';
 
-export const SUPPORTED_LANGUAGES = ['de', 'en'] as const satisfies readonly Language[];
+/** What the user picked; `auto` means "follow the device". */
+export type LanguagePreference = 'auto' | Language;
 
-/** Unsupported system languages fall back to English (issue #31 rule). */
-export const FALLBACK_LANGUAGE: Language = 'en';
+export const LANGUAGE_PREFERENCES = [
+  'auto',
+  ...SUPPORTED_LANGUAGES,
+] as const satisfies readonly LanguagePreference[];
 
-interface CommunityStrings {
-  sectionTitle: string;
-  externalHint: string;
-  offlineHint: string;
-  freeNote: string;
-  /** Appended to each link's accessible name so its external nature is spoken. */
-  opensExternalA11y: string;
-  support: { label: string; description: string };
-  feedback: { label: string; description: string };
-  bug: { label: string; description: string };
-  privacyTitle: string;
-  privacyText: string;
-  /** Visible label of the link to the external provider's privacy information. */
-  privacyLinkLabel: string;
-}
-
-interface Resources {
-  community: CommunityStrings;
-}
-
-// `Record<Language, Resources>` gives compile-time key parity: a missing or
-// misshaped translation in any language fails the typecheck.
-export const resources: Record<Language, Resources> = {
-  de: {
-    community: {
-      sectionTitle: 'Community',
-      externalHint:
-        'Diese Einträge öffnen einen externen Dienst in einem neuen Tab. Es werden keine Trainings-, Körper- oder Gerätedaten übertragen.',
-      offlineHint:
-        'Offline nicht verfügbar — dafür ist eine Internetverbindung nötig. Die App selbst funktioniert offline uneingeschränkt weiter.',
-      freeNote:
-        'Die App bleibt dauerhaft kostenlos. Unterstützung ist freiwillig und keine steuerlich absetzbare Spende.',
-      opensExternalA11y: 'externer Link, öffnet in neuem Tab',
-      support: {
-        label: 'Projekt freiwillig unterstützen',
-        description:
-          'Bleibt komplett kostenlos — freiwillige Unterstützung über Ko-fi, ohne Konto in der App.',
-      },
-      feedback: {
-        label: 'Feedback & Wünsche',
-        description: 'Ideen und Feature-Wünsche über ein externes Formular teilen.',
-      },
-      bug: {
-        label: 'Fehler melden',
-        description:
-          'Ein Problem melden — öffnet dasselbe externe Formular mit Kategorieauswahl.',
-      },
-      privacyTitle: 'Community-Links: Ko-fi und Feedback-Formular',
-      privacyText:
-        'Die Einträge im Community-Bereich öffnen externe Dienste erst dann in einem neuen Tab, wenn du sie selbst auswählst (Ko-fi für freiwillige Unterstützung, Tally für Feedback). Beim normalen Start der App werden keine Ko-fi- oder Tally-Ressourcen geladen — keine Iframes, Widgets oder Skripte. Trainingsdaten, Körperdaten, Notizen und Sicherungen werden nicht automatisch übertragen, und es werden keine Parameter mit App-Daten angehängt. Was du freiwillig in das Formular einträgst, wird von Tally verarbeitet; Kontakt-E-Mail und Screenshot sind ausdrücklich freiwillig. Zahlungen über Ko-fi sind freiwillige Unterstützung und keine steuerlich absetzbare Spende.',
-      privacyLinkLabel: 'Datenschutzinformationen von Tally',
-    },
-  },
-  en: {
-    community: {
-      sectionTitle: 'Community',
-      externalHint:
-        'These entries open an external service in a new tab. No training, body or device data is transferred.',
-      offlineHint:
-        'Unavailable offline — this needs an internet connection. The app itself keeps working fully offline.',
-      freeNote:
-        'The app stays free forever. Support is voluntary and not a tax-deductible donation.',
-      opensExternalA11y: 'external link, opens in a new tab',
-      support: {
-        label: 'Support the project',
-        description:
-          'Stays completely free — voluntary support via Ko-fi, with no in-app account.',
-      },
-      feedback: {
-        label: 'Feedback & requests',
-        description: 'Share ideas and feature requests through an external form.',
-      },
-      bug: {
-        label: 'Report a bug',
-        description:
-          'Report a problem — opens the same external form with a category picker.',
-      },
-      privacyTitle: 'Community links: Ko-fi and feedback form',
-      privacyText:
-        'The entries in the Community section only open an external service in a new tab once you choose them yourself (Ko-fi for voluntary support, Tally for feedback). Starting the app normally loads no Ko-fi or Tally resources — no iframes, widgets or scripts. Workout data, body data, notes and backups are never transferred automatically, and no parameters carrying app data are appended. Whatever you voluntarily enter in the form is processed by Tally; contact email and screenshot are explicitly optional. Payments via Ko-fi are voluntary support and not a tax-deductible donation.',
-      privacyLinkLabel: 'Tally privacy information',
-    },
-  },
-};
+/**
+ * Mirror of the preference for the pre-React first paint. The authoritative
+ * copy stays in IndexedDB with the other settings; this is an uncritical UI
+ * preference, never data (same approach as the theme).
+ */
+const STORAGE_KEY = 'training-tracker.language';
 
 /** Narrows an arbitrary tag to a supported language (exact match, no region). */
 export function isSupportedLanguage(tag: string): tag is Language {
   return (SUPPORTED_LANGUAGES as readonly string[]).includes(tag);
+}
+
+export function isLanguagePreference(value: unknown): value is LanguagePreference {
+  return (
+    typeof value === 'string' &&
+    (LANGUAGE_PREFERENCES as readonly string[]).includes(value)
+  );
 }
 
 /**
@@ -114,8 +65,7 @@ export function isSupportedLanguage(tag: string): tag is Language {
 export function resolveLanguage(tags: readonly string[]): Language {
   for (const tag of tags) {
     const base = tag.toLowerCase().split('-')[0];
-    if (base === 'de') return 'de';
-    if (base === 'en') return 'en';
+    if (isSupportedLanguage(base)) return base;
   }
   return FALLBACK_LANGUAGE;
 }
@@ -132,27 +82,85 @@ export function detectLanguage(): Language {
   return resolveLanguage(tags);
 }
 
-// Resolved once per load. Manual switching (Auto/DE/EN) and reactive re-render
-// on change are part of #31; until then the language is stable per session.
-let currentLanguage: Language | null = null;
-
-export function getLanguage(): Language {
-  return (currentLanguage ??= detectLanguage());
+/** Resolves a stored preference into the language actually rendered. */
+export function resolvePreference(preference: LanguagePreference): Language {
+  return preference === 'auto' ? detectLanguage() : preference;
 }
 
-/** Sets the active language and mirrors it onto `<html lang>`. */
-export function setLanguage(language: Language): void {
-  currentLanguage = language;
+export function readStoredPreference(): LanguagePreference {
+  try {
+    const value = localStorage.getItem(STORAGE_KEY);
+    if (isLanguagePreference(value)) return value;
+  } catch {
+    // localStorage can be unavailable in private mode — `auto` is fine.
+  }
+  return 'auto';
+}
+
+function storePreference(preference: LanguagePreference): void {
+  try {
+    localStorage.setItem(STORAGE_KEY, preference);
+  } catch {
+    // Ignore — the language still applies for this session.
+  }
+}
+
+// Initialised synchronously with bundled resources: `t()` is usable from the
+// first import, which also keeps tests free of async i18n setup.
+void i18next.use(initReactI18next).init({
+  resources,
+  lng: resolvePreference(readStoredPreference()),
+  fallbackLng: FALLBACK_LANGUAGE,
+  defaultNS,
+  ns: Object.keys(resources.de),
+  // A missing key is a bug, not a runtime feature: render the key itself so it
+  // is obvious in review and in tests instead of showing an empty string.
+  parseMissingKeyHandler: (key) => key,
+  interpolation: { escapeValue: false },
+  returnNull: false,
+});
+
+export const i18n = i18next;
+
+/** The language actually rendered right now. */
+export function getLanguage(): Language {
+  const current = i18next.resolvedLanguage ?? i18next.language;
+  return isSupportedLanguage(current) ? current : FALLBACK_LANGUAGE;
+}
+
+/** BCP-47 tag for `Intl` / `toLocaleString`. */
+export function localeTag(language: Language = getLanguage()): 'de-DE' | 'en-US' {
+  return language === 'de' ? 'de-DE' : 'en-US';
+}
+
+/**
+ * Applies a language and mirrors it onto `<html lang>` so screen readers and
+ * hyphenation use the right language. Persists nothing.
+ */
+export function applyLanguage(language: Language): void {
+  if (getLanguage() !== language) void i18next.changeLanguage(language);
   if (typeof document !== 'undefined') {
     document.documentElement.lang = language;
   }
 }
 
-/** Called at startup so the document language matches what is rendered. */
-export function applyDocumentLanguage(): void {
-  setLanguage(getLanguage());
+/** Applies a preference (resolving `auto`) and mirrors it to localStorage. */
+export function applyPreference(preference: LanguagePreference): Language {
+  const language = resolvePreference(preference);
+  storePreference(preference);
+  applyLanguage(language);
+  return language;
 }
 
-export function communityStrings(language: Language = getLanguage()): CommunityStrings {
-  return resources[language].community;
+/** Imperative switch of the rendered language (used by tests and tooling). */
+export function setLanguage(language: Language): void {
+  applyLanguage(language);
 }
+
+/** Called before the first paint so `<html lang>` matches what is rendered. */
+export function applyDocumentLanguage(): void {
+  applyLanguage(resolvePreference(readStoredPreference()));
+}
+
+/** Direct access for non-React code (services, formatters, validation). */
+export const t = i18next.t.bind(i18next);

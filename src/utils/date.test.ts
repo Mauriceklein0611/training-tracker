@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest';
+import { setLanguage } from '@/i18n';
 import {
   currentWeeklyStreak,
   customRange,
   dayGreeting,
   dayKey,
   daysInRange,
+  formatDate,
+  formatDayHeading,
   formatDayReference,
   formatDuration,
   formatDurationLong,
@@ -61,10 +64,48 @@ describe('home header day reference', () => {
     expect(formatDayReference('2026-07-29T09:00:00')).toBe('Mittwoch, 29. Juli');
   });
 
+  it('renders weekday and month name in English', () => {
+    setLanguage('en');
+    expect(formatDayReference('2026-07-29T09:00:00')).toBe('Wednesday, 29 July');
+  });
+
   it('greets by time of day', () => {
     expect(dayGreeting(new Date('2026-07-29T07:00:00'))).toBe('Guten Morgen');
     expect(dayGreeting(new Date('2026-07-29T13:00:00'))).toBe('Guten Tag');
     expect(dayGreeting(new Date('2026-07-29T20:00:00'))).toBe('Guten Abend');
+  });
+
+  it('greets in English when the app language is English', () => {
+    setLanguage('en');
+    expect(dayGreeting(new Date('2026-07-29T07:00:00'))).toBe('Good morning');
+    expect(dayGreeting(new Date('2026-07-29T20:00:00'))).toBe('Good evening');
+  });
+});
+
+describe('localised dates and stable data keys', () => {
+  it('formats dates per language', () => {
+    expect(formatDate('2026-07-29T09:00:00')).toBe('29.07.2026');
+    setLanguage('en');
+    expect(formatDate('2026-07-29T09:00:00')).toBe('29 Jul 2026');
+  });
+
+  it('names days relative to today in both languages', () => {
+    const today = new Date('2026-07-29T12:00:00');
+    expect(formatDayHeading('2026-07-29T09:00:00', today)).toBe('Heute');
+    expect(formatDayHeading('2026-07-28T09:00:00', today)).toBe('Gestern');
+    setLanguage('en');
+    expect(formatDayHeading('2026-07-29T09:00:00', today)).toBe('Today');
+    expect(formatDayHeading('2026-07-28T09:00:00', today)).toBe('Yesterday');
+  });
+
+  it('keeps grouping keys language independent', () => {
+    // Data keys must never localise — grouping, exports and stored values
+    // depend on the ISO form in every language.
+    const iso = '2026-07-29T09:00:00';
+    const germanKeys = [dayKey(iso), weekKey(iso)];
+    setLanguage('en');
+    expect([dayKey(iso), weekKey(iso)]).toEqual(germanKeys);
+    expect(dayKey(iso)).toBe('2026-07-29');
   });
 });
 
