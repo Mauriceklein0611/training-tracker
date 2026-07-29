@@ -26,9 +26,10 @@ are in English.
 11. [CSV export](#csv-export)
 12. [Installing on iPhone](#installing-on-iphone)
 13. [Deployment on Cloudflare Pages](#deployment-on-cloudflare-pages)
-14. [Privacy](#privacy)
-15. [Testing](#testing)
-16. [Known limitations](#known-limitations)
+14. [Community and support](#community-and-support)
+15. [Privacy](#privacy)
+16. [Testing](#testing)
+17. [Known limitations](#known-limitations)
 
 ---
 
@@ -481,6 +482,54 @@ banner; you decide when to reload, so an update never interrupts a set.
 
 ---
 
+## Community and support
+
+The _Mehr_ hub has a **Community** group with optional, entirely voluntary
+external links. These are plain links that open in a new browser tab — there
+are **no widgets, iframes, tracking scripts or third-party SDKs** loaded at app
+start, and **no training, body or device data** is ever sent along.
+
+- **Projekt freiwillig unterstützen / Support the project** — opens the public
+  Ko-fi page. The app stays free forever; support is voluntary and **not a
+  tax-deductible donation**.
+- **Feedback & Wünsche / Feedback & requests** and **Fehler melden / Report a
+  bug** — open a public Tally form (same form, category picker inside).
+
+### Configuration
+
+Both URLs live in a single typed config file, [`src/config/externalLinks.ts`](src/config/externalLinks.ts):
+
+- `KOFI_URL` is the public Ko-fi link and ships enabled.
+- `TALLY_FEEDBACK_URL` ships **empty**. Create the form first, then paste its
+  public URL here. While it is empty (or not a valid `https` URL), the feedback
+  and bug entries are simply not rendered — the app never ships a dead link.
+
+Recommended Tally form fields: category (Feedback · Feature request · Bug ·
+Usability · Other), title, description, reproduction steps, expected vs. actual
+behaviour, optional device/OS/browser, optional screenshot **with a warning not
+to upload sensitive data**, optional contact e-mail, and a privacy-notice
+acknowledgement. Configure it in German and English, enable owner
+notifications, and manage responses in the Tally dashboard — copy relevant ones
+into GitHub issues manually, never publishing personal details.
+
+Ko-fi tip: use **Ko-fi Free**; for one-off tips you can disable the contributor
+mode. The payment provider's normal fees may still apply.
+
+### No secrets
+
+This feature needs **no webhook, no API and no access key**. Only public URLs
+are used. Following the project's static-SPA rule (see `vite.config.ts`), there
+are **no environment variables** and therefore no `VITE_*` values in the bundle:
+nothing secret is baked into the client. If a Tally admin tool such as the Tally
+MCP server is ever used, it is a local development tool only — its OAuth tokens
+or API keys must never enter the repository, commits, issues, logs, client code
+or build output, and the shipped PWA talks only to the public form URL.
+
+The language of these entries follows the system/browser language (German or
+English, English fallback); a full in-app language switch is tracked separately.
+
+---
+
 ## Privacy
 
 - All data is stored exclusively on this device, in this browser.
@@ -488,6 +537,9 @@ banner; you decide when to reload, so an update never interrupts a set.
 - No user account, no registration.
 - No cookies, no tracking, no telemetry, no ads.
 - No external fonts, scripts or APIs at runtime.
+- The optional **Community** links (Ko-fi, Tally) only open an external page in a
+  new tab when you tap them. You then leave the app and that provider processes
+  your input under its own terms; no app data is transferred automatically.
 - Clearing browser site data — or deleting the installed app — can remove your
   training history. Take backups.
 - The AI export is generated locally and only shared if you share it.

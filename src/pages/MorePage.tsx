@@ -14,6 +14,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { PageHeader } from '@/components/layout/PageHeader';
+import { CommunityGroup } from '@/features/community/CommunityGroup';
 
 interface MoreItem {
   to: string;
@@ -148,6 +149,8 @@ export default function MorePage() {
             </ul>
           </section>
         ))}
+
+        <CommunityGroup />
       </div>
 
       <p className="mt-6 text-center text-xs leading-relaxed text-muted">

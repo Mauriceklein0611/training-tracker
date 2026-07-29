@@ -1,5 +1,6 @@
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card } from '@/components/ui/Card';
+import { communityStrings, getLanguage } from '@/i18n';
 
 const SECTIONS = [
   {
@@ -33,6 +34,7 @@ const SECTIONS = [
 ];
 
 export default function PrivacyPage() {
+  const community = communityStrings(getLanguage());
   return (
     <>
       <PageHeader title="Datenschutz" backTo="/mehr" />
@@ -43,6 +45,12 @@ export default function PrivacyPage() {
             <p className="mt-1.5 text-sm leading-relaxed text-muted">{section.text}</p>
           </Card>
         ))}
+        <Card>
+          <h2 className="text-sm font-semibold">{community.privacyTitle}</h2>
+          <p className="mt-1.5 text-sm leading-relaxed text-muted">
+            {community.privacyText}
+          </p>
+        </Card>
       </div>
     </>
   );
