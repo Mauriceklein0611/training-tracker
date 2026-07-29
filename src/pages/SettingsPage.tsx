@@ -21,16 +21,16 @@ export default function SettingsPage() {
 
   return (
     <>
-      <PageHeader title="Einstellungen" backTo="/mehr" />
+      <PageHeader title={tSettings('title')} backTo="/mehr" />
 
       <div className="grid gap-4">
         <Card>
-          <CardHeader title="Training" as="h2" />
+          <CardHeader title={tSettings('training.sectionTitle')} as="h2" />
           <div className="grid gap-4">
             <NumberField
-              label="Standardpause (Sekunden)"
+              label={tSettings('training.restLabel')}
               value={String(settings.defaultRestSeconds)}
-              hint="Wird verwendet, wenn eine Übung keine eigene Pausenzeit vorgibt."
+              hint={tSettings('training.restHint')}
               onChange={(event) => {
                 const value = parseNumberInput(event.target.value);
                 if (value == null || Number.isNaN(value)) return;
@@ -40,17 +40,17 @@ export default function SettingsPage() {
               }}
             />
             <SelectField
-              label="Einheit"
+              label={tSettings('training.unitLabel')}
               value={settings.unit}
               disabled
-              hint="Aktuell werden alle Gewichte in Kilogramm erfasst."
+              hint={tSettings('training.unitHint')}
             >
-              <option value="kg">Kilogramm (kg)</option>
+              <option value="kg">{tSettings('training.unitKg')}</option>
             </SelectField>
             <SelectField
-              label="Anstrengung erfassen"
+              label={tSettings('training.effortLabel')}
               value={settings.effortInput ?? 'rir'}
-              hint="Welche Anstrengungsangabe der Satz-Editor anbietet. Optional — ein Satz kann immer ohne Angabe abgeschlossen werden."
+              hint={tSettings('training.effortHint')}
               onChange={(event) =>
                 void update({ effortInput: event.target.value as EffortInput })
               }
@@ -62,40 +62,40 @@ export default function SettingsPage() {
               ))}
             </SelectField>
             <SelectField
-              label="Fachbegriffe"
+              label={tSettings('training.termsLabel')}
               value={settings.explainMode ?? 'beginner'}
-              hint="Anfänger sehen ausführliche Labels (z. B. „Anstrengung (RPE)“), erfahrene Nutzer kompakte Fachlabels."
+              hint={tSettings('training.termsHint')}
               onChange={(event) =>
                 void update({ explainMode: event.target.value as ExplainMode })
               }
             >
-              <option value="beginner">Ausführlich (Anfänger)</option>
-              <option value="expert">Kompakt (erfahren)</option>
+              <option value="beginner">{tSettings('training.termsBeginner')}</option>
+              <option value="expert">{tSettings('training.termsExpert')}</option>
             </SelectField>
           </div>
         </Card>
 
         <Card>
-          <CardHeader title="Pausensignal" as="h2" />
+          <CardHeader title={tSettings('rest.sectionTitle')} as="h2" />
           <div className="grid gap-4">
             <CheckboxField
-              label="Ton bei abgelaufener Pause"
-              hint="Wird lokal erzeugt. Auf dem iPhone muss die App dafür zuvor einmal berührt worden sein."
+              label={tSettings('rest.soundLabel')}
+              hint={tSettings('rest.soundHint')}
               checked={settings.restSoundEnabled}
               onChange={(checked) => void update({ restSoundEnabled: checked })}
             />
             <CheckboxField
-              label="Vibration bei abgelaufener Pause"
-              hint="Wird nicht von allen Geräten unterstützt — iOS-Browser ignorieren die Vibration."
+              label={tSettings('rest.vibrationLabel')}
+              hint={tSettings('rest.vibrationHint')}
               checked={settings.restVibrationEnabled}
               onChange={(checked) => void update({ restVibrationEnabled: checked })}
             />
             <CheckboxField
-              label="Sprachansage bei Pausenende"
+              label={tSettings('rest.voiceLabel')}
               hint={
                 isSpeechSupported()
-                  ? 'Kündigt das Pausenende lokal per Sprachausgabe an. Auf dem iPhone muss die App dafür zuvor einmal berührt worden sein.'
-                  : 'Dieser Browser unterstützt die Sprachausgabe nicht — die Einstellung bleibt dann wirkungslos.'
+                  ? tSettings('rest.voiceHint')
+                  : tSettings('rest.voiceUnsupported')
               }
               checked={settings.voiceAnnouncementsEnabled}
               onChange={(checked) => void update({ voiceAnnouncementsEnabled: checked })}
@@ -106,22 +106,23 @@ export default function SettingsPage() {
                 primeAudio();
                 if (settings.restSoundEnabled) playRestFinishedSound();
                 if (settings.restVibrationEnabled) vibrate();
-                if (settings.voiceAnnouncementsEnabled) speak('Pause beendet.');
+                if (settings.voiceAnnouncementsEnabled)
+                  speak(tSettings('rest.voiceTest'));
               }}
             >
-              Signal testen
+              {tSettings('rest.testSignal')}
             </Button>
           </div>
         </Card>
 
         <Card>
-          <CardHeader title="Bildschirm" as="h2" />
+          <CardHeader title={tSettings('screen.sectionTitle')} as="h2" />
           <CheckboxField
-            label="Bildschirm während des Trainings aktiv halten"
+            label={tSettings('screen.keepAwakeLabel')}
             hint={
               isWakeLockSupported()
-                ? 'Verhindert, dass sich das Display zwischen den Sätzen ausschaltet.'
-                : 'Dieser Browser unterstützt die Funktion nicht — die Einstellung bleibt dann wirkungslos. Die App funktioniert normal weiter.'
+                ? tSettings('screen.keepAwakeHint')
+                : tSettings('screen.keepAwakeUnsupported')
             }
             checked={settings.keepScreenAwake}
             onChange={(checked) => void update({ keepScreenAwake: checked })}
@@ -147,25 +148,25 @@ export default function SettingsPage() {
         </Card>
 
         <Card>
-          <CardHeader title="Darstellung" as="h2" />
+          <CardHeader title={tSettings('appearance.sectionTitle')} as="h2" />
           <SelectField
-            label="Farbmodus"
+            label={tSettings('appearance.colorModeLabel')}
             value={settings.darkMode}
-            hint="Der dunkle Modus ist für das Training in Innenräumen voreingestellt."
+            hint={tSettings('appearance.colorModeHint')}
             onChange={(event) =>
               void update({ darkMode: event.target.value as AppSettings['darkMode'] })
             }
           >
-            <option value="dark">Dunkel (Gym-Modus)</option>
-            <option value="light">Hell</option>
-            <option value="system">Systemeinstellung folgen</option>
+            <option value="dark">{tSettings('appearance.dark')}</option>
+            <option value="light">{tSettings('appearance.light')}</option>
+            <option value="system">{tSettings('appearance.system')}</option>
           </SelectField>
         </Card>
 
         <Card>
-          <CardHeader title="Analyse" as="h2" />
+          <CardHeader title={tSettings('analytics.sectionTitle')} as="h2" />
           <SelectField
-            label="Standardzeitraum"
+            label={tSettings('analytics.rangeLabel')}
             value={settings.defaultAnalyticsRange}
             onChange={(event) =>
               void update({
@@ -173,17 +174,17 @@ export default function SettingsPage() {
               })
             }
           >
-            <option value="7d">7 Tage</option>
-            <option value="30d">30 Tage</option>
-            <option value="90d">90 Tage</option>
-            <option value="all">Gesamter Zeitraum</option>
+            <option value="7d">{tSettings('analytics.range7d')}</option>
+            <option value="30d">{tSettings('analytics.range30d')}</option>
+            <option value="90d">{tSettings('analytics.range90d')}</option>
+            <option value="all">{tSettings('analytics.rangeAll')}</option>
           </SelectField>
         </Card>
 
         <Card>
           <CardHeader
-            title="Wochenziele"
-            subtitle="Erscheinen im Verlauf über dem Kalender."
+            title={tSettings('weeklyGoals.sectionTitle')}
+            subtitle={tSettings('weeklyGoals.subtitle')}
             as="h2"
           />
           <WeeklyGoalsEditor
@@ -193,12 +194,12 @@ export default function SettingsPage() {
         </Card>
 
         <Card>
-          <CardHeader title="Sicherungserinnerung" as="h2" />
+          <CardHeader title={tSettings('backupReminder.sectionTitle')} as="h2" />
           <div className="grid gap-4">
             <NumberField
-              label="Erinnerungsintervall (Tage)"
+              label={tSettings('backupReminder.intervalLabel')}
               value={String(settings.backupReminderDays)}
-              hint="0 deaktiviert die Erinnerung. Eine Sicherung ist die einzige Möglichkeit, deine Daten auf ein anderes Gerät zu übertragen."
+              hint={tSettings('backupReminder.intervalHint')}
               onChange={(event) => {
                 const value = parseNumberInput(event.target.value);
                 if (value == null || Number.isNaN(value)) return;
@@ -208,11 +209,11 @@ export default function SettingsPage() {
               }}
             />
             <p className="text-sm text-muted">
-              Letzte Sicherung:{' '}
+              {tSettings('backupReminder.lastBackup')}{' '}
               <span className="font-medium text-text">
                 {settings.lastBackupAt
                   ? formatDateTime(settings.lastBackupAt)
-                  : 'noch nie'}
+                  : tSettings('backupReminder.never')}
               </span>
             </p>
           </div>
@@ -220,16 +221,15 @@ export default function SettingsPage() {
 
         {showIosHint ? (
           <Card>
-            <CardHeader title="Auf dem iPhone installieren" as="h2" />
+            <CardHeader title={tSettings('ios.sectionTitle')} as="h2" />
             <ol className="grid list-decimal gap-1.5 pl-5 text-sm leading-relaxed text-muted">
-              <li>Diese Seite in Safari öffnen.</li>
-              <li>Unten auf „Teilen“ tippen.</li>
-              <li>„Zum Home-Bildschirm“ auswählen.</li>
-              <li>Die App künftig über das Symbol auf dem Home-Bildschirm starten.</li>
+              <li>{tSettings('ios.step1')}</li>
+              <li>{tSettings('ios.step2')}</li>
+              <li>{tSettings('ios.step3')}</li>
+              <li>{tSettings('ios.step4')}</li>
             </ol>
             <p className="mt-2 text-xs leading-relaxed text-muted">
-              Als installierte App läuft der Tracker im Vollbild und funktioniert
-              vollständig ohne Internetverbindung.
+              {tSettings('ios.note')}
             </p>
           </Card>
         ) : null}
