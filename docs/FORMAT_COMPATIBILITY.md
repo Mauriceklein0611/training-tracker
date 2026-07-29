@@ -13,7 +13,7 @@ previous supported version, the current version, an invalid and an
 unsupported-future fixture. Raise a schema version only on a real persistence
 change; prefer optional/additive fields.
 
-Last full matrix audit (2026-07-28): every version in the table below was
+Last full matrix audit (2026-07-29): every version in the table below was
 cross-checked against its code constant (`SCHEMA_VERSION` 28, `AI_EXPORT_VERSION`
 3, `SUPPORTED_RESPONSE_SCHEMA_VERSION` 2, `PLAN_BUILDER_KIT_VERSION` 3,
 `PLAN_PACKAGE_SCHEMA_VERSION` 4 with `SUPPORTED_PLAN_PACKAGE_VERSIONS` [1, 2, 3,
