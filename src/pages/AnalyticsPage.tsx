@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { GitCompareArrows } from 'lucide-react';
+import { ChevronRight, GitCompareArrows } from 'lucide-react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card, CardHeader, EmptyState, Stat } from '@/components/ui/Card';
 import { equipmentLabel } from '@/services/equipment';
@@ -323,29 +323,36 @@ export default function AnalyticsPage() {
         subtitle="Berechnet ausschließlich aus deinen lokalen Daten"
       />
 
-      <div className="mb-3 grid gap-2">
-        <Link
-          to="/analyse/vergleich"
-          className="flex min-h-[48px] items-center gap-2 rounded-2xl border border-border bg-surface px-4 text-sm font-medium active:bg-surface-2"
+      {/* The three comparison entry points live in one "Vergleichen" card so
+       * they read as a single tool, not three competing actions. */}
+      <section
+        aria-labelledby="compare-heading"
+        className="mb-3 rounded-2xl border border-border bg-surface p-3"
+      >
+        <h2
+          id="compare-heading"
+          className="mb-1 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted"
         >
-          <GitCompareArrows size={18} className="text-accent" aria-hidden="true" />
-          Trainingsblöcke vergleichen
-        </Link>
-        <Link
-          to="/analyse/plaene-vergleich"
-          className="flex min-h-[48px] items-center gap-2 rounded-2xl border border-border bg-surface px-4 text-sm font-medium active:bg-surface-2"
-        >
-          <GitCompareArrows size={18} className="text-accent" aria-hidden="true" />
-          Pläne vergleichen
-        </Link>
-        <Link
-          to="/analyse/einheiten-vergleich"
-          className="flex min-h-[48px] items-center gap-2 rounded-2xl border border-border bg-surface px-4 text-sm font-medium active:bg-surface-2"
-        >
-          <GitCompareArrows size={18} className="text-accent" aria-hidden="true" />
-          Einheiten vergleichen
-        </Link>
-      </div>
+          <GitCompareArrows size={14} className="text-accent" aria-hidden="true" />
+          Vergleichen
+        </h2>
+        <div className="grid">
+          {[
+            { to: '/analyse/vergleich', label: 'Zeiträume' },
+            { to: '/analyse/plaene-vergleich', label: 'Trainingspläne' },
+            { to: '/analyse/einheiten-vergleich', label: 'Übungseinheiten' },
+          ].map((entry) => (
+            <Link
+              key={entry.to}
+              to={entry.to}
+              className="flex min-h-[48px] items-center justify-between gap-2 border-t border-border text-sm font-medium first:border-t-0 active:bg-surface-2"
+            >
+              {entry.label}
+              <ChevronRight size={18} className="text-muted" aria-hidden="true" />
+            </Link>
+          ))}
+        </div>
+      </section>
 
       <Segmented
         label="Zeitraum"
