@@ -8,7 +8,7 @@ import {
   formatSignedSeconds,
   formatVolume,
 } from '@/utils/format';
-import { formatCardioDistance } from '@/services/cardioMetrics';
+import { formatCardioDistance, formatPace } from '@/services/cardioMetrics';
 import { formatDurationLong } from '@/utils/date';
 import { cn } from '@/utils/cn';
 
@@ -93,6 +93,28 @@ function Section({ title, rows }: { title: string; rows: MetricRow[] }) {
 /** Distance for a cardio total: null (→ "keine Daten") when nothing was recorded. */
 function distanceOrNull(meters: number): number | null {
   return meters > 0 ? meters : null;
+}
+
+/**
+ * Aggregate pace (min/km) from the totals, not an unweighted mean of per-set
+ * paces. Null unless both totals are positive, so a division never yields NaN
+ * or Infinity.
+ */
+function aggregatePaceMinPerKm(
+  durationSeconds: number,
+  distanceMeters: number,
+): number | null {
+  if (!(durationSeconds > 0) || !(distanceMeters > 0)) return null;
+  return durationSeconds / 60 / (distanceMeters / 1000);
+}
+
+/** Aggregate speed (km/h) from the totals; null unless both are positive. */
+function aggregateSpeedKmH(
+  durationSeconds: number,
+  distanceMeters: number,
+): number | null {
+  if (!(durationSeconds > 0) || !(distanceMeters > 0)) return null;
+  return distanceMeters / 1000 / (durationSeconds / 3600);
 }
 
 /**
@@ -204,6 +226,24 @@ export function MetricsCompareTable({
           ? b.cardioDistanceMeters / b.cardioActivities
           : null,
       format: distance,
+    },
+    {
+      label: 'Ø Pace',
+      a: aggregatePaceMinPerKm(a.cardioDurationSeconds, a.cardioDistanceMeters),
+      b: aggregatePaceMinPerKm(b.cardioDurationSeconds, b.cardioDistanceMeters),
+      format: (value) => formatPace({ kind: 'min_per_km', value }),
+    },
+    {
+      label: 'Ø Geschwindigkeit',
+      a: aggregateSpeedKmH(a.cardioDurationSeconds, a.cardioDistanceMeters),
+      b: aggregateSpeedKmH(b.cardioDurationSeconds, b.cardioDistanceMeters),
+      format: (value) => formatPace({ kind: 'km_per_h', value }),
+    },
+    {
+      label: 'Ø Cardio-RPE',
+      a: a.cardioAvgRpe,
+      b: b.cardioAvgRpe,
+      format: n(1),
     },
     {
       label: 'Einheiten / Wo.',

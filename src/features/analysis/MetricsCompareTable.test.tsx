@@ -33,6 +33,7 @@ function metrics(overrides: Partial<BlockMetrics> = {}): BlockMetrics {
     cardioActivitiesPerWeek: 0,
     cardioMinutesPerWeek: 0,
     cardioDistancePerWeekMeters: 0,
+    cardioAvgRpe: null,
     ...overrides,
   };
 }
@@ -58,6 +59,34 @@ describe('MetricsCompareTable cardio section', () => {
     expect(screen.getAllByText('5 km').length).toBeGreaterThanOrEqual(1);
     // The cardio-free side reports honest "keine Daten" for its distance, not 0 km.
     expect(screen.getAllByText('keine Daten').length).toBeGreaterThan(0);
+  });
+
+  it('adds aggregate pace, speed and cardio RPE from the totals', () => {
+    // 20 km in 4 × 30 min = 120 min → 6:00 min/km and 10 km/h.
+    const a = metrics({
+      cardioActivities: 4,
+      cardioDurationSeconds: 120 * 60,
+      cardioDistanceMeters: 20000,
+      cardioAvgRpe: 6.5,
+    });
+    render(<MetricsCompareTable a={a} b={metrics()} />);
+    // Labels render twice (mobile + desktop); values render once (side A only).
+    expect(screen.getAllByText('Ø Pace').length).toBeGreaterThan(0);
+    expect(screen.getByText('6:00 min/km')).toBeInTheDocument();
+    expect(screen.getByText('10 km/h')).toBeInTheDocument();
+    expect(screen.getAllByText('Ø Cardio-RPE').length).toBeGreaterThan(0);
+    expect(screen.getByText('6,5')).toBeInTheDocument();
+  });
+
+  it('never shows NaN or Infinity when duration or distance is missing', () => {
+    // Duration but no distance → pace/speed must stay "keine Daten".
+    const a = metrics({
+      cardioActivities: 2,
+      cardioDurationSeconds: 3600,
+      cardioDistanceMeters: 0,
+    });
+    render(<MetricsCompareTable a={a} b={metrics()} />);
+    expect(screen.queryByText(/NaN|Infinity|∞/)).not.toBeInTheDocument();
   });
 
   it('hides the cardio section entirely for two strength-only blocks', () => {

@@ -122,6 +122,7 @@ describe('computeBlockMetrics', () => {
           reps: undefined,
           durationSeconds: 1800,
           distanceMeters: 6000,
+          rpe: 7,
           completedAt: '2026-07-06T18:40:00',
         }),
       ],
@@ -139,6 +140,9 @@ describe('computeBlockMetrics', () => {
     expect(metrics.cardioActivities).toBe(1);
     expect(metrics.cardioDistanceMeters).toBe(6000);
     expect(metrics.cardioDurationSeconds).toBe(1800);
+    // Cardio RPE is averaged from the cardio set only, apart from strength RPE.
+    expect(metrics.cardioAvgRpe).toBe(7);
+    expect(metrics.avgRpe).toBeNull();
   });
 
   it('reports missing subjective and body data as null', () => {

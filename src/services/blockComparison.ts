@@ -55,6 +55,8 @@ export interface BlockMetrics {
   cardioActivitiesPerWeek: number;
   cardioMinutesPerWeek: number;
   cardioDistancePerWeekMeters: number;
+  /** Mean cardio RPE across recorded cardio sections, or null when none. */
+  cardioAvgRpe: number | null;
 }
 
 function average(values: number[]): number | null {
@@ -76,7 +78,8 @@ export function computeBlockMetrics(
   const weeks = weeksInRange(range);
   const perWeekDivisor = rateWeeks(range);
 
-  const contexts = filterContextsByRange(buildSetContexts(dataset), range).filter(
+  const inRange = filterContextsByRange(buildSetContexts(dataset), range);
+  const contexts = inRange.filter(
     (context) =>
       isCompleted(context.set) &&
       isWorkingSet(context.set) &&
@@ -86,6 +89,15 @@ export function computeBlockMetrics(
     .map((context) => context.set.rir)
     .filter((value): value is number => value != null);
   const rpeValues = contexts
+    .map((context) => context.set.rpe)
+    .filter((value): value is number => value != null);
+  // Cardio effort is kept apart from strength RPE: mean of the recorded cardio
+  // RPE values only (missing values are never counted as zero).
+  const cardioRpeValues = inRange
+    .filter(
+      (context) =>
+        isCompleted(context.set) && isCardio(context.set, context.sessionExercise),
+    )
     .map((context) => context.set.rpe)
     .filter((value): value is number => value != null);
   const distinctExercises = new Set(
@@ -143,6 +155,7 @@ export function computeBlockMetrics(
     cardioActivitiesPerWeek: analytics.cardio.activities / perWeekDivisor,
     cardioMinutesPerWeek: analytics.cardio.totalDurationSeconds / 60 / perWeekDivisor,
     cardioDistancePerWeekMeters: analytics.cardio.totalDistanceMeters / perWeekDivisor,
+    cardioAvgRpe: average(cardioRpeValues),
   };
 }
 
