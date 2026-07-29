@@ -519,7 +519,11 @@ export default function AnalyticsPage() {
                   />
                 }
               >
-                <HorizontalBarChart data={musclePoints} formatValue={formatNumber} />
+                <HorizontalBarChart
+                  data={musclePoints}
+                  formatValue={formatNumber}
+                  allowDecimals={false}
+                />
                 {trainedMuscles.primary.length > 0 ? (
                   <div className="mt-3 border-t border-border pt-3">
                     <BodyMap
@@ -658,6 +662,8 @@ export default function AnalyticsPage() {
                       <SimpleLineChart
                         data={seriesPoints}
                         formatValue={metricFormatter}
+                        // Rep counts are whole numbers; other metrics vary.
+                        allowDecimals={metric !== 'reps'}
                       />
                     </ChartFrame>
                     {data?.cardioRecords ? (

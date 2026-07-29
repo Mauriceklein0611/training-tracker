@@ -126,9 +126,12 @@ export interface BarPoint {
 export function SimpleBarChart({
   data,
   formatValue,
+  allowDecimals = true,
 }: {
   data: BarPoint[];
   formatValue: (value: number) => string;
+  /** False for count metrics (sets, reps) so ticks stay whole numbers. */
+  allowDecimals?: boolean;
 }) {
   return (
     // left:0, never negative — a negative left margin pulls the Y axis off the
@@ -143,7 +146,12 @@ export function SimpleBarChart({
           interval="preserveStartEnd"
           minTickGap={12}
         />
-        <YAxis {...AXIS_PROPS} width={52} tickFormatter={formatValue} />
+        <YAxis
+          {...AXIS_PROPS}
+          width={52}
+          tickFormatter={formatValue}
+          allowDecimals={allowDecimals}
+        />
         <Tooltip
           cursor={{ fill: 'color-mix(in oklab, var(--muted) 15%, transparent)' }}
           content={<ChartTooltip formatter={(value) => formatValue(value)} />}
@@ -165,9 +173,12 @@ export function SimpleBarChart({
 export function HorizontalBarChart({
   data,
   formatValue,
+  allowDecimals = true,
 }: {
   data: BarPoint[];
   formatValue: (value: number) => string;
+  /** False for count metrics (sets) so the value axis stays whole numbers. */
+  allowDecimals?: boolean;
 }) {
   return (
     <ResponsiveContainer width="100%" height={Math.max(140, data.length * 34 + 24)}>
@@ -177,7 +188,12 @@ export function HorizontalBarChart({
         margin={{ top: 4, right: 12, bottom: 0, left: 4 }}
       >
         <CartesianGrid stroke={GRID_COLOR} horizontal={false} />
-        <XAxis type="number" {...AXIS_PROPS} tickFormatter={formatValue} />
+        <XAxis
+          type="number"
+          {...AXIS_PROPS}
+          tickFormatter={formatValue}
+          allowDecimals={allowDecimals}
+        />
         <YAxis type="category" dataKey="label" {...AXIS_PROPS} width={92} />
         <Tooltip
           cursor={{ fill: 'color-mix(in oklab, var(--muted) 15%, transparent)' }}
@@ -198,9 +214,12 @@ export interface LinePoint {
 export function SimpleLineChart({
   data,
   formatValue,
+  allowDecimals = true,
 }: {
   data: LinePoint[];
   formatValue: (value: number) => string;
+  /** False for count metrics (reps) so ticks stay whole numbers. */
+  allowDecimals?: boolean;
 }) {
   return (
     <ResponsiveContainer width="100%" height={200}>
@@ -217,6 +236,7 @@ export function SimpleLineChart({
           width={52}
           tickFormatter={formatValue}
           domain={['auto', 'auto']}
+          allowDecimals={allowDecimals}
         />
         <Tooltip content={<ChartTooltip formatter={(value) => formatValue(value)} />} />
         <Line
