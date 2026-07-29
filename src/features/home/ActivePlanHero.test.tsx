@@ -88,9 +88,7 @@ describe('ActivePlanHero', () => {
       screen.queryByRole('button', { name: /Training starten/ }),
     ).not.toBeInTheDocument();
 
-    await userEvent.click(
-      screen.getByRole('button', { name: /Einheit konfigurieren/ }),
-    );
+    await userEvent.click(screen.getByRole('button', { name: /Einheit konfigurieren/ }));
     expect(onConfigure).toHaveBeenCalledWith('d3');
     expect(onStartNext).not.toHaveBeenCalled();
   });

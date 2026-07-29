@@ -1,10 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  formatSections,
-  formatSets,
-  pluralSection,
-  pluralSet,
-} from '@/utils/format';
+import { formatSections, formatSets, pluralSection, pluralSet } from '@/utils/format';
 
 describe('German count plurals', () => {
   it('uses the singular only for exactly one set', () => {

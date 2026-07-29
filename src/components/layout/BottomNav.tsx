@@ -1,11 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import {
-  BarChart3,
-  ClipboardList,
-  History,
-  House,
-  MoreHorizontal,
-} from 'lucide-react';
+import { BarChart3, ClipboardList, History, House, MoreHorizontal } from 'lucide-react';
 import { cn } from '@/utils/cn';
 
 const ITEMS = [
