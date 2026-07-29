@@ -156,15 +156,19 @@ describe('translation resources', () => {
     expect(t('action.save')).toBe('Save');
   });
 
-  it('uses the required DE/EN labels from #29 and #30', () => {
+  it('uses the required DE/EN labels from #29 and #33', () => {
     setLanguage('de');
     expect(t('community:support.label')).toBe('Projekt freiwillig unterstützen');
-    expect(t('community:feedback.label')).toBe('Feedback & Wünsche');
-    expect(t('community:bug.label')).toBe('Fehler melden');
+    expect(t('community:feedback.label')).toBe('Feedback geben');
+    expect(t('community:feedback.description')).toBe(
+      'Fehler melden, Idee teilen oder Verbesserung vorschlagen.',
+    );
     setLanguage('en');
     expect(t('community:support.label')).toBe('Support the project');
-    expect(t('community:feedback.label')).toBe('Feedback & requests');
-    expect(t('community:bug.label')).toBe('Report a bug');
+    expect(t('community:feedback.label')).toBe('Send feedback');
+    expect(t('community:feedback.description')).toBe(
+      'Report a bug, share an idea, or suggest an improvement.',
+    );
   });
 
   it('renders the key itself for an unknown key instead of an empty string', () => {

@@ -12,13 +12,8 @@ export const community: Community = {
       'Stays completely free — voluntary support via Ko-fi, with no in-app account.',
   },
   feedback: {
-    label: 'Feedback & requests',
-    description: 'Share ideas and feature requests through an external form.',
-  },
-  bug: {
-    label: 'Report a bug',
-    description:
-      'Report a problem — opens the same external form with a category picker.',
+    label: 'Send feedback',
+    description: 'Report a bug, share an idea, or suggest an improvement.',
   },
   privacyTitle: 'Community links: Ko-fi and feedback form',
   privacyText:

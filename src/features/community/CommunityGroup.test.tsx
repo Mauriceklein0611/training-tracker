@@ -41,38 +41,41 @@ describe('CommunityGroup', () => {
     expect(screen.getByRole('link', { name: /Support the project/ })).toBeInTheDocument();
   });
 
-  it('does not render feedback entries when Tally is not configured', () => {
+  it('does not render the feedback entry when Tally is not configured', () => {
     render(<CommunityGroup tallyUrl="" />);
     expect(
-      screen.queryByRole('link', { name: /Feedback & Wünsche/ }),
+      screen.queryByRole('link', { name: /Feedback geben/ }),
     ).not.toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: /Fehler melden/ })).not.toBeInTheDocument();
   });
 
-  it('drops the feedback entries for an invalid (non-https) URL', () => {
+  it('drops the feedback entry for an invalid (non-https) URL', () => {
     render(<CommunityGroup tallyUrl="http://tally.so/r/plain" />);
     expect(
-      screen.queryByRole('link', { name: /Feedback & Wünsche/ }),
+      screen.queryByRole('link', { name: /Feedback geben/ }),
     ).not.toBeInTheDocument();
     render(<CommunityGroup tallyUrl="not a url" />);
-    expect(screen.queryByRole('link', { name: /Fehler melden/ })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('link', { name: /Feedback geben/ }),
+    ).not.toBeInTheDocument();
   });
 
-  it('renders both feedback entries pointing at the same configured form', () => {
+  it('offers exactly one Tally entry covering bugs, ideas and feedback (#33)', () => {
     render(<CommunityGroup tallyUrl={TALLY} />);
-    expect(screen.getByRole('link', { name: /Feedback & Wünsche/ })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /Feedback geben/ })).toHaveAttribute(
       'href',
       TALLY,
     );
-    expect(screen.getByRole('link', { name: /Fehler melden/ })).toHaveAttribute(
-      'href',
-      TALLY,
-    );
+    // The duplicate bug-report entry is gone; the category is picked in Tally.
+    expect(screen.queryByRole('link', { name: /Fehler melden/ })).not.toBeInTheDocument();
+    expect(screen.getAllByRole('link')).toHaveLength(2);
+    expect(
+      screen.getByText('Fehler melden, Idee teilen oder Verbesserung vorschlagen.'),
+    ).toBeInTheDocument();
   });
 
   it('uses the German form when the app language is German', () => {
     render(<CommunityGroup />);
-    expect(screen.getByRole('link', { name: /Feedback & Wünsche/ })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /Feedback geben/ })).toHaveAttribute(
       'href',
       TALLY_FEEDBACK_URLS.de,
     );
@@ -81,21 +84,23 @@ describe('CommunityGroup', () => {
   it('uses the English form and English copy when the app language is English', () => {
     setLanguage('en');
     render(<CommunityGroup />);
-    expect(screen.getByRole('link', { name: /Feedback & requests/ })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /Send feedback/ })).toHaveAttribute(
       'href',
       TALLY_FEEDBACK_URLS.en,
     );
-    expect(screen.getByRole('link', { name: /Report a bug/ })).toBeInTheDocument();
+    expect(
+      screen.getByText('Report a bug, share an idea, or suggest an improvement.'),
+    ).toBeInTheDocument();
   });
 
   it('shows no leftover strings of the other language', () => {
     const { container, unmount } = render(<CommunityGroup />);
-    expect(container.textContent).not.toMatch(/Report a bug|Support the project/);
+    expect(container.textContent).not.toMatch(/Send feedback|Support the project/);
     unmount();
     setLanguage('en');
     const english = render(<CommunityGroup />);
     expect(english.container.textContent).not.toMatch(
-      /Fehler melden|Projekt freiwillig unterstützen/,
+      /Feedback geben|Projekt freiwillig unterstützen/,
     );
   });
 
@@ -121,7 +126,8 @@ describe('CommunityGroup', () => {
     expect(screen.queryByRole('link')).not.toBeInTheDocument();
     // … but every entry and a clear hint stay visible.
     expect(screen.getByText(/Projekt freiwillig unterstützen/)).toBeInTheDocument();
-    expect(screen.getAllByText(/Offline nicht verfügbar/).length).toBeGreaterThan(0);
+    expect(screen.getByText(/Feedback geben/)).toBeInTheDocument();
+    expect(screen.getAllByText(/Offline nicht verfügbar/).length).toBe(2);
   });
 
   it('exposes an accessible name announcing the external link, in a labelled group', () => {
@@ -142,7 +148,7 @@ describe('CommunityGroup', () => {
     const user = userEvent.setup();
     render(<CommunityGroup />);
     const links = screen.getAllByRole('link');
-    expect(links.length).toBeGreaterThan(1);
+    expect(links).toHaveLength(2);
     for (const link of links) {
       await user.tab();
       expect(link).toHaveFocus();

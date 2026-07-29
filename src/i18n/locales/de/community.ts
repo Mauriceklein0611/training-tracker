@@ -14,13 +14,8 @@ export const community = {
       'Bleibt komplett kostenlos — freiwillige Unterstützung über Ko-fi, ohne Konto in der App.',
   },
   feedback: {
-    label: 'Feedback & Wünsche',
-    description: 'Ideen und Feature-Wünsche über ein externes Formular teilen.',
-  },
-  bug: {
-    label: 'Fehler melden',
-    description:
-      'Ein Problem melden — öffnet dasselbe externe Formular mit Kategorieauswahl.',
+    label: 'Feedback geben',
+    description: 'Fehler melden, Idee teilen oder Verbesserung vorschlagen.',
   },
   privacyTitle: 'Community-Links: Ko-fi und Feedback-Formular',
   privacyText:

@@ -492,9 +492,10 @@ start, and **no training, body or device data** is ever sent along.
 - **Projekt freiwillig unterstützen / Support the project** — opens the public
   Ko-fi page. The app stays free forever; support is voluntary and **not a
   tax-deductible donation**.
-- **Feedback & Wünsche / Feedback & requests** and **Fehler melden / Report a
-  bug** — open the public Tally form for the active language (both entries lead
-  to the same form; the category is picked inside it).
+- **Feedback geben / Send feedback** — "Fehler melden, Idee teilen oder
+  Verbesserung vorschlagen": one single entry (#33) that opens the public Tally
+  form for the active language. Bug reports, ideas and general feedback are
+  classified by the form's first question, not by duplicated menu items.
 
 ### Configuration
 
@@ -508,12 +509,12 @@ All URLs live in a single typed config file, [`src/config/externalLinks.ts`](src
   #31 fallback rule.
 - `TALLY_PRIVACY_URL` points at Tally's public terms & privacy overview and is
   linked from _Mehr → Datenschutz_.
-- If an entry is ever emptied or is not a valid `https` URL, the feedback and
-  bug entries are simply not rendered — the app never ships a dead link.
+- If an entry is ever emptied or is not a valid `https` URL, that entry is simply
+  not rendered — the app never ships a dead link.
 
 Both forms are structurally identical, one fully German and one fully English
-(no mixed bilingual form): required category (General feedback · Feature request
-· Bug report · Usability issue · Other), required short title and description,
+(no mixed bilingual form): required category (Bug report · Feature request ·
+General feedback · Question · Other), required short title and description,
 plus **steps to reproduce, expected behaviour and actual behaviour, shown and
 required by conditional logic only for the bug category**. Optional: device/OS,
 browser, contact e-mail, and a single image screenshot (max 5 MB) preceded by an

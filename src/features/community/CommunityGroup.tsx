@@ -1,5 +1,4 @@
 import {
-  Bug,
   ExternalLink,
   Heart,
   MessageSquarePlus,
@@ -23,9 +22,10 @@ interface CommunityLink {
 }
 
 /**
- * Community group for the "Mehr" hub: voluntary Ko-fi support (#29) and Tally
- * feedback (#30). Both feedback entries open the same form — the category is
- * picked inside it.
+ * Community group for the "Mehr" hub: voluntary Ko-fi support (#29) and exactly
+ * one Tally feedback entry (#30, consolidated in #33 — bug reports, ideas and
+ * general feedback share one entry and are classified inside the form instead
+ * of by duplicated menu items).
  *
  * Entries are plain external links — no widgets, iframes, SDKs or query
  * parameters carrying app data. A link is only rendered when its public URL is
@@ -59,20 +59,12 @@ export function CommunityGroup({
     });
   }
   if (isConfiguredExternalUrl(feedbackUrl)) {
-    // Both entries deliberately point at the same form (one category picker).
     links.push({
       key: 'feedback',
       href: feedbackUrl,
       label: t('feedback.label'),
       description: t('feedback.description'),
       Icon: MessageSquarePlus,
-    });
-    links.push({
-      key: 'bug',
-      href: feedbackUrl,
-      label: t('bug.label'),
-      description: t('bug.description'),
-      Icon: Bug,
     });
   }
 
