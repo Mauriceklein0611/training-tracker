@@ -294,6 +294,7 @@ export default function HomePage() {
           data={activePlan}
           disabled={Boolean(activeSession)}
           onStartNext={(templateId) => void startTemplate(templateId)}
+          onConfigure={(templateId) => navigate(`/bibliothek/${templateId}`)}
         />
       ) : !activeSession ? (
         <Card className="mb-4">

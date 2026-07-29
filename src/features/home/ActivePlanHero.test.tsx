@@ -4,13 +4,23 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { ActivePlanHero, type ActivePlanHeroData } from '@/features/home/ActivePlanHero';
 
-function renderHero(data: ActivePlanHeroData, onStartNext = vi.fn(), disabled = false) {
+function renderHero(
+  data: ActivePlanHeroData,
+  onStartNext = vi.fn(),
+  disabled = false,
+  onConfigure = vi.fn(),
+) {
   render(
     <MemoryRouter>
-      <ActivePlanHero data={data} onStartNext={onStartNext} disabled={disabled} />
+      <ActivePlanHero
+        data={data}
+        onStartNext={onStartNext}
+        onConfigure={onConfigure}
+        disabled={disabled}
+      />
     </MemoryRouter>,
   );
-  return onStartNext;
+  return { onStartNext, onConfigure };
 }
 
 const base: ActivePlanHeroData = {
@@ -29,7 +39,7 @@ const base: ActivePlanHeroData = {
 
 describe('ActivePlanHero', () => {
   it('shows the plan, cycle week and next unit, and starts it', async () => {
-    const onStart = renderHero(base);
+    const { onStartNext: onStart } = renderHero(base);
     expect(screen.getByText('Muskelaufbau 3er-Split')).toBeInTheDocument();
     expect(screen.getByText('Woche 4 / 8')).toBeInTheDocument();
     // "Beine" appears as the next-unit line and as its split chip.
@@ -66,5 +76,22 @@ describe('ActivePlanHero', () => {
   it('states plainly when there is no next unit', () => {
     renderHero({ ...base, nextUnit: undefined });
     expect(screen.getByText(/keine nächste Einheit geplant/)).toBeInTheDocument();
+  });
+
+  it('offers to configure an empty next unit instead of starting it', async () => {
+    const { onStartNext, onConfigure } = renderHero({
+      ...base,
+      nextUnit: { ...base.nextUnit!, exerciseCount: 0 },
+    });
+    expect(screen.getByText(/noch keine Übungen/)).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /Training starten/ }),
+    ).not.toBeInTheDocument();
+
+    await userEvent.click(
+      screen.getByRole('button', { name: /Einheit konfigurieren/ }),
+    );
+    expect(onConfigure).toHaveBeenCalledWith('d3');
+    expect(onStartNext).not.toHaveBeenCalled();
   });
 });

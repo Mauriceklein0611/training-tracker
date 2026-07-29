@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { CalendarClock, Play } from 'lucide-react';
+import { CalendarClock, Play, SlidersHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { formatPercent } from '@/utils/format';
 
@@ -41,11 +41,14 @@ export function ActivePlanHero({
   data,
   disabled,
   onStartNext,
+  onConfigure,
 }: {
   data: ActivePlanHeroData;
   /** True while another session is active — starting is then blocked. */
   disabled?: boolean;
   onStartNext: (templateId: string) => void;
+  /** Open the unit editor to add exercises to an empty next unit. */
+  onConfigure: (templateId: string) => void;
 }) {
   return (
     <section
@@ -118,32 +121,53 @@ export function ActivePlanHero({
               <span className="text-muted">Als Nächstes: </span>
               <span className="font-semibold">{data.nextUnit.name}</span>
             </p>
-            <p className="mb-2 text-xs text-muted">
-              {data.nextUnit.exerciseCount}{' '}
-              {data.nextUnit.exerciseCount === 1 ? 'Übung' : 'Übungen'}
-              {data.nextUnit.estimatedMinutes > 0
-                ? ` · ca. ${data.nextUnit.estimatedMinutes} Min.`
-                : ''}
-              {data.nextUnit.lastDoneDaysAgo != null
-                ? ` · zuletzt ${
-                    data.nextUnit.lastDoneDaysAgo === 0
-                      ? 'heute'
-                      : data.nextUnit.lastDoneDaysAgo === 1
-                        ? 'gestern'
-                        : `vor ${data.nextUnit.lastDoneDaysAgo} Tagen`
-                  }`
-                : ''}
-            </p>
-            <Button
-              variant="primary"
-              size="lg"
-              fullWidth
-              disabled={disabled}
-              onClick={() => onStartNext(data.nextUnit!.templateId)}
-            >
-              <Play size={20} aria-hidden="true" />
-              Training starten
-            </Button>
+            {data.nextUnit.exerciseCount === 0 ? (
+              // An empty unit can't be trained yet — configuring it is the real
+              // next step, and it must not silently start an empty session.
+              <>
+                <p className="mb-2 text-xs text-muted">
+                  Diese Einheit hat noch keine Übungen.
+                </p>
+                <Button
+                  variant="primary"
+                  size="lg"
+                  fullWidth
+                  onClick={() => onConfigure(data.nextUnit!.templateId)}
+                >
+                  <SlidersHorizontal size={20} aria-hidden="true" />
+                  Einheit konfigurieren
+                </Button>
+              </>
+            ) : (
+              <>
+                <p className="mb-2 text-xs text-muted">
+                  {data.nextUnit.exerciseCount}{' '}
+                  {data.nextUnit.exerciseCount === 1 ? 'Übung' : 'Übungen'}
+                  {data.nextUnit.estimatedMinutes > 0
+                    ? ` · ca. ${data.nextUnit.estimatedMinutes} Min.`
+                    : ''}
+                  {data.nextUnit.lastDoneDaysAgo != null
+                    ? ` · zuletzt ${
+                        data.nextUnit.lastDoneDaysAgo === 0
+                          ? 'heute'
+                          : data.nextUnit.lastDoneDaysAgo === 1
+                            ? 'gestern'
+                            : `vor ${data.nextUnit.lastDoneDaysAgo} Tagen`
+                      }`
+                    : ''}
+                </p>
+                <Button
+                  variant="primary"
+                  size="lg"
+                  fullWidth
+                  disabled={disabled}
+                  onClick={() => onStartNext(data.nextUnit!.templateId)}
+                >
+                  <Play size={20} aria-hidden="true" />
+                  Training starten
+                </Button>
+              </>
+            )}
           </>
         ) : (
           <p className="text-sm text-muted">
