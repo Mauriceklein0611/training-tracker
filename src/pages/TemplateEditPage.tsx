@@ -27,7 +27,6 @@ import {
   updateTemplate,
 } from '@/db/repositories/templates';
 import {
-  addDay,
   deleteDay,
   duplicateDay,
   getPlanWithDays,
@@ -42,6 +41,7 @@ import {
 } from '@/db/repositories/sessions';
 import { saveTemplateAsWorkoutUnit } from '@/db/repositories/workoutUnits';
 import { ExercisePickerDialog } from '@/features/exercises/ExercisePickerDialog';
+import { AddDayDialog } from '@/features/plans/AddDayDialog';
 import { PlanCalendarView } from '@/features/plans/PlanCalendarView';
 import { PlanDayTabs } from '@/features/plans/PlanDayTabs';
 import { PlanDeloadCard } from '@/features/plans/PlanDeloadCard';
@@ -76,6 +76,7 @@ export default function TemplateEditPage() {
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [goalsOpen, setGoalsOpen] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const [addDayOpen, setAddDayOpen] = useState(false);
 
   const days = plan?.days ?? [];
   // Keep a valid active day even as days are added/removed.
@@ -154,12 +155,6 @@ export default function TemplateEditPage() {
     if (!activeDayId) return;
     await saveTemplateAsWorkoutUnit(activeDayId);
     toast.show('Als Übungseinheit in der Bibliothek gespeichert.', 'success');
-  };
-
-  const handleAddDay = async () => {
-    const day = await addDay(plan.plan.id);
-    setSelectedDayId(day.id);
-    toast.show('Trainingstag hinzugefügt.', 'success');
   };
 
   const handleDeleteDay = async () => {
@@ -246,7 +241,7 @@ export default function TemplateEditPage() {
           days={days}
           activeDayId={activeDayId}
           onSelect={setSelectedDayId}
-          onAdd={() => void handleAddDay()}
+          onAdd={() => setAddDayOpen(true)}
         />
       )}
 
@@ -414,6 +409,16 @@ export default function TemplateEditPage() {
       >
         <ScheduleEditor planId={plan.plan.id} />
       </Dialog>
+
+      <AddDayDialog
+        open={addDayOpen}
+        planId={plan.plan.id}
+        onClose={() => setAddDayOpen(false)}
+        onDayAdded={(dayId) => {
+          setSelectedDayId(dayId);
+          setAddDayOpen(false);
+        }}
+      />
 
       <PlanGoalsDialog
         plan={plan.plan}

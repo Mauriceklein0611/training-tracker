@@ -6,6 +6,11 @@ import { ToastProvider } from '@/components/ui/ToastProvider';
 import { db } from '@/db/db';
 import { resetDatabase } from '@/tests/dbTestUtils';
 import { createPlan, getPlanWithDays } from '@/db/repositories/plans';
+import { createExercise } from '@/db/repositories/exercises';
+import {
+  addExerciseToWorkoutUnit,
+  createWorkoutUnit,
+} from '@/db/repositories/workoutUnits';
 import TemplatesPage from '@/pages/TemplatesPage';
 import TemplateEditPage from '@/pages/TemplateEditPage';
 
@@ -73,10 +78,50 @@ describe('plan editor day navigation', () => {
     expect(screen.getByRole('tab', { name: 'Beine' })).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /Trainingstag hinzufügen/ }));
+    // The "+" now opens a dialog offering an empty day or a library import.
+    await user.click(await screen.findByRole('button', { name: /Leeren Tag erstellen/ }));
 
     await waitFor(async () => {
       const withDays = await getPlanWithDays(plan.id);
       expect(withDays?.days).toHaveLength(4);
+    });
+  });
+
+  it('imports a workout unit from the library as a new day', async () => {
+    const user = userEvent.setup();
+    const bench = await createExercise({
+      name: 'Bankdrücken',
+      primaryMuscleGroup: 'Brust',
+      secondaryMuscleGroups: [],
+      equipment: '',
+      trackingType: 'weight_reps',
+      weightMode: 'total',
+      weightMultiplier: 1,
+      defaultRestSeconds: 90,
+      notes: '',
+    });
+    const unit = await createWorkoutUnit({ name: 'Push', description: '' });
+    await addExerciseToWorkoutUnit(unit.id, bench);
+    // A multi-day plan so the "+" (add-day) control is shown.
+    const plan = await createPlan({
+      name: 'Plan',
+      splitType: 'custom',
+      dayNames: ['Tag A', 'Tag B'],
+    });
+    renderEditor(plan.id);
+
+    await user.click(
+      await screen.findByRole('button', { name: /Trainingstag hinzufügen/ }),
+    );
+    // The dialog lists the library unit; tapping it imports it as a new day.
+    await user.click(await screen.findByRole('button', { name: /Push/ }));
+
+    await waitFor(async () => {
+      const withDays = await getPlanWithDays(plan.id);
+      expect(withDays?.days).toHaveLength(3);
+      const imported = withDays?.days.find((day) => day.name === 'Push');
+      expect(imported).toBeDefined();
+      expect(imported?.sourceWorkoutUnitTemplateId).toBe(unit.id);
     });
   });
 
