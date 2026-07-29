@@ -1,17 +1,7 @@
-import {
-  ExternalLink,
-  Heart,
-  MessageSquarePlus,
-  WifiOff,
-  type LucideIcon,
-} from 'lucide-react';
+import { ExternalLink, MessageSquarePlus, WifiOff, type LucideIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
-import {
-  KOFI_URL,
-  isConfiguredExternalUrl,
-  tallyFeedbackUrl,
-} from '@/config/externalLinks';
+import { isConfiguredExternalUrl, tallyFeedbackUrl } from '@/config/externalLinks';
 
 interface CommunityLink {
   key: string;
@@ -22,10 +12,10 @@ interface CommunityLink {
 }
 
 /**
- * Community group for the "Mehr" hub: voluntary Ko-fi support (#29) and exactly
- * one Tally feedback entry (#30, consolidated in #33 — bug reports, ideas and
- * general feedback share one entry and are classified inside the form instead
- * of by duplicated menu items).
+ * Community group for the "Mehr" hub: exactly one Tally feedback entry (#30,
+ * consolidated in #33 — bug reports, ideas and general feedback share one entry
+ * and are classified inside the form instead of by duplicated menu items).
+ * Voluntary support has its own prominent card (`SupportCard`, #32).
  *
  * Entries are plain external links — no widgets, iframes, SDKs or query
  * parameters carrying app data. A link is only rendered when its public URL is
@@ -37,10 +27,7 @@ interface CommunityLink {
  *
  * URLs are injectable for tests; production uses the configured defaults.
  */
-export function CommunityGroup({
-  kofiUrl = KOFI_URL,
-  tallyUrl,
-}: { kofiUrl?: string; tallyUrl?: string } = {}) {
+export function CommunityGroup({ tallyUrl }: { tallyUrl?: string } = {}) {
   const online = useOnlineStatus();
   const { t, i18n } = useTranslation('community');
   const { t: tCommon } = useTranslation();
@@ -49,15 +36,6 @@ export function CommunityGroup({
     tallyUrl ?? tallyFeedbackUrl(i18n.resolvedLanguage ?? i18n.language);
 
   const links: CommunityLink[] = [];
-  if (isConfiguredExternalUrl(kofiUrl)) {
-    links.push({
-      key: 'support',
-      href: kofiUrl,
-      label: t('support.label'),
-      description: t('support.description'),
-      Icon: Heart,
-    });
-  }
   if (isConfiguredExternalUrl(feedbackUrl)) {
     links.push({
       key: 'feedback',
@@ -130,7 +108,6 @@ export function CommunityGroup({
       {online ? (
         <p className="mt-2 text-xs leading-relaxed text-muted">{t('externalHint')}</p>
       ) : null}
-      <p className="mt-1 text-xs leading-relaxed text-muted">{t('freeNote')}</p>
     </section>
   );
 }

@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { CommunityGroup } from '@/features/community/CommunityGroup';
+import { SupportCard } from '@/features/community/SupportCard';
 
 interface MoreItem {
   to: string;
@@ -115,6 +116,11 @@ export default function MorePage() {
   return (
     <>
       <PageHeader title="Mehr" />
+
+      {/* The project card sits above the tool groups so voluntary support is
+          findable — but it is never a training call to action (#32). */}
+      <SupportCard />
+
       <div className="grid gap-6">
         {GROUPS.map((group) => (
           <section key={group.title} aria-labelledby={`more-${group.title}`}>

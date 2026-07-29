@@ -17,6 +17,25 @@ export const community = {
     label: 'Feedback geben',
     description: 'Fehler melden, Idee teilen oder Verbesserung vorschlagen.',
   },
+  /** Standalone project card in "Mehr" (#32) — support and sharing as equals. */
+  project: {
+    title: 'Kostenlos. Privat. Unabhängig.',
+    text: 'Die App bleibt werbefrei, ohne Konto und kostenlos. Wenn sie dir hilft, kannst du die Weiterentwicklung unterstützen – oder sie mit Freunden teilen.',
+    support: 'Projekt unterstützen',
+    share: 'App teilen',
+  },
+  /** Discreet, opt-out home hint after proven usage (#32). */
+  hint: {
+    title: 'Danke, dass du den Training Tracker nutzt.',
+    text: 'Die App bleibt kostenlos und werbefrei. Wenn sie dir hilft, kannst du sie unterstützen oder weiterempfehlen — beides freiwillig.',
+  },
+  share: {
+    title: 'Training Tracker',
+    text: 'Training Tracker — private, lokale Trainingsdokumentation für Kraft und Cardio. Kein Konto, keine Werbung.',
+    copied: 'Link kopiert.',
+    unavailable:
+      'Teilen ist in diesem Browser nicht möglich. Du kannst die Adresse aus der Adresszeile kopieren.',
+  },
   privacyTitle: 'Community-Links: Ko-fi und Feedback-Formular',
   privacyText:
     'Die Einträge im Community-Bereich öffnen externe Dienste erst dann in einem neuen Tab, wenn du sie selbst auswählst (Ko-fi für freiwillige Unterstützung, Tally für Feedback). Beim normalen Start der App werden keine Ko-fi- oder Tally-Ressourcen geladen — keine Iframes, Widgets oder Skripte. Trainingsdaten, Körperdaten, Notizen und Sicherungen werden nicht automatisch übertragen, und es werden keine Parameter mit App-Daten angehängt. Was du freiwillig in das Formular einträgst, wird von Tally verarbeitet; Kontakt-E-Mail und Screenshot sind ausdrücklich freiwillig. Zahlungen über Ko-fi sind freiwillige Unterstützung und keine steuerlich absetzbare Spende.',

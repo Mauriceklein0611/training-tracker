@@ -421,6 +421,37 @@ describe('weekly goals round trip', () => {
     expect((await db.settings.get('app-settings'))?.language).toBe('auto');
   });
 
+  it('round trips the support-hint preference and tolerates its absence', async () => {
+    await seedDatabase();
+    await updateSettings({
+      supportHintDismissed: true,
+      supportHintLastShownAt: '2026-07-01T10:00:00.000Z',
+    });
+
+    const backup = await createBackup();
+    await resetDatabase();
+    await importBackup(backup, 'replace');
+
+    // A dismissal travels with the backup, so restoring a device does not start
+    // asking again.
+    const restored = await db.settings.get('app-settings');
+    expect(restored?.supportHintDismissed).toBe(true);
+    expect(restored?.supportHintLastShownAt).toBe('2026-07-01T10:00:00.000Z');
+
+    // A backup written before #32 simply has no preference → hint may appear.
+    const legacy = JSON.parse(JSON.stringify(backup));
+    delete legacy.settings.supportHintDismissed;
+    delete legacy.settings.supportHintLastShownAt;
+    const result = validateBackupJson(legacy);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    await resetDatabase();
+    await importBackup(result.backup, 'replace');
+    const fresh = await db.settings.get('app-settings');
+    expect(fresh?.supportHintDismissed).toBeUndefined();
+    expect(fresh?.supportHintLastShownAt).toBeUndefined();
+  });
+
   it('exports identical domain data regardless of the display language', async () => {
     await seedDatabase();
     setLanguage('de');

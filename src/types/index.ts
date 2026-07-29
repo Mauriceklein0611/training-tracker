@@ -910,6 +910,14 @@ export interface AppSettings {
    * older settings rows and older backups → 'auto'.
    */
   language: 'auto' | 'de' | 'en';
+  /**
+   * When the voluntary support hint was last shown (#32), ISO timestamp. Absent
+   * means "never shown". Purely a UI throttle — no analytics, no counter of
+   * anything a user did, nothing transmitted.
+   */
+  supportHintLastShownAt?: string;
+  /** The user switched the support hint off for good (#32). Absent → not off. */
+  supportHintDismissed?: boolean;
   restSoundEnabled: boolean;
   restVibrationEnabled: boolean;
   /** Keep the display on while a workout is running, where supported. */

@@ -489,9 +489,18 @@ external links. These are plain links that open in a new browser tab — there
 are **no widgets, iframes, tracking scripts or third-party SDKs** loaded at app
 start, and **no training, body or device data** is ever sent along.
 
-- **Projekt freiwillig unterstützen / Support the project** — opens the public
-  Ko-fi page. The app stays free forever; support is voluntary and **not a
-  tax-deductible donation**.
+- A standalone **project card** at the top of _Mehr_ (#32) — "Kostenlos. Privat.
+  Unabhängig." / "Free. Private. Independent." — offers **Projekt unterstützen /
+  Support the project** (the public Ko-fi page) and **App teilen / Share the app**
+  as equal actions. The app stays free forever; support is voluntary and **not a
+  tax-deductible donation**. Sharing uses the browser's own Web Share API with a
+  clipboard fallback and sends nothing but a fixed text and the app's own origin.
+- An optional, discreet **home hint** (#32) may appear only after five finished
+  workouts, at most once every 30 days, never while a workout is running and
+  never on a day one was finished — so it can never be a reaction to a record or
+  a finished session. It is an inline card (never a modal or a repeating banner)
+  with **Später / Later** and **Nicht mehr anzeigen / Don't show again**; the
+  opt-out is permanent and stored locally in the settings.
 - **Feedback geben / Send feedback** — "Fehler melden, Idee teilen oder
   Verbesserung vorschlagen": one single entry (#33) that opens the public Tally
   form for the active language. Bug reports, ideas and general feedback are

@@ -524,6 +524,10 @@ export const appSettingsSchema = z.object({
   // Added with #31; defaulted so older settings rows and older backups still
   // validate. Purely a UI preference — no format or domain data depends on it.
   language: z.enum(['auto', 'de', 'en']).default('auto'),
+  // Added with #32; optional so older settings rows and backups still validate.
+  // A UI throttle for the voluntary support hint, never analytics.
+  supportHintLastShownAt: isoDateTime.optional(),
+  supportHintDismissed: z.boolean().optional(),
   restSoundEnabled: z.boolean().default(true),
   restVibrationEnabled: z.boolean().default(true),
   // Added in schema version 5; defaulted so older backups still validate.

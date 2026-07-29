@@ -34,6 +34,8 @@ import {
   startSessionFromWorkoutUnit,
 } from '@/db/repositories/sessions';
 import { StartFreeDialog } from '@/features/home/StartFreeDialog';
+import { SupportHint } from '@/features/community/SupportHint';
+import { shouldShowSupportHint } from '@/services/supportHint';
 import { PlanPackageTools } from '@/features/plans/PlanPackageTools';
 import { useActiveSession } from '@/hooks/useActiveSession';
 import { useSettings } from '@/hooks/useSettings';
@@ -69,7 +71,7 @@ export default function HomePage() {
   const navigate = useNavigate();
   const toast = useToast();
   const activeSession = useActiveSession();
-  const { settings } = useSettings();
+  const { settings, update } = useSettings();
 
   const templates = useLiveQuery(() => listTemplates(), [], []);
 
@@ -210,6 +212,8 @@ export default function HomePage() {
   // from a saved library unit.
   const [startFreeOpen, setStartFreeOpen] = useState(false);
   const [importPlanOpen, setImportPlanOpen] = useState(false);
+  // "Später" only closes the card for this visit; the 30-day cooldown is stored.
+  const [supportHintClosed, setSupportHintClosed] = useState(false);
 
   const startFree = useCallback(async () => {
     try {
@@ -288,6 +292,23 @@ export default function HomePage() {
     settings.backupReminderDays,
   );
   const hasHistory = (overview?.totalSessions ?? 0) > 0;
+
+  // Voluntary support hint (#32): only after proven usage, at most once every
+  // 30 days, never while training and never on the day a workout was finished.
+  const showSupportHint =
+    overview !== undefined &&
+    shouldShowSupportHint({
+      finishedSessions: overview.totalSessions,
+      lastFinishedDayKey: overview.lastSession
+        ? dayKey(overview.lastSession.startedAt)
+        : undefined,
+      hasRunningWorkout: Boolean(activeSession),
+      lastShownAt: settings.supportHintLastShownAt,
+      dismissed: settings.supportHintDismissed,
+      todayDayKey: dayKey(new Date()),
+      now: new Date(),
+    });
+
   const lastTemplateId = overview?.lastSession?.templateId;
   const lastTemplate = lastTemplateId
     ? templates.find((template) => template.id === lastTemplateId)
@@ -482,6 +503,20 @@ export default function HomePage() {
 
       {hasHistory && overview?.insights ? (
         <CoachFeed insights={overview.insights} />
+      ) : null}
+
+      {/* Inline and skippable — never a modal, never a repeating banner (#32). */}
+      {showSupportHint && !supportHintClosed ? (
+        <SupportHint
+          onShown={() =>
+            void update({ supportHintLastShownAt: new Date().toISOString() })
+          }
+          onLater={() => setSupportHintClosed(true)}
+          onDismiss={() => {
+            setSupportHintClosed(true);
+            void update({ supportHintDismissed: true });
+          }}
+        />
       ) : null}
 
       <section aria-labelledby="overview-heading">

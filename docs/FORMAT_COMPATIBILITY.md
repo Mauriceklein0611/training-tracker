@@ -140,6 +140,13 @@ never reinterpreted as cardio.
   ever translated: the same database exports byte-identical domain data in both
   languages (guarded by test). Data keys (`dayKey`/`weekKey`, CSV headers, format
   names) stay language independent by design.
+- Support-hint preference (#32, **no schema bump**): `settings` gains optional
+  `supportHintLastShownAt` (ISO) and `supportHintDismissed` (boolean). Additive,
+  not indexed and purely a UI throttle — no counter of user behaviour, nothing
+  transmitted. Older settings rows and backups validate with both absent, which
+  means "hint may appear". Deliberate backup/restore behaviour: both travel with
+  the backup like the other UI settings, so restoring a device keeps a permanent
+  opt-out instead of starting to ask again (guarded by `backup.test.ts`).
 - AI import undo (schema 24): `aiAnalyses` gain optional `restoreVersionIds`
   (the `ai-import` `templateVersions` frozen before applying, one per changed
   plan) and `undoneAt` (set when the import was reverted). Optional/defaulted, so
