@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { History, X } from 'lucide-react';
+import { Activity, Dumbbell, History, X } from 'lucide-react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { EmptyState } from '@/components/ui/Card';
 import { SelectField, TextField } from '@/components/ui/Field';
@@ -12,7 +12,14 @@ import { loadAnalyticsDataset } from '@/services/dataset';
 import { buildSetContexts, type AnalyticsDataset } from '@/services/analytics';
 import { buildDayActivity, hasAnyWeeklyGoal } from '@/services/calendar';
 import { listBodyWeightEntries } from '@/db/repositories/bodyWeight';
-import { aggregateVolume } from '@/services/metrics';
+import { aggregateVolume, isCardio, isCompleted } from '@/services/metrics';
+import {
+  aggregateCardio,
+  aggregatePace,
+  formatCardioDistance,
+  formatPace,
+  type Pace,
+} from '@/services/cardioMetrics';
 import {
   dayKey,
   formatDate,
@@ -20,7 +27,9 @@ import {
   formatDurationLong,
   formatTime,
 } from '@/utils/date';
-import { formatSets, formatVolume } from '@/utils/format';
+import { formatSections, formatSets, formatVolume } from '@/utils/format';
+
+type SessionKind = 'strength' | 'cardio' | 'mixed';
 
 interface HistoryRow {
   id: string;
@@ -28,8 +37,12 @@ interface HistoryRow {
   startedAt: string;
   day: string;
   durationSeconds: number | null;
+  kind: SessionKind;
   workingSets: number;
   volumeKg: number;
+  cardioSections: number;
+  cardioDistanceMeters: number;
+  cardioPace: Pace | null;
   exerciseNames: string[];
   notes: string;
 }
@@ -46,6 +59,45 @@ const EMPTY_DATA: HistoryData = {
   dataset: { sessions: [], sessionExercises: [], sets: [], exercises: [] },
   bodyDays: [],
 };
+
+/** Type signal per session: an icon and a semantic colour, never colour alone. */
+const KIND_META: Record<
+  SessionKind,
+  { label: string; Icon: typeof Dumbbell; color: string }
+> = {
+  strength: { label: 'Kraft', Icon: Dumbbell, color: 'var(--accent)' },
+  cardio: { label: 'Cardio', Icon: Activity, color: 'var(--cardio)' },
+  mixed: { label: 'Kraft + Cardio', Icon: Dumbbell, color: 'var(--accent)' },
+};
+
+/** The headline metric line — strength uses Sätze/Volumen, cardio uses
+ * Abschnitte/Distanz/Pace, so a run never reads as "0 Sätze". */
+function primaryMetrics(row: HistoryRow): string {
+  const parts: string[] = [];
+  if (row.durationSeconds != null) parts.push(formatDurationLong(row.durationSeconds));
+  if (row.kind === 'cardio') {
+    parts.push(formatSections(row.cardioSections));
+    if (row.cardioDistanceMeters > 0) {
+      parts.push(formatCardioDistance(row.cardioDistanceMeters, undefined));
+    }
+    if (row.cardioPace) parts.push(formatPace(row.cardioPace));
+  } else {
+    parts.push(formatSets(row.workingSets));
+    if (row.volumeKg > 0) parts.push(formatVolume(row.volumeKg));
+  }
+  return parts.join(' · ');
+}
+
+/** Second line for a mixed session: its cardio side, kept in cardio terms. */
+function cardioMetrics(row: HistoryRow): string | null {
+  if (row.kind !== 'mixed') return null;
+  const parts = [formatSections(row.cardioSections)];
+  if (row.cardioDistanceMeters > 0) {
+    parts.push(formatCardioDistance(row.cardioDistanceMeters, undefined));
+  }
+  if (row.cardioPace) parts.push(formatPace(row.cardioPace));
+  return parts.join(' · ');
+}
 
 export default function HistoryPage() {
   const { settings } = useSettings();
@@ -67,6 +119,25 @@ export default function HistoryPage() {
           const totals = aggregateVolume(
             own.map(({ set, sessionExercise }) => ({ set, sessionExercise })),
           );
+          const cardioTotals = aggregateCardio(
+            own.map(({ set, sessionExercise }) => ({ set, context: sessionExercise })),
+          );
+          const hasStrength = own.some(
+            ({ set, sessionExercise }) =>
+              isCompleted(set) && !isCardio(set, sessionExercise),
+          );
+          const hasCardio = cardioTotals.activities > 0;
+          const kind: SessionKind =
+            hasStrength && hasCardio ? 'mixed' : hasCardio ? 'cardio' : 'strength';
+          // A single, shared modality lets us show an aggregate pace; mixed
+          // modalities (e.g. run + row) have no common pace, so we omit it.
+          const modalities = new Set(
+            own
+              .filter(({ set, sessionExercise }) => isCardio(set, sessionExercise))
+              .map(({ sessionExercise }) => sessionExercise.cardioModalitySnapshot)
+              .filter((value): value is NonNullable<typeof value> => value != null),
+          );
+          const singleModality = modalities.size === 1 ? [...modalities][0] : undefined;
           return {
             id: session.id,
             name: session.name,
@@ -77,8 +148,16 @@ export default function HistoryPage() {
                   new Date(session.startedAt).getTime()) /
                 1000
               : null,
+            kind,
             workingSets: totals.setCount,
             volumeKg: totals.volumeKg,
+            cardioSections: cardioTotals.activities,
+            cardioDistanceMeters: cardioTotals.totalDistanceMeters,
+            cardioPace: aggregatePace(
+              singleModality,
+              cardioTotals.totalDurationSeconds,
+              cardioTotals.totalDistanceMeters,
+            ),
             exerciseNames: [
               ...new Set(
                 own.map((context) => context.sessionExercise.exerciseNameSnapshot),
@@ -202,33 +281,56 @@ export default function HistoryPage() {
                 {formatDayHeading(day)}
               </h2>
               <ul className="grid gap-2">
-                {entries.map((row) => (
-                  <li key={row.id}>
-                    <Link
-                      to={`/verlauf/${row.id}`}
-                      className="block rounded-2xl border border-border bg-surface p-3 active:bg-surface-2"
-                    >
-                      <div className="flex items-baseline justify-between gap-2">
-                        <p className="min-w-0 truncate font-medium">{row.name}</p>
-                        <span className="numeric shrink-0 text-sm text-muted">
-                          {formatTime(row.startedAt)}
+                {entries.map((row) => {
+                  const meta = KIND_META[row.kind];
+                  const cardioLine = cardioMetrics(row);
+                  return (
+                    <li key={row.id}>
+                      <Link
+                        to={`/verlauf/${row.id}`}
+                        className="flex gap-3 rounded-2xl border border-border bg-surface p-3 active:bg-surface-2"
+                      >
+                        {/* Type signal: a tinted icon on the left, plus a text label
+                         * in the exercise line, so meaning never rests on colour. */}
+                        <span
+                          className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
+                          style={{
+                            color: meta.color,
+                            background: `color-mix(in oklab, ${meta.color} 15%, transparent)`,
+                          }}
+                          aria-hidden="true"
+                        >
+                          <meta.Icon size={18} />
                         </span>
-                      </div>
-                      <p className="numeric mt-1 text-sm text-muted">
-                        {row.durationSeconds != null
-                          ? `${formatDurationLong(row.durationSeconds)} · `
-                          : ''}
-                        {formatSets(row.workingSets)}
-                        {row.volumeKg > 0 ? ` · ${formatVolume(row.volumeKg)}` : ''}
-                      </p>
-                      {row.exerciseNames.length > 0 ? (
-                        <p className="mt-1 truncate text-xs text-muted">
-                          {row.exerciseNames.join(', ')}
-                        </p>
-                      ) : null}
-                    </Link>
-                  </li>
-                ))}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-baseline justify-between gap-2">
+                            <p className="min-w-0 truncate font-medium">{row.name}</p>
+                            <span className="numeric shrink-0 text-sm text-muted">
+                              {formatTime(row.startedAt)}
+                            </span>
+                          </div>
+                          <p className="numeric mt-1 text-sm text-muted">
+                            {primaryMetrics(row)}
+                          </p>
+                          {cardioLine ? (
+                            <p
+                              className="numeric mt-0.5 text-xs"
+                              style={{ color: 'var(--cardio)' }}
+                            >
+                              {cardioLine}
+                            </p>
+                          ) : null}
+                          {row.exerciseNames.length > 0 ? (
+                            <p className="mt-1 truncate text-xs text-muted">
+                              <span className="sr-only">{meta.label}: </span>
+                              {row.exerciseNames.join(', ')}
+                            </p>
+                          ) : null}
+                        </div>
+                      </Link>
+                    </li>
+                  );
+                })}
               </ul>
             </section>
           ))}
