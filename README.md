@@ -27,9 +27,10 @@ are in English.
 12. [Installing on iPhone](#installing-on-iphone)
 13. [Deployment on Cloudflare Pages](#deployment-on-cloudflare-pages)
 14. [Community and support](#community-and-support)
-15. [Privacy](#privacy)
-16. [Testing](#testing)
-17. [Known limitations](#known-limitations)
+15. [Language and i18n](#language-and-i18n)
+16. [Privacy](#privacy)
+17. [Testing](#testing)
+18. [Known limitations](#known-limitations)
 
 ---
 
@@ -555,6 +556,65 @@ English, English fallback); a full in-app language switch is tracked separately.
 
 ---
 
+## Language and i18n
+
+The app ships **German and English** (#31). Every string is bundled at build
+time — there is no translation CDN, no runtime request and no lazy namespace, so
+both languages work fully offline like the rest of the PWA.
+
+### How the language is chosen
+
+- The preference lives in the settings as `language`: `auto` (default), `de` or
+  `en`, selectable under _Mehr → Einstellungen → Sprache_.
+- `auto` evaluates `navigator.languages` in order, maps regional variants
+  (`de-DE` → `de`, `en-US` → `en`) and falls back to **English** for anything
+  unsupported. While `auto` is active, a later change of the device language is
+  picked up without a restart.
+- Switching only swaps strings: no reload, no navigation, nothing written to
+  IndexedDB — **a running workout is unaffected**.
+- The preference is mirrored into `localStorage` so the very first paint after a
+  cold start is already correct, and `<html lang>` always matches what is
+  rendered.
+
+### Architecture
+
+- `src/i18n/` — i18next + react-i18next, initialised synchronously.
+  `resources.ts` assembles the namespaces; `locales/de/*` is the **source of
+  truth** and every `locales/en/*` file declares its object against the German
+  type, so a missing or renamed key fails `npm run typecheck`. `i18next.d.ts`
+  makes `t('nav.home')` and `t('community:support.label')` statically checked.
+- Namespaces per area: `common`, `home`, `more`, `settings`, `community`.
+- Formatting is locale-aware in `src/utils/format.ts` and `src/utils/date.ts`:
+  decimal comma vs point, thousands grouping, date order, weekday and month
+  names, and correct set/section plurals. Number **input** accepts both comma and
+  point in either language.
+- Interpolation instead of concatenation (`'Heute: {{name}}'`), so a translation
+  can reorder a sentence rather than gluing fragments together.
+
+### What is never translated
+
+Routes (`/mehr/glossar`, `/bibliothek`) are stable, bookmarkable identifiers.
+Data keys (`dayKey`/`weekKey`), format names, version fields, enum values, CSV
+headers and every stored value stay language independent — the same database
+exports byte-identical domain data in both languages (guarded by test). User
+content is never rewritten.
+
+### Migration status
+
+The infrastructure is complete and these areas are fully bilingual: bottom
+navigation, app shell (startup, crash fallback, update banner), shared
+primitives (back button, confirm dialog), the _Mehr_ hub, the settings screen,
+the home screen and the community/support surfaces.
+
+**Still German-only** and tracked in #31: live workout, plans, library, history,
+analytics, glossary, body data, equipment profiles, data & backup, AI analyses,
+storage, the dialogs opened from home (StartFreeDialog, PlanPackageTools), the
+domain label maps in `src/utils/format.ts` (tracking types, weight modes, set
+types) and the validation messages. Add a string by putting it in the German
+namespace first — the typecheck then demands the English counterpart.
+
+---
+
 ## Privacy
 
 - All data is stored exclusively on this device, in this browser.
@@ -627,6 +687,10 @@ Specifically verified:
   browsing data removes the history. The app reminds you when a backup is
   overdue.
 - Weights are kilograms only; there is no pounds mode.
+- **The English translation is partial.** The frame, settings, home screen and
+  community surfaces are bilingual; training, plans, library, history, analytics
+  and the data screens are still German regardless of the chosen language (see
+  [Language and i18n](#language-and-i18n) and #31).
 - The estimated 1RM is a formula, not a measurement, and is meaningless outside
   1–12 repetitions.
 - Bodyweight exercises are not converted into a kilogram volume, by design. This
