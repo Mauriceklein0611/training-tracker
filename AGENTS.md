@@ -1,9 +1,33 @@
 # Agent instructions — Training Tracker
 
 Private, local, offline-first training PWA (React 18 + TypeScript + Vite +
-Tailwind + Dexie/IndexedDB + Zod + Recharts + vite-plugin-pwa). No account, no
-backend, no cloud, no external runtime APIs, no telemetry, no direct LLM API.
-UI is German; code, types and technical comments are English. Mobile-first.
+Tailwind + Dexie/IndexedDB + Zod + Recharts + i18next + vite-plugin-pwa). No
+account, no backend, no cloud, no external runtime APIs, no telemetry, no direct
+LLM API. Code, types and technical comments are English. Mobile-first.
+
+## UI language (#31, partially migrated)
+
+The app is DE/EN. **German is the source of truth**: put a new string in
+`src/i18n/locales/de/<namespace>.ts` first — the typecheck then demands the
+English counterpart, because each `en` file is declared against the German type.
+Never add a visible literal to a component.
+
+**The migration is incomplete and that is expected.** Migrated: app shell,
+navigation, shared primitives, Mehr hub, settings, home (incl. plan hero, coach
+feed, free-workout dialog), local storage, exercise catalog, community, and the
+shared domain labels. Still German-only: live workout, plans, library, history,
+analytics, glossary, body data, equipment, data & backup, AI analyses, the
+exercise form dialog, `PlanPackageTools`, validation messages. Migrate an area as
+a whole, keep the existing German tests green, and add an English test that
+asserts no leftovers of the other language.
+
+**A format must never inherit the display language.** `utils/format` and
+`utils/date` are locale-aware; `csv.ts` therefore keeps its own German label maps
+and its own number formatting, and no export service may import `utils/format`.
+`BODY_MEASUREMENT_FIELDS.label` (body CSV header) and the label maps feeding the
+AI export stay canonical German until export and display values are split.
+`services/exportLanguageIndependence.test.ts` enforces this — read it before
+localising anything shared.
 
 ## Mandatory: existing local user data is production data
 
@@ -76,7 +100,9 @@ state, export content previews, privacy notices.
   rewrites, no unnecessary dependencies, no regressions.
 - Components go through the repository layer; domain/matching logic is pure and
   unit-tested where sensible.
-- German, concrete, action-oriented error messages. Touch targets stay ≥44px.
+- Concrete, action-oriented error messages — through the i18n namespaces in
+  migrated areas, German literals only where the area is not migrated yet.
+  Touch targets stay ≥44px.
 - Only change files a task actually needs. No repo-wide reformatting; run
   Prettier only on changed files. Do not push, deploy or publish without an
   explicit instruction.
