@@ -1,6 +1,20 @@
+import { useTranslation } from 'react-i18next';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card } from '@/components/ui/Card';
-import { GLOSSARY } from '@/constants/glossary';
+
+const GLOSSARY_KEYS = [
+  'rpe',
+  'rir',
+  'oneRm',
+  'e1rm',
+  'volume',
+  'workingSet',
+  'intensity',
+  'deload',
+  'pace',
+  'restAdherence',
+  'muscleGroups',
+] as const;
 
 /**
  * The full glossary — every technical term the app uses, explained in plain
@@ -8,29 +22,38 @@ import { GLOSSARY } from '@/constants/glossary';
  * the inline info hints next to terms across the app.
  */
 export default function GlossaryPage() {
+  const { t } = useTranslation('more');
   return (
     <>
-      <PageHeader title="Glossar" backTo="/mehr" />
+      <PageHeader title={t('screens.glossary.title')} backTo="/mehr" />
       <div className="grid gap-3">
         <p className="text-sm leading-relaxed text-muted">
-          Kurze, verständliche Erklärungen der Fachbegriffe. Schätzwerte sind als solche
-          gekennzeichnet und nie als Messung dargestellt.
+          {t('screens.glossary.intro')}
         </p>
-        {GLOSSARY.map((entry) => (
-          <Card key={entry.key}>
-            <h2 className="text-base font-semibold">{entry.term}</h2>
-            <p className="mt-1 text-sm leading-relaxed">{entry.definition}</p>
-            <p className="mt-1 text-sm leading-relaxed text-muted">
-              <span className="font-medium text-text">Beispiel: </span>
-              {entry.example}
-            </p>
-            {entry.caveat ? (
-              <p className="mt-2 rounded-xl bg-surface-2 p-2 text-xs leading-relaxed text-muted">
-                {entry.caveat}
+        {GLOSSARY_KEYS.map((key) => {
+          const caveat = t(`screens.glossary.entries.${key}.caveat`);
+          return (
+            <Card key={key}>
+              <h2 className="text-base font-semibold">
+                {t(`screens.glossary.entries.${key}.term`)}
+              </h2>
+              <p className="mt-1 text-sm leading-relaxed">
+                {t(`screens.glossary.entries.${key}.definition`)}
               </p>
-            ) : null}
-          </Card>
-        ))}
+              <p className="mt-1 text-sm leading-relaxed text-muted">
+                <span className="font-medium text-text">
+                  {t('screens.glossary.example')}
+                </span>
+                {t(`screens.glossary.entries.${key}.example`)}
+              </p>
+              {caveat ? (
+                <p className="mt-2 rounded-xl bg-surface-2 p-2 text-xs leading-relaxed text-muted">
+                  {caveat}
+                </p>
+              ) : null}
+            </Card>
+          );
+        })}
       </div>
     </>
   );

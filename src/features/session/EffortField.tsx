@@ -7,6 +7,7 @@ import {
   approxRpeFromRir,
   formatEffort,
 } from '@/services/effort';
+import { useTranslation } from 'react-i18next';
 
 /**
  * Effort entry as tappable chips — RPE or RIR, per the user's setting. Only the
@@ -28,6 +29,7 @@ export function EffortField({
   /** Compact term labels ("RPE") instead of the spelled-out beginner ones. */
   expertLabels?: boolean;
 }) {
+  const { t } = useTranslation('session');
   const rpeMode = mode === 'rpe';
   const raw = rpeMode ? rpe : rir;
   const selected = raw === '' ? null : Number(raw);
@@ -58,8 +60,8 @@ export function EffortField({
       ? 'RPE'
       : 'RIR'
     : rpeMode
-      ? 'Anstrengung (RPE)'
-      : 'Reps in Reserve (RIR)';
+      ? t('effort.exertion')
+      : t('effort.repsInReserve');
 
   const approx =
     selected == null
@@ -72,7 +74,7 @@ export function EffortField({
     <div className="col-span-2">
       <span className="mb-1 flex items-center gap-1 text-sm font-medium text-muted">
         <span>
-          {label} <span className="font-normal">(optional)</span>
+          {label} <span className="font-normal">({t('effort.optional')})</span>
         </span>
         <InfoHint term={rpeMode ? 'rpe' : 'rir'} />
       </span>
@@ -105,7 +107,9 @@ export function EffortField({
         })}
       </div>
       {approx ? (
-        <p className="mt-1 text-xs text-muted">{approx} · Näherung, kein Messwert</p>
+        <p className="mt-1 text-xs text-muted">
+          {approx} · {t('effort.approximation')}
+        </p>
       ) : null}
     </div>
   );

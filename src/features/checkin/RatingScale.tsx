@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/utils/cn';
 
 /**
@@ -25,6 +26,7 @@ export function RatingScale({
   highLabel?: string;
   onChange: (value: number | undefined) => void;
 }) {
+  const { t } = useTranslation('more');
   const values = Array.from({ length: max - min + 1 }, (_, index) => min + index);
 
   return (
@@ -39,7 +41,7 @@ export function RatingScale({
             value == null ? 'text-muted' : 'text-accent',
           )}
         >
-          {value == null ? 'keine Angabe' : 'zurücksetzen'}
+          {value == null ? t('screens.checkIn.noValue') : t('screens.checkIn.reset')}
         </button>
       </div>
       <div role="radiogroup" aria-label={label} className="flex gap-1.5">

@@ -22,6 +22,7 @@ import { playRestFinishedSound, primeAudio, vibrate } from '@/services/sound';
 import { parseNumberInput } from '@/services/validation';
 import { formatDuration } from '@/utils/date';
 import { cn } from '@/utils/cn';
+import { useTranslation } from 'react-i18next';
 
 /**
  * Stopwatch / countdown for time-based exercises.
@@ -51,6 +52,7 @@ export function ExerciseTimer({
    */
   showComplete?: boolean;
 }) {
+  const { t } = useTranslation('session');
   // Restore a running measurement after an accidental reload.
   const [state, setState] = useState<ExerciseTimerState>(
     () => loadTimerState(setId) ?? createTimerState(setId, targetSeconds ?? null),
@@ -111,13 +113,13 @@ export function ExerciseTimer({
         <span className="text-xs font-medium uppercase tracking-wide text-muted">
           {remaining != null
             ? finished
-              ? 'Zielzeit erreicht'
-              : 'Countdown'
-            : 'Stoppuhr'}
+              ? t('timer.targetReached')
+              : t('timer.countdown')
+            : t('timer.stopwatch')}
         </span>
         {remaining != null ? (
           <span className="numeric text-xs text-muted">
-            Gemessen {formatDuration(seconds)}
+            {t('timer.measured', { duration: formatDuration(seconds) })}
           </span>
         ) : null}
       </div>
@@ -133,20 +135,20 @@ export function ExerciseTimer({
       </p>
       <p className="sr-only">
         {running
-          ? `Timer läuft, ${seconds} Sekunden gemessen.`
-          : `Timer pausiert bei ${seconds} Sekunden.`}
+          ? t('timer.runningAnnouncement', { seconds })
+          : t('timer.pausedAnnouncement', { seconds })}
       </p>
 
       <div className="mt-3 grid grid-cols-2 gap-2">
         {running ? (
           <Button variant="secondary" onClick={() => apply(pause(state))}>
             <Pause size={18} aria-hidden="true" />
-            Pause
+            {t('timer.pause')}
           </Button>
         ) : (
           <Button variant="primary" onClick={handleStart}>
             <Play size={18} aria-hidden="true" />
-            {seconds > 0 ? 'Fortsetzen' : 'Start'}
+            {seconds > 0 ? t('timer.resume') : t('timer.start')}
           </Button>
         )}
         <Button
@@ -158,7 +160,7 @@ export function ExerciseTimer({
           }}
         >
           <RotateCcw size={18} aria-hidden="true" />
-          Zurücksetzen
+          {t('timer.reset')}
         </Button>
       </div>
 
@@ -172,7 +174,7 @@ export function ExerciseTimer({
             onClick={() => handleApply(true)}
           >
             <Check size={18} aria-hidden="true" />
-            Zeit übernehmen und Satz abschließen
+            {t('timer.applyAndComplete')}
           </Button>
           <Button
             variant="ghost"
@@ -181,7 +183,7 @@ export function ExerciseTimer({
             disabled={seconds === 0}
             onClick={() => handleApply(false)}
           >
-            Nur Zeit übernehmen
+            {t('timer.applyOnly')}
           </Button>
         </>
       ) : (
@@ -193,13 +195,13 @@ export function ExerciseTimer({
           onClick={() => handleApply(false)}
         >
           <Check size={18} aria-hidden="true" />
-          Zeit übernehmen
+          {t('timer.apply')}
         </Button>
       )}
 
       <div className="mt-3">
         <NumberField
-          label="Countdown-Dauer (s, leer = Stoppuhr)"
+          label={t('timer.countdownDuration')}
           value={countdownInput}
           disabled={running}
           onChange={(event) => {

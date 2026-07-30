@@ -65,6 +65,11 @@ export const home: Home = {
     deloadTitle_other: 'Deload active · {{count}} days left',
     deloadText:
       'Targets are reduced by {{percent}} this week ({{intensity}}). Until {{endDate}}.',
+    deloadIntensity: {
+      light: 'Light (−30%)',
+      medium: 'Medium (−40%)',
+      strong: 'Strong (−50%)',
+    },
     nextLabel: 'Up next: ',
     emptyUnit: 'This unit has no exercises yet.',
     configureUnit: 'Configure unit',

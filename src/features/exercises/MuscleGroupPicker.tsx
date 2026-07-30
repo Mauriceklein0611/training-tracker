@@ -6,10 +6,13 @@ import { TextField } from '@/components/ui/Field';
 import { EmptyState } from '@/components/ui/Card';
 import {
   groupMuscleGroupsByCategory,
+  muscleCategoryDisplayLabel,
+  muscleGroupDisplayLabel,
   normalizeMuscleQuery,
   searchMuscleGroups,
 } from '@/constants/muscleGroups';
 import { cn } from '@/utils/cn';
+import { useTranslation } from 'react-i18next';
 
 /**
  * Searchable, offline muscle-group picker built on the shared Dialog primitive.
@@ -36,6 +39,7 @@ export function MuscleGroupPicker({
   title: string;
   excludeLabels?: string[];
 }) {
+  const { t } = useTranslation('more');
   const [query, setQuery] = useState('');
   const searchRef = useRef<HTMLInputElement>(null);
 
@@ -87,16 +91,16 @@ export function MuscleGroupPicker({
       title={title}
       footer={
         <Button variant="primary" onClick={onClose}>
-          Fertig
+          {t('screens.exercise.musclePicker.done')}
         </Button>
       }
     >
       <TextField
         ref={searchRef}
-        label="Suchen"
+        label={t('screens.exercise.musclePicker.search')}
         type="search"
         value={query}
-        placeholder="Name, Kategorie oder z. B. „Lat“, „Rear Delt“"
+        placeholder={t('screens.exercise.musclePicker.placeholder')}
         onChange={(event) => setQuery(event.target.value)}
       />
 
@@ -108,15 +112,19 @@ export function MuscleGroupPicker({
       >
         {groups.length === 0 ? (
           <EmptyState
-            title="Keine Treffer"
-            description="Passe den Suchbegriff an. Du kannst nach Namen, Kategorie oder englischen Begriffen suchen."
+            title={t('screens.exercise.musclePicker.noMatchTitle')}
+            description={t('screens.exercise.musclePicker.noMatchDescription')}
           />
         ) : (
           <div className="grid gap-3">
             {groups.map((group) => (
-              <div key={group.category} role="group" aria-label={group.category}>
+              <div
+                key={group.category}
+                role="group"
+                aria-label={muscleCategoryDisplayLabel(group.category)}
+              >
                 <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted">
-                  {group.category}
+                  {muscleCategoryDisplayLabel(group.category)}
                 </h3>
                 <div className="grid gap-1">
                   {group.entries.map((entry) => {
@@ -135,7 +143,9 @@ export function MuscleGroupPicker({
                             : 'border-border bg-surface-2 active:bg-surface-3',
                         )}
                       >
-                        <span className="min-w-0 truncate">{entry.label}</span>
+                        <span className="min-w-0 truncate">
+                          {muscleGroupDisplayLabel(entry.label)}
+                        </span>
                         {isSelected ? (
                           <Check
                             size={18}

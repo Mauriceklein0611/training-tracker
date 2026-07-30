@@ -6,8 +6,9 @@ installable Progressive Web App for a single user on a single phone.
 There is no account, no backend, no sync and no analytics. Every workout you
 record stays in the browser's local database on the device you recorded it on.
 
-The user interface is entirely in German; the source code and this documentation
-are in English.
+The user interface is fully available in German and English. Switching the
+display language does not rewrite user-created content or historical workout
+snapshots. The source code and this documentation are in English.
 
 ---
 
@@ -557,8 +558,8 @@ tokens or API keys must never enter the repository, commits, issues, logs,
 client code or build output; no Tally API key is used at all, and the shipped
 PWA talks only to the public form URL.
 
-The language of these entries follows the system/browser language (German or
-English, English fallback); a full in-app language switch is tracked separately.
+The language of these entries follows the active in-app language (automatic
+system/browser language, German or English; English fallback).
 
 ---
 
@@ -589,7 +590,9 @@ both languages work fully offline like the rest of the PWA.
   truth** and every `locales/en/*` file declares its object against the German
   type, so a missing or renamed key fails `npm run typecheck`. `i18next.d.ts`
   makes `t('nav.home')` and `t('community:support.label')` statically checked.
-- Namespaces per area: `common`, `home`, `more`, `settings`, `community`.
+- Namespaces per area: `common`, `home`, `more`, `settings`, `storage`,
+  `exercises`, `domain`, `community`, `analytics`, `comparisons`, `data`,
+  `history`, `library`, `plans` and `session`.
 - Formatting is locale-aware in `src/utils/format.ts` and `src/utils/date.ts`:
   decimal comma vs point, thousands grouping, date order, weekday and month
   names, and correct set/section plurals. Number **input** accepts both comma and
@@ -612,25 +615,18 @@ German even in the English UI — a localised display label needs a separate
 lookup. Backup, CSV and AI export are asserted byte-identical across languages
 by `backup.test.ts` and `exportLanguageIndependence.test.ts`.
 
-### Migration status
+### Translation status
 
-The infrastructure is complete and these areas are fully bilingual: bottom
-navigation, app shell (startup, crash fallback, update banner), shared
-primitives (back button, confirm dialog), the _Mehr_ hub, the settings screen,
-the home screen including its plan hero, coach feed and free-workout dialog, the
-local-storage screen, the exercise catalog, the community/support surfaces, and
-the shared domain labels (tracking types, weight modes, set types).
+All application surfaces are bilingual: app shell and navigation, home, live
+workout, plans, library, history, analytics and comparisons, glossary, body
+data, equipment profiles, exercises, data and backup, AI analyses, settings,
+validation messages, and the community/support and feedback surfaces.
 
-**Still German-only** and tracked in #31: live workout, plans, library, history,
-analytics, glossary, body data, equipment profiles, data & backup, AI analyses,
-the exercise form dialog, `PlanPackageTools`, and the validation messages. Add a
-string by putting it in the German namespace first — the typecheck then demands
-the English counterpart.
-
-Two label groups stay German **by design** until export and display are split:
-`BODY_MEASUREMENT_FIELDS` (part of the body CSV header) and the maps feeding the
-AI export (group types, plan goals, experience level, deload intensity, schedule
-mode). The deload intensity is therefore still German in the English plan hero.
+Add a visible string to the German namespace first; the typecheck then requires
+the English counterpart. Canonical labels used by released import/export
+formats remain German by design and are mapped to separate localized display
+labels in the UI. User-created exercise, plan and workout names, notes, and
+historical snapshots always remain exactly as entered.
 
 ---
 
@@ -706,10 +702,9 @@ Specifically verified:
   browsing data removes the history. The app reminds you when a backup is
   overdue.
 - Weights are kilograms only; there is no pounds mode.
-- **The English translation is partial.** The frame, settings, home screen and
-  community surfaces are bilingual; training, plans, library, history, analytics
-  and the data screens are still German regardless of the chosen language (see
-  [Language and i18n](#language-and-i18n) and #31).
+- User-created names, notes and historical snapshots are displayed in the
+  language in which they were entered; changing the UI language never rewrites
+  stored data.
 - The estimated 1RM is a formula, not a measurement, and is meaningless outside
   1–12 repetitions.
 - Bodyweight exercises are not converted into a kilogram volume, by design. This

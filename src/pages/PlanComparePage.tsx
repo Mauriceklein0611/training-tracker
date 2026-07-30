@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { useTranslation } from 'react-i18next';
 import { AlertTriangle } from 'lucide-react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card, CardHeader, EmptyState } from '@/components/ui/Card';
@@ -14,14 +15,15 @@ import {
   comparePlans,
   planUsagePeriodsOverlap,
   planUsageSpan,
-  DELOAD_FILTER_LABELS,
   type DeloadFilter,
 } from '@/services/analysisFilters';
 import { customRange, dayKey, formatDate } from '@/utils/date';
 
-const DELOAD_OPTIONS = (Object.keys(DELOAD_FILTER_LABELS) as DeloadFilter[]).map(
-  (value) => ({ value, label: DELOAD_FILTER_LABELS[value] }),
-);
+const DELOAD_FILTERS = [
+  'include',
+  'exclude',
+  'only',
+] as const satisfies readonly DeloadFilter[];
 
 /** The completed-session span of a plan, as a fallback when it has no usage history. */
 function sessionSpan(
@@ -40,6 +42,7 @@ function sessionSpan(
 
 /** Compares two plans side by side over each plan's own active span (Phase 6). */
 export default function PlanComparePage() {
+  const { t } = useTranslation('comparisons');
   const data = useLiveQuery(async () => {
     const [dataset, body, plansWithDays, usagePeriods] = await Promise.all([
       loadAnalyticsDataset(),
@@ -58,6 +61,10 @@ export default function PlanComparePage() {
   // Default to the first two plans once they are loaded.
   const aId = planA || plans[0]?.id || '';
   const bId = planB || plans[1]?.id || plans[0]?.id || '';
+  const deloadOptions = DELOAD_FILTERS.map((value) => ({
+    value,
+    label: t(`plan.deloadOptions.${value}`),
+  }));
 
   const comparison = useMemo(() => {
     if (!data || !aId || !bId || aId === bId) return null;
@@ -68,7 +75,7 @@ export default function PlanComparePage() {
       return customRange(span?.from ?? today, span?.to ?? today);
     };
     const name = (planId: string) =>
-      data.plans.find((plan) => plan.id === planId)?.name ?? 'Plan';
+      data.plans.find((plan) => plan.id === planId)?.name ?? t('plan.fallbackName');
     const uncertain = planUsagePeriodsOverlap(data.usagePeriods, aId, bId);
     return {
       ...comparePlans(
@@ -90,28 +97,28 @@ export default function PlanComparePage() {
       ),
       uncertain,
     };
-  }, [data, aId, bId, deload]);
+  }, [data, aId, bId, deload, t]);
 
   return (
     <>
       <PageHeader
-        title="Pläne vergleichen"
-        subtitle="Zwei Pläne über ihren jeweiligen Nutzungszeitraum"
+        title={t('plan.title')}
+        subtitle={t('plan.subtitle')}
         backTo="/analyse"
       />
 
       {plans.length < 2 ? (
         <EmptyState
-          title="Mindestens zwei Pläne nötig"
-          description="Sobald du zwei Trainingspläne hast, kannst du ihre Kennzahlen hier nebeneinanderstellen."
+          title={t('plan.emptyTitle')}
+          description={t('plan.emptyDescription')}
         />
       ) : (
         <>
           <Card className="mb-4">
-            <CardHeader title="Pläne" as="h2" />
+            <CardHeader title={t('plan.plans')} as="h2" />
             <div className="grid gap-3">
               <SelectField
-                label="Plan A"
+                label={t('plan.planA')}
                 value={aId}
                 onChange={(event) => setPlanA(event.target.value)}
               >
@@ -122,7 +129,7 @@ export default function PlanComparePage() {
                 ))}
               </SelectField>
               <SelectField
-                label="Plan B"
+                label={t('plan.planB')}
                 value={bId}
                 onChange={(event) => setPlanB(event.target.value)}
               >
@@ -133,8 +140,8 @@ export default function PlanComparePage() {
                 ))}
               </SelectField>
               <Segmented
-                label="Deload"
-                options={DELOAD_OPTIONS}
+                label={t('plan.deload')}
+                options={deloadOptions}
                 value={deload}
                 onChange={setDeload}
               />
@@ -143,7 +150,7 @@ export default function PlanComparePage() {
 
           {aId === bId ? (
             <p className="text-sm text-muted" role="status">
-              Bitte zwei verschiedene Pläne wählen.
+              {t('plan.chooseDifferent')}
             </p>
           ) : comparison ? (
             <Card>
@@ -154,8 +161,7 @@ export default function PlanComparePage() {
                     className="mt-0.5 shrink-0 text-warning"
                     aria-hidden="true"
                   />
-                  Die Nutzungszeiträume dieser Pläne überlappen sich. Ein Unterschied
-                  lässt sich deshalb nicht eindeutig einem Plan zuschreiben.
+                  {t('plan.overlap')}
                 </p>
               ) : null}
               <MetricsCompareTable
@@ -168,7 +174,7 @@ export default function PlanComparePage() {
                     {formatDate(comparison.a.metrics.fromKey)}–
                     {formatDate(comparison.a.metrics.toKey)}
                     <br />
-                    {comparison.a.metrics.weeks} Wo.
+                    {t('weekShort', { value: comparison.a.metrics.weeks })}
                   </>
                 }
                 subB={
@@ -176,14 +182,14 @@ export default function PlanComparePage() {
                     {formatDate(comparison.b.metrics.fromKey)}–
                     {formatDate(comparison.b.metrics.toKey)}
                     <br />
-                    {comparison.b.metrics.weeks} Wo.
+                    {t('weekShort', { value: comparison.b.metrics.weeks })}
                   </>
                 }
               />
             </Card>
           ) : (
             <p className="text-sm text-muted" role="status">
-              Vergleich wird berechnet …
+              {t('plan.calculating')}
             </p>
           )}
         </>

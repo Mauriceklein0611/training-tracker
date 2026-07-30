@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Trash2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Button, IconButton } from '@/components/ui/Button';
 import { Card, CardHeader, EmptyState, Stat } from '@/components/ui/Card';
@@ -33,6 +34,7 @@ function readNumber(raw: string): number | undefined | typeof NaN {
 }
 
 export default function BodyWeightPage() {
+  const { t } = useTranslation('more');
   const toast = useToast();
   const entries = useLiveQuery(() => listBodyWeightEntries(), [], []);
 
@@ -70,7 +72,7 @@ export default function BodyWeightPage() {
       weightValue != null &&
       (Number.isNaN(weightValue) || weightValue <= 0 || weightValue > 700)
     ) {
-      nextErrors.weight = 'Bitte ein Gewicht zwischen 0 und 700 kg eingeben.';
+      nextErrors.weight = t('screens.body.validation.weight');
     }
 
     const bodyFatValue = readNumber(bodyFat);
@@ -78,7 +80,7 @@ export default function BodyWeightPage() {
       bodyFatValue != null &&
       (Number.isNaN(bodyFatValue) || bodyFatValue <= 0 || bodyFatValue > 70)
     ) {
-      nextErrors.bodyFat = 'Bitte einen Körperfettanteil zwischen 0 und 70 % eingeben.';
+      nextErrors.bodyFat = t('screens.body.validation.bodyFat');
     }
 
     const parsedMeasurements: BodyMeasurements = {};
@@ -86,7 +88,7 @@ export default function BodyWeightPage() {
       const value = readNumber(measurements[field.key] ?? '');
       if (value == null) continue;
       if (Number.isNaN(value) || value <= 0 || value > 300) {
-        nextErrors[field.key] = 'Wert zwischen 0 und 300 cm.';
+        nextErrors[field.key] = t('screens.body.validation.measurement');
         continue;
       }
       parsedMeasurements[field.key] = value;
@@ -103,7 +105,7 @@ export default function BodyWeightPage() {
     // An entry has to carry at least one measured value — an empty row would
     // only clutter the diary.
     if (Object.keys(nextErrors).length === 0 && !hasAnyBodyValue(input)) {
-      nextErrors.weight = 'Bitte mindestens einen Wert eintragen.';
+      nextErrors.weight = t('screens.body.validation.atLeastOne');
     }
 
     setErrors(nextErrors);
@@ -111,26 +113,26 @@ export default function BodyWeightPage() {
 
     await upsertBodyWeightEntry(input);
     resetForm();
-    toast.show('Körperdaten gespeichert.', 'success');
+    toast.show(t('screens.body.toast.saved'), 'success');
   };
 
   return (
     <>
       <PageHeader
-        title="Körperdaten"
-        subtitle="Optional — für Trainingsauswertungen nicht erforderlich"
+        title={t('screens.body.title')}
+        subtitle={t('screens.body.subtitle')}
         backTo="/mehr"
       />
 
       <Card className="mb-4">
         <CardHeader
-          title="Eintrag hinzufügen"
-          subtitle="Pro Tag wird ein Eintrag geführt. Trägst du am selben Tag erneut etwas ein, werden die Werte ergänzt — bereits gespeicherte Angaben bleiben erhalten."
+          title={t('screens.body.form.title')}
+          subtitle={t('screens.body.form.subtitle')}
           as="h2"
         />
         <div className="grid gap-3">
           <TextField
-            label="Datum"
+            label={t('screens.body.form.date')}
             type="date"
             value={date}
             onChange={(event) => setDate(event.target.value)}
@@ -138,19 +140,19 @@ export default function BodyWeightPage() {
 
           <div className="grid grid-cols-2 gap-2">
             <NumberField
-              label="Gewicht (kg)"
+              label={t('screens.body.form.weight')}
               decimal
               value={weight}
               error={errors.weight}
-              placeholder="z. B. 78,5"
+              placeholder={t('screens.body.form.weightPlaceholder')}
               onChange={(event) => setWeight(event.target.value)}
             />
             <NumberField
-              label="Körperfett (%)"
+              label={t('screens.body.form.bodyFat')}
               decimal
               value={bodyFat}
               error={errors.bodyFat}
-              placeholder="z. B. 17,5"
+              placeholder={t('screens.body.form.bodyFatPlaceholder')}
               onChange={(event) => setBodyFat(event.target.value)}
             />
           </div>
@@ -162,23 +164,24 @@ export default function BodyWeightPage() {
               onClick={() => setMeasurementsOpen((open) => !open)}
               className="flex min-h-[44px] w-full items-center justify-between gap-2 text-left text-sm font-medium"
             >
-              <span>Körpermaße (cm)</span>
+              <span>{t('screens.body.form.measurements')}</span>
               <span aria-hidden="true" className="text-accent">
-                {measurementsOpen ? 'Ausblenden' : 'Einblenden'}
+                {measurementsOpen
+                  ? t('screens.body.form.hideMeasurements')
+                  : t('screens.body.form.showMeasurements')}
               </span>
             </button>
 
             {measurementsOpen ? (
               <>
                 <p className="mb-3 mt-1 text-xs leading-relaxed text-muted">
-                  Alle Felder sind freiwillig. Trage nur ein, was du tatsächlich gemessen
-                  hast — leere Felder bleiben leer und werden nicht geschätzt.
+                  {t('screens.body.form.measurementsHint')}
                 </p>
                 <div className="grid grid-cols-2 gap-2">
                   {BODY_MEASUREMENT_FIELDS.map((field) => (
                     <NumberField
                       key={field.key}
-                      label={field.label}
+                      label={t(`screens.body.measurements.${field.key}`)}
                       decimal
                       value={measurements[field.key] ?? ''}
                       error={errors[field.key]}
@@ -196,60 +199,68 @@ export default function BodyWeightPage() {
           </div>
 
           <TextField
-            label="Notiz"
+            label={t('screens.body.form.note')}
             value={notes}
-            placeholder="Optional, z. B. morgens nüchtern"
+            placeholder={t('screens.body.form.notePlaceholder')}
             onChange={(event) => setNotes(event.target.value)}
           />
           <Button variant="primary" onClick={() => void handleSave()}>
-            Speichern
+            {t('screens.action.save')}
           </Button>
         </div>
       </Card>
 
       {entries.length === 0 ? (
         <EmptyState
-          title="Noch keine Einträge"
-          description="Das Körperdatentagebuch ist freiwillig. Gewicht, Körperfett und Umfänge fließen bewusst nicht in Volumenberechnungen ein — Körpergewichtsübungen werden nicht mit einem geschätzten Kilogramm-Volumen bewertet."
+          title={t('screens.body.empty.title')}
+          description={t('screens.body.empty.description')}
         />
       ) : (
         <>
           <div className="mb-3 grid grid-cols-2 gap-2">
             <Stat
-              label="Gewicht"
+              label={t('screens.body.stats.weight')}
               value={formatKg(trends.weight.latest)}
               hint={
                 trends.weight.change == null
-                  ? 'aktuell'
-                  : `${trends.weight.change > 0 ? '+' : ''}${formatKg(trends.weight.change)} seit Beginn`
+                  ? t('screens.body.stats.current')
+                  : t('screens.body.stats.sinceStart', {
+                      value: `${trends.weight.change > 0 ? '+' : ''}${formatKg(trends.weight.change)}`,
+                    })
               }
               tone="accent"
             />
             <Stat
-              label="Körperfett"
+              label={t('screens.body.stats.bodyFat')}
               value={formatPercentValue(trends.bodyFat.latest)}
               hint={
                 trends.bodyFat.change == null
-                  ? 'aktuell'
-                  : `${trends.bodyFat.change > 0 ? '+' : ''}${formatPercentValue(trends.bodyFat.change)} seit Beginn`
+                  ? t('screens.body.stats.current')
+                  : t('screens.body.stats.sinceStart', {
+                      value: `${trends.bodyFat.change > 0 ? '+' : ''}${formatPercentValue(trends.bodyFat.change)}`,
+                    })
               }
             />
             <Stat
-              label="Taille"
+              label={t('screens.body.stats.waist')}
               value={formatCm(trends.waist.latest)}
               hint={
                 trends.waist.change == null
-                  ? 'aktuell'
-                  : `${trends.waist.change > 0 ? '+' : ''}${formatCm(trends.waist.change)} seit Beginn`
+                  ? t('screens.body.stats.current')
+                  : t('screens.body.stats.sinceStart', {
+                      value: `${trends.waist.change > 0 ? '+' : ''}${formatCm(trends.waist.change)}`,
+                    })
               }
             />
             <Stat
-              label="Brust"
+              label={t('screens.body.stats.chest')}
               value={formatCm(trends.chest.latest)}
               hint={
                 trends.chest.change == null
-                  ? 'aktuell'
-                  : `${trends.chest.change > 0 ? '+' : ''}${formatCm(trends.chest.change)} seit Beginn`
+                  ? t('screens.body.stats.current')
+                  : t('screens.body.stats.sinceStart', {
+                      value: `${trends.chest.change > 0 ? '+' : ''}${formatCm(trends.chest.change)}`,
+                    })
               }
             />
           </div>
@@ -278,7 +289,7 @@ export default function BodyWeightPage() {
                             : null,
                         ]
                           .filter(Boolean)
-                          .join(' · ') || 'Nur Maße'}
+                          .join(' · ') || t('screens.body.list.measurementsOnly')}
                       </p>
                       <p className="text-sm text-muted">
                         {formatDate(entry.date)}
@@ -286,10 +297,12 @@ export default function BodyWeightPage() {
                       </p>
                     </div>
                     <IconButton
-                      label={`Eintrag vom ${formatDate(entry.date)} löschen`}
+                      label={t('screens.body.list.deleteEntry', {
+                        date: formatDate(entry.date),
+                      })}
                       onClick={async () => {
                         await deleteBodyWeightEntry(entry.id);
-                        toast.show('Eintrag gelöscht.', 'info');
+                        toast.show(t('screens.body.toast.deleted'), 'info');
                       }}
                     >
                       <Trash2 size={18} aria-hidden="true" />
@@ -300,7 +313,9 @@ export default function BodyWeightPage() {
                     <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 border-t border-border pt-2 text-xs">
                       {recorded.map((field) => (
                         <div key={field.key} className="flex justify-between gap-2">
-                          <dt className="truncate text-muted">{field.label}</dt>
+                          <dt className="truncate text-muted">
+                            {t(`screens.body.measurements.${field.key}`)}
+                          </dt>
                           <dd className="numeric font-medium">
                             {formatCm(entry.measurements?.[field.key])}
                           </dd>

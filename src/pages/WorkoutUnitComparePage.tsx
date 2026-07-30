@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { useTranslation } from 'react-i18next';
 import { db } from '@/db/db';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card, CardHeader, EmptyState } from '@/components/ui/Card';
@@ -12,14 +13,11 @@ import type { AnalyticsDataset } from '@/services/analytics';
 import {
   compareWorkoutUnits,
   sessionWorkoutUnitId,
-  DELOAD_FILTER_LABELS,
   type DeloadFilter,
 } from '@/services/analysisFilters';
 import { customRange, dayKey, formatDate } from '@/utils/date';
 
-const DELOAD_OPTIONS = (Object.keys(DELOAD_FILTER_LABELS) as DeloadFilter[]).map(
-  (value) => ({ value, label: DELOAD_FILTER_LABELS[value] }),
-);
+const DELOAD_FILTERS: readonly DeloadFilter[] = ['include', 'exclude', 'only'];
 
 /** The completed-session span attributed to one workout unit. */
 function unitSessionSpan(
@@ -43,6 +41,7 @@ function unitSessionSpan(
 
 /** Compares two library workout units side by side over their own spans (Phase 6). */
 export default function WorkoutUnitComparePage() {
+  const { t } = useTranslation('library');
   const data = useLiveQuery(async () => {
     const [dataset, body, units, days] = await Promise.all([
       loadAnalyticsDataset(),
@@ -70,6 +69,10 @@ export default function WorkoutUnitComparePage() {
   const [unitA, setUnitA] = useState('');
   const [unitB, setUnitB] = useState('');
   const [deload, setDeload] = useState<DeloadFilter>('include');
+  const deloadOptions = DELOAD_FILTERS.map((value) => ({
+    value,
+    label: t(`compare.deloadOptions.${value}`),
+  }));
 
   const units = data?.units ?? [];
   const aId = unitA || units[0]?.id || '';
@@ -83,7 +86,7 @@ export default function WorkoutUnitComparePage() {
       return customRange(span?.from ?? today, span?.to ?? today);
     };
     const name = (unitId: string) =>
-      data.units.find((unit) => unit.id === unitId)?.name ?? 'Einheit';
+      data.units.find((unit) => unit.id === unitId)?.name ?? t('unit.fallbackName');
     return compareWorkoutUnits(
       data.dataset,
       data.body,
@@ -92,28 +95,28 @@ export default function WorkoutUnitComparePage() {
       { unitId: bId, label: name(bId), range: rangeFor(bId) },
       deload,
     );
-  }, [data, aId, bId, deload]);
+  }, [data, aId, bId, deload, t]);
 
   return (
     <>
       <PageHeader
-        title="Einheiten vergleichen"
-        subtitle="Zwei Bibliotheks-Übungseinheiten nebeneinander"
+        title={t('compare.title')}
+        subtitle={t('compare.subtitle')}
         backTo="/analyse"
       />
 
       {units.length < 2 ? (
         <EmptyState
-          title="Zu wenige genutzte Einheiten"
-          description="Sobald mindestens zwei Übungseinheiten aus deiner Bibliothek trainiert wurden (direkt oder als Plan-Tag), kannst du sie hier vergleichen."
+          title={t('compare.empty.title')}
+          description={t('compare.empty.description')}
         />
       ) : (
         <>
           <Card className="mb-4">
-            <CardHeader title="Einheiten" as="h2" />
+            <CardHeader title={t('compare.units')} as="h2" />
             <div className="grid gap-3">
               <SelectField
-                label="Einheit A"
+                label={t('compare.unitA')}
                 value={aId}
                 onChange={(event) => setUnitA(event.target.value)}
               >
@@ -124,7 +127,7 @@ export default function WorkoutUnitComparePage() {
                 ))}
               </SelectField>
               <SelectField
-                label="Einheit B"
+                label={t('compare.unitB')}
                 value={bId}
                 onChange={(event) => setUnitB(event.target.value)}
               >
@@ -135,8 +138,8 @@ export default function WorkoutUnitComparePage() {
                 ))}
               </SelectField>
               <Segmented
-                label="Deload"
-                options={DELOAD_OPTIONS}
+                label={t('compare.deload')}
+                options={deloadOptions}
                 value={deload}
                 onChange={setDeload}
               />
@@ -145,7 +148,7 @@ export default function WorkoutUnitComparePage() {
 
           {aId === bId ? (
             <p className="text-sm text-muted" role="status">
-              Bitte zwei verschiedene Einheiten wählen.
+              {t('compare.chooseDifferent')}
             </p>
           ) : comparison ? (
             <Card>
@@ -159,7 +162,9 @@ export default function WorkoutUnitComparePage() {
                     {formatDate(comparison.a.metrics.fromKey)}–
                     {formatDate(comparison.a.metrics.toKey)}
                     <br />
-                    {comparison.a.metrics.weeks} Wo.
+                    {t('compare.weekShort', {
+                      count: comparison.a.metrics.weeks,
+                    })}
                   </>
                 }
                 subB={
@@ -167,14 +172,16 @@ export default function WorkoutUnitComparePage() {
                     {formatDate(comparison.b.metrics.fromKey)}–
                     {formatDate(comparison.b.metrics.toKey)}
                     <br />
-                    {comparison.b.metrics.weeks} Wo.
+                    {t('compare.weekShort', {
+                      count: comparison.b.metrics.weeks,
+                    })}
                   </>
                 }
               />
             </Card>
           ) : (
             <p className="text-sm text-muted" role="status">
-              Vergleich wird berechnet …
+              {t('compare.calculating')}
             </p>
           )}
         </>

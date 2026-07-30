@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { BatteryLow } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
@@ -8,12 +9,13 @@ import {
   getActiveDeload,
   startDeload,
 } from '@/db/repositories/planDeload';
-import { DELOAD_INTENSITY_LABELS, deloadRemainingDays } from '@/services/deload';
+import { deloadRemainingDays } from '@/services/deload';
 import { useToast } from '@/hooks/useToast';
 import type { DeloadIntensity } from '@/types';
 
 /** Start / show / end a plan's time-boxed 7-day deload (Phase 5). */
 export function PlanDeloadCard({ planId }: { planId: string }) {
+  const { t } = useTranslation('plans');
   const toast = useToast();
   const active = useLiveQuery(() => getActiveDeload(planId), [planId], undefined);
   const [intensity, setIntensity] = useState<DeloadIntensity>('medium');
@@ -23,58 +25,55 @@ export function PlanDeloadCard({ planId }: { planId: string }) {
   const handleStart = async () => {
     try {
       await startDeload(planId, intensity);
-      toast.show('Deload gestartet — 7 Tage.', 'success');
-    } catch (error) {
-      toast.show(
-        error instanceof Error ? error.message : 'Start fehlgeschlagen.',
-        'error',
-      );
+      toast.show(t('deload.started'), 'success');
+    } catch {
+      toast.show(t('deload.startFailed'), 'error');
     }
   };
 
   const handleEnd = async () => {
     await endDeloadEarly(planId);
-    toast.show('Deload beendet.', 'success');
+    toast.show(t('deload.ended'), 'success');
   };
 
   return (
     <div className="mb-4 rounded-2xl border border-border bg-surface p-3">
       <div className="mb-2 flex items-center gap-2">
         <BatteryLow size={18} className="text-accent" aria-hidden="true" />
-        <span className="text-sm font-semibold">Deload</span>
+        <span className="text-sm font-semibold">{t('deload.title')}</span>
       </div>
 
       {active ? (
         <div className="grid gap-2">
           <p className="rounded-xl border border-warning/50 bg-surface-2 p-2 text-xs text-warning">
-            Deload aktiv ({DELOAD_INTENSITY_LABELS[active.intensity]}) — noch {remaining}{' '}
-            {remaining === 1 ? 'Tag' : 'Tage'}. Sätze −
-            {Math.round(active.setReductionPercent * 100)} %, Zieldauer −
-            {Math.round(active.durationReductionPercent * 100)} %, RIR +{active.addedRir}.
-            Die Planwerte bleiben unverändert.
+            {t('deload.active', {
+              intensity: t(`deload.${active.intensity}`),
+              count: remaining,
+              days: t(remaining === 1 ? 'deload.dayOne' : 'deload.dayOther'),
+              sets: Math.round(active.setReductionPercent * 100),
+              duration: Math.round(active.durationReductionPercent * 100),
+              rir: active.addedRir,
+            })}
           </p>
           <Button variant="secondary" size="sm" onClick={() => void handleEnd()}>
-            Deload vorzeitig beenden
+            {t('deload.end')}
           </Button>
         </div>
       ) : (
         <div className="grid gap-2">
-          <p className="text-xs text-muted">
-            Eine Woche reduziertes Volumen. Startet heute und endet nach genau 7 Tagen
-            automatisch. Die gespeicherten Planwerte werden nie überschrieben.
-          </p>
+          <p className="text-xs text-muted">{t('deload.description')}</p>
           <Segmented
-            label="Intensität"
+            label={t('deload.intensity')}
             value={intensity}
             onChange={(value) => setIntensity(value as DeloadIntensity)}
             options={[
-              { value: 'light', label: 'Leicht' },
-              { value: 'medium', label: 'Mittel' },
-              { value: 'strong', label: 'Stark' },
+              { value: 'light', label: t('deload.light') },
+              { value: 'medium', label: t('deload.medium') },
+              { value: 'strong', label: t('deload.strong') },
             ]}
           />
           <Button variant="primary" size="sm" onClick={() => void handleStart()}>
-            Deload starten (7 Tage)
+            {t('deload.start')}
           </Button>
         </div>
       )}

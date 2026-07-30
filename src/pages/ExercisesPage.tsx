@@ -22,6 +22,7 @@ import { useToast } from '@/hooks/useToast';
 import type { Exercise, ExerciseOrigin } from '@/types';
 import { MuscleGroupChips } from '@/features/exercises/MuscleGroupChips';
 import { trackingTypeLabel, weightModeLabel } from '@/utils/format';
+import { muscleGroupDisplayLabel } from '@/constants/muscleGroups';
 
 export default function ExercisesPage() {
   // The local variable `exercises` holds the rows, so the namespace hook is
@@ -80,11 +81,8 @@ export default function ExercisesPage() {
     try {
       await deleteExercise(deleteTarget.id);
       toast.show(t('toast.deleted'), 'success');
-    } catch (error) {
-      toast.show(
-        error instanceof Error ? error.message : t('toast.deleteFailed'),
-        'error',
-      );
+    } catch {
+      toast.show(t('toast.deleteFailed'), 'error');
     } finally {
       setDeleteTarget(null);
     }
@@ -136,7 +134,7 @@ export default function ExercisesPage() {
             <option value="">{t('filter.all')}</option>
             {filters.muscleGroups.map((group) => (
               <option key={group} value={group}>
-                {group}
+                {muscleGroupDisplayLabel(group)}
               </option>
             ))}
           </SelectField>

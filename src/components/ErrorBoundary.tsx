@@ -1,8 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
-// A class component cannot use hooks; the imperative `t` is fine here because a
-// crash screen is never re-rendered on a language switch anyway.
-import { t } from '@/i18n';
 
 interface Props {
   children: ReactNode;
@@ -12,6 +10,44 @@ interface Props {
 
 interface State {
   error: Error | null;
+}
+
+// Kept beside the class boundary so the fallback can use the typed translation hook.
+// eslint-disable-next-line react-refresh/only-export-components
+function ErrorFallback({
+  error,
+  fallbackTitle,
+  onReset,
+}: {
+  error: Error;
+  fallbackTitle?: string;
+  onReset: () => void;
+}) {
+  const { t } = useTranslation('more');
+
+  return (
+    <div className="mx-auto max-w-md p-4">
+      <div className="rounded-2xl border border-danger/50 bg-surface p-5">
+        <h1 className="text-lg font-semibold text-danger">
+          {fallbackTitle ?? t('screens.errorBoundary.title')}
+        </h1>
+        <p className="mt-2 text-sm leading-relaxed text-muted">
+          {t('screens.errorBoundary.text')}
+        </p>
+        <pre className="mt-3 max-h-40 overflow-auto rounded-xl bg-surface-2 p-3 text-xs text-muted">
+          {error.message}
+        </pre>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Button variant="primary" onClick={onReset}>
+            {t('screens.errorBoundary.retry')}
+          </Button>
+          <Button variant="secondary" onClick={() => window.location.reload()}>
+            {t('screens.errorBoundary.reload')}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 /**
@@ -41,27 +77,11 @@ export class ErrorBoundary extends Component<Props, State> {
     if (!error) return this.props.children;
 
     return (
-      <div className="mx-auto max-w-md p-4">
-        <div className="rounded-2xl border border-danger/50 bg-surface p-5">
-          <h1 className="text-lg font-semibold text-danger">
-            {this.props.fallbackTitle ?? t('shell.crashTitle')}
-          </h1>
-          <p className="mt-2 text-sm leading-relaxed text-muted">
-            {t('shell.crashText')}
-          </p>
-          <pre className="mt-3 max-h-40 overflow-auto rounded-xl bg-surface-2 p-3 text-xs text-muted">
-            {error.message}
-          </pre>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <Button variant="primary" onClick={this.handleReset}>
-              {t('action.retry')}
-            </Button>
-            <Button variant="secondary" onClick={() => window.location.reload()}>
-              {t('shell.reloadApp')}
-            </Button>
-          </div>
-        </div>
-      </div>
+      <ErrorFallback
+        error={error}
+        fallbackTitle={this.props.fallbackTitle}
+        onReset={this.handleReset}
+      />
     );
   }
 }

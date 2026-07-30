@@ -24,6 +24,7 @@ export function Dialog({
   footer?: ReactNode;
   size?: 'md' | 'lg';
 }) {
+  const { t } = useTranslation('more');
   const ref = useRef<HTMLDialogElement>(null);
   // A stable, per-instance id so concurrently mounted or sequentially opened
   // dialogs never share `dialog-title`; aria-labelledby then points at the
@@ -81,7 +82,7 @@ export function Dialog({
       <div className="flex flex-wrap justify-end gap-2 border-t border-border p-3">
         {footer ?? (
           <Button onClick={onClose} variant="secondary">
-            Schließen
+            {t('screens.dialog.close')}
           </Button>
         )}
       </div>
@@ -114,7 +115,7 @@ export function ConfirmDialog({
   onCancel: () => void;
   children?: ReactNode;
 }) {
-  const { t } = useTranslation();
+  const { t } = useTranslation('more');
   return (
     <Dialog
       open={open}
@@ -124,10 +125,10 @@ export function ConfirmDialog({
       footer={
         <>
           <Button variant="secondary" onClick={onCancel}>
-            {cancelLabel ?? t('action.cancel')}
+            {cancelLabel ?? t('screens.dialog.cancel')}
           </Button>
           <Button variant={destructive ? 'danger' : 'primary'} onClick={onConfirm}>
-            {confirmLabel ?? t('action.confirm')}
+            {confirmLabel ?? t('screens.dialog.confirm')}
           </Button>
         </>
       }

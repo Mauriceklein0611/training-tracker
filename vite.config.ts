@@ -2,9 +2,56 @@ import { fileURLToPath, URL } from 'node:url';
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
-import { VitePWA } from 'vite-plugin-pwa';
+import { VitePWA, type ManifestOptions } from 'vite-plugin-pwa';
 
 const isTest = process.env.VITEST === 'true';
+
+type LocalizedManifestText =
+  string | { value: string; lang?: string; dir?: 'ltr' | 'rtl' };
+
+type LocalizedWebAppManifest = Partial<ManifestOptions> & {
+  name_localized: Record<'de' | 'en', LocalizedManifestText>;
+  short_name_localized: Record<'de' | 'en', LocalizedManifestText>;
+  description_localized: Record<'de' | 'en', LocalizedManifestText>;
+};
+
+const manifest = {
+  name: 'Training Tracker',
+  short_name: 'Training',
+  description:
+    'A private strength and cardio training log. All data stays on this device.',
+  lang: 'en',
+  dir: 'ltr',
+  name_localized: {
+    de: 'Training Tracker',
+    en: 'Training Tracker',
+  },
+  short_name_localized: {
+    de: 'Training',
+    en: 'Training',
+  },
+  description_localized: {
+    de: 'Private Trainingsdokumentation für Kraft und Cardio. Alle Daten bleiben auf diesem Gerät.',
+    en: 'A private strength and cardio training log. All data stays on this device.',
+  },
+  start_url: '/',
+  scope: '/',
+  display: 'standalone',
+  orientation: 'portrait',
+  background_color: '#0b0f14',
+  theme_color: '#0b0f14',
+  categories: ['health', 'fitness', 'productivity'],
+  icons: [
+    { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+    { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+    {
+      src: '/icons/icon-maskable-512.png',
+      sizes: '512x512',
+      type: 'image/png',
+      purpose: 'maskable',
+    },
+  ],
+} satisfies LocalizedWebAppManifest;
 
 /**
  * Vite configuration.
@@ -28,31 +75,7 @@ export default defineConfig({
             registerType: 'prompt',
             injectRegister: null,
             includeAssets: ['favicon.svg', 'icons/apple-touch-icon-180.png'],
-            manifest: {
-              name: 'Training Tracker',
-              short_name: 'Training',
-              description:
-                'Private Trainingsdokumentation für Kraft und Cardio. Alle Daten bleiben auf diesem Gerät.',
-              lang: 'de',
-              dir: 'ltr',
-              start_url: '/',
-              scope: '/',
-              display: 'standalone',
-              orientation: 'portrait',
-              background_color: '#0b0f14',
-              theme_color: '#0b0f14',
-              categories: ['health', 'fitness', 'productivity'],
-              icons: [
-                { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
-                { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
-                {
-                  src: '/icons/icon-maskable-512.png',
-                  sizes: '512x512',
-                  type: 'image/png',
-                  purpose: 'maskable',
-                },
-              ],
-            },
+            manifest,
             workbox: {
               // Precache the whole app shell so the app starts offline.
               globPatterns: ['**/*.{js,css,html,svg,png,ico,webmanifest}'],

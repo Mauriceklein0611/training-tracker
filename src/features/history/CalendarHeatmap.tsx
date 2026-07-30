@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { addMonths } from 'date-fns';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { IconButton } from '@/components/ui/Button';
@@ -6,7 +7,6 @@ import { Segmented } from '@/components/ui/Field';
 import {
   buildCalendarCells,
   dayColorKind,
-  INTENSITY_METRIC_LABELS,
   type DayActivity,
   type DayColorKind,
   type IntensityLevel,
@@ -19,22 +19,12 @@ import {
   monthGridDays,
 } from '@/utils/date';
 
-const WEEKDAY_LABELS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
-
 /** The base colour token for each day kind (strength = cyan, cardio = green …). */
 const KIND_COLOR: Record<Exclude<DayColorKind, 'none' | 'mixed'>, string> = {
   strength: 'var(--accent)',
   cardio: 'var(--cardio)',
   deload: 'var(--warning)',
   body: 'var(--body)',
-};
-
-const KIND_LABEL: Record<Exclude<DayColorKind, 'none'>, string> = {
-  strength: 'Kraft',
-  cardio: 'Cardio',
-  mixed: 'Kraft + Cardio',
-  deload: 'Deload',
-  body: 'Körpermessung',
 };
 
 /**
@@ -53,17 +43,6 @@ function dayBackground(kind: DayColorKind, level: IntensityLevel): string {
     return `linear-gradient(135deg, color-mix(in oklab, var(--accent) ${percent}%, var(--surface-2)), color-mix(in oklab, var(--cardio) ${percent}%, var(--surface-2)))`;
   }
   return `color-mix(in oklab, ${KIND_COLOR[kind]} ${percent}%, var(--surface-2))`;
-}
-
-function metricSummary(activity: DayActivity, metric: IntensityMetric): string {
-  switch (metric) {
-    case 'sessions':
-      return `${activity.sessionCount} ${activity.sessionCount === 1 ? 'Einheit' : 'Einheiten'}`;
-    case 'sets':
-      return `${activity.workingSets} ${activity.workingSets === 1 ? 'Satz' : 'Sätze'}`;
-    case 'duration':
-      return formatDurationLong(activity.durationSeconds);
-  }
 }
 
 /**
@@ -87,8 +66,25 @@ export function CalendarHeatmap({
   onSelectDay: (day: string | null) => void;
   now?: Date;
 }) {
+  const { t } = useTranslation('history');
   const [anchor, setAnchor] = useState(() => now);
   const [metric, setMetric] = useState<IntensityMetric>('sets');
+  const weekdayLabels = t('calendar.weekdays', {
+    returnObjects: true,
+  }) as string[];
+  const metricLabel = (value: IntensityMetric) => t(`calendar.metric.${value}`);
+  const metricSummary = (value: DayActivity) => {
+    if (metric === 'duration') return formatDurationLong(value.durationSeconds);
+    if (metric === 'sessions') {
+      return t(
+        value.sessionCount === 1 ? 'calendar.sessionOne' : 'calendar.sessionOther',
+        { count: value.sessionCount },
+      );
+    }
+    return t(value.workingSets === 1 ? 'calendar.setOne' : 'calendar.setOther', {
+      count: value.workingSets,
+    });
+  };
 
   const cells = useMemo(
     () =>
@@ -98,12 +94,12 @@ export function CalendarHeatmap({
 
   return (
     <section
-      aria-label="Trainingskalender"
+      aria-label={t('calendar.aria')}
       className="rounded-2xl border border-border bg-surface p-3"
     >
       <div className="mb-3 flex items-center justify-between gap-2">
         <IconButton
-          label="Vorheriger Monat"
+          label={t('calendar.previousMonth')}
           variant="secondary"
           onClick={() => setAnchor((current) => addMonths(current, -1))}
         >
@@ -111,7 +107,7 @@ export function CalendarHeatmap({
         </IconButton>
         <h3 className="text-sm font-semibold capitalize">{formatMonthTitle(anchor)}</h3>
         <IconButton
-          label="Nächster Monat"
+          label={t('calendar.nextMonth')}
           variant="secondary"
           onClick={() => setAnchor((current) => addMonths(current, 1))}
         >
@@ -120,19 +116,19 @@ export function CalendarHeatmap({
       </div>
 
       <Segmented
-        label="Intensität anzeigen nach"
+        label={t('calendar.intensityBy')}
         className="mb-3"
         value={metric}
         onChange={setMetric}
         options={[
-          { value: 'sets', label: INTENSITY_METRIC_LABELS.sets },
-          { value: 'sessions', label: INTENSITY_METRIC_LABELS.sessions },
-          { value: 'duration', label: INTENSITY_METRIC_LABELS.duration },
+          { value: 'sets', label: metricLabel('sets') },
+          { value: 'sessions', label: metricLabel('sessions') },
+          { value: 'duration', label: metricLabel('duration') },
         ]}
       />
 
       <div className="grid grid-cols-7 gap-1" aria-hidden="true">
-        {WEEKDAY_LABELS.map((label) => (
+        {weekdayLabels.map((label) => (
           <div
             key={label}
             className="pb-1 text-center text-[11px] font-medium text-muted"
@@ -149,12 +145,12 @@ export function CalendarHeatmap({
           const kind = dayColorKind(cell.activity, hasBody);
           const isSelected = selectedDay === cell.day;
           const label = hasTraining
-            ? `${formatDate(cell.date)}: ${metricSummary(cell.activity as DayActivity, metric)}${
+            ? `${formatDate(cell.date)}: ${metricSummary(cell.activity as DayActivity)}${
                 cell.activity!.isDeload ? ' · Deload' : ''
               }`
             : hasBody
-              ? `${formatDate(cell.date)}: Körpermessung`
-              : `${formatDate(cell.date)}: kein Training`;
+              ? t('calendar.bodyDay', { date: formatDate(cell.date) })
+              : t('calendar.noTraining', { date: formatDate(cell.date) });
 
           const baseClass =
             'flex min-h-[44px] items-center justify-center rounded-lg text-sm tabular-nums transition-colors';
@@ -206,13 +202,12 @@ export function CalendarHeatmap({
               className="inline-block h-3 w-3 rounded-sm border border-border"
               style={{ background: dayBackground(kind, 4) }}
             />
-            {KIND_LABEL[kind]}
+            {t(`calendar.kind.${kind}`)}
           </span>
         ))}
       </div>
       <p className="mt-1 text-[11px] text-muted">
-        Farbe = Art des Tages, Sättigung = {INTENSITY_METRIC_LABELS[metric]} pro Tag.
-        Ruhetage bleiben grau.
+        {t('calendar.legend', { metric: metricLabel(metric) })}
       </p>
     </section>
   );

@@ -1,4 +1,5 @@
 import { useId } from 'react';
+import { useTranslation } from 'react-i18next';
 import Body, { type ExtendedBodyPart, type Slug } from 'react-muscle-highlighter';
 import {
   buildBodyData,
@@ -85,6 +86,7 @@ export function AnatomyBodyMap({
   selectedSlug?: Slug;
   onSelectSlug?: (slug: Slug) => void;
 }) {
+  const { t } = useTranslation('analytics');
   const headingId = useId();
   const base = buildBodyData(primary, secondary, COLORS);
   // Outline the selected muscle without changing its fill (styles.stroke only,
@@ -104,30 +106,40 @@ export function AnatomyBodyMap({
   return (
     <section aria-labelledby={headingId}>
       <h3 id={headingId} className="sr-only">
-        Beteiligte Muskelgruppen
+        {t('anatomy.heading')}
       </h3>
       <div className="grid grid-cols-2 gap-3">
-        <Figure data={data} side="front" label="Vorne" onSelectSlug={onSelectSlug} />
-        <Figure data={data} side="back" label="Hinten" onSelectSlug={onSelectSlug} />
+        <Figure
+          data={data}
+          side="front"
+          label={t('anatomy.front')}
+          onSelectSlug={onSelectSlug}
+        />
+        <Figure
+          data={data}
+          side="back"
+          label={t('anatomy.back')}
+          onSelectSlug={onSelectSlug}
+        />
       </div>
 
       <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
-        <Swatch color={COLORS.primary} label="Primär" />
-        <Swatch color={COLORS.secondary} label="Sekundär" />
-        <Swatch color={COLORS.inactive} label="Nicht beteiligt" />
+        <Swatch color={COLORS.primary} label={t('anatomy.primary')} />
+        <Swatch color={COLORS.secondary} label={t('anatomy.secondary')} />
+        <Swatch color={COLORS.inactive} label={t('anatomy.inactive')} />
       </div>
 
       {/* Textual alternative — also carries custom muscle labels with no region. */}
       <dl className="mt-2 grid gap-0.5 text-xs">
         <div className="flex gap-1">
-          <dt className="font-medium">Primär:</dt>
+          <dt className="font-medium">{t('anatomy.primary')}:</dt>
           <dd className="text-muted">
             {cleanPrimary.length > 0 ? cleanPrimary.join(', ') : '—'}
           </dd>
         </div>
         {cleanSecondary.length > 0 ? (
           <div className="flex gap-1">
-            <dt className="font-medium">Sekundär:</dt>
+            <dt className="font-medium">{t('anatomy.secondary')}:</dt>
             <dd className="text-muted">{cleanSecondary.join(', ')}</dd>
           </div>
         ) : null}

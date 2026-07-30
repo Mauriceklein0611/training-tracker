@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Download, FileJson, Share2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Dialog } from '@/components/ui/Dialog';
@@ -31,6 +32,7 @@ export function PlanShareDialog({
   planId: string | null;
   onClose: () => void;
 }) {
+  const { t } = useTranslation('plans');
   const toast = useToast();
   const [input, setInput] = useState<PlanExportInput | null>(null);
   const [packageName, setPackageName] = useState('');
@@ -80,15 +82,24 @@ export function PlanShareDialog({
         data: pkg,
         title: pkg.packageName,
       });
-      toast.show(result.message, result.outcome === 'failed' ? 'error' : 'success');
+      const message =
+        result.outcome === 'shared-file'
+          ? t('share.result.sharedFile')
+          : result.outcome === 'shared-text'
+            ? t('share.result.sharedText')
+            : result.outcome === 'downloaded'
+              ? t(
+                  result.copiedToClipboard
+                    ? 'share.result.downloadedCopied'
+                    : 'share.result.downloaded',
+                )
+              : result.outcome === 'cancelled'
+                ? t('share.result.cancelled')
+                : t('share.result.failed');
+      toast.show(message, result.outcome === 'failed' ? 'error' : 'success');
       if (result.outcome !== 'cancelled' && result.outcome !== 'failed') onClose();
-    } catch (error) {
-      toast.show(
-        error instanceof Error
-          ? `Teilen fehlgeschlagen: ${error.message}`
-          : 'Teilen fehlgeschlagen.',
-        'error',
-      );
+    } catch {
+      toast.show(t('share.shareFailed'), 'error');
     } finally {
       setBusy(false);
     }
@@ -99,15 +110,10 @@ export function PlanShareDialog({
     try {
       const pkg = build();
       downloadJson(planPackageFileName(pkg.packageName), pkg);
-      toast.show('Datei gespeichert.', 'success');
+      toast.show(t('share.saved'), 'success');
       onClose();
-    } catch (error) {
-      toast.show(
-        error instanceof Error
-          ? `Export fehlgeschlagen: ${error.message}`
-          : 'Export fehlgeschlagen.',
-        'error',
-      );
+    } catch {
+      toast.show(t('share.exportFailed'), 'error');
     } finally {
       setBusy(false);
     }
@@ -124,15 +130,15 @@ export function PlanShareDialog({
     <Dialog
       open={Boolean(planId)}
       onClose={onClose}
-      title="Plan teilen"
+      title={t('share.title')}
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>
-            Abbrechen
+            {t('share.cancel')}
           </Button>
           <Button variant="secondary" disabled={busy || !input} onClick={handleDownload}>
             <FileJson size={18} aria-hidden="true" />
-            Als Datei
+            {t('share.asFile')}
           </Button>
           <Button
             variant="primary"
@@ -140,36 +146,38 @@ export function PlanShareDialog({
             onClick={() => void handleShare()}
           >
             <Share2 size={18} aria-hidden="true" />
-            Teilen
+            {t('share.action')}
           </Button>
         </>
       }
     >
       <div className="grid gap-4">
         <TextField
-          label="Name des Pakets"
+          label={t('share.packageName')}
           value={packageName}
           onChange={(event) => setPackageName(event.target.value)}
         />
         <CheckboxField
-          label="Notizen einschließen"
-          hint="Notizen zu Plänen und Übungen. Ohne Haken bleiben sie auf deinem Gerät."
+          label={t('share.includeNotes')}
+          hint={t('share.includeNotesHint')}
           checked={includeNotes}
           onChange={setIncludeNotes}
         />
         <div className="rounded-xl bg-surface-2 p-3">
-          <p className="text-xs font-semibold">Das Paket enthält:</p>
+          <p className="text-xs font-semibold">{t('share.contentsTitle')}</p>
           <ul className="mt-1 list-disc pl-4 text-xs leading-relaxed text-muted">
             <li>
-              {dayCount} {dayCount === 1 ? 'Trainingstag' : 'Trainingstage'} mit{' '}
-              {exerciseCount} Übungsdefinitionen
+              {t('share.contentsSummary', {
+                days: dayCount,
+                dayLabel: t(dayCount === 1 ? 'share.dayOne' : 'share.dayOther'),
+                exercises: exerciseCount,
+              })}
             </li>
-            <li>keine Trainingshistorie, keine Körperdaten, keine internen IDs</li>
+            <li>{t('share.privacySummary')}</li>
           </ul>
           <p className="mt-2 flex items-center gap-1.5 text-xs leading-relaxed text-muted">
             <Download size={13} aria-hidden="true" />
-            Die Datei wird lokal erzeugt. Beim Teilen entscheidet dein Gerät, welche Apps
-            angeboten werden — die App überträgt selbst nichts.
+            {t('share.localHint')}
           </p>
         </div>
       </div>

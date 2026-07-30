@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Check } from 'lucide-react';
 import { Card, CardHeader } from '@/components/ui/Card';
 import type { AnalyticsDataset } from '@/services/analytics';
@@ -26,6 +27,7 @@ function GoalProgress({
   goal: number;
   isCurrentWeek: boolean;
 }) {
+  const { t } = useTranslation('history');
   const reached = goalReached(actual, goal);
   const ratio = goal > 0 ? Math.min(1, actual / goal) : 0;
   const remaining = Math.max(0, goal - actual);
@@ -44,7 +46,7 @@ function GoalProgress({
         aria-valuemin={0}
         aria-valuemax={goal}
         aria-valuenow={actual}
-        aria-label={`${label}: ${actual} von ${goal}`}
+        aria-label={t('goals.progress', { label, actual, goal })}
       >
         <div
           className="h-full rounded-full transition-[width]"
@@ -57,12 +59,12 @@ function GoalProgress({
       <p className="mt-1 text-xs text-muted">
         {reached ? (
           <span className="inline-flex items-center gap-1 text-success">
-            <Check size={13} aria-hidden="true" /> Ziel erreicht
+            <Check size={13} aria-hidden="true" /> {t('goals.reached')}
           </span>
         ) : isCurrentWeek ? (
-          `Noch ${remaining} bis zum Wochenziel`
+          t('goals.remaining', { count: remaining })
         ) : (
-          `${actual} von ${goal} in dieser Woche`
+          t('goals.finishedProgress', { actual, goal })
         )}
       </p>
     </div>
@@ -85,6 +87,7 @@ export function WeeklyGoalsCard({
   goals: WeeklyGoals;
   now?: Date;
 }) {
+  const { t } = useTranslation('history');
   const weeks = useMemo(
     () => computeWeekProgress(dataset, WEEKS_SHOWN, now),
     [dataset, now],
@@ -105,14 +108,14 @@ export function WeeklyGoalsCard({
 
   return (
     <Card>
-      <CardHeader title="Wochenziele" subtitle="Diese Woche" as="h2" />
+      <CardHeader title={t('goals.title')} subtitle={t('goals.currentWeek')} as="h2" />
 
       <div className="grid gap-4">
         {hasOverallGoal ? (
           <div className="grid gap-3">
             {goals.sessionsPerWeek != null ? (
               <GoalProgress
-                label="Trainingseinheiten"
+                label={t('goals.sessions')}
                 actual={current.sessions}
                 goal={goals.sessionsPerWeek}
                 isCurrentWeek
@@ -120,7 +123,7 @@ export function WeeklyGoalsCard({
             ) : null}
             {goals.workingSetsPerWeek != null ? (
               <GoalProgress
-                label="Arbeitssätze"
+                label={t('goals.workingSets')}
                 actual={current.workingSets}
                 goal={goals.workingSetsPerWeek}
                 isCurrentWeek
@@ -128,7 +131,7 @@ export function WeeklyGoalsCard({
             ) : null}
             {goals.cardioMinutesPerWeek != null ? (
               <GoalProgress
-                label="Cardio-Minuten"
+                label={t('goals.cardioMinutes')}
                 actual={Math.round(current.cardioMinutes)}
                 goal={goals.cardioMinutesPerWeek}
                 isCurrentWeek
@@ -136,7 +139,7 @@ export function WeeklyGoalsCard({
             ) : null}
             {goals.cardioDistancePerWeekMeters != null ? (
               <GoalProgress
-                label="Cardio-Distanz (km)"
+                label={t('goals.cardioDistance')}
                 actual={Math.round(current.cardioDistanceMeters / 100) / 10}
                 goal={Math.round(goals.cardioDistancePerWeekMeters / 100) / 10}
                 isCurrentWeek
@@ -144,7 +147,7 @@ export function WeeklyGoalsCard({
             ) : null}
             {goals.cardioSessionsPerWeek != null ? (
               <GoalProgress
-                label="Cardio-Einheiten"
+                label={t('goals.cardioSessions')}
                 actual={current.cardioSessions}
                 goal={goals.cardioSessionsPerWeek}
                 isCurrentWeek
@@ -156,7 +159,7 @@ export function WeeklyGoalsCard({
         {exerciseProgress.length > 0 ? (
           <div className="grid gap-3">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">
-              Übungen diese Woche
+              {t('goals.exercises')}
             </h3>
             {exerciseProgress.map((entry) => {
               const goal = entry.goal;
@@ -164,7 +167,9 @@ export function WeeklyGoalsCard({
                 return (
                   <GoalProgress
                     key={`${goal.exerciseId}-sessions`}
-                    label={`${goal.exerciseNameSnapshot} · Einheiten`}
+                    label={t('goals.exerciseSessions', {
+                      name: goal.exerciseNameSnapshot,
+                    })}
                     actual={entry.sessions}
                     goal={goal.sessionsPerWeek}
                     isCurrentWeek
@@ -175,7 +180,9 @@ export function WeeklyGoalsCard({
                 return (
                   <GoalProgress
                     key={`${goal.exerciseId}-sets`}
-                    label={`${goal.exerciseNameSnapshot} · Sätze`}
+                    label={t('goals.exerciseSets', {
+                      name: goal.exerciseNameSnapshot,
+                    })}
                     actual={entry.workingSets}
                     goal={goal.workingSetsPerWeek}
                     isCurrentWeek
@@ -190,7 +197,7 @@ export function WeeklyGoalsCard({
         {hasOverallGoal && finishedWeeks.length > 0 ? (
           <div>
             <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">
-              Abgeschlossene Wochen
+              {t('goals.completedWeeks')}
             </h3>
             <ul className="grid gap-1.5">
               {finishedWeeks.map((week) => {
@@ -210,7 +217,7 @@ export function WeeklyGoalsCard({
                     <span className="text-muted">{formatWeekRange(week.weekStart)}</span>
                     <span className="numeric flex items-center gap-2">
                       {goals.sessionsPerWeek != null ? (
-                        <span>{week.sessions} Einh.</span>
+                        <span>{t('goals.sessionShort', { count: week.sessions })}</span>
                       ) : null}
                       {goals.workingSetsPerWeek != null ? (
                         <span>{formatSets(week.workingSets)}</span>
@@ -219,7 +226,7 @@ export function WeeklyGoalsCard({
                         <Check
                           size={15}
                           className="text-success"
-                          aria-label="Ziel erreicht"
+                          aria-label={t('goals.reached')}
                         />
                       ) : null}
                     </span>

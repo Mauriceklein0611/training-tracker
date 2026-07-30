@@ -1,4 +1,5 @@
 import type { CardioModality } from '@/types';
+import { useTranslation } from 'react-i18next';
 import {
   formatCardioDistance,
   formatPace,
@@ -19,31 +20,35 @@ export function CardioRecordsCard({
   modality: CardioModality | undefined;
   records: CardioRecords;
 }) {
+  const { t } = useTranslation('analytics');
   const rows: { label: string; value: string }[] = [];
   if (records.longestDurationSeconds != null) {
     rows.push({
-      label: 'Längste Dauer',
+      label: t('cardioRecords.longestDuration'),
       value: formatDurationLong(records.longestDurationSeconds),
     });
   }
   if (records.greatestDistanceMeters != null) {
     rows.push({
-      label: 'Größte Distanz',
+      label: t('cardioRecords.greatestDistance'),
       value: formatCardioDistance(records.greatestDistanceMeters, modality),
     });
   }
   if (records.bestPace != null) {
-    rows.push({ label: 'Schnellste Pace', value: formatPace(records.bestPace) });
+    rows.push({
+      label: t('cardioRecords.fastestPace'),
+      value: formatPace(records.bestPace),
+    });
   }
 
   if (rows.length === 0) return null;
 
   return (
     <section
-      aria-label="Cardio-Bestwerte"
+      aria-label={t('cardioRecords.aria')}
       className="mt-3 rounded-2xl border border-cardio/40 bg-surface p-3"
     >
-      <h4 className="text-sm font-semibold text-cardio">Bestwerte</h4>
+      <h4 className="text-sm font-semibold text-cardio">{t('cardioRecords.title')}</h4>
       <dl className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
         {rows.map((row) => (
           <div key={row.label} className="rounded-xl border border-border px-3 py-2">
@@ -53,8 +58,7 @@ export function CardioRecordsCard({
         ))}
       </dl>
       <p className="mt-2 text-xs leading-relaxed text-muted">
-        Bestwerte innerhalb dieser Übung. Die schnellste Pace zählt erst ab einer
-        Mindestdistanz, damit ein kurzer Ausreißer kein Rekord wird.
+        {t('cardioRecords.explanation')}
       </p>
     </section>
   );

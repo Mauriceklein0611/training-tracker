@@ -24,7 +24,7 @@ import { SupportCard } from '@/features/community/SupportCard';
  * still catches a typo or a removed entry at compile time even though the label
  * is looked up dynamically.
  */
-type MoreEntryKey = Exclude<keyof More, 'title' | 'groups'>;
+type MoreEntryKey = Exclude<keyof More, 'title' | 'groups' | 'screens'>;
 type MoreGroupKey = `groups.${keyof More['groups']}`;
 
 interface MoreItem {

@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/Button';
 import type { ActiveRest } from '@/features/session/useActiveRest';
 import { cn } from '@/utils/cn';
 import { formatDuration } from '@/utils/date';
+import { useTranslation } from 'react-i18next';
 
 /**
  * Sticky rest countdown.
@@ -21,6 +22,7 @@ export function RestTimerBar({
   /** Nudge the rest target by ±seconds (the +15 / −15 controls). */
   onAdjust: (deltaSeconds: number) => void;
 }) {
+  const { t } = useTranslation('session');
   const { progress } = rest;
   const reached = progress.targetReached;
   const ratio =
@@ -46,7 +48,7 @@ export function RestTimerBar({
         />
         <div className="min-w-0 flex-1">
           <p className="text-xs font-medium uppercase tracking-wide text-muted">
-            {reached ? 'Pause erreicht' : 'Pause läuft'} · {rest.exerciseName}
+            {reached ? t('rest.reached') : t('rest.running')} · {rest.exerciseName}
           </p>
           <p
             className="numeric text-2xl font-bold leading-tight"
@@ -57,7 +59,7 @@ export function RestTimerBar({
               ? `+${formatDuration(progress.overtimeSeconds)}`
               : formatDuration(progress.remainingSeconds)}
             <span className="ml-2 text-sm font-normal text-muted">
-              Ziel {formatDuration(progress.targetSeconds)}
+              {t('rest.target', { duration: formatDuration(progress.targetSeconds) })}
             </span>
           </p>
         </div>
@@ -66,7 +68,7 @@ export function RestTimerBar({
             variant="secondary"
             size="sm"
             className="px-2"
-            aria-label="15 Sekunden weniger"
+            aria-label={t('rest.decrease')}
             onClick={() => onAdjust(-15)}
           >
             <Minus size={16} aria-hidden="true" />
@@ -76,7 +78,7 @@ export function RestTimerBar({
             variant="secondary"
             size="sm"
             className="px-2"
-            aria-label="15 Sekunden mehr"
+            aria-label={t('rest.increase')}
             onClick={() => onAdjust(15)}
           >
             <Plus size={16} aria-hidden="true" />
@@ -89,7 +91,7 @@ export function RestTimerBar({
           onClick={onEndRest}
         >
           <Check size={18} aria-hidden="true" />
-          Pause beenden
+          {t('rest.end')}
         </Button>
       </div>
 
@@ -99,7 +101,7 @@ export function RestTimerBar({
         aria-valuemin={0}
         aria-valuemax={progress.targetSeconds}
         aria-valuenow={Math.min(progress.elapsedSeconds, progress.targetSeconds)}
-        aria-label="Fortschritt der Pause"
+        aria-label={t('rest.progress')}
       >
         <div
           className={cn('h-full rounded-full', reached ? 'bg-success' : 'bg-accent')}
@@ -109,8 +111,11 @@ export function RestTimerBar({
 
       <p className="sr-only">
         {reached
-          ? `Die geplante Pause von ${progress.targetSeconds} Sekunden ist erreicht. Bereits ${progress.elapsedSeconds} Sekunden pausiert.`
-          : `Noch ${progress.remainingSeconds} Sekunden Pause.`}
+          ? t('rest.reachedAnnouncement', {
+              target: progress.targetSeconds,
+              elapsed: progress.elapsedSeconds,
+            })
+          : t('rest.remainingAnnouncement', { remaining: progress.remainingSeconds })}
       </p>
     </div>
   );

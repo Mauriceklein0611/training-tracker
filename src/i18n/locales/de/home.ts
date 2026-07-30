@@ -72,6 +72,11 @@ export const home = {
     /** "Zielwerte sind diese Woche um {{percent}} reduziert ({{intensity}}). Bis {{endDate}}." */
     deloadText:
       'Zielwerte sind diese Woche um {{percent}} reduziert ({{intensity}}). Bis {{endDate}}.',
+    deloadIntensity: {
+      light: 'Leicht (−30 %)',
+      medium: 'Mittel (−40 %)',
+      strong: 'Stark (−50 %)',
+    },
     nextLabel: 'Als Nächstes: ',
     emptyUnit: 'Diese Einheit hat noch keine Übungen.',
     configureUnit: 'Einheit konfigurieren',

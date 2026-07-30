@@ -3,11 +3,12 @@ import { Dialog } from '@/components/ui/Dialog';
 import { Button } from '@/components/ui/Button';
 import { NumberField, SelectField } from '@/components/ui/Field';
 import { deleteSet, updateSet } from '@/db/repositories/sessions';
-import { requiredFieldsFor, weightFieldLabel } from '@/services/metrics';
+import { requiredFieldsFor } from '@/services/metrics';
 import { hasErrors, parseNumberInput, validateSetInput } from '@/services/validation';
 import type { SessionExercise, SetType, WorkoutSet } from '@/types';
-import { SET_TYPES, setTypeLabel } from '@/utils/format';
+import { SET_TYPES } from '@/utils/format';
 import { useToast } from '@/hooks/useToast';
+import { useTranslation } from 'react-i18next';
 
 /**
  * Correcting a set of a past workout.
@@ -24,6 +25,9 @@ export function SetEditDialog({
   sessionExercise: SessionExercise | null;
   onClose: () => void;
 }) {
+  const { t } = useTranslation('history');
+  const { t: tCommon } = useTranslation('common');
+  const { t: tDomain } = useTranslation('domain');
   const toast = useToast();
   const [form, setForm] = useState({
     setType: 'working' as SetType,
@@ -57,8 +61,12 @@ export function SetEditDialog({
   if (!set || !sessionExercise) return null;
 
   const trackingType = sessionExercise.trackingTypeSnapshot;
+  const weightMode = sessionExercise.weightModeSnapshot;
   const fields = requiredFieldsFor(trackingType);
-  const weightLabel = weightFieldLabel(trackingType, sessionExercise.weightModeSnapshot);
+  const weightLabel =
+    trackingType === 'duration' || trackingType === 'reps_only' || weightMode === 'none'
+      ? null
+      : tDomain(`weightField.${weightMode}`);
 
   const toNumber = (raw: string) => {
     const parsed = parseNumberInput(raw);
@@ -72,11 +80,7 @@ export function SetEditDialog({
     rir: toNumber(form.rir),
     rpe: toNumber(form.rpe),
   };
-  const errors = validateSetInput(
-    values,
-    trackingType,
-    sessionExercise.weightModeSnapshot,
-  );
+  const errors = validateSetInput(values, trackingType, weightMode);
   const visibleErrors = touched ? errors : {};
 
   const handleSave = async () => {
@@ -91,7 +95,7 @@ export function SetEditDialog({
           ? undefined
           : Math.max(0, Math.round(toNumber(form.restActual) ?? 0)),
     });
-    toast.show('Satz aktualisiert.', 'success');
+    toast.show(t('setEdit.toast.updated'), 'success');
     onClose();
   };
 
@@ -99,7 +103,7 @@ export function SetEditDialog({
     <Dialog
       open={Boolean(set)}
       onClose={onClose}
-      title={`Satz ${set.position + 1} bearbeiten`}
+      title={t('setEdit.title', { position: set.position + 1 })}
       description={sessionExercise.exerciseNameSnapshot}
       footer={
         <>
@@ -111,24 +115,24 @@ export function SetEditDialog({
                 return;
               }
               await deleteSet(set.id);
-              toast.show('Satz gelöscht.', 'info');
+              toast.show(t('setEdit.toast.deleted'), 'info');
               onClose();
             }}
           >
-            {confirmDelete ? 'Wirklich löschen' : 'Löschen'}
+            {confirmDelete ? t('setEdit.action.confirmDelete') : tCommon('action.delete')}
           </Button>
           <Button variant="secondary" onClick={onClose}>
-            Abbrechen
+            {tCommon('action.cancel')}
           </Button>
           <Button variant="primary" onClick={() => void handleSave()}>
-            Speichern
+            {tCommon('action.save')}
           </Button>
         </>
       }
     >
       <div className="grid grid-cols-2 gap-3">
         <SelectField
-          label="Satzart"
+          label={t('setEdit.field.setType')}
           containerClassName="col-span-2"
           value={form.setType}
           onChange={(event) =>
@@ -137,7 +141,7 @@ export function SetEditDialog({
         >
           {SET_TYPES.map((type) => (
             <option key={type} value={type}>
-              {setTypeLabel(type)}
+              {tDomain(`setType.${type}`)}
             </option>
           ))}
         </SelectField>
@@ -156,7 +160,7 @@ export function SetEditDialog({
 
         {fields.reps ? (
           <NumberField
-            label="Wiederholungen"
+            label={t('setEdit.field.repetitions')}
             value={form.reps}
             error={visibleErrors.reps}
             onChange={(event) =>
@@ -167,7 +171,7 @@ export function SetEditDialog({
 
         {fields.duration ? (
           <NumberField
-            label="Dauer (s)"
+            label={t('setEdit.field.durationSeconds')}
             value={form.duration}
             error={visibleErrors.durationSeconds}
             onChange={(event) =>
@@ -195,14 +199,14 @@ export function SetEditDialog({
           }
         />
         <NumberField
-          label="Zielpause (s)"
+          label={t('setEdit.field.targetRestSeconds')}
           value={form.restTarget}
           onChange={(event) =>
             setForm((current) => ({ ...current, restTarget: event.target.value }))
           }
         />
         <NumberField
-          label="Tatsächliche Pause (s)"
+          label={t('setEdit.field.actualRestSeconds')}
           value={form.restActual}
           onChange={(event) =>
             setForm((current) => ({ ...current, restActual: event.target.value }))

@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { useTranslation } from 'react-i18next';
 import { Copy, Download } from 'lucide-react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/Button';
@@ -16,6 +17,7 @@ import { customRange, dayKey, formatDate } from '@/utils/date';
 const dayOffset = (days: number) => dayKey(new Date(Date.now() + days * 86400000));
 
 export default function BlockComparePage() {
+  const { t } = useTranslation('comparisons');
   const toast = useToast();
   const [aFrom, setAFrom] = useState(() => dayOffset(-55));
   const [aTo, setATo] = useState(() => dayOffset(-28));
@@ -49,11 +51,11 @@ export default function BlockComparePage() {
     const payload = buildBlockComparisonExport(comparison);
     if (mode === 'download') {
       downloadJson(`trainingsblock-vergleich-${dayKey(new Date())}.json`, payload);
-      toast.show('Vergleich als Datei exportiert.', 'success');
+      toast.show(t('block.exported'), 'success');
     } else {
       void copyToClipboard(JSON.stringify(payload, null, 2)).then((ok) =>
         toast.show(
-          ok ? 'Vergleich für die KI kopiert.' : 'Kopieren nicht möglich.',
+          ok ? t('block.copied') : t('block.copyFailed'),
           ok ? 'success' : 'error',
         ),
       );
@@ -63,46 +65,46 @@ export default function BlockComparePage() {
   return (
     <>
       <PageHeader
-        title="Blöcke vergleichen"
-        subtitle="Zwei frei wählbare Zeiträume nebeneinander"
+        title={t('block.title')}
+        subtitle={t('block.subtitle')}
         backTo="/analyse"
       />
 
       <Card className="mb-4">
-        <CardHeader title="Zeiträume" as="h2" />
+        <CardHeader title={t('block.periods')} as="h2" />
         <div className="grid gap-3">
           <div>
-            <p className="mb-1 text-sm font-medium">Block A</p>
+            <p className="mb-1 text-sm font-medium">{t('block.blockA')}</p>
             <div className="grid grid-cols-2 gap-2">
               <TextField
-                label="Von"
+                label={t('block.from')}
                 type="date"
                 value={aFrom}
                 onChange={(e) => setAFrom(e.target.value)}
               />
               <TextField
-                label="Bis"
+                label={t('block.to')}
                 type="date"
                 value={aTo}
-                error={validA ? undefined : 'Bis vor Von'}
+                error={validA ? undefined : t('block.invalidRange')}
                 onChange={(e) => setATo(e.target.value)}
               />
             </div>
           </div>
           <div>
-            <p className="mb-1 text-sm font-medium">Block B</p>
+            <p className="mb-1 text-sm font-medium">{t('block.blockB')}</p>
             <div className="grid grid-cols-2 gap-2">
               <TextField
-                label="Von"
+                label={t('block.from')}
                 type="date"
                 value={bFrom}
                 onChange={(e) => setBFrom(e.target.value)}
               />
               <TextField
-                label="Bis"
+                label={t('block.to')}
                 type="date"
                 value={bTo}
-                error={validB ? undefined : 'Bis vor Von'}
+                error={validB ? undefined : t('block.invalidRange')}
                 onChange={(e) => setBTo(e.target.value)}
               />
             </div>
@@ -112,9 +114,7 @@ export default function BlockComparePage() {
 
       {!comparison ? (
         <p className="text-sm text-muted" role="status">
-          {validA && validB
-            ? 'Vergleich wird berechnet …'
-            : 'Bitte gültige Zeiträume wählen.'}
+          {validA && validB ? t('block.calculating') : t('block.chooseValidPeriods')}
         </p>
       ) : (
         <Card>
@@ -125,14 +125,14 @@ export default function BlockComparePage() {
               <>
                 {formatDate(comparison.a.fromKey)}–{formatDate(comparison.a.toKey)}
                 <br />
-                {comparison.a.weeks} Wo.
+                {t('weekShort', { value: comparison.a.weeks })}
               </>
             }
             subB={
               <>
                 {formatDate(comparison.b.fromKey)}–{formatDate(comparison.b.toKey)}
                 <br />
-                {comparison.b.weeks} Wo.
+                {t('weekShort', { value: comparison.b.weeks })}
               </>
             }
           />
@@ -140,11 +140,11 @@ export default function BlockComparePage() {
           <div className="mt-4 grid grid-cols-2 gap-2">
             <Button variant="secondary" onClick={() => handleExport('copy')}>
               <Copy size={18} aria-hidden="true" />
-              Für KI kopieren
+              {t('block.copyForAi')}
             </Button>
             <Button variant="secondary" onClick={() => handleExport('download')}>
               <Download size={18} aria-hidden="true" />
-              Als Datei
+              {t('block.asFile')}
             </Button>
           </div>
         </Card>

@@ -11,12 +11,12 @@ import {
   computeGroupProgress,
   DEFAULT_GROUP_REST_MODE,
   DEFAULT_GROUP_TYPE,
-  GROUP_TYPE_LABELS,
   groupItems,
   memberLabel,
 } from '@/services/grouping';
 import { isWorkingSet } from '@/services/metrics';
 import type { EffortInput, GroupRestMode, GroupType, TemplateExercise } from '@/types';
+import { useTranslation } from 'react-i18next';
 
 /**
  * The exercise list of a running workout, laid out as superset/circuit blocks.
@@ -42,6 +42,7 @@ export function LiveExerciseList({
   effortInput?: EffortInput;
   expertLabels?: boolean;
 }) {
+  const { t } = useTranslation('session');
   const entries = detail.exercises;
   const detailById = new Map(entries.map((entry) => [entry.sessionExercise.id, entry]));
   const indexById = new Map(
@@ -100,7 +101,7 @@ export function LiveExerciseList({
                   className="inline-flex min-h-[44px] items-center gap-1.5 self-start px-1 text-sm font-medium text-accent"
                 >
                   <Link2Off size={16} aria-hidden="true" />
-                  Aus Gruppe lösen
+                  {t('group.detach')}
                 </button>
               ) : globalIndex > 0 ? (
                 <button
@@ -109,7 +110,7 @@ export function LiveExerciseList({
                   className="inline-flex min-h-[44px] items-center gap-1.5 self-start px-1 text-sm font-medium text-accent"
                 >
                   <Link2 size={16} aria-hidden="true" />
-                  Mit Übung darüber gruppieren
+                  {t('group.attachPrevious')}
                 </button>
               ) : null}
             </div>
@@ -123,7 +124,10 @@ export function LiveExerciseList({
         return (
           <section
             key={block.key}
-            aria-label={`${GROUP_TYPE_LABELS[groupType]} ${block.letter}`}
+            aria-label={t('group.aria', {
+              type: groupType === 'superset' ? t('group.superset') : t('group.circuit'),
+              letter: block.letter,
+            })}
             className="rounded-2xl border border-accent/40 bg-surface-2/40 p-2"
           >
             <div className="mb-2 flex flex-wrap items-center justify-between gap-2 px-1">
@@ -132,19 +136,22 @@ export function LiveExerciseList({
                   {block.letter}
                 </span>
                 <span className="text-sm font-semibold">
-                  {GROUP_TYPE_LABELS[groupType]}
+                  {groupType === 'superset' ? t('group.superset') : t('group.circuit')}
                 </span>
               </div>
               {progress ? (
                 <span className="numeric text-sm text-muted">
                   {progress.done
-                    ? 'Runden abgeschlossen'
-                    : `Runde ${progress.currentRound} von ${progress.totalRounds}`}
+                    ? t('group.roundsComplete')
+                    : t('group.roundProgress', {
+                        current: progress.currentRound,
+                        total: progress.totalRounds,
+                      })}
                 </span>
               ) : null}
             </div>
             <Segmented
-              label="Pause"
+              label={t('group.rest')}
               className="mb-2"
               value={groupRestMode}
               onChange={(value) =>
@@ -153,12 +160,12 @@ export function LiveExerciseList({
                 })
               }
               options={[
-                { value: 'round', label: 'Pause nach Runde' },
-                { value: 'each', label: 'Pause nach Übung' },
+                { value: 'round', label: t('group.restAfterRound') },
+                { value: 'each', label: t('group.restAfterExercise') },
               ]}
             />
             <Segmented
-              label="Gruppentyp"
+              label={t('group.type')}
               className="mb-2"
               value={groupType}
               onChange={(value) =>
@@ -167,8 +174,8 @@ export function LiveExerciseList({
                 })
               }
               options={[
-                { value: 'superset', label: 'Supersatz' },
-                { value: 'circuit', label: 'Zirkel' },
+                { value: 'superset', label: t('group.superset') },
+                { value: 'circuit', label: t('group.circuit') },
               ]}
             />
             <div className="grid gap-2">{cards}</div>

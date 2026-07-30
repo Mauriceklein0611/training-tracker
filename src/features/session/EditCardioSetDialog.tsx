@@ -4,11 +4,7 @@ import { Button } from '@/components/ui/Button';
 import { NumberField, SelectField } from '@/components/ui/Field';
 import { editCompletedCardioSet } from '@/db/repositories/sessions';
 import { effectiveSetExecution } from '@/services/equipment';
-import {
-  CARDIO_MODALITY_LABELS,
-  CARDIO_MODALITY_VALUES,
-  prefersMeters,
-} from '@/services/cardio';
+import { CARDIO_MODALITY_VALUES, prefersMeters } from '@/services/cardio';
 import {
   cardioSectionComplete,
   hasErrors,
@@ -18,6 +14,7 @@ import {
 } from '@/services/validation';
 import { useToast } from '@/hooks/useToast';
 import type { CardioModality, SessionExercise, WorkoutSet } from '@/types';
+import { useTranslation } from 'react-i18next';
 
 interface Draft {
   modality: CardioModality;
@@ -53,6 +50,8 @@ export function EditCardioSetDialog({
   sessionExercise: SessionExercise;
   onClose: () => void;
 }) {
+  const { t } = useTranslation('session');
+  const { t: tDomain } = useTranslation('domain');
   const toast = useToast();
   const execution = effectiveSetExecution(set, sessionExercise);
   const modality = execution.cardioModality ?? 'other';
@@ -113,22 +112,17 @@ export function EditCardioSetDialog({
   const handleSave = async () => {
     setTouched(true);
     if (!cardioSectionComplete(values)) {
-      toast.show('Bitte eine Dauer oder eine Distanz eingeben.', 'error');
+      toast.show(t('edit.cardioIncomplete'), 'error');
       return;
     }
     if (hasErrors(errors)) return;
     setSaving(true);
     try {
       await editCompletedCardioSet(set.id, { ...values, cardioModality: draft.modality });
-      toast.show('Cardio-Abschnitt aktualisiert.', 'success');
+      toast.show(t('edit.cardioUpdated'), 'success');
       onClose();
-    } catch (error) {
-      toast.show(
-        error instanceof Error
-          ? error.message
-          : 'Der Abschnitt konnte nicht gespeichert werden.',
-        'error',
-      );
+    } catch {
+      toast.show(t('edit.cardioFailed'), 'error');
     } finally {
       setSaving(false);
     }
@@ -138,47 +132,47 @@ export function EditCardioSetDialog({
     <Dialog
       open={open}
       onClose={onClose}
-      title={`Cardio-Abschnitt ${set.position + 1} bearbeiten`}
-      description="Korrigiert die erfassten Werte. Reihenfolge, Pausen und Zeitstempel bleiben erhalten."
+      title={t('edit.cardioTitle', { position: set.position + 1 })}
+      description={t('edit.description')}
       footer={
         <>
           <Button variant="secondary" onClick={onClose} disabled={saving}>
-            Abbrechen
+            {t('action.cancel')}
           </Button>
           <Button variant="primary" onClick={() => void handleSave()} disabled={saving}>
-            {saving ? 'Speichern …' : 'Speichern'}
+            {saving ? t('action.saving') : t('action.save')}
           </Button>
         </>
       }
     >
       <div className="grid grid-cols-2 gap-2">
         <SelectField
-          label="Aktivität"
+          label={t('field.activity')}
           containerClassName="col-span-2"
           value={draft.modality}
           onChange={(event) => update('modality', event.target.value)}
         >
           {CARDIO_MODALITY_VALUES.map((value) => (
             <option key={value} value={value}>
-              {CARDIO_MODALITY_LABELS[value]}
+              {tDomain(`cardioModality.${value}`)}
             </option>
           ))}
         </SelectField>
         <NumberField
-          label="Dauer (s)"
+          label={t('field.durationSeconds')}
           value={draft.duration}
           error={err('durationSeconds')}
           onChange={(event) => update('duration', event.target.value)}
         />
         <NumberField
-          label={`Distanz (${distanceInMeters ? 'm' : 'km'})`}
+          label={t('field.distance', { unit: distanceInMeters ? 'm' : 'km' })}
           decimal
           value={draft.distance}
           error={err('distanceMeters')}
           onChange={(event) => update('distance', event.target.value)}
         />
         <NumberField
-          label="RPE (optional)"
+          label={t('field.rpeOptional')}
           decimal
           containerClassName="col-span-2"
           value={draft.rpe}
@@ -186,31 +180,31 @@ export function EditCardioSetDialog({
           onChange={(event) => update('rpe', event.target.value)}
         />
         <NumberField
-          label="Ø Herzfrequenz (bpm)"
+          label={t('field.averageHeartRate')}
           value={draft.heartRate}
           error={err('averageHeartRateBpm')}
           onChange={(event) => update('heartRate', event.target.value)}
         />
         <NumberField
-          label="Kalorien (kcal)"
+          label={t('field.calories')}
           value={draft.calories}
           error={err('caloriesKcal')}
           onChange={(event) => update('calories', event.target.value)}
         />
         <NumberField
-          label="Höhenmeter (m)"
+          label={t('field.elevation')}
           value={draft.elevation}
           error={err('elevationGainMeters')}
           onChange={(event) => update('elevation', event.target.value)}
         />
         <NumberField
-          label="Kadenz (rpm)"
+          label={t('field.cadence')}
           value={draft.cadence}
           error={err('cadenceRpm')}
           onChange={(event) => update('cadence', event.target.value)}
         />
         <NumberField
-          label="Widerstand"
+          label={t('field.resistance')}
           containerClassName="col-span-2"
           value={draft.resistance}
           error={err('resistanceLevel')}

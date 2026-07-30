@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Plus, Trash2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Button, IconButton } from '@/components/ui/Button';
 import { NumberField, SelectField } from '@/components/ui/Field';
 import { db } from '@/db/db';
@@ -31,6 +32,7 @@ export function WeeklyGoalsEditor({
   goals: WeeklyGoals | undefined;
   onChange: (goals: WeeklyGoals) => void;
 }) {
+  const { t, i18n } = useTranslation('more');
   const exercises = useLiveQuery(
     () => db.exercises.filter((exercise) => !exercise.archived).toArray(),
     [],
@@ -48,8 +50,8 @@ export function WeeklyGoalsEditor({
     const taken = new Set(exerciseGoals.map((goal) => goal.exerciseId));
     return [...exercises]
       .filter((exercise) => !taken.has(exercise.id))
-      .sort((a, b) => a.name.localeCompare(b.name, 'de'));
-  }, [exercises, exerciseGoals]);
+      .sort((a, b) => a.name.localeCompare(b.name, i18n.resolvedLanguage));
+  }, [exercises, exerciseGoals, i18n.resolvedLanguage]);
 
   const update = (changes: Partial<WeeklyGoals>) => {
     onChange({ ...current, ...changes });
@@ -88,48 +90,47 @@ export function WeeklyGoalsEditor({
   return (
     <div className="grid gap-4">
       <p className="text-sm leading-relaxed text-muted">
-        Ziele sind freiwillig und helfen nur beim Dranbleiben. Leere Felder bedeuten „kein
-        Ziel“.
+        {t('screens.weeklyGoals.intro')}
       </p>
 
       <NumberField
-        label="Trainingseinheiten pro Woche"
+        label={t('screens.weeklyGoals.sessions')}
         value={current.sessionsPerWeek != null ? String(current.sessionsPerWeek) : ''}
-        placeholder="kein Ziel"
+        placeholder={t('screens.weeklyGoals.noGoal')}
         onChange={(event) =>
           update({ sessionsPerWeek: toGoalValue(event.target.value, 14) })
         }
       />
       <NumberField
-        label="Arbeitssätze pro Woche"
-        hint="Nur Kraft — Cardio zählt hier nicht mit."
+        label={t('screens.weeklyGoals.workingSets')}
+        hint={t('screens.weeklyGoals.workingSetsHint')}
         value={
           current.workingSetsPerWeek != null ? String(current.workingSetsPerWeek) : ''
         }
-        placeholder="kein Ziel"
+        placeholder={t('screens.weeklyGoals.noGoal')}
         onChange={(event) =>
           update({ workingSetsPerWeek: toGoalValue(event.target.value, 500) })
         }
       />
       <NumberField
-        label="Cardio-Minuten pro Woche"
+        label={t('screens.weeklyGoals.cardioMinutes')}
         value={
           current.cardioMinutesPerWeek != null ? String(current.cardioMinutesPerWeek) : ''
         }
-        placeholder="kein Ziel"
+        placeholder={t('screens.weeklyGoals.noGoal')}
         onChange={(event) =>
           update({ cardioMinutesPerWeek: toGoalValue(event.target.value, 10000) })
         }
       />
       <NumberField
-        label="Cardio-Distanz pro Woche (km)"
+        label={t('screens.weeklyGoals.cardioDistance')}
         decimal
         value={
           current.cardioDistancePerWeekMeters != null
             ? String(current.cardioDistancePerWeekMeters / 1000)
             : ''
         }
-        placeholder="kein Ziel"
+        placeholder={t('screens.weeklyGoals.noGoal')}
         onChange={(event) => {
           const km = parseNumberInput(event.target.value);
           update({
@@ -141,26 +142,25 @@ export function WeeklyGoalsEditor({
         }}
       />
       <NumberField
-        label="Cardio-Einheiten pro Woche"
+        label={t('screens.weeklyGoals.cardioSessions')}
         value={
           current.cardioSessionsPerWeek != null
             ? String(current.cardioSessionsPerWeek)
             : ''
         }
-        placeholder="kein Ziel"
+        placeholder={t('screens.weeklyGoals.noGoal')}
         onChange={(event) =>
           update({ cardioSessionsPerWeek: toGoalValue(event.target.value, 14) })
         }
       />
 
       <div className="grid gap-3">
-        <h3 className="text-sm font-semibold">Übungsziele (optional)</h3>
+        <h3 className="text-sm font-semibold">
+          {t('screens.weeklyGoals.exerciseGoals')}
+        </h3>
 
         {exerciseGoals.length === 0 ? (
-          <p className="text-xs text-muted">
-            Noch keine übungsspezifischen Ziele. Du kannst z. B. „Kniebeugen 2× pro Woche“
-            festlegen.
-          </p>
+          <p className="text-xs text-muted">{t('screens.weeklyGoals.noExerciseGoals')}</p>
         ) : (
           <ul className="grid gap-3">
             {exerciseGoals.map((goal) => {
@@ -178,7 +178,9 @@ export function WeeklyGoalsEditor({
                       {goal.exerciseNameSnapshot}
                     </span>
                     <IconButton
-                      label={`Ziel für ${goal.exerciseNameSnapshot} entfernen`}
+                      label={t('screens.weeklyGoals.removeExerciseGoal', {
+                        name: goal.exerciseNameSnapshot,
+                      })}
                       variant="ghost"
                       onClick={() => removeExerciseGoal(goal.exerciseId)}
                     >
@@ -187,7 +189,7 @@ export function WeeklyGoalsEditor({
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <SelectField
-                      label="Ziel"
+                      label={t('screens.weeklyGoals.goal')}
                       value={metric}
                       onChange={(event) => {
                         const nextMetric = event.target.value as ExerciseMetric;
@@ -199,11 +201,13 @@ export function WeeklyGoalsEditor({
                         });
                       }}
                     >
-                      <option value="sessions">Einheiten/Woche</option>
-                      <option value="sets">Sätze/Woche</option>
+                      <option value="sessions">
+                        {t('screens.weeklyGoals.sessionsPerWeek')}
+                      </option>
+                      <option value="sets">{t('screens.weeklyGoals.setsPerWeek')}</option>
                     </SelectField>
                     <NumberField
-                      label="Anzahl"
+                      label={t('screens.weeklyGoals.amount')}
                       value={value != null ? String(value) : ''}
                       onChange={(event) => {
                         const parsed = toGoalValue(
@@ -226,12 +230,12 @@ export function WeeklyGoalsEditor({
         {available.length > 0 ? (
           <div className="flex items-end gap-2">
             <SelectField
-              label="Übung hinzufügen"
+              label={t('screens.weeklyGoals.addExercise')}
               containerClassName="flex-1"
               value={addId}
               onChange={(event) => setAddId(event.target.value)}
             >
-              <option value="">Übung wählen …</option>
+              <option value="">{t('screens.weeklyGoals.chooseExercise')}</option>
               {available.map((exercise) => (
                 <option key={exercise.id} value={exercise.id}>
                   {exercise.name}
@@ -240,7 +244,7 @@ export function WeeklyGoalsEditor({
             </SelectField>
             <Button variant="secondary" onClick={addExerciseGoal} disabled={!addId}>
               <Plus size={18} aria-hidden="true" />
-              Ziel
+              {t('screens.weeklyGoals.goal')}
             </Button>
           </div>
         ) : null}

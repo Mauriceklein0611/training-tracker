@@ -1,4 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks';
+import { useTranslation } from 'react-i18next';
 import { CheckCircle2, Circle, Target } from 'lucide-react';
 import { db } from '@/db/db';
 import { Button } from '@/components/ui/Button';
@@ -8,9 +9,9 @@ import {
   getActivePlanId,
 } from '@/db/repositories/planUsage';
 import { computePlanOverview } from '@/services/planMetrics';
-import { PLAN_GOAL_TYPE_LABELS } from '@/services/planGoals';
 import type { TrainingPlan, WorkoutSession } from '@/types';
-import { dayKey } from '@/utils/date';
+import { formatDate } from '@/utils/date';
+import { formatNumber } from '@/utils/format';
 
 /** Completed sessions attributed to this plan (by planId snapshot). */
 async function completedSessionsOfPlan(planId: string): Promise<WorkoutSession[]> {
@@ -32,6 +33,7 @@ function Stat({ label, value }: { label: string; value: string }) {
  * derived purely from completed sessions (Phase 3). No invented numbers.
  */
 export function PlanOverviewCard({ plan }: { plan: TrainingPlan }) {
+  const { t } = useTranslation('plans');
   const activePlanId = useLiveQuery(() => getActivePlanId(), [], undefined);
   const sessions = useLiveQuery(
     () => completedSessionsOfPlan(plan.id),
@@ -47,7 +49,7 @@ export function PlanOverviewCard({ plan }: { plan: TrainingPlan }) {
       })
     : undefined;
 
-  const goalLabel = plan.goalType ? PLAN_GOAL_TYPE_LABELS[plan.goalType] : undefined;
+  const goalLabel = plan.goalType ? t(`goal.${plan.goalType}`) : undefined;
 
   return (
     <div className="mb-4 rounded-2xl border border-border bg-surface p-3">
@@ -55,8 +57,10 @@ export function PlanOverviewCard({ plan }: { plan: TrainingPlan }) {
         <div className="flex min-w-0 items-center gap-2">
           <Target size={18} className="shrink-0 text-accent" aria-hidden="true" />
           <span className="truncate text-sm font-semibold">
-            {goalLabel ? goalLabel : 'Übersicht'}
-            {plan.startDate ? ` · seit ${plan.startDate}` : ''}
+            {goalLabel ?? t('overview.title')}
+            {plan.startDate
+              ? ` · ${t('overview.since', { date: formatDate(plan.startDate) })}`
+              : ''}
           </span>
         </div>
         <Button
@@ -69,12 +73,12 @@ export function PlanOverviewCard({ plan }: { plan: TrainingPlan }) {
           {isActive ? (
             <>
               <CheckCircle2 size={16} aria-hidden="true" />
-              Aktiver Plan
+              {t('overview.active')}
             </>
           ) : (
             <>
               <Circle size={16} aria-hidden="true" />
-              Aktivieren
+              {t('overview.activate')}
             </>
           )}
         </Button>
@@ -82,9 +86,12 @@ export function PlanOverviewCard({ plan }: { plan: TrainingPlan }) {
 
       {overview ? (
         <div className="mt-3 grid grid-cols-3 gap-2">
-          <Stat label="Einheiten" value={String(overview.sessionCount)} />
           <Stat
-            label="diese Woche"
+            label={t('overview.sessions')}
+            value={formatNumber(overview.sessionCount)}
+          />
+          <Stat
+            label={t('overview.thisWeek')}
             value={
               overview.weeklyTarget
                 ? `${overview.sessionsThisWeek}/${overview.weeklyTarget}`
@@ -92,10 +99,10 @@ export function PlanOverviewCard({ plan }: { plan: TrainingPlan }) {
             }
           />
           <Stat
-            label="Ø / Woche"
+            label={t('overview.averageWeek')}
             value={
               overview.avgSessionsPerWeek != null
-                ? overview.avgSessionsPerWeek.toLocaleString('de-DE')
+                ? formatNumber(overview.avgSessionsPerWeek, 1)
                 : '–'
             }
           />
@@ -104,10 +111,12 @@ export function PlanOverviewCard({ plan }: { plan: TrainingPlan }) {
 
       {overview && overview.lastSessionAt ? (
         <p className="mt-2 text-xs text-muted">
-          Letztes Training: {dayKey(overview.lastSessionAt)}
+          {t('overview.lastTraining', {
+            date: formatDate(overview.lastSessionAt),
+          })}
         </p>
       ) : overview ? (
-        <p className="mt-2 text-xs text-muted">Noch kein Training in diesem Plan.</p>
+        <p className="mt-2 text-xs text-muted">{t('overview.noTraining')}</p>
       ) : null}
     </div>
   );

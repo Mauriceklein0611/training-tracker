@@ -1,4 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks';
+import { useTranslation } from 'react-i18next';
 import { FilePlus2, Layers } from 'lucide-react';
 import { Dialog } from '@/components/ui/Dialog';
 import { Button } from '@/components/ui/Button';
@@ -29,6 +30,7 @@ export function AddDayDialog({
   /** Called with the new day's id so the editor can select it. */
   onDayAdded: (dayId: string) => void;
 }) {
+  const { t } = useTranslation('plans');
   const toast = useToast();
   const units = useLiveQuery(
     () => (open ? listWorkoutUnitsWithExercises() : Promise.resolve([])),
@@ -39,19 +41,16 @@ export function AddDayDialog({
   const addEmpty = async () => {
     const day = await addDay(planId);
     onDayAdded(day.id);
-    toast.show('Trainingstag hinzugefügt.', 'success');
+    toast.show(t('addDay.success'), 'success');
   };
 
   const importUnit = async (unitId: string) => {
     try {
       const day = await addWorkoutUnitToPlan(unitId, planId);
       onDayAdded(day.id);
-      toast.show('Einheit als Trainingstag importiert.', 'success');
-    } catch (error) {
-      toast.show(
-        error instanceof Error ? error.message : 'Import fehlgeschlagen.',
-        'error',
-      );
+      toast.show(t('addDay.importSuccess'), 'success');
+    } catch {
+      toast.show(t('addDay.importFailed'), 'error');
     }
   };
 
@@ -59,8 +58,8 @@ export function AddDayDialog({
     <Dialog
       open={open}
       onClose={onClose}
-      title="Trainingstag hinzufügen"
-      description="Starte mit einem leeren Tag oder importiere eine Einheit aus deiner Bibliothek."
+      title={t('addDay.title')}
+      description={t('addDay.description')}
     >
       <div className="grid gap-4">
         <Button
@@ -70,19 +69,16 @@ export function AddDayDialog({
           onClick={() => void addEmpty()}
         >
           <FilePlus2 size={18} aria-hidden="true" />
-          Leeren Tag erstellen
+          {t('addDay.empty')}
         </Button>
 
         <div>
           <h3 className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
             <Layers size={14} aria-hidden="true" />
-            Aus Bibliothek importieren
+            {t('addDay.fromLibrary')}
           </h3>
           {units.length === 0 ? (
-            <p className="text-sm text-muted">
-              Noch keine Übungseinheiten in der Bibliothek. Speichere einen Trainingstag
-              als Einheit, um ihn später wiederzuverwenden.
-            </p>
+            <p className="text-sm text-muted">{t('addDay.libraryEmpty')}</p>
           ) : (
             <ul className="grid gap-2">
               {units.map(({ unit, exercises }) => {
@@ -96,9 +92,13 @@ export function AddDayDialog({
                     >
                       <p className="truncate font-medium">{unit.name}</p>
                       <p className="numeric text-xs text-muted">
-                        {summary.exerciseCount}{' '}
-                        {summary.exerciseCount === 1 ? 'Übung' : 'Übungen'} ·{' '}
-                        {formatSets(summary.totalTargetSets)}
+                        {t(
+                          summary.exerciseCount === 1
+                            ? 'count.exerciseOne'
+                            : 'count.exerciseOther',
+                          { count: summary.exerciseCount },
+                        )}{' '}
+                        · {formatSets(summary.totalTargetSets)}
                       </p>
                     </button>
                   </li>

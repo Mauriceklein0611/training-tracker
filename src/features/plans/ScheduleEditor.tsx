@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { useTranslation } from 'react-i18next';
 import {
   ArrowDown,
   ArrowUp,
@@ -28,12 +29,7 @@ import {
   setWeekdayAssignment,
   updateCycleEntry,
 } from '@/db/repositories/schedules';
-import {
-  SCHEDULE_MODE_DESCRIPTIONS,
-  SCHEDULE_MODE_LABELS,
-  WEEKDAY_LABELS,
-} from '@/services/schedule';
-import type { ScheduleMode } from '@/types';
+import { type ScheduleMode } from '@/types';
 import { useToast } from '@/hooks/useToast';
 import { cn } from '@/utils/cn';
 
@@ -72,6 +68,7 @@ function DayChip({
  * "coming up" preview.
  */
 export function ScheduleEditor({ planId }: { planId: string }) {
+  const { t } = useTranslation('plans');
   const view = useLiveQuery(() => getPlanScheduleView(planId), [planId]);
   const state = useLiveQuery(() => getPlanScheduleState(planId), [planId]);
   const [pendingMode, setPendingMode] = useState<ScheduleMode | null>(null);
@@ -79,7 +76,7 @@ export function ScheduleEditor({ planId }: { planId: string }) {
   if (!view) {
     return (
       <p className="text-sm text-muted" role="status">
-        Wird geladen …
+        {t('schedule.loading')}
       </p>
     );
   }
@@ -106,23 +103,25 @@ export function ScheduleEditor({ planId }: { planId: string }) {
   return (
     <div className="grid gap-4">
       <Segmented<ScheduleMode>
-        label="Zeitplan-Modus"
+        label={t('schedule.modeLabel')}
         value={mode}
         onChange={requestModeChange}
         options={[
-          { value: 'free-rotation', label: SCHEDULE_MODE_LABELS['free-rotation'] },
-          { value: 'repeating-cycle', label: SCHEDULE_MODE_LABELS['repeating-cycle'] },
-          { value: 'weekly', label: SCHEDULE_MODE_LABELS.weekly },
+          { value: 'free-rotation', label: t('schedule.modes.free-rotation') },
+          { value: 'repeating-cycle', label: t('schedule.modes.repeating-cycle') },
+          { value: 'weekly', label: t('schedule.modes.weekly') },
         ]}
       />
       <p className="text-xs leading-relaxed text-muted">
-        {SCHEDULE_MODE_DESCRIPTIONS[mode]}
+        {t(`schedule.modeDescriptions.${mode}`)}
       </p>
 
       {/* Coming-up preview, shared by all modes. */}
       {state && state.upcoming.length > 0 ? (
         <div>
-          <p className="mb-1.5 text-xs font-medium text-muted">Als Nächstes</p>
+          <p className="mb-1.5 text-xs font-medium text-muted">
+            {t('schedule.upcoming')}
+          </p>
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
             {state.upcoming.map((item, index) => (
               <div
@@ -130,7 +129,20 @@ export function ScheduleEditor({ planId }: { planId: string }) {
                 className="flex items-center gap-1.5"
               >
                 {index > 0 ? <span className="text-muted">→</span> : null}
-                <DayChip name={item.name} rest={item.type === 'rest'} />
+                <DayChip
+                  name={
+                    item.type === 'rest'
+                      ? item.entry.id.startsWith('weekday-')
+                        ? t('schedule.free')
+                        : item.name === 'Pause'
+                          ? t('schedule.rest')
+                          : item.name
+                      : item.template
+                        ? item.name
+                        : t('schedule.removedUnit')
+                  }
+                  rest={item.type === 'rest'}
+                />
               </div>
             ))}
           </div>
@@ -153,17 +165,16 @@ export function ScheduleEditor({ planId }: { planId: string }) {
 
       <ConfirmDialog
         open={pendingMode !== null}
-        title="Modus wechseln?"
-        description="Der aktuelle Zeitplan wird dabei zurückgesetzt. Die Übungseinheiten und ihre Übungen bleiben unverändert erhalten."
-        confirmLabel="Wechseln"
+        title={t('schedule.changeModeTitle')}
+        description={t('schedule.changeModeDescription')}
+        confirmLabel={t('schedule.changeMode')}
         onCancel={() => setPendingMode(null)}
         onConfirm={() => pendingMode && void applyModeChange(pendingMode)}
       />
 
       {!hasUnitOptions ? (
         <p className="rounded-xl border border-warning/50 bg-surface-2 p-2 text-xs text-warning">
-          Dieser Plan hat noch keine Übungseinheit. Füge zuerst eine Einheit hinzu, um sie
-          im Zeitplan zu verwenden.
+          {t('schedule.noUnits')}
         </p>
       ) : null}
     </div>
@@ -172,12 +183,10 @@ export function ScheduleEditor({ planId }: { planId: string }) {
 
 /** Free rotation: the units in order, reorderable in place. */
 function FreeRotationBody({ units }: { units: { id: string; name: string }[] }) {
+  const { t } = useTranslation('plans');
   return (
     <div className="grid gap-2">
-      <p className="text-xs text-muted">
-        Die Übungseinheiten werden in dieser Reihenfolge vorgeschlagen. Pausentage
-        entstehen einfach dadurch, dass du an einem Tag nicht trainierst.
-      </p>
+      <p className="text-xs text-muted">{t('schedule.freeRotationHint')}</p>
       <ol className="grid gap-2">
         {units.map((unit, index) => (
           <li
@@ -191,14 +200,14 @@ function FreeRotationBody({ units }: { units: { id: string; name: string }[] }) 
               {unit.name}
             </span>
             <IconButton
-              label={`${unit.name} nach oben`}
+              label={t('schedule.moveUnitUp', { name: unit.name })}
               onClick={() => void moveDay(unit.id, -1)}
               {...(index === 0 ? { disabled: true } : {})}
             >
               <ArrowUp size={16} aria-hidden="true" />
             </IconButton>
             <IconButton
-              label={`${unit.name} nach unten`}
+              label={t('schedule.moveUnitDown', { name: unit.name })}
               onClick={() => void moveDay(unit.id, 1)}
               {...(index === units.length - 1 ? { disabled: true } : {})}
             >
@@ -232,16 +241,14 @@ function CycleBody({
   cursor: number;
   hasUnitOptions: boolean;
 }) {
+  const { t } = useTranslation('plans');
   const toast = useToast();
   const [resetOpen, setResetOpen] = useState(false);
 
   return (
     <div className="grid gap-2">
       {entries.length === 0 ? (
-        <p className="text-xs text-muted">
-          Noch keine Zyklustage. Füge Trainings- und Pausentage in der gewünschten
-          Reihenfolge hinzu; nach dem letzten Tag beginnt der Zyklus von vorn.
-        </p>
+        <p className="text-xs text-muted">{t('schedule.cycleEmpty')}</p>
       ) : (
         <ol className="grid gap-2">
           {entries.map((entry, index) => {
@@ -267,7 +274,7 @@ function CycleBody({
                   </span>
                   {entry.type === 'workout' ? (
                     <select
-                      aria-label={`Einheit für Tag ${index + 1}`}
+                      aria-label={t('schedule.unitForDay', { day: index + 1 })}
                       value={entry.templateId ?? ''}
                       onChange={(event) =>
                         void updateCycleEntry(entry.id, {
@@ -279,7 +286,9 @@ function CycleBody({
                     >
                       {entry.templateId &&
                       !units.some((u) => u.id === entry.templateId) ? (
-                        <option value={entry.templateId}>Entfernte Einheit</option>
+                        <option value={entry.templateId}>
+                          {t('schedule.removedUnit')}
+                        </option>
                       ) : null}
                       {units.map((unit) => (
                         <option key={unit.id} value={unit.id}>
@@ -290,12 +299,12 @@ function CycleBody({
                   ) : (
                     <span className="flex min-w-0 flex-1 items-center gap-1.5 text-sm text-muted">
                       {REST_ICON}
-                      Pausentag
+                      {t('schedule.restDay')}
                     </span>
                   )}
                   {isToday ? (
                     <span className="shrink-0 rounded-full bg-accent px-2 py-0.5 text-[10px] font-semibold text-accent-contrast">
-                      Heute
+                      {t('schedule.today')}
                     </span>
                   ) : null}
                 </div>
@@ -306,31 +315,31 @@ function CycleBody({
                       size="sm"
                       onClick={() => void setCyclePosition(planId, index)}
                     >
-                      Als heute
+                      {t('schedule.setToday')}
                     </Button>
                   ) : null}
                   <IconButton
-                    label="Nach oben"
+                    label={t('schedule.moveUp')}
                     onClick={() => void moveCycleEntry(entry.id, -1)}
                     {...(index === 0 ? { disabled: true } : {})}
                   >
                     <ArrowUp size={16} aria-hidden="true" />
                   </IconButton>
                   <IconButton
-                    label="Nach unten"
+                    label={t('schedule.moveDown')}
                     onClick={() => void moveCycleEntry(entry.id, 1)}
                     {...(index === entries.length - 1 ? { disabled: true } : {})}
                   >
                     <ArrowDown size={16} aria-hidden="true" />
                   </IconButton>
                   <IconButton
-                    label="Tag duplizieren"
+                    label={t('schedule.duplicateDay')}
                     onClick={() => void duplicateCycleEntry(entry.id)}
                   >
                     <Copy size={16} aria-hidden="true" />
                   </IconButton>
                   <IconButton
-                    label="Tag entfernen"
+                    label={t('schedule.removeDay')}
                     onClick={() => void deleteCycleEntry(entry.id)}
                   >
                     <Trash2 size={16} aria-hidden="true" />
@@ -352,7 +361,7 @@ function CycleBody({
           }
         >
           <Plus size={16} aria-hidden="true" />
-          Trainingstag
+          {t('schedule.trainingDay')}
         </Button>
         <Button
           variant="secondary"
@@ -360,27 +369,27 @@ function CycleBody({
           onClick={() => void addCycleEntry(planId, { type: 'rest' })}
         >
           <Moon size={16} aria-hidden="true" />
-          Pausentag
+          {t('schedule.restDay')}
         </Button>
         {entries.length > 0 ? (
           <Button variant="ghost" size="sm" onClick={() => setResetOpen(true)}>
             <RotateCcw size={16} aria-hidden="true" />
-            Zurücksetzen
+            {t('schedule.reset')}
           </Button>
         ) : null}
       </div>
 
       <ConfirmDialog
         open={resetOpen}
-        title="Zyklus zurücksetzen?"
-        description="Alle Zyklustage werden entfernt. Die Übungseinheiten selbst bleiben erhalten."
-        confirmLabel="Zurücksetzen"
+        title={t('schedule.resetTitle')}
+        description={t('schedule.resetDescription')}
+        confirmLabel={t('schedule.reset')}
         destructive
         onCancel={() => setResetOpen(false)}
         onConfirm={async () => {
           await resetCycle(planId);
           setResetOpen(false);
-          toast.show('Zyklus zurückgesetzt.', 'success');
+          toast.show(t('schedule.resetSuccess'), 'success');
         }}
       />
     </div>
@@ -405,8 +414,10 @@ function WeeklyBody({
   units: { id: string; name: string }[];
   entries: WeeklyEntryRow[];
 }) {
+  const { t } = useTranslation('plans');
   const byWeekday = new Map<number, WeeklyEntryRow>();
   for (const entry of entries) byWeekday.set(entry.weekday ?? entry.position, entry);
+  const weekdays = t('schedule.weekdays', { returnObjects: true }) as string[];
 
   const valueFor = (entry: WeeklyEntryRow | undefined): string => {
     if (!entry) return 'free';
@@ -426,7 +437,7 @@ function WeeklyBody({
 
   return (
     <div className="grid gap-2">
-      {WEEKDAY_LABELS.map((label, weekday) => {
+      {weekdays.map((label, weekday) => {
         const entry = byWeekday.get(weekday);
         return (
           <div
@@ -436,13 +447,13 @@ function WeeklyBody({
             <CalendarDays size={16} className="shrink-0 text-muted" aria-hidden="true" />
             <span className="w-24 shrink-0 text-sm font-medium">{label}</span>
             <select
-              aria-label={`Zuordnung für ${label}`}
+              aria-label={t('schedule.assignmentFor', { day: label })}
               value={valueFor(entry)}
               onChange={(event) => handleChange(weekday, event.target.value)}
               className="min-h-[40px] min-w-0 flex-1 rounded-lg border border-border bg-surface-2 px-2 text-sm"
             >
-              <option value="free">Frei</option>
-              <option value="rest">Pause</option>
+              <option value="free">{t('schedule.free')}</option>
+              <option value="rest">{t('schedule.rest')}</option>
               {units.map((unit) => (
                 <option key={unit.id} value={unit.id}>
                   {unit.name}
@@ -451,7 +462,7 @@ function WeeklyBody({
               {entry?.type === 'workout' &&
               entry.templateId &&
               !units.some((u) => u.id === entry.templateId) ? (
-                <option value={entry.templateId}>Entfernte Einheit</option>
+                <option value={entry.templateId}>{t('schedule.removedUnit')}</option>
               ) : null}
             </select>
           </div>

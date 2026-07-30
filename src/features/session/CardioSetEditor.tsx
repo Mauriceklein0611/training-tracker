@@ -11,12 +11,13 @@ import {
   type CardioSetInputValues,
 } from '@/services/validation';
 import { effectiveSetExecution } from '@/services/equipment';
-import { cardioModalityLabel, prefersMeters } from '@/services/cardio';
+import { prefersMeters } from '@/services/cardio';
 import { computePace, formatPace } from '@/services/cardioMetrics';
 import { cn } from '@/utils/cn';
 import { useAutosave } from '@/hooks/useAutosave';
 import { useToast } from '@/hooks/useToast';
 import { ExerciseTimer } from '@/features/session/ExerciseTimer';
+import { useTranslation } from 'react-i18next';
 
 /** The cardio values a completed section carries. */
 export interface CardioSetValues {
@@ -122,6 +123,8 @@ export function CardioSetEditor({
   onComplete: (values: CardioSetValues) => void | Promise<void>;
   onDelete: () => void;
 }) {
+  const { t } = useTranslation('session');
+  const { t: tDomain } = useTranslation('domain');
   const toast = useToast();
   const execution = effectiveSetExecution(set, sessionExercise);
   const modality = execution.cardioModality;
@@ -172,10 +175,7 @@ export function CardioSetEditor({
       completedRef.current = true;
       autosave.disable();
     } catch {
-      toast.show(
-        'Der Cardio-Abschnitt konnte nicht gespeichert werden. Bitte erneut versuchen.',
-        'error',
-      );
+      toast.show(t('setEditor.cardioSaveFailed'), 'error');
     } finally {
       completingRef.current = false;
       setIsCompleting(false);
@@ -185,7 +185,7 @@ export function CardioSetEditor({
   const handleComplete = () => {
     setTouched(true);
     if (!cardioSectionComplete(values)) {
-      toast.show('Bitte eine Dauer oder eine Distanz eingeben.', 'error');
+      toast.show(t('edit.cardioIncomplete'), 'error');
       return;
     }
     if (hasErrors(errors)) return;
@@ -196,9 +196,9 @@ export function CardioSetEditor({
     <div className="rounded-2xl border border-accent/40 bg-surface-2 p-3">
       <div className="mb-2 flex items-center justify-between gap-2">
         <span className="text-sm font-semibold">
-          Cardio · {cardioModalityLabel(modality)}
+          Cardio · {tDomain(`cardioModality.${modality ?? 'other'}`)}
         </span>
-        <IconButton label="Abschnitt verwerfen" onClick={onDelete}>
+        <IconButton label={t('setEditor.discardSection')} onClick={onDelete}>
           <Trash2 size={18} aria-hidden="true" />
         </IconButton>
       </div>
@@ -221,14 +221,14 @@ export function CardioSetEditor({
 
       <div className="grid grid-cols-2 gap-2">
         <NumberField
-          label="Dauer (s)"
+          label={t('field.durationSeconds')}
           value={draft.duration}
           error={fieldError(errors, touched, 'durationSeconds')}
           onChange={(event) => update('duration', event.target.value)}
           onBlur={persist}
         />
         <NumberField
-          label={`Distanz (${distanceUnit})`}
+          label={t('field.distance', { unit: distanceUnit })}
           decimal
           value={draft.distance}
           error={fieldError(errors, touched, 'distanceMeters')}
@@ -239,14 +239,14 @@ export function CardioSetEditor({
 
       {livePace ? (
         <p className="mt-2 text-sm text-muted">
-          <span className="font-medium text-text">Pace / Tempo: </span>
+          <span className="font-medium text-text">{t('field.pace')}: </span>
           <span className="numeric">{formatPace(livePace)}</span>
         </p>
       ) : null}
 
       <div className="mt-3">
         <span className="mb-1 block text-sm font-medium text-muted">
-          Anstrengung (RPE) <span className="font-normal">(optional)</span>
+          {t('field.effort')} <span className="font-normal">({t('field.optional')})</span>
         </span>
         <div className="flex flex-wrap gap-1.5" role="group" aria-label="RPE">
           {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((value) => {
@@ -277,39 +277,39 @@ export function CardioSetEditor({
         onToggle={(event) => setMoreOpen((event.target as HTMLDetailsElement).open)}
       >
         <summary className="min-h-[44px] cursor-pointer list-none py-2 text-sm font-medium text-accent">
-          Weitere Werte (optional)
+          {t('field.moreValues')}
         </summary>
         <div className="mt-1 grid grid-cols-2 gap-2">
           <NumberField
-            label="Ø Herzfrequenz (bpm)"
+            label={t('field.averageHeartRate')}
             value={draft.heartRate}
             error={fieldError(errors, touched, 'averageHeartRateBpm')}
             onChange={(event) => update('heartRate', event.target.value)}
             onBlur={persist}
           />
           <NumberField
-            label="Kalorien (kcal)"
+            label={t('field.calories')}
             value={draft.calories}
             error={fieldError(errors, touched, 'caloriesKcal')}
             onChange={(event) => update('calories', event.target.value)}
             onBlur={persist}
           />
           <NumberField
-            label="Höhenmeter (m)"
+            label={t('field.elevation')}
             value={draft.elevation}
             error={fieldError(errors, touched, 'elevationGainMeters')}
             onChange={(event) => update('elevation', event.target.value)}
             onBlur={persist}
           />
           <NumberField
-            label="Kadenz (rpm)"
+            label={t('field.cadence')}
             value={draft.cadence}
             error={fieldError(errors, touched, 'cadenceRpm')}
             onChange={(event) => update('cadence', event.target.value)}
             onBlur={persist}
           />
           <NumberField
-            label="Widerstand"
+            label={t('field.resistance')}
             containerClassName="col-span-2"
             value={draft.resistance}
             error={fieldError(errors, touched, 'resistanceLevel')}
@@ -328,7 +328,7 @@ export function CardioSetEditor({
         onClick={handleComplete}
       >
         <Check size={20} aria-hidden="true" />
-        {isCompleting ? 'Wird gespeichert …' : 'Abschnitt abschließen'}
+        {isCompleting ? t('action.saving') : t('setEditor.completeSection')}
       </Button>
     </div>
   );

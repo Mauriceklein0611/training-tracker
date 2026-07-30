@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Download, Share2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import { Dialog } from '@/components/ui/Dialog';
 import { CheckboxField } from '@/components/ui/Field';
@@ -27,6 +28,8 @@ export function WorkoutUnitShareDialog({
   unitId: string | null;
   onClose: () => void;
 }) {
+  const { t } = useTranslation('library');
+  const { t: tCommon } = useTranslation();
   const toast = useToast();
   const [detail, setDetail] = useState<WorkoutUnitWithExercises | null>(null);
   const [includeNotes, setIncludeNotes] = useState(true);
@@ -64,11 +67,25 @@ export function WorkoutUnitShareDialog({
       const result = await shareJsonExport({
         fileName: workoutUnitPackageFileName(),
         data: build(),
-        title: `Übungseinheit „${detail.unit.name}" teilen`,
+        title: t('share.systemTitle', { name: detail.unit.name }),
       });
-      toast.show(result.message, result.outcome === 'failed' ? 'error' : 'success');
+      const message =
+        result.outcome === 'shared-file'
+          ? t('share.result.sharedFile')
+          : result.outcome === 'shared-text'
+            ? t('share.result.sharedText')
+            : result.outcome === 'cancelled'
+              ? t('share.result.cancelled')
+              : result.outcome === 'downloaded'
+                ? t(
+                    result.copiedToClipboard
+                      ? 'share.result.downloadedCopied'
+                      : 'share.result.downloaded',
+                  )
+                : t('share.result.failed');
+      toast.show(message, result.outcome === 'failed' ? 'error' : 'success');
     } catch {
-      toast.show('Teilen fehlgeschlagen.', 'error');
+      toast.show(t('share.failed'), 'error');
     } finally {
       setBusy(false);
     }
@@ -77,45 +94,43 @@ export function WorkoutUnitShareDialog({
   const handleDownload = () => {
     if (!detail) return;
     downloadJson(workoutUnitPackageFileName(), build());
-    toast.show('Datei gespeichert.', 'success');
+    toast.show(t('share.saved'), 'success');
   };
 
   return (
-    <Dialog
-      open={unitId !== null}
-      onClose={onClose}
-      title="Übungseinheit teilen"
-      size="lg"
-    >
+    <Dialog open={unitId !== null} onClose={onClose} title={t('share.title')} size="lg">
       {detail ? (
         <div className="grid gap-3">
           <p className="text-sm text-muted">
-            „{detail.unit.name}" mit {detail.exercises.length} Übungen wird als portable
-            Datei geteilt. Enthalten sind nur die Einheit, ihre Übungen und Zielwerte —
-            keine Trainingshistorie, keine Körperdaten, keine internen IDs.
+            {t('share.description', {
+              name: detail.unit.name,
+              exercises: t(
+                detail.exercises.length === 1
+                  ? 'count.exerciseOne'
+                  : 'count.exerciseOther',
+                { count: detail.exercises.length },
+              ),
+            })}
           </p>
           <CheckboxField
-            label="Notizen mitgeben"
+            label={t('share.includeNotes')}
             checked={includeNotes}
             onChange={setIncludeNotes}
           />
           <div className="grid grid-cols-2 gap-2">
             <Button variant="primary" disabled={busy} onClick={() => void handleShare()}>
               <Share2 size={18} aria-hidden="true" />
-              Teilen
+              {tCommon('action.share')}
             </Button>
             <Button variant="secondary" disabled={busy} onClick={handleDownload}>
               <Download size={18} aria-hidden="true" />
-              Herunterladen
+              {t('share.download')}
             </Button>
           </div>
-          <p className="text-xs text-muted">
-            Falls Teilen nicht unterstützt wird, lädt die App die Datei stattdessen
-            herunter — du kannst sie dann z. B. über WhatsApp versenden.
-          </p>
+          <p className="text-xs text-muted">{t('share.fallbackHint')}</p>
         </div>
       ) : (
-        <p className="text-sm text-muted">Wird geladen …</p>
+        <p className="text-sm text-muted">{tCommon('state.loading')}</p>
       )}
     </Dialog>
   );

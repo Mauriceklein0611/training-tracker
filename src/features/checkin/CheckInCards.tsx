@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Card } from '@/components/ui/Card';
 import { TextAreaField } from '@/components/ui/Field';
 import { setPostCheckIn, setPreCheckIn } from '@/db/repositories/sessions';
@@ -36,6 +37,7 @@ function CheckInShell({
   filled: boolean;
   children: ReactNode;
 }) {
+  const { t } = useTranslation('more');
   const [open, setOpen] = useState(filled);
   return (
     <Card>
@@ -48,7 +50,7 @@ function CheckInShell({
         <div className="min-w-0">
           <h2 className="text-base font-semibold leading-tight">{title}</h2>
           <p className="mt-0.5 text-sm text-muted">
-            {filled ? 'Ausgefüllt · antippen' : subtitle}
+            {filled ? t('screens.checkIn.filled') : subtitle}
           </p>
         </div>
         {open ? (
@@ -93,6 +95,7 @@ export function PreCheckInCard({
   sessionId: string;
   value: PreWorkoutCheckIn | undefined;
 }) {
+  const { t } = useTranslation('more');
   const current = value ?? {};
   const patch = (changes: Partial<PreWorkoutCheckIn>) => {
     void setPreCheckIn(sessionId, prune({ ...current, ...changes }));
@@ -100,50 +103,50 @@ export function PreCheckInCard({
 
   return (
     <CheckInShell
-      title="Vor dem Training"
-      subtitle="Optional · in wenigen Sekunden"
+      title={t('screens.checkIn.pre.title')}
+      subtitle={t('screens.checkIn.pre.subtitle')}
       filled={hasPreCheckIn(value)}
     >
       <RatingScale
-        label="Energie"
+        label={t('screens.checkIn.pre.energy')}
         value={current.energy}
-        lowLabel="niedrig"
-        highLabel="hoch"
+        lowLabel={t('screens.checkIn.scale.low')}
+        highLabel={t('screens.checkIn.scale.high')}
         onChange={(energy) => patch({ energy })}
       />
       <RatingScale
-        label="Schlafqualität"
+        label={t('screens.checkIn.pre.sleep')}
         value={current.sleepQuality}
-        lowLabel="schlecht"
-        highLabel="gut"
+        lowLabel={t('screens.checkIn.scale.bad')}
+        highLabel={t('screens.checkIn.scale.good')}
         onChange={(sleepQuality) => patch({ sleepQuality })}
       />
       <RatingScale
-        label="Motivation"
+        label={t('screens.checkIn.pre.motivation')}
         value={current.motivation}
-        lowLabel="niedrig"
-        highLabel="hoch"
+        lowLabel={t('screens.checkIn.scale.low')}
+        highLabel={t('screens.checkIn.scale.high')}
         onChange={(motivation) => patch({ motivation })}
       />
       <RatingScale
-        label="Muskelkater"
+        label={t('screens.checkIn.pre.soreness')}
         value={current.soreness}
         min={0}
         max={5}
-        lowLabel="keiner"
-        highLabel="stark"
+        lowLabel={t('screens.checkIn.scale.none')}
+        highLabel={t('screens.checkIn.scale.strong')}
         onChange={(soreness) => patch({ soreness })}
       />
       <NoteField
-        label="Schmerz oder Einschränkung"
+        label={t('screens.checkIn.pre.pain')}
         value={current.painNote}
-        placeholder="z. B. Knie zwickt, Schulter vorsichtig"
+        placeholder={t('screens.checkIn.pre.painPlaceholder')}
         onCommit={(painNote) => patch({ painNote })}
       />
       <NoteField
-        label="Notiz"
+        label={t('screens.checkIn.pre.note')}
         value={current.note}
-        placeholder="Optional"
+        placeholder={t('screens.checkIn.optional')}
         onCommit={(note) => patch({ note })}
       />
     </CheckInShell>
@@ -157,6 +160,7 @@ export function PostCheckInCard({
   sessionId: string;
   value: PostWorkoutCheckIn | undefined;
 }) {
+  const { t } = useTranslation('more');
   const current = value ?? {};
   const patch = (changes: Partial<PostWorkoutCheckIn>) => {
     void setPostCheckIn(sessionId, prune({ ...current, ...changes }));
@@ -164,35 +168,35 @@ export function PostCheckInCard({
 
   return (
     <CheckInShell
-      title="Nach dem Training"
-      subtitle="Optional · wie war die Einheit?"
+      title={t('screens.checkIn.post.title')}
+      subtitle={t('screens.checkIn.post.subtitle')}
       filled={hasPostCheckIn(value)}
     >
       <RatingScale
-        label="Trainingsqualität"
+        label={t('screens.checkIn.post.quality')}
         value={current.quality}
-        lowLabel="schlecht"
-        highLabel="top"
+        lowLabel={t('screens.checkIn.scale.bad')}
+        highLabel={t('screens.checkIn.scale.top')}
         onChange={(quality) => patch({ quality })}
       />
       <RatingScale
-        label="Schwierigkeit"
+        label={t('screens.checkIn.post.difficulty')}
         value={current.difficulty}
-        lowLabel="leicht"
-        highLabel="sehr schwer"
+        lowLabel={t('screens.checkIn.scale.easy')}
+        highLabel={t('screens.checkIn.scale.veryHard')}
         onChange={(difficulty) => patch({ difficulty })}
       />
       <RatingScale
-        label="Zufriedenheit"
+        label={t('screens.checkIn.post.satisfaction')}
         value={current.satisfaction}
-        lowLabel="niedrig"
-        highLabel="hoch"
+        lowLabel={t('screens.checkIn.scale.low')}
+        highLabel={t('screens.checkIn.scale.high')}
         onChange={(satisfaction) => patch({ satisfaction })}
       />
       <NoteField
-        label="Notiz"
+        label={t('screens.checkIn.post.note')}
         value={current.note}
-        placeholder="Optional"
+        placeholder={t('screens.checkIn.optional')}
         onCommit={(note) => patch({ note })}
       />
     </CheckInShell>

@@ -1,5 +1,6 @@
 import { useEffect, useId, useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { useTranslation } from 'react-i18next';
 import { db } from '@/db/db';
 import { Dialog } from '@/components/ui/Dialog';
 import { Button } from '@/components/ui/Button';
@@ -24,20 +25,9 @@ import type {
   TrackingType,
   WeightMode,
 } from '@/types';
-import { EQUIPMENT_LABELS, equipmentValuesFor } from '@/services/equipment';
-import {
-  CARDIO_MODALITY_LABELS,
-  CARDIO_MODALITY_VALUES,
-  defaultEquipmentForModality,
-} from '@/services/cardio';
-import {
-  EQUIPMENT_SUGGESTIONS,
-  trackingTypeHelp,
-  TRACKING_TYPES,
-  trackingTypeLabel,
-  weightModeHelp,
-  weightModeLabel,
-} from '@/utils/format';
+import { equipmentValuesFor } from '@/services/equipment';
+import { CARDIO_MODALITY_VALUES, defaultEquipmentForModality } from '@/services/cardio';
+import { TRACKING_TYPES } from '@/utils/format';
 import { useToast } from '@/hooks/useToast';
 
 interface FormState {
@@ -148,6 +138,8 @@ export function ExerciseFormDialog({
   onClose: () => void;
   onSaved?: (exercise: Exercise) => void;
 }) {
+  const { t, i18n } = useTranslation('more');
+  const { t: tDomain } = useTranslation('domain');
   const toast = useToast();
   const listId = useId();
   const [form, setForm] = useState<FormState>(() =>
@@ -281,21 +273,16 @@ export function ExerciseFormDialog({
     try {
       if (exercise) {
         await updateExercise(exercise.id, payload);
-        toast.show('Übung gespeichert.', 'success');
+        toast.show(t('screens.exercise.form.toast.saved'), 'success');
         onSaved?.({ ...exercise, ...payload });
       } else {
         const created = await createExercise(payload);
-        toast.show('Übung angelegt.', 'success');
+        toast.show(t('screens.exercise.form.toast.created'), 'success');
         onSaved?.(created);
       }
       onClose();
-    } catch (error) {
-      toast.show(
-        error instanceof Error
-          ? error.message
-          : 'Die Übung konnte nicht gespeichert werden.',
-        'error',
-      );
+    } catch {
+      toast.show(t('screens.exercise.form.toast.saveFailed'), 'error');
     } finally {
       setSaving(false);
     }
@@ -306,41 +293,49 @@ export function ExerciseFormDialog({
       <Dialog
         open={open}
         onClose={onClose}
-        title={exercise ? 'Übung bearbeiten' : 'Neue Übung'}
+        title={
+          exercise
+            ? t('screens.exercise.form.editTitle')
+            : t('screens.exercise.form.newTitle')
+        }
         footer={
           <>
             <Button variant="secondary" onClick={onClose} disabled={saving}>
-              Abbrechen
+              {t('screens.action.cancel')}
             </Button>
             <Button
               variant="primary"
               onClick={() => void handleSubmit()}
               disabled={saving}
             >
-              {saving ? 'Speichern …' : 'Speichern'}
+              {saving ? t('screens.action.saving') : t('screens.action.save')}
             </Button>
           </>
         }
       >
         <div className="grid gap-4">
           <TextField
-            label="Name"
+            label={t('screens.exercise.form.name')}
             value={form.name}
             error={errors.name}
             autoComplete="off"
-            placeholder="z. B. Bankdrücken"
+            placeholder={t('screens.exercise.form.namePlaceholder')}
             onChange={(event) => update('name', event.target.value)}
           />
 
           <div>
             <div className="mb-1.5 flex items-center justify-between gap-2">
-              <span className="text-sm font-medium">Primäre Muskelgruppe</span>
+              <span className="text-sm font-medium">
+                {t('screens.exercise.form.primaryMuscle')}
+              </span>
               <Button
                 variant="secondary"
                 size="sm"
                 onClick={() => setPickerMode('primary')}
               >
-                {form.primaryMuscleGroup ? 'Ändern' : 'Wählen'}
+                {form.primaryMuscleGroup
+                  ? t('screens.action.change')
+                  : t('screens.action.choose')}
               </Button>
             </div>
             <MuscleGroupChips
@@ -352,13 +347,15 @@ export function ExerciseFormDialog({
 
           <div>
             <div className="mb-1.5 flex items-center justify-between gap-2">
-              <span className="text-sm font-medium">Sekundäre Muskelgruppen</span>
+              <span className="text-sm font-medium">
+                {t('screens.exercise.form.secondaryMuscles')}
+              </span>
               <Button
                 variant="secondary"
                 size="sm"
                 onClick={() => setPickerMode('secondary')}
               >
-                Hinzufügen
+                {t('screens.action.add')}
               </Button>
             </div>
             <MuscleGroupChips
@@ -382,61 +379,67 @@ export function ExerciseFormDialog({
           ) : null}
 
           <TextField
-            label="Equipment"
+            label={t('screens.exercise.form.equipment')}
             value={form.equipment}
             list={`${listId}-equipment`}
-            placeholder="z. B. Langhantel"
+            placeholder={t('screens.exercise.form.equipmentPlaceholder')}
             onChange={(event) => update('equipment', event.target.value)}
           />
           <datalist id={`${listId}-equipment`}>
-            {EQUIPMENT_SUGGESTIONS.map((item) => (
-              <option key={item} value={item} />
-            ))}
+            {equipmentOptions
+              .filter((item) => item !== 'unspecified')
+              .map((item) => (
+                <option key={item} value={tDomain(`equipment.${item}`)} />
+              ))}
           </datalist>
 
           <SelectField
-            label="Tracking-Typ"
+            label={t('screens.exercise.form.trackingType')}
             value={form.trackingType}
-            hint={trackingTypeHelp(form.trackingType)}
+            hint={tDomain(`trackingTypeHelp.${form.trackingType}`)}
             onChange={(event) =>
               handleTrackingTypeChange(event.target.value as TrackingType)
             }
           >
             {TRACKING_TYPES.map((type) => (
               <option key={type} value={type}>
-                {trackingTypeLabel(type)}
+                {tDomain(`trackingType.${type}`)}
               </option>
             ))}
           </SelectField>
 
           {isCardio ? (
             <SelectField
-              label="Cardio-Aktivität"
+              label={t('screens.exercise.form.cardioModality')}
               value={form.cardioModality}
-              hint="Bestimmt die Auswertung (z. B. Pace-Einheit). Das Gerät wird separat gewählt."
+              hint={t('screens.exercise.form.cardioModalityHint')}
               onChange={(event) =>
                 handleModalityChange(event.target.value as CardioModality)
               }
             >
               {CARDIO_MODALITY_VALUES.map((value) => (
                 <option key={value} value={value}>
-                  {CARDIO_MODALITY_LABELS[value]}
+                  {tDomain(`cardioModality.${value}`)}
                 </option>
               ))}
             </SelectField>
           ) : null}
 
           <SelectField
-            label={isCardio ? 'Standardgerät' : 'Standardausrüstung'}
+            label={
+              isCardio
+                ? t('screens.exercise.form.defaultCardioEquipment')
+                : t('screens.exercise.form.defaultStrengthEquipment')
+            }
             value={form.defaultEquipment}
-            hint="Ausgangswert für neue Trainings. Im laufenden Training lässt sich die Ausführung temporär wechseln, ohne die Übung zu ändern."
+            hint={t('screens.exercise.form.defaultEquipmentHint')}
             onChange={(event) =>
               update('defaultEquipment', event.target.value as Equipment)
             }
           >
             {equipmentOptions.map((value) => (
               <option key={value} value={value}>
-                {EQUIPMENT_LABELS[value]}
+                {tDomain(`equipment.${value}`)}
               </option>
             ))}
           </SelectField>
@@ -444,15 +447,15 @@ export function ExerciseFormDialog({
           {/* Weight convention and multiplier are meaningless for cardio. */}
           {!isCardio ? (
             <SelectField
-              label="Gewichtskonvention"
+              label={t('screens.exercise.form.weightMode')}
               value={form.weightMode}
-              hint={weightModeHelp(form.weightMode)}
+              hint={tDomain(`weightModeHelp.${form.weightMode}`)}
               disabled={weightModes.length <= 1}
               onChange={(event) => update('weightMode', event.target.value as WeightMode)}
             >
               {weightModes.map((mode) => (
                 <option key={mode} value={mode}>
-                  {weightModeLabel(mode)}
+                  {tDomain(`weightMode.${mode}`)}
                 </option>
               ))}
             </SelectField>
@@ -460,11 +463,11 @@ export function ExerciseFormDialog({
 
           {showMultiplier ? (
             <NumberField
-              label="Gewichtsmultiplikator"
+              label={t('screens.exercise.form.weightMultiplier')}
               decimal
               value={form.weightMultiplier}
               error={errors.weightMultiplier}
-              hint="Bei zwei Kurzhanteln à 20 kg ergibt der Multiplikator 2 eine Gesamtlast von 40 kg."
+              hint={t('screens.exercise.form.weightMultiplierHint')}
               onChange={(event) => update('weightMultiplier', event.target.value)}
             />
           ) : null}
@@ -472,8 +475,8 @@ export function ExerciseFormDialog({
           <NumberField
             label={
               isCardio
-                ? 'Standardpause zwischen Intervallen (Sekunden)'
-                : 'Standardpause (Sekunden)'
+                ? t('screens.exercise.form.cardioRest')
+                : t('screens.exercise.form.strengthRest')
             }
             value={form.defaultRestSeconds}
             error={errors.defaultRestSeconds}
@@ -484,47 +487,51 @@ export function ExerciseFormDialog({
           {!isCardio ? (
             <details className="rounded-xl border border-border bg-surface-2 p-3">
               <summary className="min-h-[44px] cursor-pointer list-none py-2 text-sm font-medium text-accent">
-                Progression (optional)
+                {t('screens.exercise.form.progression')}
               </summary>
               <div className="mt-3 grid gap-3">
                 <p className="text-xs leading-relaxed text-muted">
-                  Diese Angaben verbessern die lokale Progressionsempfehlung. Ohne sie
-                  wird eine Standardsteigerung angenommen — es wird nichts geschätzt oder
-                  automatisch geändert.
+                  {t('screens.exercise.form.progressionHint')}
                 </p>
 
                 <NumberField
-                  label="Kleinste Gewichtssteigerung (kg)"
+                  label={t('screens.exercise.form.increment')}
                   decimal
                   value={form.weightIncrementKg}
-                  placeholder="Standard: 2,5"
+                  placeholder={t('screens.exercise.form.incrementPlaceholder')}
                   onChange={(event) => update('weightIncrementKg', event.target.value)}
                 />
 
                 <TextField
-                  label="Verfügbare Gewichte (kg)"
+                  label={t('screens.exercise.form.availableWeights')}
                   value={form.availableWeightsKg}
-                  hint="Durch Komma trennen, z. B. 10, 12.5, 15, 17.5. Dann wird nur ein tatsächlich vorhandenes Gewicht vorgeschlagen."
+                  hint={t('screens.exercise.form.availableWeightsHint')}
                   onChange={(event) => update('availableWeightsKg', event.target.value)}
                 />
 
                 <SelectField
-                  label="Bevorzugte Progression"
+                  label={t('screens.exercise.form.progressionMethod')}
                   value={form.progressionMethod}
                   onChange={(event) =>
                     update('progressionMethod', event.target.value as ProgressionMethod)
                   }
                 >
-                  <option value="auto">Automatisch (nach Tracking-Typ)</option>
-                  <option value="weight">Zuerst Gewicht steigern</option>
-                  <option value="reps">Zuerst Wiederholungen steigern</option>
+                  <option value="auto">
+                    {t('screens.exercise.form.progressionMethods.auto')}
+                  </option>
+                  <option value="weight">
+                    {t('screens.exercise.form.progressionMethods.weight')}
+                  </option>
+                  <option value="reps">
+                    {t('screens.exercise.form.progressionMethods.reps')}
+                  </option>
                 </SelectField>
 
                 <NumberField
-                  label="Ziel-RIR"
+                  label={t('screens.exercise.form.targetRir')}
                   decimal
                   value={form.targetRir}
-                  hint="Verbleibende Wiederholungen im Tank. Höher heißt leichter. Leer lassen, wenn du RIR nicht nutzt."
+                  hint={t('screens.exercise.form.targetRirHint')}
                   onChange={(event) => update('targetRir', event.target.value)}
                 />
               </div>
@@ -532,27 +539,26 @@ export function ExerciseFormDialog({
           ) : null}
 
           <TextAreaField
-            label="Technik-Hinweise (optional)"
+            label={t('screens.exercise.form.techniqueCues')}
             value={form.techniqueCues}
-            hint="Ein kurzer Hinweis pro Zeile, z. B. Schulterblätter fixieren. Wird im Training angezeigt."
+            hint={t('screens.exercise.form.techniqueCuesHint')}
             onChange={(event) => update('techniqueCues', event.target.value)}
           />
 
           {open && otherExercises.length > 0 ? (
             <details className="rounded-xl border border-border bg-surface-2 p-3">
               <summary className="min-h-[44px] cursor-pointer list-none py-2 text-sm font-medium text-accent">
-                Alternativübungen (optional)
+                {t('screens.exercise.form.alternatives')}
                 {form.alternativeExerciseIds.length > 0
                   ? ` · ${form.alternativeExerciseIds.length}`
                   : ''}
               </summary>
               <p className="mb-2 mt-1 text-xs leading-relaxed text-muted">
-                Manuell gewählte Ersatzübungen — im Training schnell wählbar, z. B. wenn
-                ein Gerät belegt ist.
+                {t('screens.exercise.form.alternativesHint')}
               </p>
               <div className="grid max-h-56 gap-1 overflow-y-auto">
                 {[...otherExercises]
-                  .sort((a, b) => a.name.localeCompare(b.name, 'de'))
+                  .sort((a, b) => a.name.localeCompare(b.name, i18n.resolvedLanguage))
                   .map((entry) => {
                     const checked = form.alternativeExerciseIds.includes(entry.id);
                     return (
@@ -584,9 +590,9 @@ export function ExerciseFormDialog({
           ) : null}
 
           <TextAreaField
-            label="Notizen"
+            label={t('screens.exercise.form.notes')}
             value={form.notes}
-            placeholder="z. B. Griffbreite, Sitzposition"
+            placeholder={t('screens.exercise.form.notesPlaceholder')}
             onChange={(event) => update('notes', event.target.value)}
           />
         </div>
@@ -597,7 +603,9 @@ export function ExerciseFormDialog({
           open
           mode={pickerMode === 'primary' ? 'single' : 'multiple'}
           title={
-            pickerMode === 'primary' ? 'Primäre Muskelgruppe' : 'Sekundäre Muskelgruppen'
+            pickerMode === 'primary'
+              ? t('screens.exercise.form.primaryMuscle')
+              : t('screens.exercise.form.secondaryMuscles')
           }
           selected={
             pickerMode === 'primary'

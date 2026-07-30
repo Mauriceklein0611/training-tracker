@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Activity, Dumbbell, History, X } from 'lucide-react';
@@ -60,14 +61,10 @@ const EMPTY_DATA: HistoryData = {
   bodyDays: [],
 };
 
-/** Type signal per session: an icon and a semantic colour, never colour alone. */
-const KIND_META: Record<
-  SessionKind,
-  { label: string; Icon: typeof Dumbbell; color: string }
-> = {
-  strength: { label: 'Kraft', Icon: Dumbbell, color: 'var(--accent)' },
-  cardio: { label: 'Cardio', Icon: Activity, color: 'var(--cardio)' },
-  mixed: { label: 'Kraft + Cardio', Icon: Dumbbell, color: 'var(--accent)' },
+const KIND_STYLE: Record<SessionKind, { Icon: typeof Dumbbell; color: string }> = {
+  strength: { Icon: Dumbbell, color: 'var(--accent)' },
+  cardio: { Icon: Activity, color: 'var(--cardio)' },
+  mixed: { Icon: Dumbbell, color: 'var(--accent)' },
 };
 
 /** The headline metric line — strength uses Sätze/Volumen, cardio uses
@@ -100,6 +97,7 @@ function cardioMetrics(row: HistoryRow): string | null {
 }
 
 export default function HistoryPage() {
+  const { t } = useTranslation('history');
   const { settings } = useSettings();
   const [search, setSearch] = useState('');
   const [period, setPeriod] = useState('all');
@@ -208,7 +206,10 @@ export default function HistoryPage() {
 
   return (
     <>
-      <PageHeader title="Verlauf" subtitle={`${rows.length} abgeschlossene Einheiten`} />
+      <PageHeader
+        title={t('title')}
+        subtitle={t('completedCount', { count: rows.length })}
+      />
 
       {rows.length > 0 ? (
         <div className="mb-4 grid gap-4">
@@ -226,21 +227,21 @@ export default function HistoryPage() {
 
       <div className="mb-4 grid gap-3">
         <TextField
-          label="Suchen"
+          label={t('search.label')}
           type="search"
           value={search}
-          placeholder="Training, Übung oder Notiz"
+          placeholder={t('search.placeholder')}
           onChange={(event) => setSearch(event.target.value)}
         />
         <SelectField
-          label="Zeitraum"
+          label={t('period.label')}
           value={period}
           onChange={(event) => setPeriod(event.target.value)}
         >
-          <option value="all">Gesamter Zeitraum</option>
-          <option value="7">Letzte 7 Tage</option>
-          <option value="30">Letzte 30 Tage</option>
-          <option value="90">Letzte 90 Tage</option>
+          <option value="all">{t('period.all')}</option>
+          <option value="7">{t('period.days7')}</option>
+          <option value="30">{t('period.days30')}</option>
+          <option value="90">{t('period.days90')}</option>
         </SelectField>
       </div>
 
@@ -250,24 +251,22 @@ export default function HistoryPage() {
           onClick={() => setSelectedDay(null)}
           className="mb-3 inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-accent/40 bg-surface-2 px-3 text-sm font-medium text-accent"
         >
-          <span>Ausgewählter Tag: {formatDate(selectedDay)}</span>
+          <span>{t('selectedDay', { date: formatDate(selectedDay) })}</span>
           <X size={16} aria-hidden="true" />
-          <span className="sr-only">Auswahl aufheben</span>
+          <span className="sr-only">{t('clearSelection')}</span>
         </button>
       ) : null}
 
       {groups.length === 0 ? (
         <EmptyState
           icon={<History size={28} aria-hidden="true" />}
-          title={
-            rows.length === 0 ? 'Noch keine abgeschlossenen Trainings' : 'Keine Treffer'
-          }
+          title={rows.length === 0 ? t('empty.noWorkouts') : t('empty.noResults')}
           description={
             rows.length === 0
-              ? 'Sobald du eine Trainingseinheit beendest, erscheint sie hier — mit allen Sätzen, Pausen und Notizen. Du kannst Einheiten später korrigieren oder als Vorlage für ein neues Training verwenden.'
+              ? t('empty.firstWorkout')
               : selectedDay
-                ? 'An diesem Tag gibt es keine Einheit, die zu Suche und Zeitraum passt.'
-                : 'Passe Suche oder Zeitraum an.'
+                ? t('empty.selectedDay')
+                : t('empty.filters')
           }
         />
       ) : (
@@ -282,7 +281,7 @@ export default function HistoryPage() {
               </h2>
               <ul className="grid gap-2">
                 {entries.map((row) => {
-                  const meta = KIND_META[row.kind];
+                  const meta = KIND_STYLE[row.kind];
                   const cardioLine = cardioMetrics(row);
                   return (
                     <li key={row.id}>
@@ -322,7 +321,7 @@ export default function HistoryPage() {
                           ) : null}
                           {row.exerciseNames.length > 0 ? (
                             <p className="mt-1 truncate text-xs text-muted">
-                              <span className="sr-only">{meta.label}: </span>
+                              <span className="sr-only">{t(`kind.${row.kind}`)}: </span>
                               {row.exerciseNames.join(', ')}
                             </p>
                           ) : null}

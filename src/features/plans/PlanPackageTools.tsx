@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ClipboardCopy, FileJson, Share2, Sparkles, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card, CardHeader } from '@/components/ui/Card';
@@ -24,11 +25,7 @@ import {
 import { shareJsonExport } from '@/services/share';
 import { copyToClipboard, downloadJson, readFileAsText } from '@/utils/download';
 import { useToast } from '@/hooks/useToast';
-
-const EXERCISE_STATUS_LABEL: Record<string, string> = {
-  reuse: 'Vorhandene Übung wird verwendet',
-  new: 'Wird neu angelegt',
-};
+import { PLAN_PACKAGE_SCHEMA_VERSION } from '@/constants/formats';
 
 /**
  * Tools to build a plan with AI or import a package. Rendered as a Card on the
@@ -36,6 +33,7 @@ const EXERCISE_STATUS_LABEL: Record<string, string> = {
  * inside a dialog (e.g. the home screen's "Trainingsplan importieren" modal).
  */
 export function PlanPackageTools({ embedded = false }: { embedded?: boolean } = {}) {
+  const { t, i18n } = useTranslation('plans');
   const toast = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -45,6 +43,7 @@ export function PlanPackageTools({ embedded = false }: { embedded?: boolean } = 
   const [importErrors, setImportErrors] = useState<string[]>([]);
   const [pkg, setPkg] = useState<PlanPackage | null>(null);
   const [analysis, setAnalysis] = useState<PlanPackageImportAnalysis | null>(null);
+  const [migratedFromVersion, setMigratedFromVersion] = useState<number | null>(null);
 
   // ---- builder kit ------------------------------------------------------
   const handleShareKit = async () => {
@@ -53,12 +52,26 @@ export function PlanPackageTools({ embedded = false }: { embedded?: boolean } = 
       const result = await shareJsonExport({
         fileName: planBuilderKitFileName(),
         data: buildPlanBuilderKit(),
-        title: 'Trainingsplan mit KI erstellen',
+        title: t('packageTools.createWithAi'),
         textPrefix: PLAN_BUILDER_PROMPT,
       });
-      toast.show(result.message, result.outcome === 'failed' ? 'error' : 'success');
+      const message =
+        result.outcome === 'shared-file'
+          ? t('share.result.sharedFile')
+          : result.outcome === 'shared-text'
+            ? t('share.result.sharedText')
+            : result.outcome === 'downloaded'
+              ? t(
+                  result.copiedToClipboard
+                    ? 'share.result.downloadedCopied'
+                    : 'share.result.downloaded',
+                )
+              : result.outcome === 'cancelled'
+                ? t('share.result.cancelled')
+                : t('share.result.failed');
+      toast.show(message, result.outcome === 'failed' ? 'error' : 'success');
     } catch {
-      toast.show('Teilen fehlgeschlagen.', 'error');
+      toast.show(t('packageTools.shareFailed'), 'error');
     } finally {
       setBusy(null);
     }
@@ -66,7 +79,7 @@ export function PlanPackageTools({ embedded = false }: { embedded?: boolean } = 
 
   const handleDownloadKit = () => {
     downloadJson(planBuilderKitFileName(), buildPlanBuilderKit());
-    toast.show('Builder-Kit gespeichert.', 'success');
+    toast.show(t('packageTools.kitSaved'), 'success');
   };
 
   // ---- import -----------------------------------------------------------
@@ -75,11 +88,13 @@ export function PlanPackageTools({ embedded = false }: { embedded?: boolean } = 
     setImportErrors([]);
     setPkg(null);
     setAnalysis(null);
+    setMigratedFromVersion(null);
     try {
       const text = await readFileAsText(file);
       const result = parsePlanPackage(text);
       if (!result.ok) {
-        setImportErrors(result.errors);
+        const isGerman = (i18n.resolvedLanguage ?? i18n.language).startsWith('de');
+        setImportErrors(isGerman ? result.errors : [t('packageTools.invalidFormat')]);
         return;
       }
       const [exercises, plans, fingerprints] = await Promise.all([
@@ -93,17 +108,11 @@ export function PlanPackageTools({ embedded = false }: { embedded?: boolean } = 
         plans.map((plan) => plan.name),
         fingerprints,
       );
-      if (result.migratedFromVersion) {
-        analysisResult.warnings.unshift(
-          `Ältere Paketversion (v${result.migratedFromVersion}) erkannt — sie wird als Plan mit einem Tag übernommen.`,
-        );
-      }
+      setMigratedFromVersion(result.migratedFromVersion ?? null);
       setPkg(result.data);
       setAnalysis(analysisResult);
-    } catch (error) {
-      setImportErrors([
-        error instanceof Error ? error.message : 'Die Datei konnte nicht gelesen werden.',
-      ]);
+    } catch {
+      setImportErrors([t('packageTools.readFailed')]);
     } finally {
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
@@ -137,6 +146,34 @@ export function PlanPackageTools({ embedded = false }: { embedded?: boolean } = 
 
   const collisions = analysis ? planNameCollisions(analysis) : [];
   const hasEmptyPlanName = analysis?.plans.some((plan) => !plan.name.trim()) ?? false;
+  const importWarnings = analysis
+    ? [
+        ...(migratedFromVersion
+          ? [
+              t('packageTools.migratedVersion', {
+                version: migratedFromVersion,
+              }),
+            ]
+          : []),
+        ...(analysis.duplicate ? [t('packageTools.duplicateWarning')] : []),
+        ...(analysis.unknownMuscleGroups.length > 0
+          ? [
+              t('packageTools.unknownMuscles', {
+                groups: analysis.unknownMuscleGroups.join(', '),
+              }),
+            ]
+          : []),
+      ]
+    : [];
+  const differenceLabel = (difference: string): string => {
+    if (difference === 'primäre Muskelgruppe')
+      return t('packageTools.difference.primaryMuscle');
+    if (difference === 'sekundäre Muskelgruppen')
+      return t('packageTools.difference.secondaryMuscles');
+    if (difference === 'Equipment') return t('packageTools.difference.equipment');
+    if (difference === 'Pausenzeit') return t('packageTools.difference.rest');
+    return t('packageTools.difference.other');
+  };
 
   const handleImport = async () => {
     if (!pkg || !analysis) return;
@@ -144,21 +181,22 @@ export function PlanPackageTools({ embedded = false }: { embedded?: boolean } = 
     try {
       const result = await importPlanPackage(pkg, analysis);
       toast.show(
-        `Import abgeschlossen: ${result.createdPlans} ${
-          result.createdPlans === 1 ? 'Plan' : 'Pläne'
-        }, ${result.createdExercises} neue Übungen, ${result.reusedExercises} wiederverwendet.`,
+        t('packageTools.importSuccess', {
+          plans: result.createdPlans,
+          planLabel: t(
+            result.createdPlans === 1 ? 'packageTools.planOne' : 'packageTools.planOther',
+          ),
+          created: result.createdExercises,
+          reused: result.reusedExercises,
+        }),
         'success',
       );
       setPkg(null);
       setAnalysis(null);
-    } catch (error) {
+      setMigratedFromVersion(null);
+    } catch {
       // The import runs in one transaction — nothing was written on failure.
-      toast.show(
-        error instanceof Error
-          ? `Import fehlgeschlagen: ${error.message} Es wurden keine Daten verändert.`
-          : 'Import fehlgeschlagen. Es wurden keine Daten verändert.',
-        'error',
-      );
+      toast.show(t('packageTools.importFailed'), 'error');
     } finally {
       setBusy(null);
     }
@@ -168,7 +206,7 @@ export function PlanPackageTools({ embedded = false }: { embedded?: boolean } = 
     <div className="grid gap-2">
       <Button variant="primary" fullWidth onClick={() => setBuilderOpen(true)}>
         <Sparkles size={18} aria-hidden="true" />
-        Mit KI Trainingsplan erstellen
+        {t('packageTools.createWithAi')}
       </Button>
 
       <input
@@ -185,7 +223,7 @@ export function PlanPackageTools({ embedded = false }: { embedded?: boolean } = 
         onClick={() => fileInputRef.current?.click()}
       >
         <Upload size={18} aria-hidden="true" />
-        Trainingsplan-Datei importieren
+        {t('packageTools.importFile')}
       </Button>
 
       {importErrors.length > 0 ? (
@@ -195,7 +233,7 @@ export function PlanPackageTools({ embedded = false }: { embedded?: boolean } = 
         >
           <p className="font-semibold text-danger">
             <span aria-hidden="true">⚠ </span>
-            Die Datei konnte nicht verwendet werden
+            {t('packageTools.invalidFile')}
           </p>
           <ul className="mt-1.5 list-disc pl-5 text-xs leading-relaxed text-muted">
             {importErrors.map((message) => (
@@ -214,8 +252,8 @@ export function PlanPackageTools({ embedded = false }: { embedded?: boolean } = 
       ) : (
         <Card>
           <CardHeader
-            title="Plan mit KI erstellen oder importieren"
-            subtitle="Erstelle mit ChatGPT einen Plan im passenden Format oder importiere ein geteiltes Trainingsplan-Paket. Beim Import wird nichts überschrieben — vorhandene Übungen werden wiederverwendet."
+            title={t('packageTools.cardTitle')}
+            subtitle={t('packageTools.cardSubtitle')}
             as="h2"
           />
           {panel}
@@ -226,18 +264,16 @@ export function PlanPackageTools({ embedded = false }: { embedded?: boolean } = 
       <Dialog
         open={builderOpen}
         onClose={() => setBuilderOpen(false)}
-        title="Mit KI Trainingsplan erstellen"
+        title={t('packageTools.createWithAi')}
         footer={
           <Button variant="secondary" onClick={() => setBuilderOpen(false)}>
-            Schließen
+            {t('packageTools.close')}
           </Button>
         }
       >
         <div className="grid gap-3">
           <p className="text-sm leading-relaxed text-muted">
-            Teile die Builder-Datei zusammen mit dem Text an ChatGPT. Die KI stellt dir
-            zuerst Fragen und baut den Plan mit dir. Am Ende bittest du sie, die Datei zu
-            erstellen — diese importierst du hier wieder.
+            {t('packageTools.builderDescription')}
           </p>
           <Button
             variant="primary"
@@ -247,12 +283,12 @@ export function PlanPackageTools({ embedded = false }: { embedded?: boolean } = 
           >
             <Share2 size={18} aria-hidden="true" />
             {busy === 'kit-share'
-              ? 'Wird vorbereitet …'
-              : 'Builder-Kit & Anleitung teilen'}
+              ? t('packageTools.preparing')
+              : t('packageTools.shareKit')}
           </Button>
           <Button variant="secondary" fullWidth onClick={handleDownloadKit}>
             <FileJson size={18} aria-hidden="true" />
-            Nur Builder-Kit speichern
+            {t('packageTools.saveKit')}
           </Button>
           <Button
             variant="secondary"
@@ -260,22 +296,22 @@ export function PlanPackageTools({ embedded = false }: { embedded?: boolean } = 
             onClick={async () => {
               const ok = await copyToClipboard(PLAN_BUILDER_PROMPT);
               toast.show(
-                ok
-                  ? 'Anleitung in die Zwischenablage kopiert.'
-                  : 'Kopieren wurde vom Browser blockiert. Bitte markiere den Text manuell.',
+                ok ? t('packageTools.instructionCopied') : t('packageTools.copyBlocked'),
                 ok ? 'success' : 'error',
               );
             }}
           >
             <ClipboardCopy size={18} aria-hidden="true" />
-            Anleitung kopieren
+            {t('packageTools.copyInstruction')}
           </Button>
           <details className="rounded-xl border border-border bg-surface-2 p-3">
             <summary className="min-h-[44px] cursor-pointer list-none py-2 text-xs font-medium text-accent">
-              Anleitung anzeigen
+              {t('packageTools.showInstruction')}
             </summary>
             <p className="mt-2 whitespace-pre-line text-xs leading-relaxed text-muted">
-              {PLAN_BUILDER_PROMPT}
+              {t('packageTools.builderPromptDisplay', {
+                version: PLAN_PACKAGE_SCHEMA_VERSION,
+              })}
             </p>
           </details>
         </div>
@@ -287,10 +323,13 @@ export function PlanPackageTools({ embedded = false }: { embedded?: boolean } = 
         onClose={() => {
           setPkg(null);
           setAnalysis(null);
+          setMigratedFromVersion(null);
         }}
-        title="Trainingsplan importieren"
+        title={t('packageTools.importTitle')}
         description={
-          analysis?.sourceLabel ? `Quelle: ${analysis.sourceLabel}` : undefined
+          analysis?.sourceLabel
+            ? t('packageTools.source', { source: analysis.sourceLabel })
+            : undefined
         }
         footer={
           <>
@@ -299,16 +338,17 @@ export function PlanPackageTools({ embedded = false }: { embedded?: boolean } = 
               onClick={() => {
                 setPkg(null);
                 setAnalysis(null);
+                setMigratedFromVersion(null);
               }}
             >
-              Abbrechen
+              {t('packageTools.cancel')}
             </Button>
             <Button
               variant="primary"
               disabled={busy !== null || collisions.length > 0 || hasEmptyPlanName}
               onClick={() => void handleImport()}
             >
-              {busy === 'import' ? 'Wird importiert …' : 'Importieren'}
+              {busy === 'import' ? t('packageTools.importing') : t('packageTools.import')}
             </Button>
           </>
         }
@@ -317,14 +357,14 @@ export function PlanPackageTools({ embedded = false }: { embedded?: boolean } = 
           <div className="grid gap-4">
             <p className="text-sm font-medium">{analysis.packageName}</p>
 
-            {analysis.warnings.length > 0 ? (
+            {importWarnings.length > 0 ? (
               <div className="rounded-xl border border-warning/50 bg-surface-2 p-3">
                 <p className="text-sm font-semibold text-warning">
                   <span aria-hidden="true">⚠ </span>
-                  Hinweise
+                  {t('packageTools.warnings')}
                 </p>
                 <ul className="mt-1 list-disc pl-5 text-xs leading-relaxed text-muted">
-                  {analysis.warnings.map((warning) => (
+                  {importWarnings.map((warning) => (
                     <li key={warning}>{warning}</li>
                   ))}
                 </ul>
@@ -332,38 +372,50 @@ export function PlanPackageTools({ embedded = false }: { embedded?: boolean } = 
             ) : null}
 
             <div>
-              <h3 className="text-sm font-semibold">Pläne ({analysis.plans.length})</h3>
+              <h3 className="text-sm font-semibold">
+                {t('packageTools.plans', { count: analysis.plans.length })}
+              </h3>
               <div className="mt-2 grid gap-2">
                 {analysis.plans.map((plan) => (
                   <div key={plan.planKey} className="grid gap-1">
                     <TextField
-                      label={`Plan „${plan.originalName}"`}
+                      label={t('packageTools.planLabel', {
+                        name: plan.originalName,
+                      })}
                       value={plan.name}
                       onChange={(event) => setPlanName(plan.planKey, event.target.value)}
                     />
                     {plan.nameConflict ? (
                       <p className="text-xs text-muted">
-                        Ein Plan mit diesem Namen existiert bereits — Name wurde
-                        angepasst.
+                        {t('packageTools.planNameConflict')}
                       </p>
                     ) : null}
                     <p className="text-xs text-muted">
-                      {plan.dayCount} {plan.dayCount === 1 ? 'Tag' : 'Tage'} ·{' '}
-                      {plan.exerciseCount} Übungen
+                      {t('packageTools.planSummary', {
+                        days: plan.dayCount,
+                        dayLabel: t(
+                          plan.dayCount === 1
+                            ? 'packageTools.dayOne'
+                            : 'packageTools.dayOther',
+                        ),
+                        exercises: plan.exerciseCount,
+                      })}
                     </p>
                   </div>
                 ))}
               </div>
               {collisions.length > 0 ? (
                 <p className="mt-1 text-xs text-danger">
-                  Zwei Pläne haben denselben Namen. Bitte vergib eindeutige Namen.
+                  {t('packageTools.duplicatePlanNames')}
                 </p>
               ) : null}
             </div>
 
             <div>
               <h3 className="text-sm font-semibold">
-                Übungen ({analysis.exercises.length})
+                {t('packageTools.exercises', {
+                  count: analysis.exercises.length,
+                })}
               </h3>
               <ul className="mt-2 grid gap-2">
                 {analysis.exercises.map((item) => (
@@ -372,14 +424,14 @@ export function PlanPackageTools({ embedded = false }: { embedded?: boolean } = 
                       <span className="truncate text-sm">{item.name}</span>
                       {item.status === 'reuse' || item.status === 'new' ? (
                         <span className="shrink-0 text-xs text-muted">
-                          {EXERCISE_STATUS_LABEL[item.status]}
+                          {t(`packageTools.status.${item.status}`)}
                         </span>
                       ) : null}
                     </div>
                     {item.status === 'conflict' || item.status === 'metadata-diff' ? (
                       <>
                         <SelectField
-                          label="Wie importieren?"
+                          label={t('packageTools.resolutionLabel')}
                           value={item.resolution}
                           onChange={(event) =>
                             setExerciseResolution(
@@ -388,13 +440,17 @@ export function PlanPackageTools({ embedded = false }: { embedded?: boolean } = 
                             )
                           }
                         >
-                          <option value="reuse">Vorhandene Übung verwenden</option>
-                          <option value="new-copy">Als neue Übung anlegen</option>
+                          <option value="reuse">{t('packageTools.reuseExercise')}</option>
+                          <option value="new-copy">
+                            {t('packageTools.createExercise')}
+                          </option>
                         </SelectField>
                         <p className="text-xs text-muted">
                           {item.status === 'conflict'
-                            ? 'Gleicher Name, aber abweichendes Tracking. Standard: neu anlegen.'
-                            : `Unterschiede: ${item.differences.join(', ')}.`}
+                            ? t('packageTools.trackingConflict')
+                            : t('packageTools.differences', {
+                                values: item.differences.map(differenceLabel).join(', '),
+                              })}
                         </p>
                       </>
                     ) : null}
@@ -404,8 +460,7 @@ export function PlanPackageTools({ embedded = false }: { embedded?: boolean } = 
             </div>
 
             <p className="rounded-xl bg-surface-2 p-3 text-xs leading-relaxed text-muted">
-              Vorhandene Daten werden nie überschrieben. Der Import läuft in einem Schritt
-              — schlägt er fehl, bleibt alles unverändert.
+              {t('packageTools.importSafety')}
             </p>
           </div>
         ) : null}

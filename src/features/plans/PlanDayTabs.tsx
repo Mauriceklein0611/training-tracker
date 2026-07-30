@@ -1,4 +1,5 @@
 import { Plus } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import type { WorkoutTemplate } from '@/types';
 import { cn } from '@/utils/cn';
 
@@ -18,10 +19,11 @@ export function PlanDayTabs({
   onSelect: (dayId: string) => void;
   onAdd: () => void;
 }) {
+  const { t } = useTranslation('plans');
   return (
     <div
       role="tablist"
-      aria-label="Trainingstage"
+      aria-label={t('days.aria')}
       className="-mx-4 mb-4 flex gap-2 overflow-x-auto px-4 pb-1"
     >
       {days.map((day) => {
@@ -47,7 +49,7 @@ export function PlanDayTabs({
       <button
         type="button"
         onClick={onAdd}
-        aria-label="Trainingstag hinzufügen"
+        aria-label={t('days.add')}
         className="flex min-h-[44px] w-11 shrink-0 items-center justify-center rounded-full border border-dashed border-border text-muted active:bg-surface-2"
       >
         <Plus size={18} aria-hidden="true" />
