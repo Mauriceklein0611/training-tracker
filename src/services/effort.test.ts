@@ -1,5 +1,8 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
+import { setLanguage } from '@/i18n';
 import { approxRirFromRpe, approxRpeFromRir, formatEffort } from '@/services/effort';
+
+afterEach(() => setLanguage('de'));
 
 describe('effort RPE ↔ RIR approximation', () => {
   it('maps the canonical RPE values to RIR', () => {
@@ -24,8 +27,11 @@ describe('effort RPE ↔ RIR approximation', () => {
     expect(approxRpeFromRir(20)).toBe(1);
   });
 
-  it('formats effort values with a German decimal comma', () => {
+  it('formats effort values with the selected locale', () => {
+    setLanguage('de');
     expect(formatEffort(8)).toBe('8');
     expect(formatEffort(8.5)).toBe('8,5');
+    setLanguage('en');
+    expect(formatEffort(8.5)).toBe('8.5');
   });
 });

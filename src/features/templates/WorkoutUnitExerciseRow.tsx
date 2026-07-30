@@ -11,6 +11,7 @@ import {
 import { ExerciseTargetFields } from '@/features/templates/ExerciseTargetFields';
 import type { Exercise, WorkoutUnitTemplateExercise } from '@/types';
 import { trackingTypeLabel } from '@/utils/format';
+import { exerciseDisplayName } from '@/utils/exerciseDisplay';
 
 /**
  * One exercise row inside the library unit editor. Mirrors
@@ -36,7 +37,7 @@ export function WorkoutUnitExerciseRow({
   canGroupWithPrevious: boolean;
 }) {
   const { t } = useTranslation('library');
-  const name = exercise?.name ?? t('exercise.deleted');
+  const name = exercise ? exerciseDisplayName(exercise) : t('exercise.deleted');
 
   return (
     <div className="rounded-2xl border border-border bg-surface p-3">

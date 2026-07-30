@@ -78,6 +78,11 @@ describe('SettingsPage language section', () => {
     });
     expect(screen.getByRole('heading', { name: 'Settings' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Appearance' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'RPE (effort)' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('option', { name: 'RIR (reps in reserve)' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'No entry' })).toBeInTheDocument();
   });
 
   it('renders a stored English preference on load, fully in English', async () => {

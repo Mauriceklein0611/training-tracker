@@ -10,7 +10,6 @@ import { isIos, isStandalone } from '@/services/pwa';
 import { isWakeLockSupported } from '@/hooks/useWakeLock';
 import { playRestFinishedSound, primeAudio, vibrate } from '@/services/sound';
 import { isSpeechSupported, speak } from '@/services/speech';
-import { EFFORT_INPUT_LABELS } from '@/services/effort';
 import type { AnalyticsRangeKey, AppSettings, EffortInput, ExplainMode } from '@/types';
 import { formatDateTime } from '@/utils/date';
 
@@ -55,11 +54,9 @@ export default function SettingsPage() {
                 void update({ effortInput: event.target.value as EffortInput })
               }
             >
-              {(Object.keys(EFFORT_INPUT_LABELS) as EffortInput[]).map((key) => (
-                <option key={key} value={key}>
-                  {EFFORT_INPUT_LABELS[key]}
-                </option>
-              ))}
+              <option value="rpe">{tSettings('training.effortRpe')}</option>
+              <option value="rir">{tSettings('training.effortRir')}</option>
+              <option value="none">{tSettings('training.effortNone')}</option>
             </SelectField>
             <SelectField
               label={tSettings('training.termsLabel')}

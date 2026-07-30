@@ -10,6 +10,7 @@ export const session = {
     reachedAnnouncement:
       'Die geplante Pause von {{target}} Sekunden ist erreicht. Bereits {{elapsed}} Sekunden pausiert.',
     remainingAnnouncement: 'Noch {{remaining}} Sekunden Pause.',
+    voiceFinished: 'Pause beendet. Weiter mit {{exercise}}.',
   },
   effort: {
     exertion: 'Anstrengung (RPE)',

@@ -5,6 +5,16 @@ import { MemoryRouter } from 'react-router-dom';
 import { ToastProvider } from '@/components/ui/ToastProvider';
 import { ExercisePickerDialog } from '@/features/exercises/ExercisePickerDialog';
 import { resetDatabase } from '@/tests/dbTestUtils';
+import { db } from '@/db/db';
+
+vi.mock('@/utils/exerciseDisplay', () => ({
+  exerciseDisplayName: (exercise: { name: string; catalogKey?: string }) =>
+    exercise.catalogKey === 'barbell-bench-press' ? 'Bench Press' : exercise.name,
+  exerciseSearchText: (exercise: { name: string; catalogKey?: string }) =>
+    exercise.catalogKey === 'barbell-bench-press'
+      ? `Bench Press ${exercise.name}`
+      : exercise.name,
+}));
 
 function renderPicker(
   onSelect = vi.fn(),
@@ -75,5 +85,52 @@ describe('ExercisePickerDialog — create from search (Feature 1)', () => {
     // The create form opens with the trimmed search term as the name.
     const nameInput = (await screen.findByLabelText(/^Name$/)) as HTMLInputElement;
     expect(nameInput.value).toBe('Reverse Back');
+  });
+});
+
+describe('ExercisePickerDialog — localized system exercise names', () => {
+  it('renders and finds a system exercise through the display helpers', async () => {
+    const user = userEvent.setup();
+    const timestamp = new Date().toISOString();
+    await db.exercises.add({
+      id: 'system-bench-press',
+      name: 'Bankdrücken',
+      origin: 'system',
+      catalogKey: 'barbell-bench-press',
+      searchTerms: [],
+      primaryMuscleGroup: 'Brust',
+      secondaryMuscleGroups: [],
+      equipment: 'Langhantel',
+      trackingType: 'weight_reps',
+      weightMode: 'total',
+      weightMultiplier: 1,
+      defaultRestSeconds: 120,
+      notes: '',
+      archived: false,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    });
+    await db.exercises.add({
+      id: 'custom-squat',
+      name: 'Kniebeugen',
+      origin: 'custom',
+      primaryMuscleGroup: 'Beine',
+      secondaryMuscleGroups: [],
+      equipment: 'Langhantel',
+      trackingType: 'weight_reps',
+      weightMode: 'total',
+      weightMultiplier: 1,
+      defaultRestSeconds: 120,
+      notes: '',
+      archived: false,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    });
+
+    renderPicker();
+    await user.type(await screen.findByLabelText('Suchen'), 'Bench Press');
+
+    expect(await screen.findByText('Bench Press')).toBeInTheDocument();
+    expect(screen.queryByText('Kniebeugen')).not.toBeInTheDocument();
   });
 });

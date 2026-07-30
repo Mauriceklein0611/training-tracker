@@ -23,6 +23,7 @@ import type { Exercise, ExerciseOrigin } from '@/types';
 import { MuscleGroupChips } from '@/features/exercises/MuscleGroupChips';
 import { trackingTypeLabel, weightModeLabel } from '@/utils/format';
 import { muscleGroupDisplayLabel } from '@/constants/muscleGroups';
+import { exerciseDisplayName, exerciseSearchText } from '@/utils/exerciseDisplay';
 
 export default function ExercisesPage() {
   // The local variable `exercises` holds the rows, so the namespace hook is
@@ -42,17 +43,19 @@ export default function ExercisesPage() {
   const [deleteTarget, setDeleteTarget] = useState<Exercise | null>(null);
 
   const filters = useMemo(() => collectFilterValues(exercises), [exercises]);
-  const visible = useMemo(
-    () =>
-      filterExercises(exercises, {
-        search,
-        muscleGroup,
-        equipment,
-        origin: origin || undefined,
-        showArchived,
-      }),
-    [exercises, search, muscleGroup, equipment, origin, showArchived],
-  );
+  const visible = useMemo(() => {
+    const filtered = filterExercises(exercises, {
+      muscleGroup,
+      equipment,
+      origin: origin || undefined,
+      showArchived,
+    });
+    const normalizedSearch = search.trim().toLocaleLowerCase();
+    if (!normalizedSearch) return filtered;
+    return filtered.filter((exercise) =>
+      exerciseSearchText(exercise).toLocaleLowerCase().includes(normalizedSearch),
+    );
+  }, [exercises, search, muscleGroup, equipment, origin, showArchived]);
   const existingNames = useMemo(
     () => exercises.map((exercise) => exercise.name),
     [exercises],
@@ -197,7 +200,7 @@ export default function ExercisesPage() {
                       to={`/mehr/uebungen/${exercise.id}`}
                       className="truncate text-accent underline-offset-2 hover:underline"
                     >
-                      {exercise.name}
+                      {exerciseDisplayName(exercise)}
                     </Link>
                     {exercise.origin === 'system' ? (
                       <Badge tone="accent">System</Badge>
@@ -229,7 +232,7 @@ export default function ExercisesPage() {
                 </div>
                 <div className="flex shrink-0 gap-1">
                   <IconButton
-                    label={t('row.edit', { name: exercise.name })}
+                    label={t('row.edit', { name: exerciseDisplayName(exercise) })}
                     onClick={() => {
                       setEditing(exercise);
                       setFormOpen(true);
@@ -240,8 +243,8 @@ export default function ExercisesPage() {
                   <IconButton
                     label={
                       exercise.archived
-                        ? t('row.restore', { name: exercise.name })
-                        : t('row.archive', { name: exercise.name })
+                        ? t('row.restore', { name: exerciseDisplayName(exercise) })
+                        : t('row.archive', { name: exerciseDisplayName(exercise) })
                     }
                     onClick={() => void handleArchive(exercise)}
                   >
@@ -252,7 +255,7 @@ export default function ExercisesPage() {
                     )}
                   </IconButton>
                   <IconButton
-                    label={t('row.delete', { name: exercise.name })}
+                    label={t('row.delete', { name: exerciseDisplayName(exercise) })}
                     onClick={() => void handleDeleteRequest(exercise)}
                   >
                     <Trash2 size={18} aria-hidden="true" />
@@ -275,7 +278,9 @@ export default function ExercisesPage() {
       <ConfirmDialog
         open={Boolean(deleteTarget)}
         title={t('deleteDialog.title')}
-        description={t('deleteDialog.description', { name: deleteTarget?.name ?? '' })}
+        description={t('deleteDialog.description', {
+          name: deleteTarget ? exerciseDisplayName(deleteTarget) : '',
+        })}
         confirmLabel={t('deleteDialog.confirm')}
         destructive
         onCancel={() => setDeleteTarget(null)}

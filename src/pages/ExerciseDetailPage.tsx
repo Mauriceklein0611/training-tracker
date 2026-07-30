@@ -23,6 +23,7 @@ import {
 } from '@/services/cardioMetrics';
 import { formatDate, formatDurationLong, lastDaysRange } from '@/utils/date';
 import { formatKg, formatNumber, formatVolume } from '@/utils/format';
+import { exerciseDisplayName } from '@/utils/exerciseDisplay';
 
 /**
  * Exercise "story" page: the current record, the last performance, an eight-week
@@ -102,7 +103,7 @@ export default function ExerciseDetailPage() {
 
   return (
     <>
-      <PageHeader title={exercise.name} backTo="/mehr/uebungen" />
+      <PageHeader title={exerciseDisplayName(exercise)} backTo="/mehr/uebungen" />
       <div className="grid gap-3">
         {!isCardio ? (
           <Card>

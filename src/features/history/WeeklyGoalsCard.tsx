@@ -12,6 +12,7 @@ import {
 import type { WeeklyGoals } from '@/types';
 import { formatWeekRange } from '@/utils/date';
 import { formatSets } from '@/utils/format';
+import { exerciseDisplayName } from '@/utils/exerciseDisplay';
 
 const WEEKS_SHOWN = 4;
 
@@ -96,6 +97,10 @@ export function WeeklyGoalsCard({
     () => computeCurrentWeekExerciseProgress(dataset, goals.exerciseGoals ?? [], now),
     [dataset, goals.exerciseGoals, now],
   );
+  const exercisesById = useMemo(
+    () => new Map(dataset.exercises.map((exercise) => [exercise.id, exercise])),
+    [dataset.exercises],
+  );
 
   const current = weeks[weeks.length - 1] as WeekProgress;
   const finishedWeeks = weeks.slice(0, -1).reverse();
@@ -163,12 +168,16 @@ export function WeeklyGoalsCard({
             </h3>
             {exerciseProgress.map((entry) => {
               const goal = entry.goal;
+              const currentExercise = exercisesById.get(goal.exerciseId);
+              const displayName = currentExercise
+                ? exerciseDisplayName(currentExercise)
+                : goal.exerciseNameSnapshot;
               if (goal.sessionsPerWeek != null) {
                 return (
                   <GoalProgress
                     key={`${goal.exerciseId}-sessions`}
                     label={t('goals.exerciseSessions', {
-                      name: goal.exerciseNameSnapshot,
+                      name: displayName,
                     })}
                     actual={entry.sessions}
                     goal={goal.sessionsPerWeek}
@@ -181,7 +190,7 @@ export function WeeklyGoalsCard({
                   <GoalProgress
                     key={`${goal.exerciseId}-sets`}
                     label={t('goals.exerciseSets', {
-                      name: goal.exerciseNameSnapshot,
+                      name: displayName,
                     })}
                     actual={entry.workingSets}
                     goal={goal.workingSetsPerWeek}

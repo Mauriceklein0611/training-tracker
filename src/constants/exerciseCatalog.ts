@@ -28,8 +28,8 @@ export interface SystemExerciseDef {
 }
 
 /** Compact builder; weightMultiplier defaults to 1 (2 for per-hand dumbbell work). */
-function b(
-  catalogKey: string,
+function b<const CatalogKey extends string>(
+  catalogKey: CatalogKey,
   name: string,
   primaryMuscleGroup: string,
   secondaryMuscleGroups: string[],
@@ -39,7 +39,7 @@ function b(
   defaultRestSeconds: number,
   searchTerms: string[],
   weightMultiplier = 1,
-): SystemExerciseDef {
+): SystemExerciseDef & { catalogKey: CatalogKey } {
   return {
     catalogKey,
     name,
@@ -55,13 +55,13 @@ function b(
 }
 
 /** Compact builder for a cardio catalog entry (modality + structured device). */
-function c(
-  catalogKey: string,
+function c<const CatalogKey extends string>(
+  catalogKey: CatalogKey,
   name: string,
   cardioModality: CardioModality,
   defaultEquipment: Equipment,
   searchTerms: string[],
-): SystemExerciseDef {
+): SystemExerciseDef & { catalogKey: CatalogKey } {
   return {
     catalogKey,
     name,
@@ -81,7 +81,7 @@ function c(
   };
 }
 
-export const SYSTEM_EXERCISES: SystemExerciseDef[] = [
+export const SYSTEM_EXERCISES = [
   // ---- Brust ----------------------------------------------------------
   b(
     'bench-press',
@@ -1195,4 +1195,7 @@ export const SYSTEM_EXERCISES: SystemExerciseDef[] = [
     'jump rope',
     'rope skipping',
   ]),
-];
+] as const satisfies readonly SystemExerciseDef[];
+
+/** Stable keys used to localise untouched entries without relying on their name. */
+export type SystemExerciseCatalogKey = (typeof SYSTEM_EXERCISES)[number]['catalogKey'];

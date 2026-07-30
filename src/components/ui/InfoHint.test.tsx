@@ -1,7 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { InfoHint } from '@/components/ui/InfoHint';
+import { setLanguage } from '@/i18n';
+
+afterEach(() => setLanguage('de'));
 
 describe('InfoHint', () => {
   it('opens an accessible popover with the term explanation on tap', async () => {
@@ -20,5 +23,15 @@ describe('InfoHint', () => {
   it('renders nothing for an unknown term', () => {
     const { container } = render(<InfoHint term="does-not-exist" />);
     expect(container).toBeEmptyDOMElement();
+  });
+
+  it('localises the trigger and explanation in English', async () => {
+    setLanguage('en');
+    render(<InfoHint term="e1rm" />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'What does e1RM mean?' }));
+
+    expect(screen.getByRole('dialog', { name: 'e1RM' })).toBeInTheDocument();
+    expect(screen.getByText(/Only an estimate/)).toBeInTheDocument();
   });
 });

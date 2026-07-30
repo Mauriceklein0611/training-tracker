@@ -625,7 +625,9 @@ validation messages, and the community/support and feedback surfaces.
 Add a visible string to the German namespace first; the typecheck then requires
 the English counterpart. Canonical labels used by released import/export
 formats remain German by design and are mapped to separate localized display
-labels in the UI. User-created exercise, plan and workout names, notes, and
+labels in the UI. Untouched system exercises use their stable `catalogKey` for
+English display names and search synonyms; their stored canonical name is never
+rewritten. User-created or renamed exercise, plan and workout names, notes, and
 historical snapshots always remain exactly as entered.
 
 ---
