@@ -29,6 +29,7 @@ import { equipmentValuesFor } from '@/services/equipment';
 import { CARDIO_MODALITY_VALUES, defaultEquipmentForModality } from '@/services/cardio';
 import { TRACKING_TYPES } from '@/utils/format';
 import { useToast } from '@/hooks/useToast';
+import { exerciseDisplayName } from '@/utils/exerciseDisplay';
 
 interface FormState {
   name: string;
@@ -558,7 +559,12 @@ export function ExerciseFormDialog({
               </p>
               <div className="grid max-h-56 gap-1 overflow-y-auto">
                 {[...otherExercises]
-                  .sort((a, b) => a.name.localeCompare(b.name, i18n.resolvedLanguage))
+                  .sort((a, b) =>
+                    exerciseDisplayName(a).localeCompare(
+                      exerciseDisplayName(b),
+                      i18n.resolvedLanguage,
+                    ),
+                  )
                   .map((entry) => {
                     const checked = form.alternativeExerciseIds.includes(entry.id);
                     return (
@@ -581,7 +587,9 @@ export function ExerciseFormDialog({
                             )
                           }
                         />
-                        <span className="min-w-0 truncate">{entry.name}</span>
+                        <span className="min-w-0 truncate">
+                          {exerciseDisplayName(entry)}
+                        </span>
                       </label>
                     );
                   })}

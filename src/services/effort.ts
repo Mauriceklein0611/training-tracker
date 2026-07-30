@@ -11,15 +11,7 @@
  *   RPE 10 → 0 RIR · RPE 9 → 1 · RPE 8 → 2 · RPE 7 → 3 · RPE 6 → 4
  */
 
-import type { EffortInput } from '@/types';
-
-export type { EffortInput };
-
-export const EFFORT_INPUT_LABELS: Record<EffortInput, string> = {
-  rpe: 'RPE (Anstrengung)',
-  rir: 'RIR (Reps in Reserve)',
-  none: 'Keine Angabe',
-};
+import { localeTag } from '@/i18n';
 
 /** Suggested RPE chips: whole and half steps in the useful 6–10 band. */
 export const RPE_CHIP_VALUES = [6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10] as const;
@@ -46,7 +38,7 @@ export function approxRpeFromRir(rir: number): number {
   return clamp(Math.round((10 - rir) * 2) / 2, 1, 10);
 }
 
-/** Trims a half-step number for display: 8 → "8", 8.5 → "8,5" (German comma). */
+/** Trims a half-step number and follows the selected display locale. */
 export function formatEffort(value: number): string {
-  return Number.isInteger(value) ? String(value) : value.toFixed(1).replace('.', ',');
+  return value.toLocaleString(localeTag(), { maximumFractionDigits: 1 });
 }

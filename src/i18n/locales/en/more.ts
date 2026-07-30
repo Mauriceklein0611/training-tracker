@@ -337,6 +337,7 @@ export const more: More = {
       intro:
         'Short, clear explanations of technical terms. Estimates are marked as such and never presented as measurements.',
       example: 'Example: ',
+      whatMeans: 'What does {{term}} mean?',
       entries: {
         rpe: {
           term: 'RPE',

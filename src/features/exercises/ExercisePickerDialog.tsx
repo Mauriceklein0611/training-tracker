@@ -13,6 +13,7 @@ import { ExerciseFormDialog } from '@/features/exercises/ExerciseFormDialog';
 import { useSettings } from '@/hooks/useSettings';
 import type { Exercise } from '@/types';
 import { muscleGroupDisplayLabel } from '@/constants/muscleGroups';
+import { exerciseDisplayName, exerciseSearchText } from '@/utils/exerciseDisplay';
 
 /**
  * Picker used by the plan editor and the live view.
@@ -47,7 +48,13 @@ export function ExercisePickerDialog({
   }, [settings.activeEquipmentProfileId]);
 
   const visible = useMemo(() => {
-    let bySearch = filterExercises(exercises, { search, showArchived: false });
+    let bySearch = filterExercises(exercises, { showArchived: false });
+    const normalizedSearch = search.trim().toLocaleLowerCase();
+    if (normalizedSearch) {
+      bySearch = bySearch.filter((exercise) =>
+        exerciseSearchText(exercise).toLocaleLowerCase().includes(normalizedSearch),
+      );
+    }
     if (trackingTypeFilter) {
       bySearch = bySearch.filter(
         (exercise) => exercise.trackingType === trackingTypeFilter,
@@ -138,7 +145,9 @@ export function ExercisePickerDialog({
                     className="flex w-full min-h-[56px] items-center justify-between gap-3 rounded-xl border border-border bg-surface-2 px-3 py-2 text-left active:bg-surface-3"
                   >
                     <span className="min-w-0">
-                      <span className="block truncate font-medium">{exercise.name}</span>
+                      <span className="block truncate font-medium">
+                        {exerciseDisplayName(exercise)}
+                      </span>
                       <span className="block truncate text-xs text-muted">
                         {[
                           exercise.primaryMuscleGroup

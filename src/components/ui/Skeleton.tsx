@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/utils/cn';
 
 /**
@@ -27,8 +28,9 @@ export function SkeletonCard() {
 
 /** A small grid of stat skeletons, matching a KPI block. */
 export function SkeletonStats({ count = 4 }: { count?: number }) {
+  const { t } = useTranslation();
   return (
-    <div className="grid grid-cols-2 gap-2" role="status" aria-label="Wird geladen">
+    <div className="grid grid-cols-2 gap-2" role="status" aria-label={t('state.loading')}>
       {Array.from({ length: count }, (_, index) => (
         <div key={index} className="rounded-2xl border border-border bg-surface p-3">
           <Skeleton className="h-3 w-1/2" />

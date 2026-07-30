@@ -21,6 +21,9 @@ export const settings: Settings = {
     effortLabel: 'Record effort',
     effortHint:
       'Which effort metric the set editor offers. Optional — a set can always be completed without it.',
+    effortRpe: 'RPE (effort)',
+    effortRir: 'RIR (reps in reserve)',
+    effortNone: 'No entry',
     termsLabel: 'Technical terms',
     termsHint:
       'Beginners see spelled-out labels (e.g. "Effort (RPE)"), experienced users compact ones.',

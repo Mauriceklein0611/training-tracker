@@ -57,6 +57,7 @@ import {
   formatDuration as formatCardioDuration,
   formatPace,
 } from '@/services/cardioMetrics';
+import { exerciseDisplayName } from '@/utils/exerciseDisplay';
 
 type Metric =
   | 'volume'
@@ -135,6 +136,7 @@ export default function AnalyticsPage() {
     return {
       analytics: computeAnalytics(dataset, range),
       exercises,
+      exerciseById: new Map(dataset.exercises.map((exercise) => [exercise.id, exercise])),
       series: exerciseId ? computeExerciseSeries(dataset, exerciseId, range) : [],
       // The plateau hint looks at the full history, so "recent" really means the
       // latest sessions rather than only those inside the selected range.
@@ -162,6 +164,10 @@ export default function AnalyticsPage() {
   const analytics = data?.analytics;
   const trackedExercises = data?.exercises ?? [];
   const selectedExercise = trackedExercises.find((entry) => entry.id === exerciseId);
+  const displayExerciseName = (id: string, fallback: string): string => {
+    const exercise = data?.exerciseById.get(id);
+    return exercise ? exerciseDisplayName(exercise) : fallback;
+  };
 
   // The metric picker follows the exercise's tracking type: cardio activities
   // never expose strength metrics (Volumen, 1RM, …) and vice versa.
@@ -633,7 +639,7 @@ export default function AnalyticsPage() {
                     <option value="">{t('strength.choose')}</option>
                     {trackedExercises.map((entry) => (
                       <option key={entry.id} value={entry.id}>
-                        {entry.name}
+                        {displayExerciseName(entry.id, entry.name)}
                       </option>
                     ))}
                   </SelectField>
@@ -654,7 +660,14 @@ export default function AnalyticsPage() {
                 {exerciseId ? (
                   <div className="mt-3">
                     <ChartFrame
-                      title={`${selectedExercise?.name ?? t('view.strength')} — ${metricLabels[metric]}`}
+                      title={`${
+                        selectedExercise
+                          ? displayExerciseName(
+                              selectedExercise.id,
+                              selectedExercise.name,
+                            )
+                          : t('view.strength')
+                      } — ${metricLabels[metric]}`}
                       empty={seriesPoints.every((point) => point.value == null)}
                       summary={
                         metric === 'oneRm'
@@ -894,7 +907,7 @@ export default function AnalyticsPage() {
                         className="border-t border-border pt-2 first:border-0 first:pt-0"
                       >
                         <p className="font-medium">
-                          {record.exerciseName}
+                          {displayExerciseName(record.exerciseId, record.exerciseName)}
                           {record.equipment !== 'unspecified' ? (
                             <span className="font-normal text-muted">
                               {' '}

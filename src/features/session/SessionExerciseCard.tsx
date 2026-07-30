@@ -52,6 +52,7 @@ import { formatKg, formatNumber } from '@/utils/format';
 import { formatDate } from '@/utils/date';
 import type { EffortInput, SessionExercise, TemplateExercise, WorkoutSet } from '@/types';
 import { useTranslation } from 'react-i18next';
+import { exerciseDisplayName } from '@/utils/exerciseDisplay';
 
 export interface ExerciseTarget {
   targetSets?: number;
@@ -296,6 +297,9 @@ export function SessionExerciseCard({
     () => db.exercises.get(sessionExercise.exerciseId),
     [sessionExercise.exerciseId],
   );
+  const displayName = exercise
+    ? exerciseDisplayName(exercise)
+    : sessionExercise.exerciseNameSnapshot;
 
   /** Manually configured alternative exercises, offered before any set is done. */
   const alternatives = useLiveQuery(async () => {
@@ -479,7 +483,7 @@ export function SessionExerciseCard({
               className="block truncate font-semibold leading-tight"
             >
               <span className="text-muted">{label ?? `${index + 1}.`} </span>
-              {sessionExercise.exerciseNameSnapshot}
+              {displayName}
             </span>
             <span className="block text-xs text-muted">
               {t('exercise.completed', { summary: doneSummary })}
@@ -505,7 +509,7 @@ export function SessionExerciseCard({
             className="font-semibold leading-tight"
           >
             <span className="text-muted">{label ?? `${index + 1}.`} </span>
-            {sessionExercise.exerciseNameSnapshot}
+            {displayName}
           </h2>
           <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted">
             {highlightNext ? <Badge tone="accent">{t('exercise.next')}</Badge> : null}
@@ -548,7 +552,7 @@ export function SessionExerciseCard({
           {isDone ? (
             <IconButton
               label={t('exercise.collapse', {
-                name: sessionExercise.exerciseNameSnapshot,
+                name: displayName,
               })}
               onClick={() => setExpandedOverride(false)}
             >
@@ -557,7 +561,7 @@ export function SessionExerciseCard({
           ) : null}
           <IconButton
             label={t('exercise.moveUp', {
-              name: sessionExercise.exerciseNameSnapshot,
+              name: displayName,
             })}
             disabled={index === 0}
             onClick={() => void moveSessionExercise(sessionExercise.id, -1)}
@@ -566,7 +570,7 @@ export function SessionExerciseCard({
           </IconButton>
           <IconButton
             label={t('exercise.moveDown', {
-              name: sessionExercise.exerciseNameSnapshot,
+              name: displayName,
             })}
             disabled={index === total - 1}
             onClick={() => void moveSessionExercise(sessionExercise.id, 1)}
@@ -575,7 +579,7 @@ export function SessionExerciseCard({
           </IconButton>
           <IconButton
             label={t('exercise.remove', {
-              name: sessionExercise.exerciseNameSnapshot,
+              name: displayName,
             })}
             onClick={() => void removeSessionExercise(sessionExercise.id)}
           >
@@ -625,7 +629,7 @@ export function SessionExerciseCard({
                 size="sm"
                 onClick={() => void swapSessionExercise(sessionExercise.id, alternative)}
               >
-                {alternative.name}
+                {exerciseDisplayName(alternative)}
               </Button>
             ))}
           </div>

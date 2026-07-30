@@ -7,6 +7,7 @@ import { NumberField, SelectField } from '@/components/ui/Field';
 import { db } from '@/db/db';
 import { parseNumberInput } from '@/services/validation';
 import type { ExerciseWeeklyGoal, WeeklyGoals } from '@/types';
+import { exerciseDisplayName } from '@/utils/exerciseDisplay';
 
 /** Clamp helper: empty / invalid input clears the goal (undefined). */
 function toGoalValue(raw: string, max: number): number | undefined {
@@ -45,12 +46,21 @@ export function WeeklyGoalsEditor({
     [current.exerciseGoals],
   );
   const [addId, setAddId] = useState('');
+  const exercisesById = useMemo(
+    () => new Map(exercises.map((exercise) => [exercise.id, exercise])),
+    [exercises],
+  );
 
   const available = useMemo(() => {
     const taken = new Set(exerciseGoals.map((goal) => goal.exerciseId));
     return [...exercises]
       .filter((exercise) => !taken.has(exercise.id))
-      .sort((a, b) => a.name.localeCompare(b.name, i18n.resolvedLanguage));
+      .sort((a, b) =>
+        exerciseDisplayName(a).localeCompare(
+          exerciseDisplayName(b),
+          i18n.resolvedLanguage,
+        ),
+      );
   }, [exercises, exerciseGoals, i18n.resolvedLanguage]);
 
   const update = (changes: Partial<WeeklyGoals>) => {
@@ -168,6 +178,10 @@ export function WeeklyGoalsEditor({
                 goal.sessionsPerWeek != null ? 'sessions' : 'sets';
               const value =
                 metric === 'sessions' ? goal.sessionsPerWeek : goal.workingSetsPerWeek;
+              const currentExercise = exercisesById.get(goal.exerciseId);
+              const displayName = currentExercise
+                ? exerciseDisplayName(currentExercise)
+                : goal.exerciseNameSnapshot;
               return (
                 <li
                   key={goal.exerciseId}
@@ -175,11 +189,11 @@ export function WeeklyGoalsEditor({
                 >
                   <div className="flex items-center justify-between gap-2">
                     <span className="min-w-0 truncate text-sm font-medium">
-                      {goal.exerciseNameSnapshot}
+                      {displayName}
                     </span>
                     <IconButton
                       label={t('screens.weeklyGoals.removeExerciseGoal', {
-                        name: goal.exerciseNameSnapshot,
+                        name: displayName,
                       })}
                       variant="ghost"
                       onClick={() => removeExerciseGoal(goal.exerciseId)}
@@ -238,7 +252,7 @@ export function WeeklyGoalsEditor({
               <option value="">{t('screens.weeklyGoals.chooseExercise')}</option>
               {available.map((exercise) => (
                 <option key={exercise.id} value={exercise.id}>
-                  {exercise.name}
+                  {exerciseDisplayName(exercise)}
                 </option>
               ))}
             </SelectField>

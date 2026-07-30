@@ -19,6 +19,11 @@ settings, validation messages, and community/support and feedback. Keep every
 area bilingual, preserve the existing German tests, and add English coverage
 for new visible behavior.
 
+Untouched system exercises are localized for display and search through their
+stable `catalogKey`. Never rewrite their stored canonical name. Custom, legacy
+or user-renamed exercises and historical snapshots must always display the
+saved name unchanged.
+
 **A format must never inherit the display language.** `utils/format` and
 `utils/date` are locale-aware; `csv.ts` therefore keeps its own German label maps
 and its own number formatting, and no export service may import `utils/format`.

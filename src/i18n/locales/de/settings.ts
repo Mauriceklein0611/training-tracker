@@ -21,6 +21,9 @@ export const settings = {
     effortLabel: 'Anstrengung erfassen',
     effortHint:
       'Welche Anstrengungsangabe der Satz-Editor anbietet. Optional — ein Satz kann immer ohne Angabe abgeschlossen werden.',
+    effortRpe: 'RPE (Anstrengung)',
+    effortRir: 'RIR (Wiederholungen im Tank)',
+    effortNone: 'Keine Angabe',
     termsLabel: 'Fachbegriffe',
     termsHint:
       'Anfänger sehen ausführliche Labels (z. B. „Anstrengung (RPE)“), erfahrene Nutzer kompakte Fachlabels.',

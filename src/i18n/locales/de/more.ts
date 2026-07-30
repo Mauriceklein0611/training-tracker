@@ -342,6 +342,7 @@ export const more = {
       intro:
         'Kurze, verständliche Erklärungen der Fachbegriffe. Schätzwerte sind als solche gekennzeichnet und nie als Messung dargestellt.',
       example: 'Beispiel: ',
+      whatMeans: 'Was bedeutet {{term}}?',
       entries: {
         rpe: {
           term: 'RPE',

@@ -12,6 +12,7 @@ export const session: Session = {
     reachedAnnouncement:
       'The planned rest of {{target}} seconds is complete. You have rested for {{elapsed}} seconds.',
     remainingAnnouncement: '{{remaining}} seconds of rest remaining.',
+    voiceFinished: 'Rest finished. Continue with {{exercise}}.',
   },
   effort: {
     exertion: 'Effort (RPE)',
