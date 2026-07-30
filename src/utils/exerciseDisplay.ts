@@ -2,11 +2,13 @@ import { SYSTEM_EXERCISES } from '@/constants/exerciseCatalog';
 import { getLanguage, localeTag } from '@/i18n';
 import { ENGLISH_SYSTEM_EXERCISES } from '@/i18n/exerciseCatalog.en';
 import type { Exercise } from '@/types';
+import { freeEquipmentDisplayLabel } from '@/utils/format';
 
 export type ExerciseDisplayInput = Pick<
   Exercise,
   'name' | 'origin' | 'catalogKey' | 'searchTerms'
->;
+> &
+  Partial<Pick<Exercise, 'equipment'>>;
 
 const SYSTEM_EXERCISE_BY_KEY = new Map<string, (typeof SYSTEM_EXERCISES)[number]>(
   SYSTEM_EXERCISES.map((exercise) => [exercise.catalogKey, exercise]),
@@ -44,7 +46,11 @@ export function exerciseDisplayName(exercise: ExerciseDisplayInput): string {
  * and offline search. User-owned or edited rows never receive catalog text.
  */
 export function exerciseSearchText(exercise: ExerciseDisplayInput): string {
-  const terms = [exercise.name, ...(exercise.searchTerms ?? [])];
+  const terms = [
+    exercise.name,
+    ...(exercise.searchTerms ?? []),
+    freeEquipmentDisplayLabel(exercise.equipment ?? ''),
+  ];
   const catalogExercise = untouchedSystemExercise(exercise);
 
   if (catalogExercise && getLanguage() === 'en') {
