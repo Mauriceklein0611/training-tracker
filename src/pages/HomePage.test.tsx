@@ -50,11 +50,10 @@ describe('HomePage localisation', () => {
     await waitFor(() => {
       expect(screen.getByText('No training data yet')).toBeInTheDocument();
     });
-    // Scoped to the copy this page owns: the nested dialogs (StartFreeDialog,
-    // PlanPackageTools) are migrated in a later stage of #31 and would still
-    // report German here.
+    // Scoped to the copy this page and its own dialogs own: PlanPackageTools
+    // is migrated in a later stage of #31 and would still report German here.
     expect(container.textContent).not.toMatch(
-      /Überblick|Trainingspläne|Noch keine Trainingsdaten|Kein aktiver Trainingsplan|Letzte Einheit/,
+      /Überblick|Trainingspläne|Noch keine Trainingsdaten|Kein aktiver Trainingsplan|Letzte Einheit|Freies Training starten|Aus Bibliothek starten/,
     );
   });
 

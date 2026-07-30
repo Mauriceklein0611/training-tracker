@@ -1,5 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Layers, PlusCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Dialog } from '@/components/ui/Dialog';
 import { Button } from '@/components/ui/Button';
 import { listWorkoutUnitsWithExercises } from '@/db/repositories/workoutUnits';
@@ -22,6 +23,7 @@ export function StartFreeDialog({
   onStartEmpty: () => void;
   onStartUnit: (unitId: string) => void;
 }) {
+  const { t } = useTranslation('home');
   const units = useLiveQuery(
     () => (open ? listWorkoutUnitsWithExercises() : Promise.resolve([])),
     [open],
@@ -32,8 +34,8 @@ export function StartFreeDialog({
     <Dialog
       open={open}
       onClose={onClose}
-      title="Freies Training starten"
-      description="Beginne mit einer leeren Einheit oder starte aus einer gespeicherten Einheit."
+      title={t('startFreeDialog.title')}
+      description={t('startFreeDialog.description')}
     >
       <div className="grid gap-4">
         <Button
@@ -43,19 +45,16 @@ export function StartFreeDialog({
           onClick={onStartEmpty}
         >
           <PlusCircle size={18} aria-hidden="true" />
-          Übungen selbst hinzufügen
+          {t('startFreeDialog.addYourself')}
         </Button>
 
         <div>
           <h3 className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
             <Layers size={14} aria-hidden="true" />
-            Aus Bibliothek starten
+            {t('startFreeDialog.fromLibrary')}
           </h3>
           {units.length === 0 ? (
-            <p className="text-sm text-muted">
-              Noch keine Übungseinheiten in der Bibliothek. Lege welche an, um sie hier
-              direkt zu starten.
-            </p>
+            <p className="text-sm text-muted">{t('startFreeDialog.emptyLibrary')}</p>
           ) : (
             <ul className="grid gap-2">
               {units.map(({ unit, exercises }) => {
@@ -69,8 +68,7 @@ export function StartFreeDialog({
                     >
                       <p className="truncate font-medium">{unit.name}</p>
                       <p className="numeric text-xs text-muted">
-                        {summary.exerciseCount}{' '}
-                        {summary.exerciseCount === 1 ? 'Übung' : 'Übungen'} ·{' '}
+                        {t('exerciseCount', { count: summary.exerciseCount })} ·{' '}
                         {formatSets(summary.totalTargetSets)}
                       </p>
                     </button>

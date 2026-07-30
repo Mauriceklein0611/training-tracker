@@ -1,4 +1,5 @@
 import { Lightbulb } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import type { CoachInsight } from '@/services/coachFeed';
 
 /**
@@ -7,11 +8,12 @@ import type { CoachInsight } from '@/services/coachFeed';
  * verdict. No diagnosis, no score, no claimed AI.
  */
 export function CoachFeed({ insights }: { insights: CoachInsight[] }) {
+  const { t } = useTranslation('home');
   if (insights.length === 0) return null;
   return (
     <section aria-labelledby="coach-heading" className="mb-6">
       <h2 id="coach-heading" className="mb-3 text-base font-semibold">
-        Hinweise
+        {t('coachFeed.heading')}
       </h2>
       <ul className="grid gap-2">
         {insights.map((insight) => (
@@ -33,7 +35,7 @@ export function CoachFeed({ insights }: { insights: CoachInsight[] }) {
                 <p className="text-sm">{insight.text}</p>
                 <details className="mt-1">
                   <summary className="min-h-[32px] cursor-pointer list-none py-1 text-xs font-medium text-accent">
-                    Warum wird das angezeigt?
+                    {t('coachFeed.why')}
                   </summary>
                   <p className="text-xs leading-relaxed text-muted">{insight.why}</p>
                 </details>

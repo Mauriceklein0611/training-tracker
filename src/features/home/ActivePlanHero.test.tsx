@@ -1,8 +1,11 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
+import { setLanguage } from '@/i18n';
 import { ActivePlanHero, type ActivePlanHeroData } from '@/features/home/ActivePlanHero';
+
+afterEach(() => setLanguage('de'));
 
 function renderHero(
   data: ActivePlanHeroData,
@@ -76,6 +79,55 @@ describe('ActivePlanHero', () => {
   it('states plainly when there is no next unit', () => {
     renderHero({ ...base, nextUnit: undefined });
     expect(screen.getByText(/keine nächste Einheit geplant/)).toBeInTheDocument();
+  });
+
+  it('renders the same hero in English, with no German left', () => {
+    setLanguage('en');
+    const { container } = render(
+      <MemoryRouter>
+        <ActivePlanHero data={base} onStartNext={vi.fn()} onConfigure={vi.fn()} />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText('Active training plan')).toBeInTheDocument();
+    expect(screen.getByText('Week 4 / 8')).toBeInTheDocument();
+    expect(
+      screen.getByText(/6 exercises · approx\. 55 min · last done 6 days ago/),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Start workout/ })).toBeInTheDocument();
+    expect(container.textContent).not.toMatch(
+      /Woche|Übungen|zuletzt|Training starten|Aktiver Trainingsplan/,
+    );
+  });
+
+  it('counts one exercise and one deload day with the right singular', () => {
+    const single = {
+      ...base,
+      nextUnit: { ...base.nextUnit!, exerciseCount: 1, lastDoneDaysAgo: 1 },
+      deload: {
+        remainingDays: 1,
+        endDate: '02.08.2026',
+        intensityLabel: 'Mittel (−40 %)',
+        percent: 0.4,
+      },
+    };
+    const german = render(
+      <MemoryRouter>
+        <ActivePlanHero data={single} onStartNext={vi.fn()} onConfigure={vi.fn()} />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText(/^1 Übung · /)).toBeInTheDocument();
+    expect(screen.getByText(/zuletzt gestern/)).toBeInTheDocument();
+    expect(screen.getByText(/noch 1 Tag$/)).toBeInTheDocument();
+    german.unmount();
+
+    setLanguage('en');
+    render(
+      <MemoryRouter>
+        <ActivePlanHero data={single} onStartNext={vi.fn()} onConfigure={vi.fn()} />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText(/^1 exercise · /)).toBeInTheDocument();
+    expect(screen.getByText(/1 day left$/)).toBeInTheDocument();
   });
 
   it('offers to configure an empty next unit instead of starting it', async () => {

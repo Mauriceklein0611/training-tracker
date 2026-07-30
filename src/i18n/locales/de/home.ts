@@ -62,6 +62,45 @@ export const home = {
     volume30Hint: 'gewichtete Übungen',
     lastSession: 'Letzte Einheit',
   },
+  /** The active-plan hero: where you are and what to do next. */
+  hero: {
+    label: 'Aktiver Trainingsplan',
+    /** "Woche {{current}} / {{total}}" */
+    cycleWeek: 'Woche {{current}} / {{total}}',
+    deloadTitle_one: 'Deload aktiv · noch {{count}} Tag',
+    deloadTitle_other: 'Deload aktiv · noch {{count}} Tage',
+    /** "Zielwerte sind diese Woche um {{percent}} reduziert ({{intensity}}). Bis {{endDate}}." */
+    deloadText:
+      'Zielwerte sind diese Woche um {{percent}} reduziert ({{intensity}}). Bis {{endDate}}.',
+    nextLabel: 'Als Nächstes: ',
+    emptyUnit: 'Diese Einheit hat noch keine Übungen.',
+    configureUnit: 'Einheit konfigurieren',
+    startTraining: 'Training starten',
+    noNextUnit: 'Für diesen Plan ist aktuell keine nächste Einheit geplant.',
+    /** "Zuletzt: {{name}}" */
+    lastUnit: 'Zuletzt: {{name}}',
+    /** " · ca. {{minutes}} Min." — appended to the exercise count. */
+    estimate: ' · ca. {{minutes}} Min.',
+    lastDoneToday: ' · zuletzt heute',
+    lastDoneYesterday: ' · zuletzt gestern',
+    lastDoneDaysAgo: ' · zuletzt vor {{count}} Tagen',
+  },
+  /** Counting exercises, used by the hero and the free-workout dialog. */
+  exerciseCount_one: '{{count}} Übung',
+  exerciseCount_other: '{{count}} Übungen',
+  startFreeDialog: {
+    title: 'Freies Training starten',
+    description:
+      'Beginne mit einer leeren Einheit oder starte aus einer gespeicherten Einheit.',
+    addYourself: 'Übungen selbst hinzufügen',
+    fromLibrary: 'Aus Bibliothek starten',
+    emptyLibrary:
+      'Noch keine Übungseinheiten in der Bibliothek. Lege welche an, um sie hier direkt zu starten.',
+  },
+  coachFeed: {
+    heading: 'Hinweise',
+    why: 'Warum wird das angezeigt?',
+  },
   importDialog: {
     title: 'Trainingsplan importieren',
     description:

@@ -58,6 +58,38 @@ export const home: Home = {
     volume30Hint: 'weighted exercises',
     lastSession: 'Last workout',
   },
+  hero: {
+    label: 'Active training plan',
+    cycleWeek: 'Week {{current}} / {{total}}',
+    deloadTitle_one: 'Deload active · {{count}} day left',
+    deloadTitle_other: 'Deload active · {{count}} days left',
+    deloadText:
+      'Targets are reduced by {{percent}} this week ({{intensity}}). Until {{endDate}}.',
+    nextLabel: 'Up next: ',
+    emptyUnit: 'This unit has no exercises yet.',
+    configureUnit: 'Configure unit',
+    startTraining: 'Start workout',
+    noNextUnit: 'No next workout is scheduled for this plan right now.',
+    lastUnit: 'Last: {{name}}',
+    estimate: ' · approx. {{minutes}} min',
+    lastDoneToday: ' · last done today',
+    lastDoneYesterday: ' · last done yesterday',
+    lastDoneDaysAgo: ' · last done {{count}} days ago',
+  },
+  exerciseCount_one: '{{count}} exercise',
+  exerciseCount_other: '{{count}} exercises',
+  startFreeDialog: {
+    title: 'Start a free workout',
+    description: 'Begin with an empty session or start from a saved library unit.',
+    addYourself: 'Add exercises yourself',
+    fromLibrary: 'Start from the library',
+    emptyLibrary:
+      'No workout units in the library yet. Create some to start them directly from here.',
+  },
+  coachFeed: {
+    heading: 'Insights',
+    why: 'Why is this shown?',
+  },
   importDialog: {
     title: 'Import training plan',
     description:

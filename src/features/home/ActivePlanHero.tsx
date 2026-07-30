@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { CalendarClock, Play, SlidersHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { formatPercent } from '@/utils/format';
@@ -50,13 +51,14 @@ export function ActivePlanHero({
   /** Open the unit editor to add exercises to an empty next unit. */
   onConfigure: (templateId: string) => void;
 }) {
+  const { t } = useTranslation('home');
   return (
     <section
       aria-labelledby="active-plan-heading"
       className="mb-4 rounded-2xl border border-accent/50 bg-surface p-4"
     >
       <p className="text-xs font-medium uppercase tracking-wide text-accent">
-        Aktiver Trainingsplan
+        {t('hero.label')}
       </p>
       <div className="mt-1 flex items-start justify-between gap-2">
         <Link to={`/plaene/${data.planId}`} className="min-w-0">
@@ -69,7 +71,10 @@ export function ActivePlanHero({
         </Link>
         {data.cycleWeek ? (
           <span className="numeric shrink-0 rounded-lg bg-surface-2 px-2 py-1 text-xs font-medium text-muted">
-            Woche {data.cycleWeek.current} / {data.cycleWeek.total}
+            {t('hero.cycleWeek', {
+              current: data.cycleWeek.current,
+              total: data.cycleWeek.total,
+            })}
           </span>
         ) : null}
       </div>
@@ -103,12 +108,14 @@ export function ActivePlanHero({
           />
           <div className="text-xs leading-relaxed">
             <p className="font-semibold text-warning">
-              Deload aktiv · noch {data.deload.remainingDays}{' '}
-              {data.deload.remainingDays === 1 ? 'Tag' : 'Tage'}
+              {t('hero.deloadTitle', { count: data.deload.remainingDays })}
             </p>
             <p className="text-muted">
-              Zielwerte sind diese Woche um {formatPercent(data.deload.percent)} reduziert
-              ({data.deload.intensityLabel}). Bis {data.deload.endDate}.
+              {t('hero.deloadText', {
+                percent: formatPercent(data.deload.percent),
+                intensity: data.deload.intensityLabel,
+                endDate: data.deload.endDate,
+              })}
             </p>
           </div>
         </div>
@@ -118,16 +125,14 @@ export function ActivePlanHero({
         {data.nextUnit ? (
           <>
             <p className="mb-0.5 text-sm">
-              <span className="text-muted">Als Nächstes: </span>
+              <span className="text-muted">{t('hero.nextLabel')}</span>
               <span className="font-semibold">{data.nextUnit.name}</span>
             </p>
             {data.nextUnit.exerciseCount === 0 ? (
               // An empty unit can't be trained yet — configuring it is the real
               // next step, and it must not silently start an empty session.
               <>
-                <p className="mb-2 text-xs text-muted">
-                  Diese Einheit hat noch keine Übungen.
-                </p>
+                <p className="mb-2 text-xs text-muted">{t('hero.emptyUnit')}</p>
                 <Button
                   variant="primary"
                   size="lg"
@@ -135,26 +140,25 @@ export function ActivePlanHero({
                   onClick={() => onConfigure(data.nextUnit!.templateId)}
                 >
                   <SlidersHorizontal size={20} aria-hidden="true" />
-                  Einheit konfigurieren
+                  {t('hero.configureUnit')}
                 </Button>
               </>
             ) : (
               <>
                 <p className="mb-2 text-xs text-muted">
-                  {data.nextUnit.exerciseCount}{' '}
-                  {data.nextUnit.exerciseCount === 1 ? 'Übung' : 'Übungen'}
+                  {t('exerciseCount', { count: data.nextUnit.exerciseCount })}
                   {data.nextUnit.estimatedMinutes > 0
-                    ? ` · ca. ${data.nextUnit.estimatedMinutes} Min.`
+                    ? t('hero.estimate', { minutes: data.nextUnit.estimatedMinutes })
                     : ''}
-                  {data.nextUnit.lastDoneDaysAgo != null
-                    ? ` · zuletzt ${
-                        data.nextUnit.lastDoneDaysAgo === 0
-                          ? 'heute'
-                          : data.nextUnit.lastDoneDaysAgo === 1
-                            ? 'gestern'
-                            : `vor ${data.nextUnit.lastDoneDaysAgo} Tagen`
-                      }`
-                    : ''}
+                  {data.nextUnit.lastDoneDaysAgo == null
+                    ? ''
+                    : data.nextUnit.lastDoneDaysAgo === 0
+                      ? t('hero.lastDoneToday')
+                      : data.nextUnit.lastDoneDaysAgo === 1
+                        ? t('hero.lastDoneYesterday')
+                        : t('hero.lastDoneDaysAgo', {
+                            count: data.nextUnit.lastDoneDaysAgo,
+                          })}
                 </p>
                 <Button
                   variant="primary"
@@ -164,18 +168,18 @@ export function ActivePlanHero({
                   onClick={() => onStartNext(data.nextUnit!.templateId)}
                 >
                   <Play size={20} aria-hidden="true" />
-                  Training starten
+                  {t('hero.startTraining')}
                 </Button>
               </>
             )}
           </>
         ) : (
-          <p className="text-sm text-muted">
-            Für diesen Plan ist aktuell keine nächste Einheit geplant.
-          </p>
+          <p className="text-sm text-muted">{t('hero.noNextUnit')}</p>
         )}
         {data.lastUnitName ? (
-          <p className="mt-2 text-xs text-muted">Zuletzt: {data.lastUnitName}</p>
+          <p className="mt-2 text-xs text-muted">
+            {t('hero.lastUnit', { name: data.lastUnitName })}
+          </p>
         ) : null}
       </div>
     </section>
