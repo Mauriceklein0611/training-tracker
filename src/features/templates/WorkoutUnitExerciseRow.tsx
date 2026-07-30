@@ -1,4 +1,5 @@
 import { ArrowDown, ArrowUp, Link2, Link2Off, Trash2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { IconButton } from '@/components/ui/Button';
 import {
   attachWorkoutUnitExerciseToPrevious,
@@ -34,7 +35,8 @@ export function WorkoutUnitExerciseRow({
   grouped: boolean;
   canGroupWithPrevious: boolean;
 }) {
-  const name = exercise?.name ?? 'Gelöschte Übung';
+  const { t } = useTranslation('library');
+  const name = exercise?.name ?? t('exercise.deleted');
 
   return (
     <div className="rounded-2xl border border-border bg-surface p-3">
@@ -45,28 +47,26 @@ export function WorkoutUnitExerciseRow({
             {name}
           </p>
           <p className="text-xs text-muted">
-            {exercise
-              ? trackingTypeLabel(exercise.trackingType)
-              : 'Diese Übung existiert nicht mehr.'}
+            {exercise ? trackingTypeLabel(exercise.trackingType) : t('exercise.missing')}
           </p>
         </div>
         <div className="flex shrink-0 gap-1">
           <IconButton
-            label={`${name} nach oben`}
+            label={t('exercise.moveUp', { name })}
             disabled={globalIndex === 0}
             onClick={() => void moveWorkoutUnitExercise(entry.id, -1)}
           >
             <ArrowUp size={18} aria-hidden="true" />
           </IconButton>
           <IconButton
-            label={`${name} nach unten`}
+            label={t('exercise.moveDown', { name })}
             disabled={globalIndex === total - 1}
             onClick={() => void moveWorkoutUnitExercise(entry.id, 1)}
           >
             <ArrowDown size={18} aria-hidden="true" />
           </IconButton>
           <IconButton
-            label={`${name} entfernen`}
+            label={t('exercise.remove', { name })}
             onClick={() => void removeWorkoutUnitExercise(entry.id)}
           >
             <Trash2 size={18} aria-hidden="true" />
@@ -81,7 +81,7 @@ export function WorkoutUnitExerciseRow({
           className="mt-2 inline-flex min-h-[44px] items-center gap-1.5 text-sm font-medium text-accent"
         >
           <Link2Off size={16} aria-hidden="true" />
-          Aus Gruppe lösen
+          {t('exercise.detachGroup')}
         </button>
       ) : canGroupWithPrevious ? (
         <button
@@ -90,7 +90,7 @@ export function WorkoutUnitExerciseRow({
           className="mt-2 inline-flex min-h-[44px] items-center gap-1.5 text-sm font-medium text-accent"
         >
           <Link2 size={16} aria-hidden="true" />
-          Mit Übung darüber gruppieren
+          {t('exercise.attachPrevious')}
         </button>
       ) : null}
 

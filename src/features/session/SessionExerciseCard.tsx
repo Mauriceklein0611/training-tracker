@@ -22,7 +22,6 @@ import { ExecutionChangeDialog } from '@/features/session/ExecutionChangeDialog'
 import { EditSetDialog } from '@/features/session/EditSetDialog';
 import {
   effectiveSetExecution,
-  equipmentLabel,
   executionKey,
   setExecutionKey,
 } from '@/services/equipment';
@@ -49,9 +48,10 @@ import { resolveEffectiveTarget } from '@/services/sessionTargets';
 import { suggestProgression } from '@/services/progression';
 import { ProgressionHint } from '@/features/session/ProgressionHint';
 import { db } from '@/db/db';
-import { trackingTypeLabel, formatKg, formatSections, formatSets } from '@/utils/format';
+import { formatKg, formatNumber } from '@/utils/format';
 import { formatDate } from '@/utils/date';
 import type { EffortInput, SessionExercise, TemplateExercise, WorkoutSet } from '@/types';
+import { useTranslation } from 'react-i18next';
 
 export interface ExerciseTarget {
   targetSets?: number;
@@ -66,12 +66,18 @@ export interface ExerciseTarget {
 function describeTarget(
   target: ExerciseTarget | undefined,
   isCardio: boolean,
+  labels: {
+    intervals: (value: number) => string;
+    sets: (value: number) => string;
+    reps: (min: number, max: number) => string;
+    repsFrom: (min: number) => string;
+  },
 ): string | null {
   if (!target) return null;
   const parts: string[] = [];
   if (isCardio) {
     if (target.targetSets && target.targetSets > 1) {
-      parts.push(`${target.targetSets} Intervalle`);
+      parts.push(labels.intervals(target.targetSets));
     }
     if (target.targetDurationSeconds) {
       parts.push(formatDuration(target.targetDurationSeconds));
@@ -82,11 +88,11 @@ function describeTarget(
     if (target.targetRpe) parts.push(`RPE ${target.targetRpe}`);
     return parts.length > 0 ? parts.join(' · ') : null;
   }
-  if (target.targetSets) parts.push(formatSets(target.targetSets));
+  if (target.targetSets) parts.push(labels.sets(target.targetSets));
   if (target.targetDurationSeconds) parts.push(`${target.targetDurationSeconds} s`);
   else if (target.targetRepMin && target.targetRepMax) {
-    parts.push(`${target.targetRepMin}–${target.targetRepMax} Wdh.`);
-  } else if (target.targetRepMin) parts.push(`ab ${target.targetRepMin} Wdh.`);
+    parts.push(labels.reps(target.targetRepMin, target.targetRepMax));
+  } else if (target.targetRepMin) parts.push(labels.repsFrom(target.targetRepMin));
   return parts.length > 0 ? parts.join(' · ') : null;
 }
 
@@ -124,6 +130,9 @@ export function SessionExerciseCard({
   /** Compact effort labels for experienced users. */
   expertLabels?: boolean;
 }) {
+  const { t } = useTranslation('session');
+  const { t: tCommon } = useTranslation('common');
+  const { t: tDomain } = useTranslation('domain');
   const { sessionExercise, sets } = detail;
   const toast = useToast();
 
@@ -329,9 +338,11 @@ export function SessionExerciseCard({
   const previousSessionLabel = useMemo(
     () =>
       lastPerformance
-        ? `Letztes Training: ${formatDate(lastPerformance.session.startedAt)}`
+        ? t('exercise.previousWorkout', {
+            date: formatDate(lastPerformance.session.startedAt),
+          })
         : null,
-    [lastPerformance],
+    [lastPerformance, t],
   );
 
   const [isAdding, setIsAdding] = useState(false);
@@ -393,10 +404,10 @@ export function SessionExerciseCard({
 
     // Time-limited undo: reopening clears the completion and any rest it started,
     // keeping the entered values, so a mistap is fully reversible and data-safe.
-    toast.show('Satz erfasst.', 'success', {
+    toast.show(t('exercise.setCaptured'), 'success', {
       durationMs: 6000,
       action: {
-        label: 'Rückgängig',
+        label: t('exercise.undo'),
         onClick: () => void reopenSet(setId),
       },
     });
@@ -440,8 +451,14 @@ export function SessionExerciseCard({
 
   if (!expanded) {
     const doneSummary = isCardio
-      ? formatSections(completedSets.length)
-      : formatSets(completedWorkingSets);
+      ? `${formatNumber(completedSets.length)} ${
+          completedSets.length === 1
+            ? tCommon('units.sectionOne')
+            : tCommon('units.sectionOther')
+        }`
+      : `${formatNumber(completedWorkingSets)} ${
+          completedWorkingSets === 1 ? tCommon('units.setOne') : tCommon('units.setOther')
+        }`;
     return (
       <section
         aria-labelledby={`exercise-${sessionExercise.id}`}
@@ -465,7 +482,7 @@ export function SessionExerciseCard({
               {sessionExercise.exerciseNameSnapshot}
             </span>
             <span className="block text-xs text-muted">
-              Abgeschlossen · {doneSummary}
+              {t('exercise.completed', { summary: doneSummary })}
             </span>
           </span>
           <ChevronDown size={20} className="shrink-0 text-muted" aria-hidden="true" />
@@ -491,19 +508,37 @@ export function SessionExerciseCard({
             {sessionExercise.exerciseNameSnapshot}
           </h2>
           <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted">
-            {highlightNext ? <Badge tone="accent">Als Nächstes</Badge> : null}
-            <Badge>{trackingTypeLabel(sessionExercise.trackingTypeSnapshot)}</Badge>
-            {describeTarget(effectiveTarget, isCardio) ? (
-              <span>Ziel: {describeTarget(effectiveTarget, isCardio)}</span>
+            {highlightNext ? <Badge tone="accent">{t('exercise.next')}</Badge> : null}
+            <Badge>
+              {tDomain(`trackingType.${sessionExercise.trackingTypeSnapshot}`)}
+            </Badge>
+            {describeTarget(effectiveTarget, isCardio, {
+              intervals: (value) => t('exercise.targetIntervals', { value }),
+              sets: (value) => t('exercise.targetSets', { value }),
+              reps: (min, max) => t('exercise.targetReps', { min, max }),
+              repsFrom: (min) => t('exercise.targetRepsFrom', { min }),
+            }) ? (
+              <span>
+                {t('exercise.target', {
+                  value: describeTarget(effectiveTarget, isCardio, {
+                    intervals: (value) => t('exercise.targetIntervals', { value }),
+                    sets: (value) => t('exercise.targetSets', { value }),
+                    reps: (min, max) => t('exercise.targetReps', { min, max }),
+                    repsFrom: (min) => t('exercise.targetRepsFrom', { min }),
+                  }),
+                })}
+              </span>
             ) : null}
-            {showRest ? <span>Pause {restTarget}s</span> : null}
+            {showRest ? <span>{t('exercise.rest', { seconds: restTarget })}</span> : null}
             {showExecutionBadge ? (
               <Badge tone={isTemporaryExecution ? 'accent' : 'default'}>
-                {equipmentLabel(currentExecution.equipment)}
+                {tDomain(`equipment.${currentExecution.equipment}`)}
                 {currentExecution.weightMode === 'per_hand'
-                  ? ` · pro Hantel ×${currentExecution.weightMultiplier}`
+                  ? ` · ${t('exercise.perDumbbell', {
+                      multiplier: currentExecution.weightMultiplier,
+                    })}`
                   : ''}
-                {isTemporaryExecution ? ' · nur dieses Training' : ''}
+                {isTemporaryExecution ? ` · ${t('exercise.temporary')}` : ''}
               </Badge>
             ) : null}
             {previousSessionLabel ? <span>{previousSessionLabel}</span> : null}
@@ -512,28 +547,36 @@ export function SessionExerciseCard({
         <div className="flex shrink-0 gap-1">
           {isDone ? (
             <IconButton
-              label={`${sessionExercise.exerciseNameSnapshot} einklappen`}
+              label={t('exercise.collapse', {
+                name: sessionExercise.exerciseNameSnapshot,
+              })}
               onClick={() => setExpandedOverride(false)}
             >
               <ChevronUp size={18} aria-hidden="true" />
             </IconButton>
           ) : null}
           <IconButton
-            label={`${sessionExercise.exerciseNameSnapshot} nach oben`}
+            label={t('exercise.moveUp', {
+              name: sessionExercise.exerciseNameSnapshot,
+            })}
             disabled={index === 0}
             onClick={() => void moveSessionExercise(sessionExercise.id, -1)}
           >
             <ArrowUp size={18} aria-hidden="true" />
           </IconButton>
           <IconButton
-            label={`${sessionExercise.exerciseNameSnapshot} nach unten`}
+            label={t('exercise.moveDown', {
+              name: sessionExercise.exerciseNameSnapshot,
+            })}
             disabled={index === total - 1}
             onClick={() => void moveSessionExercise(sessionExercise.id, 1)}
           >
             <ArrowDown size={18} aria-hidden="true" />
           </IconButton>
           <IconButton
-            label={`${sessionExercise.exerciseNameSnapshot} aus dem Training entfernen`}
+            label={t('exercise.remove', {
+              name: sessionExercise.exerciseNameSnapshot,
+            })}
             onClick={() => void removeSessionExercise(sessionExercise.id)}
           >
             <Trash2 size={18} aria-hidden="true" />
@@ -563,7 +606,7 @@ export function SessionExerciseCard({
           className="mt-2 flex min-h-[44px] items-center gap-1.5 text-sm font-medium text-accent"
         >
           <Repeat size={16} aria-hidden="true" />
-          Ausführung ändern
+          {t('exercise.changeExecution')}
         </button>
       ) : null}
 
@@ -572,7 +615,7 @@ export function SessionExerciseCard({
       {completedSets.length === 0 && (alternatives?.length ?? 0) > 0 ? (
         <details className="mt-2">
           <summary className="min-h-[44px] cursor-pointer list-none py-2 text-sm font-medium text-accent">
-            Alternative wählen ({alternatives?.length})
+            {t('exercise.chooseAlternative', { value: alternatives?.length ?? 0 })}
           </summary>
           <div className="mt-1 flex flex-wrap gap-2">
             {alternatives?.map((alternative) => (
@@ -605,7 +648,7 @@ export function SessionExerciseCard({
 
       {lastSetTotalLoadKg != null ? (
         <p className="mt-2 text-xs text-muted">
-          Gesamtlast letzter Satz: {formatKg(lastSetTotalLoadKg)}
+          {t('exercise.lastSetTotal', { value: formatKg(lastSetTotalLoadKg) })}
         </p>
       ) : null}
 
@@ -646,8 +689,11 @@ export function SessionExerciseCard({
           <div className="grid gap-2">
             <p className="flex items-center justify-center gap-2 rounded-xl bg-surface-2 py-2 text-sm font-medium text-success">
               <Check size={16} aria-hidden="true" />
-              {isCardio ? 'Intervallziel' : 'Satzziel'} erreicht ({completedWorkingSets}{' '}
-              von {targetSets})
+              {t('exercise.goalReached', {
+                goal: isCardio ? t('exercise.intervalGoal') : t('exercise.setGoal'),
+                current: completedWorkingSets,
+                total: targetSets,
+              })}
             </p>
             <Button
               variant="secondary"
@@ -656,7 +702,7 @@ export function SessionExerciseCard({
               onClick={() => void handleAddSet()}
             >
               <Plus size={18} aria-hidden="true" />
-              {isCardio ? 'Weiteren Abschnitt erfassen' : 'Extrasatz hinzufügen'}
+              {isCardio ? t('exercise.addSection') : t('exercise.addExtraSet')}
             </Button>
           </div>
         ) : (
@@ -669,11 +715,11 @@ export function SessionExerciseCard({
             <Plus size={18} aria-hidden="true" />
             {isCardio
               ? completedSets.length === 0
-                ? 'Cardio erfassen'
-                : 'Weiteren Abschnitt erfassen'
+                ? t('exercise.captureCardio')
+                : t('exercise.addSection')
               : completedSets.length === 0
-                ? 'Ersten Satz erfassen'
-                : 'Weiteren Satz erfassen'}
+                ? t('exercise.captureFirstSet')
+                : t('exercise.captureNextSet')}
           </Button>
         )}
       </div>
@@ -686,10 +732,10 @@ export function SessionExerciseCard({
       <div className="mt-3">
         {notesOpen ? (
           <TextAreaField
-            label="Notiz zur Übung"
+            label={t('exercise.note')}
             value={notes}
             rows={2}
-            placeholder="z. B. Griff enger, linke Schulter zwickt"
+            placeholder={t('exercise.notePlaceholder')}
             onChange={(event) => setNotes(event.target.value)}
             onBlur={() => void updateSessionExercise(sessionExercise.id, { notes })}
           />
@@ -699,7 +745,7 @@ export function SessionExerciseCard({
             onClick={() => setNotesOpen(true)}
             className="min-h-[44px] text-sm font-medium text-accent"
           >
-            + Notiz hinzufügen
+            {t('exercise.addNote')}
           </button>
         )}
       </div>

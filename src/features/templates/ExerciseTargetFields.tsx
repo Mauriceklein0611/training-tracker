@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { NumberField, TextField } from '@/components/ui/Field';
 import { parseNumberInput } from '@/services/validation';
 import type { TrackingType } from '@/types';
@@ -49,13 +50,14 @@ export function ExerciseTargetFields({
   values: ExerciseTargetValues;
   onChange: (patch: ExerciseTargetPatch) => void;
 }) {
+  const { t } = useTranslation('library');
   const isCardio = trackingType === 'cardio';
   const isDuration = trackingType === 'duration';
 
   return (
     <div className="mt-3 grid grid-cols-2 gap-2">
       <NumberField
-        label={isCardio ? 'Intervalle' : 'Sätze'}
+        label={isCardio ? t('targets.intervals') : t('targets.sets')}
         value={String(values.targetSets)}
         onChange={(event) =>
           onChange({
@@ -67,7 +69,7 @@ export function ExerciseTargetFields({
         }
       />
       <NumberField
-        label={isCardio ? 'Pause zw. Intervallen (s)' : 'Pause (s)'}
+        label={isCardio ? t('targets.intervalRestSeconds') : t('targets.restSeconds')}
         value={String(values.restSeconds)}
         onChange={(event) =>
           onChange({
@@ -82,21 +84,21 @@ export function ExerciseTargetFields({
       {isCardio ? (
         <>
           <NumberField
-            label="Zieldauer (s)"
+            label={t('targets.durationSeconds')}
             value={String(values.targetDurationSeconds ?? '')}
             onChange={(event) =>
               onChange({ targetDurationSeconds: optInt(event.target.value) })
             }
           />
           <NumberField
-            label="Zieldistanz (m)"
+            label={t('targets.distanceMeters')}
             value={String(values.targetDistanceMeters ?? '')}
             onChange={(event) =>
               onChange({ targetDistanceMeters: optDistance(event.target.value) })
             }
           />
           <NumberField
-            label="Ziel-RPE (1–10)"
+            label={t('targets.rpe')}
             decimal
             containerClassName="col-span-2"
             value={String(values.targetRpe ?? '')}
@@ -105,7 +107,7 @@ export function ExerciseTargetFields({
         </>
       ) : isDuration ? (
         <NumberField
-          label="Zieldauer (s)"
+          label={t('targets.durationSeconds')}
           containerClassName="col-span-2"
           value={String(values.targetDurationSeconds ?? '')}
           onChange={(event) =>
@@ -115,12 +117,12 @@ export function ExerciseTargetFields({
       ) : (
         <>
           <NumberField
-            label="Wdh. von"
+            label={t('targets.repsFrom')}
             value={String(values.targetRepMin ?? '')}
             onChange={(event) => onChange({ targetRepMin: optInt(event.target.value) })}
           />
           <NumberField
-            label="Wdh. bis"
+            label={t('targets.repsTo')}
             value={String(values.targetRepMax ?? '')}
             onChange={(event) => onChange({ targetRepMax: optInt(event.target.value) })}
           />
@@ -128,10 +130,10 @@ export function ExerciseTargetFields({
       )}
 
       <TextField
-        label="Notiz"
+        label={t('targets.note')}
         containerClassName="col-span-2"
         value={values.notes}
-        placeholder="Optional"
+        placeholder={t('targets.optional')}
         onChange={(event) => onChange({ notes: event.target.value })}
       />
     </div>

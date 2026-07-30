@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Plus, Search } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Dialog } from '@/components/ui/Dialog';
 import { Button } from '@/components/ui/Button';
 import { CheckboxField, TextField } from '@/components/ui/Field';
@@ -11,7 +12,7 @@ import { isExerciseAvailable } from '@/db/repositories/equipmentProfiles';
 import { ExerciseFormDialog } from '@/features/exercises/ExerciseFormDialog';
 import { useSettings } from '@/hooks/useSettings';
 import type { Exercise } from '@/types';
-import { trackingTypeLabel } from '@/utils/format';
+import { muscleGroupDisplayLabel } from '@/constants/muscleGroups';
 
 /**
  * Picker used by the plan editor and the live view.
@@ -22,7 +23,7 @@ export function ExercisePickerDialog({
   open,
   onClose,
   onSelect,
-  title = 'Übung hinzufügen',
+  title,
   trackingTypeFilter,
 }: {
   open: boolean;
@@ -32,6 +33,8 @@ export function ExercisePickerDialog({
   /** When set, only exercises of this tracking type are listed (e.g. cardio). */
   trackingTypeFilter?: Exercise['trackingType'];
 }) {
+  const { t } = useTranslation('more');
+  const { t: tDomain } = useTranslation('domain');
   const { settings } = useSettings();
   const [search, setSearch] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
@@ -64,31 +67,33 @@ export function ExercisePickerDialog({
       <Dialog
         open={open && !createOpen}
         onClose={onClose}
-        title={title}
+        title={title ?? t('screens.exercise.picker.defaultTitle')}
         footer={
           <>
             <Button variant="secondary" onClick={onClose}>
-              Abbrechen
+              {t('screens.action.cancel')}
             </Button>
             <Button variant="primary" onClick={() => setCreateOpen(true)}>
               <Plus size={18} aria-hidden="true" />
-              Neue Übung
+              {t('screens.exercise.picker.newExercise')}
             </Button>
           </>
         }
       >
         <TextField
-          label="Suchen"
+          label={t('screens.exercise.picker.search')}
           type="search"
           value={search}
-          placeholder="Name, Muskelgruppe oder Equipment"
+          placeholder={t('screens.exercise.picker.searchPlaceholder')}
           onChange={(event) => setSearch(event.target.value)}
         />
 
         {activeProfile ? (
           <div className="mt-3">
             <CheckboxField
-              label={`Nur verfügbares Equipment (${activeProfile.name})`}
+              label={t('screens.exercise.picker.onlyAvailable', {
+                name: activeProfile.name,
+              })}
               checked={onlyAvailable}
               onChange={setOnlyAvailable}
             />
@@ -99,17 +104,23 @@ export function ExercisePickerDialog({
           {visible.length === 0 ? (
             <EmptyState
               icon={<Search size={24} aria-hidden="true" />}
-              title={exercises.length === 0 ? 'Noch keine Übungen' : 'Keine Treffer'}
+              title={
+                exercises.length === 0
+                  ? t('screens.exercise.picker.emptyTitle')
+                  : t('screens.exercise.picker.noMatchTitle')
+              }
               description={
                 exercises.length === 0
-                  ? 'Lege deine erste Übung an. Du bestimmst dabei, wie sie erfasst wird — mit Gewicht, mit Körpergewicht oder auf Zeit.'
-                  : 'Passe die Suche an oder lege eine neue Übung an.'
+                  ? t('screens.exercise.picker.emptyDescription')
+                  : t('screens.exercise.picker.noMatchDescription')
               }
               action={
                 search.trim() ? (
                   <Button variant="primary" onClick={() => setCreateOpen(true)}>
-                    <Plus size={18} aria-hidden="true" />„{search.trim()}" als neue Übung
-                    erstellen
+                    <Plus size={18} aria-hidden="true" />
+                    {t('screens.exercise.picker.createFromSearch', {
+                      name: search.trim(),
+                    })}
                   </Button>
                 ) : undefined
               }
@@ -129,9 +140,15 @@ export function ExercisePickerDialog({
                     <span className="min-w-0">
                       <span className="block truncate font-medium">{exercise.name}</span>
                       <span className="block truncate text-xs text-muted">
-                        {[exercise.primaryMuscleGroup, exercise.equipment]
+                        {[
+                          exercise.primaryMuscleGroup
+                            ? muscleGroupDisplayLabel(exercise.primaryMuscleGroup)
+                            : undefined,
+                          exercise.equipment,
+                        ]
                           .filter(Boolean)
-                          .join(' · ') || trackingTypeLabel(exercise.trackingType)}
+                          .join(' · ') ||
+                          tDomain(`trackingType.${exercise.trackingType}`)}
                       </span>
                     </span>
                     <Plus size={18} className="shrink-0 text-accent" aria-hidden="true" />

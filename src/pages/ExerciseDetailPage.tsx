@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { useTranslation } from 'react-i18next';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card, CardHeader, EmptyState, Stat } from '@/components/ui/Card';
 import { SkeletonCard } from '@/components/ui/Skeleton';
@@ -30,6 +31,7 @@ import { formatKg, formatNumber, formatVolume } from '@/utils/format';
  * the metrics that make sense for them; nothing is invented for the other kind.
  */
 export default function ExerciseDetailPage() {
+  const { t } = useTranslation('more');
   const { exerciseId = '' } = useParams();
 
   const data = useLiveQuery(async () => {
@@ -67,7 +69,10 @@ export default function ExerciseDetailPage() {
   if (data === undefined) {
     return (
       <>
-        <PageHeader title="Übung" backTo="/mehr/uebungen" />
+        <PageHeader
+          title={t('screens.exercise.detail.genericTitle')}
+          backTo="/mehr/uebungen"
+        />
         <div className="grid gap-3" aria-busy="true">
           <SkeletonCard />
           <SkeletonCard />
@@ -79,10 +84,13 @@ export default function ExerciseDetailPage() {
   if (data === null) {
     return (
       <>
-        <PageHeader title="Übung" backTo="/mehr/uebungen" />
+        <PageHeader
+          title={t('screens.exercise.detail.genericTitle')}
+          backTo="/mehr/uebungen"
+        />
         <EmptyState
-          title="Übung nicht gefunden"
-          description="Diese Übung existiert nicht mehr."
+          title={t('screens.exercise.detail.notFoundTitle')}
+          description={t('screens.exercise.detail.notFoundDescription')}
         />
       </>
     );
@@ -107,7 +115,7 @@ export default function ExerciseDetailPage() {
 
         {exercise.techniqueCues && exercise.techniqueCues.length > 0 ? (
           <Card>
-            <CardHeader title="Technik" as="h2" />
+            <CardHeader title={t('screens.exercise.detail.technique')} as="h2" />
             <ul className="grid list-disc gap-1 pl-5 text-sm">
               {exercise.techniqueCues.map((cue, index) => (
                 <li key={index}>{cue}</li>
@@ -118,7 +126,7 @@ export default function ExerciseDetailPage() {
 
         {data.variants.length > 0 || exercise.targetRir != null ? (
           <Card>
-            <CardHeader title="Ausführung & Ziel" as="h2" />
+            <CardHeader title={t('screens.exercise.detail.executionAndGoal')} as="h2" />
             {data.variants.length > 0 ? (
               <div className="flex flex-wrap gap-1.5">
                 {data.variants.map((variant) => (
@@ -133,7 +141,9 @@ export default function ExerciseDetailPage() {
             ) : null}
             {exercise.targetRir != null ? (
               <p className="mt-2 text-sm text-muted">
-                Ziel für die nächste Einheit: RIR {exercise.targetRir}
+                {t('screens.exercise.detail.nextTarget', {
+                  value: exercise.targetRir,
+                })}
               </p>
             ) : null}
           </Card>
@@ -141,8 +151,8 @@ export default function ExerciseDetailPage() {
 
         {!hasHistory ? (
           <EmptyState
-            title="Noch keine Historie"
-            description="Sobald du diese Übung im Training erfasst hast, erscheinen hier dein Rekord, der Verlauf und die letzten Einheiten."
+            title={t('screens.exercise.detail.noHistoryTitle')}
+            description={t('screens.exercise.detail.noHistoryDescription')}
           />
         ) : isCardio ? (
           <>
@@ -153,7 +163,7 @@ export default function ExerciseDetailPage() {
               />
             ) : null}
             <Card>
-              <CardHeader title="Letzte Einheiten" as="h2" />
+              <CardHeader title={t('screens.exercise.detail.recentSessions')} as="h2" />
               <ul className="grid gap-1.5 text-sm">
                 {summary!.recent.map((point) => (
                   <li key={point.startedAt} className="flex justify-between gap-2">
@@ -175,34 +185,42 @@ export default function ExerciseDetailPage() {
         ) : (
           <>
             <Card>
-              <CardHeader title="Rekord & letzte Ausführung" as="h2" />
+              <CardHeader title={t('screens.exercise.detail.recordAndLatest')} as="h2" />
               <div className="grid grid-cols-2 gap-2">
                 <Stat
-                  label="Bestes e1RM"
+                  label={t('screens.exercise.detail.bestE1rm')}
                   value={
-                    summary!.bestE1rm != null ? `ca. ${formatKg(summary!.bestE1rm)}` : '–'
+                    summary!.bestE1rm != null
+                      ? t('screens.exercise.detail.estimatePrefix', {
+                          value: formatKg(summary!.bestE1rm),
+                        })
+                      : '–'
                   }
-                  hint="Schätzwert"
+                  hint={t('screens.exercise.detail.estimateHint')}
                   tone="accent"
                 />
                 <Stat
-                  label="Schwerster Satz"
+                  label={t('screens.exercise.detail.heaviestSet')}
                   value={
                     summary!.bestLoadKg != null ? formatKg(summary!.bestLoadKg) : '–'
                   }
                   hint={
                     summary!.bestLoadReps != null
-                      ? `× ${formatNumber(summary!.bestLoadReps)} Wdh.`
+                      ? t('screens.exercise.detail.reps', {
+                          value: formatNumber(summary!.bestLoadReps),
+                        })
                       : undefined
                   }
                 />
                 {summary!.last ? (
                   <Stat
-                    label="Zuletzt"
+                    label={t('screens.exercise.detail.latest')}
                     value={formatDate(summary!.last.date)}
                     hint={
                       summary!.last.volumeKg != null
-                        ? `${formatVolume(summary!.last.volumeKg)} Volumen`
+                        ? t('screens.exercise.detail.volume', {
+                            value: formatVolume(summary!.last.volumeKg),
+                          })
                         : undefined
                     }
                   />
@@ -212,12 +230,14 @@ export default function ExerciseDetailPage() {
 
             {chartPoints.length > 1 ? (
               <ChartFrame
-                title="Geschätztes 1RM — 8 Wochen"
-                summary={`Verlauf des geschätzten 1RM über ${chartPoints.length} Einheiten der letzten 8 Wochen. Schätzwert nach Epley, kein Messwert.`}
+                title={t('screens.exercise.detail.chartTitle')}
+                summary={t('screens.exercise.detail.chartSummary', {
+                  amount: chartPoints.length,
+                })}
                 table={
                   <DataTable
-                    caption="Geschätztes 1RM je Einheit"
-                    columns={['Datum', 'e1RM']}
+                    caption={t('screens.exercise.detail.chartCaption')}
+                    columns={[t('screens.exercise.detail.date'), 'e1RM']}
                     rows={data.recent8w
                       .filter((point) => point.estimatedOneRepMax != null)
                       .map((point) => [
@@ -232,7 +252,7 @@ export default function ExerciseDetailPage() {
             ) : null}
 
             <Card>
-              <CardHeader title="Letzte Einheiten" as="h2" />
+              <CardHeader title={t('screens.exercise.detail.recentSessions')} as="h2" />
               <ul className="grid gap-1.5 text-sm">
                 {summary!.recent.map((point) => (
                   <li key={point.startedAt} className="flex justify-between gap-2">
@@ -243,7 +263,9 @@ export default function ExerciseDetailPage() {
                             point.topSetReps != null ? ` × ${point.topSetReps}` : ''
                           }`
                         : point.volumeKg != null
-                          ? `${formatVolume(point.volumeKg)} Volumen`
+                          ? t('screens.exercise.detail.volume', {
+                              value: formatVolume(point.volumeKg),
+                            })
                           : `${formatDurationLong(point.maxDurationSeconds ?? 0)}`}
                     </span>
                   </li>

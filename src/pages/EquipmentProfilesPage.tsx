@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Check, Dumbbell, Pencil, Plus, Trash2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Button, IconButton } from '@/components/ui/Button';
 import { Badge, Card, CardHeader, EmptyState } from '@/components/ui/Card';
@@ -19,6 +20,7 @@ import { useToast } from '@/hooks/useToast';
 import type { EquipmentProfile } from '@/types';
 
 export default function EquipmentProfilesPage() {
+  const { t, i18n } = useTranslation('more');
   const toast = useToast();
   const { settings } = useSettings();
   const profiles = useLiveQuery(() => listEquipmentProfiles(), [], []);
@@ -33,8 +35,8 @@ export default function EquipmentProfilesPage() {
         ...new Set(
           exercises.map((exercise) => exercise.equipment.trim()).filter(Boolean),
         ),
-      ].sort((a, b) => a.localeCompare(b, 'de')),
-    [exercises],
+      ].sort((a, b) => a.localeCompare(b, i18n.resolvedLanguage)),
+    [exercises, i18n.resolvedLanguage],
   );
 
   const activeId = settings.activeEquipmentProfileId;
@@ -42,21 +44,22 @@ export default function EquipmentProfilesPage() {
   return (
     <>
       <PageHeader
-        title="Equipment-Profile"
-        subtitle="Optional — blenden Übungen aus, deren Equipment gerade fehlt"
+        title={t('screens.equipmentProfiles.title')}
+        subtitle={t('screens.equipmentProfiles.subtitle')}
         backTo="/mehr"
       />
 
       <Card className="mb-4">
         <CardHeader
-          title="Aktives Profil"
-          subtitle="Wirkt beim Hinzufügen von Übungen im Plan und im Training."
+          title={t('screens.equipmentProfiles.active.title')}
+          subtitle={t('screens.equipmentProfiles.active.subtitle')}
           as="h2"
         />
         <p className="text-sm">
           {activeId
-            ? (profiles.find((profile) => profile.id === activeId)?.name ?? 'Unbekannt')
-            : 'Kein Profil aktiv — alle Übungen verfügbar.'}
+            ? (profiles.find((profile) => profile.id === activeId)?.name ??
+              t('screens.equipmentProfiles.active.unknown'))
+            : t('screens.equipmentProfiles.active.none')}
         </p>
         {activeId ? (
           <Button
@@ -64,24 +67,26 @@ export default function EquipmentProfilesPage() {
             className="mt-3"
             onClick={() => void setActiveEquipmentProfile(undefined)}
           >
-            Profil deaktivieren
+            {t('screens.equipmentProfiles.active.disable')}
           </Button>
         ) : null}
       </Card>
 
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-base font-semibold">Profile</h2>
+        <h2 className="text-base font-semibold">
+          {t('screens.equipmentProfiles.list.title')}
+        </h2>
         <Button variant="secondary" size="sm" onClick={() => setEditing('new')}>
           <Plus size={18} aria-hidden="true" />
-          Neu
+          {t('screens.action.new')}
         </Button>
       </div>
 
       {profiles.length === 0 ? (
         <EmptyState
           icon={<Dumbbell size={26} aria-hidden="true" />}
-          title="Noch keine Profile"
-          description="Lege z. B. Zuhause, Fitnessstudio oder Hotel an und wähle das jeweils verfügbare Equipment. Beim Hinzufügen von Übungen kannst du dann auf die verfügbaren beschränken."
+          title={t('screens.equipmentProfiles.list.emptyTitle')}
+          description={t('screens.equipmentProfiles.list.emptyDescription')}
         />
       ) : (
         <ul className="grid gap-2">
@@ -94,23 +99,31 @@ export default function EquipmentProfilesPage() {
                 <div className="min-w-0">
                   <p className="flex items-center gap-2 font-medium">
                     {profile.name}
-                    {profile.id === activeId ? <Badge tone="success">aktiv</Badge> : null}
+                    {profile.id === activeId ? (
+                      <Badge tone="success">
+                        {t('screens.equipmentProfiles.list.activeBadge')}
+                      </Badge>
+                    ) : null}
                   </p>
                   <p className="mt-1 truncate text-sm text-muted">
                     {profile.equipment.length > 0
                       ? profile.equipment.join(', ')
-                      : 'Kein Equipment gewählt'}
+                      : t('screens.equipmentProfiles.list.noneSelected')}
                   </p>
                 </div>
                 <div className="flex shrink-0 gap-1">
                   <IconButton
-                    label={`${profile.name} bearbeiten`}
+                    label={t('screens.equipmentProfiles.list.edit', {
+                      name: profile.name,
+                    })}
                     onClick={() => setEditing(profile)}
                   >
                     <Pencil size={18} aria-hidden="true" />
                   </IconButton>
                   <IconButton
-                    label={`${profile.name} löschen`}
+                    label={t('screens.equipmentProfiles.list.delete', {
+                      name: profile.name,
+                    })}
                     onClick={() => setRemove(profile)}
                   >
                     <Trash2 size={18} aria-hidden="true" />
@@ -125,7 +138,7 @@ export default function EquipmentProfilesPage() {
                   onClick={() => void setActiveEquipmentProfile(profile.id)}
                 >
                   <Check size={16} aria-hidden="true" />
-                  Aktivieren
+                  {t('screens.equipmentProfiles.list.activate')}
                 </Button>
               ) : null}
             </li>
@@ -140,22 +153,22 @@ export default function EquipmentProfilesPage() {
           onClose={() => setEditing(null)}
           onSaved={() => {
             setEditing(null);
-            toast.show('Profil gespeichert.', 'success');
+            toast.show(t('screens.equipmentProfiles.toast.saved'), 'success');
           }}
         />
       ) : null}
 
       <ConfirmDialog
         open={remove != null}
-        title="Profil löschen?"
-        description="Das Equipment-Profil wird entfernt. Deine Übungen bleiben unverändert."
-        confirmLabel="Löschen"
+        title={t('screens.equipmentProfiles.deleteDialog.title')}
+        description={t('screens.equipmentProfiles.deleteDialog.description')}
+        confirmLabel={t('screens.action.delete')}
         destructive
         onCancel={() => setRemove(null)}
         onConfirm={async () => {
           if (remove) await deleteEquipmentProfile(remove.id);
           setRemove(null);
-          toast.show('Profil gelöscht.', 'info');
+          toast.show(t('screens.equipmentProfiles.toast.deleted'), 'info');
         }}
       />
     </>
@@ -173,6 +186,7 @@ function ProfileEditor({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const { t, i18n } = useTranslation('more');
   const [name, setName] = useState(profile?.name ?? '');
   const [selected, setSelected] = useState<string[]>(profile?.equipment ?? []);
   const [custom, setCustom] = useState('');
@@ -181,9 +195,9 @@ function ProfileEditor({
   const options = useMemo(
     () =>
       [...new Set([...knownEquipment, ...selected])].sort((a, b) =>
-        a.localeCompare(b, 'de'),
+        a.localeCompare(b, i18n.resolvedLanguage),
       ),
-    [knownEquipment, selected],
+    [knownEquipment, selected, i18n.resolvedLanguage],
   );
 
   const toggle = (item: string) =>
@@ -210,35 +224,41 @@ function ProfileEditor({
     <Dialog
       open
       onClose={onClose}
-      title={profile ? 'Profil bearbeiten' : 'Neues Profil'}
+      title={
+        profile
+          ? t('screens.equipmentProfiles.editor.editTitle')
+          : t('screens.equipmentProfiles.editor.newTitle')
+      }
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>
-            Abbrechen
+            {t('screens.action.cancel')}
           </Button>
           <Button
             variant="primary"
             disabled={!name.trim()}
             onClick={() => void handleSave()}
           >
-            Speichern
+            {t('screens.action.save')}
           </Button>
         </>
       }
     >
       <div className="grid gap-4">
         <TextField
-          label="Name"
+          label={t('screens.equipmentProfiles.editor.name')}
           value={name}
-          placeholder="z. B. Zuhause"
+          placeholder={t('screens.equipmentProfiles.editor.namePlaceholder')}
           onChange={(event) => setName(event.target.value)}
         />
 
         <div>
-          <p className="mb-2 text-sm font-medium">Verfügbares Equipment</p>
+          <p className="mb-2 text-sm font-medium">
+            {t('screens.equipmentProfiles.editor.equipment')}
+          </p>
           {options.length === 0 ? (
             <p className="text-xs text-muted">
-              Noch kein Equipment bekannt. Füge unten welches hinzu.
+              {t('screens.equipmentProfiles.editor.emptyEquipment')}
             </p>
           ) : (
             <div className="grid max-h-56 gap-1 overflow-y-auto">
@@ -259,10 +279,10 @@ function ProfileEditor({
 
         <div className="flex items-end gap-2">
           <TextField
-            label="Equipment hinzufügen"
+            label={t('screens.equipmentProfiles.editor.addEquipment')}
             containerClassName="flex-1"
             value={custom}
-            placeholder="z. B. Kettlebell"
+            placeholder={t('screens.equipmentProfiles.editor.equipmentPlaceholder')}
             onChange={(event) => setCustom(event.target.value)}
           />
           <Button variant="secondary" onClick={addCustom} disabled={!custom.trim()}>

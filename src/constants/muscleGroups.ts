@@ -1,3 +1,6 @@
+import { t } from '@/i18n';
+import type { Domain } from '@/i18n/locales/de/domain';
+
 /**
  * Local, offline muscle-group catalog.
  *
@@ -244,6 +247,33 @@ export const MUSCLE_GROUPS: MuscleGroup[] = [
     synonyms: ['full body', 'ganzkörper', 'total body'],
   },
 ];
+
+const MUSCLE_CATEGORY_KEYS: Record<
+  (typeof MUSCLE_GROUP_CATEGORIES)[number],
+  'chest' | 'back' | 'shoulders' | 'armsGrip' | 'core' | 'glutesHips' | 'legs' | 'other'
+> = {
+  Brust: 'chest',
+  Rücken: 'back',
+  Schultern: 'shoulders',
+  'Arme und Griff': 'armsGrip',
+  Rumpf: 'core',
+  'Gesäß und Hüfte': 'glutesHips',
+  Beine: 'legs',
+  Sonstiges: 'other',
+};
+
+/** Localized display label while preserving the canonical stored German value. */
+export function muscleGroupDisplayLabel(label: string): string {
+  const known = MUSCLE_GROUPS.find((entry) => entry.label === label);
+  const key = known?.id as keyof Domain['muscleGroup'] | undefined;
+  return key ? t(`domain:muscleGroup.${key}`) : label;
+}
+
+/** Localized category label; category values remain canonical and stable. */
+export function muscleCategoryDisplayLabel(category: string): string {
+  const key = MUSCLE_CATEGORY_KEYS[category as (typeof MUSCLE_GROUP_CATEGORIES)[number]];
+  return key ? t(`domain:muscleCategory.${key}`) : category;
+}
 
 const BY_LABEL = new Map(
   MUSCLE_GROUPS.map((entry) => [normalizeMuscleQuery(entry.label), entry]),

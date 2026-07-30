@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import {
@@ -19,13 +20,11 @@ import {
   deletePlan,
   duplicatePlan,
   listPlansWithDays,
-  SPLIT_TYPE_LABELS,
   type PlanWithDays,
 } from '@/db/repositories/plans';
 import { getPlanScheduleState } from '@/db/repositories/schedules';
 import { getActivePlanId } from '@/db/repositories/planUsage';
 import { getActiveDeload } from '@/db/repositories/planDeload';
-import { PLAN_GOAL_TYPE_LABELS } from '@/services/planGoals';
 import {
   ActiveSessionExistsError,
   startSessionFromTemplate,
@@ -48,6 +47,8 @@ interface PlanOverview extends PlanWithDays {
 }
 
 export default function TemplatesPage() {
+  const { t } = useTranslation('plans');
+  const { t: tCommon } = useTranslation();
   const navigate = useNavigate();
   const toast = useToast();
   const activeSession = useActiveSession();
@@ -102,25 +103,22 @@ export default function TemplatesPage() {
       navigate(`/training/${session.id}`);
     } catch (error) {
       if (error instanceof ActiveSessionExistsError) {
-        toast.show('Es läuft bereits eine Trainingseinheit.', 'error');
+        toast.show(t('start.activeError'), 'error');
         navigate(`/training/${error.activeSessionId}`);
         return;
       }
-      toast.show(
-        error instanceof Error ? error.message : 'Start fehlgeschlagen.',
-        'error',
-      );
+      toast.show(t('start.failed'), 'error');
     }
   };
 
   return (
     <>
       <PageHeader
-        title="Pläne"
+        title={t('title')}
         action={
           <Button variant="primary" size="sm" onClick={() => setCreateOpen(true)}>
             <Plus size={18} aria-hidden="true" />
-            Neu
+            {t('new')}
           </Button>
         }
       />
@@ -128,12 +126,12 @@ export default function TemplatesPage() {
       {plans.length === 0 ? (
         <EmptyState
           icon={<ClipboardList size={28} aria-hidden="true" />}
-          title="Noch keine Trainingspläne"
-          description="Ein Plan besteht aus einem oder mehreren Trainingstagen (z. B. Push, Pull, Beine). Beim Start wird der vorgeschlagene Tag zu einer Trainingseinheit — ändern kannst du während des Trainings trotzdem alles."
+          title={t('empty.title')}
+          description={t('empty.description')}
           action={
             <Button variant="primary" onClick={() => setCreateOpen(true)}>
               <Plus size={18} aria-hidden="true" />
-              Ersten Plan erstellen
+              {t('empty.action')}
             </Button>
           }
         />
@@ -150,15 +148,23 @@ export default function TemplatesPage() {
                   <Link to={`/plaene/${entry.plan.id}`} className="min-w-0 flex-1">
                     <p className="flex flex-wrap items-center gap-2 font-medium">
                       <span className="truncate">{entry.plan.name}</span>
-                      {entry.isActive ? <Badge tone="accent">Aktiv</Badge> : null}
+                      {entry.isActive ? <Badge tone="accent">{t('active')}</Badge> : null}
                       {entry.deloadActive ? <Badge tone="warning">Deload</Badge> : null}
                     </p>
                     <p className="truncate text-sm text-muted">
                       {multiDay
-                        ? `${SPLIT_TYPE_LABELS[entry.plan.splitType]} · ${entry.days.length} Tage`
-                        : `${entry.exerciseCount} ${entry.exerciseCount === 1 ? 'Übung' : 'Übungen'}`}
+                        ? `${t(`split.${entry.plan.splitType}`)} · ${t(
+                            entry.days.length === 1 ? 'count.dayOne' : 'count.dayOther',
+                            { count: entry.days.length },
+                          )}`
+                        : t(
+                            entry.exerciseCount === 1
+                              ? 'count.exerciseOne'
+                              : 'count.exerciseOther',
+                            { count: entry.exerciseCount },
+                          )}
                       {entry.plan.goalType
-                        ? ` · ${PLAN_GOAL_TYPE_LABELS[entry.plan.goalType]}`
+                        ? ` · ${t(`goal.${entry.plan.goalType}`)}`
                         : ''}
                     </p>
                     {multiDay ? (
@@ -184,17 +190,17 @@ export default function TemplatesPage() {
                     ) : null}
                     {entry.restToday ? (
                       <p className="truncate text-xs text-muted">
-                        Heute: {entry.restToday}
+                        {t('today', { name: entry.restToday })}
                       </p>
                     ) : null}
                     {multiDay && entry.nextDayName ? (
                       <p className="truncate text-xs text-accent">
-                        Als Nächstes: {entry.nextDayName}
+                        {t('next', { name: entry.nextDayName })}
                       </p>
                     ) : null}
                   </Link>
                   <IconButton
-                    label={`Aktionen für ${entry.plan.name}`}
+                    label={t('actionsFor', { name: entry.plan.name })}
                     className="shrink-0"
                     onClick={() => setMenuTarget(entry)}
                   >
@@ -210,10 +216,10 @@ export default function TemplatesPage() {
                 >
                   <Play size={18} aria-hidden="true" />
                   {activeSession
-                    ? 'Training läuft bereits'
+                    ? t('start.alreadyRunning')
                     : multiDay
-                      ? `„${entry.nextDayName}“ starten`
-                      : 'Als Training starten'}
+                      ? t('start.named', { name: entry.nextDayName })
+                      : t('start.generic')}
                 </Button>
               </li>
             );
@@ -238,7 +244,7 @@ export default function TemplatesPage() {
         open={Boolean(menuTarget)}
         onClose={() => setMenuTarget(null)}
         title={menuTarget?.plan.name ?? ''}
-        description="Plan verwalten"
+        description={t('manage')}
       >
         <div className="grid gap-2">
           <Button
@@ -250,11 +256,11 @@ export default function TemplatesPage() {
               const target = menuTarget;
               setMenuTarget(null);
               await duplicatePlan(target.plan.id);
-              toast.show('Plan dupliziert.', 'success');
+              toast.show(t('duplicated'), 'success');
             }}
           >
             <Copy size={18} aria-hidden="true" />
-            Duplizieren
+            {t('duplicate')}
           </Button>
           <Button
             variant="secondary"
@@ -266,7 +272,7 @@ export default function TemplatesPage() {
             }}
           >
             <Share2 size={18} aria-hidden="true" />
-            Teilen
+            {tCommon('action.share')}
           </Button>
           <Button
             variant="ghost"
@@ -278,7 +284,7 @@ export default function TemplatesPage() {
             }}
           >
             <Trash2 size={18} aria-hidden="true" />
-            Löschen
+            {tCommon('action.delete')}
           </Button>
         </div>
       </Dialog>
@@ -290,15 +296,15 @@ export default function TemplatesPage() {
 
       <ConfirmDialog
         open={Boolean(deleteTarget)}
-        title="Plan löschen?"
-        description={`„${deleteTarget?.name ?? ''}“ wird mit allen Trainingstagen entfernt. Bereits absolvierte Trainingseinheiten bleiben vollständig erhalten.`}
-        confirmLabel="Plan löschen"
+        title={t('delete.title')}
+        description={t('delete.description', { name: deleteTarget?.name ?? '' })}
+        confirmLabel={t('delete.action')}
         destructive
         onCancel={() => setDeleteTarget(null)}
         onConfirm={async () => {
           if (deleteTarget) await deletePlan(deleteTarget.id);
           setDeleteTarget(null);
-          toast.show('Plan gelöscht.', 'success');
+          toast.show(t('delete.success'), 'success');
         }}
       />
     </>

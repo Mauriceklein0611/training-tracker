@@ -25,8 +25,11 @@ import { summarizeSession } from '@/services/sessionSummary';
 import { useToast } from '@/hooks/useToast';
 import type { SessionExercise, WorkoutSet } from '@/types';
 import { formatDateTime } from '@/utils/date';
+import { useTranslation } from 'react-i18next';
 
 export default function SessionDetailPage() {
+  const { t } = useTranslation('history');
+  const { t: tCommon } = useTranslation('common');
   const { sessionId = '' } = useParams();
   const navigate = useNavigate();
   const toast = useToast();
@@ -48,9 +51,9 @@ export default function SessionDetailPage() {
   if (detail === undefined) {
     return (
       <>
-        <PageHeader title="Trainingseinheit" backTo="/verlauf" />
+        <PageHeader title={t('detail.pageTitle')} backTo="/verlauf" />
         <p className="text-sm text-muted" role="status">
-          Wird geladen …
+          {tCommon('state.loading')}
         </p>
       </>
     );
@@ -59,13 +62,13 @@ export default function SessionDetailPage() {
   if (!detail) {
     return (
       <>
-        <PageHeader title="Trainingseinheit" backTo="/verlauf" />
+        <PageHeader title={t('detail.pageTitle')} backTo="/verlauf" />
         <EmptyState
-          title="Einheit nicht gefunden"
-          description="Diese Trainingseinheit existiert nicht mehr."
+          title={t('detail.notFound.title')}
+          description={t('detail.notFound.description')}
           action={
             <Button variant="primary" onClick={() => navigate('/verlauf')}>
-              Zurück zum Verlauf
+              {t('detail.notFound.back')}
             </Button>
           }
         />
@@ -79,14 +82,11 @@ export default function SessionDetailPage() {
       navigate(`/training/${session.id}`);
     } catch (error) {
       if (error instanceof ActiveSessionExistsError) {
-        toast.show('Es läuft bereits eine Trainingseinheit.', 'error');
+        toast.show(t('detail.start.active'), 'error');
         navigate(`/training/${error.activeSessionId}`);
         return;
       }
-      toast.show(
-        error instanceof Error ? error.message : 'Start fehlgeschlagen.',
-        'error',
-      );
+      toast.show(t('detail.start.failed'), 'error');
     }
   };
 
@@ -105,9 +105,9 @@ export default function SessionDetailPage() {
         </div>
       ) : null}
 
-      <section className="mb-4 grid gap-3" aria-label="Einheit bearbeiten">
+      <section className="mb-4 grid gap-3" aria-label={t('detail.edit.aria')}>
         <TextField
-          label="Name der Einheit"
+          label={t('detail.edit.name')}
           value={name ?? detail.session.name}
           onChange={(event) => setName(event.target.value)}
           onBlur={() => {
@@ -116,9 +116,9 @@ export default function SessionDetailPage() {
           }}
         />
         <TextAreaField
-          label="Notiz"
+          label={t('detail.edit.note')}
           value={notes ?? detail.session.notes}
-          placeholder="Optional"
+          placeholder={t('detail.edit.optional')}
           onChange={(event) => setNotes(event.target.value)}
           onBlur={() => {
             if (notes != null) void updateSession(sessionId, { notes });
@@ -131,11 +131,11 @@ export default function SessionDetailPage() {
         <PostCheckInCard sessionId={sessionId} value={detail.session.postCheckIn} />
       </div>
 
-      <h2 className="mb-2 text-base font-semibold">Übungen und Sätze</h2>
+      <h2 className="mb-2 text-base font-semibold">{t('detail.exercises.title')}</h2>
       {detail.exercises.length === 0 ? (
         <EmptyState
-          title="Keine Übungen erfasst"
-          description="In dieser Einheit wurden keine Sätze gespeichert."
+          title={t('detail.exercises.emptyTitle')}
+          description={t('detail.exercises.emptyDescription')}
         />
       ) : (
         <div className="grid gap-3">
@@ -165,7 +165,7 @@ export default function SessionDetailPage() {
                 ))}
               </ul>
               {entry.sets.length === 0 ? (
-                <p className="mt-2 text-sm text-muted">Keine Sätze erfasst.</p>
+                <p className="mt-2 text-sm text-muted">{t('detail.exercises.noSets')}</p>
               ) : null}
             </section>
           ))}
@@ -175,22 +175,22 @@ export default function SessionDetailPage() {
       <div className="mt-5 grid gap-2">
         <Button variant="primary" size="lg" onClick={() => void handleRepeat()}>
           <Play size={20} aria-hidden="true" />
-          Neues Training auf dieser Basis
+          {t('detail.action.repeat')}
         </Button>
         <Button
           variant="secondary"
           onClick={async () => {
             const copy = await duplicateSession(sessionId);
-            toast.show('Einheit dupliziert.', 'success');
+            toast.show(t('detail.toast.duplicated'), 'success');
             navigate(`/verlauf/${copy.id}`);
           }}
         >
           <Copy size={18} aria-hidden="true" />
-          Einheit duplizieren
+          {t('detail.action.duplicate')}
         </Button>
         <Button variant="ghost" onClick={() => setDeleteOpen(true)}>
           <Trash2 size={18} aria-hidden="true" />
-          Einheit löschen
+          {t('detail.action.delete')}
         </Button>
       </div>
 
@@ -202,15 +202,15 @@ export default function SessionDetailPage() {
 
       <ConfirmDialog
         open={deleteOpen}
-        title="Trainingseinheit löschen?"
-        description="Alle Sätze und Notizen dieser Einheit werden endgültig gelöscht. Deine Auswertungen ändern sich dadurch sofort."
-        confirmLabel="Endgültig löschen"
+        title={t('detail.deleteDialog.title')}
+        description={t('detail.deleteDialog.description')}
+        confirmLabel={t('detail.deleteDialog.confirm')}
         destructive
         onCancel={() => setDeleteOpen(false)}
         onConfirm={async () => {
           await deleteSession(sessionId);
           setDeleteOpen(false);
-          toast.show('Einheit gelöscht.', 'info');
+          toast.show(t('detail.toast.deleted'), 'info');
           navigate('/verlauf', { replace: true });
         }}
       />

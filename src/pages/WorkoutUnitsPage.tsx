@@ -1,6 +1,8 @@
 import { useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { useTranslation } from 'react-i18next';
+import { muscleGroupDisplayLabel } from '@/constants/muscleGroups';
 import {
   Copy,
   Dumbbell,
@@ -47,6 +49,7 @@ import { formatSets } from '@/utils/format';
 
 /** Segmented links between the two library sub-areas. */
 function LibraryTabs({ active }: { active: 'units' | 'exercises' }) {
+  const { t } = useTranslation('library');
   const base =
     'flex-1 rounded-xl px-3 py-2 text-center text-sm font-medium transition-colors';
   return (
@@ -56,20 +59,22 @@ function LibraryTabs({ active }: { active: 'units' | 'exercises' }) {
         aria-current={active === 'units' ? 'page' : undefined}
         className={`${base} ${active === 'units' ? 'bg-accent text-accent-contrast' : 'text-muted active:bg-surface-2'}`}
       >
-        Übungseinheiten
+        {t('tabs.units')}
       </Link>
       <Link
         to="/mehr/uebungen"
         aria-current={active === 'exercises' ? 'page' : undefined}
         className={`${base} ${active === 'exercises' ? 'bg-accent text-accent-contrast' : 'text-muted active:bg-surface-2'}`}
       >
-        Übungen
+        {t('tabs.exercises')}
       </Link>
     </div>
   );
 }
 
 export default function WorkoutUnitsPage() {
+  const { t } = useTranslation('library');
+  const { t: tCommon } = useTranslation();
   const navigate = useNavigate();
   const toast = useToast();
   const activeSession = useActiveSession();
@@ -107,10 +112,7 @@ export default function WorkoutUnitsPage() {
         navigate(`/training/${error.activeSessionId}`);
         return;
       }
-      toast.show(
-        error instanceof Error ? error.message : 'Start fehlgeschlagen.',
-        'error',
-      );
+      toast.show(t('unit.startFailed'), 'error');
     }
   };
 
@@ -119,7 +121,12 @@ export default function WorkoutUnitsPage() {
     const plan = plans.find((p) => p.id === planId);
     await addWorkoutUnitToPlan(addToPlanId, planId);
     setAddToPlanId(null);
-    toast.show(`Zu „${plan?.name ?? 'Plan'}“ hinzugefügt.`, 'success');
+    toast.show(
+      t('unit.addedToPlan', {
+        name: plan?.name ?? t('planPicker.fallbackName'),
+      }),
+      'success',
+    );
   };
 
   const handleImportFile = async (file: File | undefined) => {
@@ -140,9 +147,7 @@ export default function WorkoutUnitsPage() {
       setImportPkg(result.data);
       setImportPreview(analyzeUnitPackageImport(result.data, exercises, fingerprints));
     } catch (error) {
-      setImportErrors([
-        error instanceof Error ? error.message : 'Die Datei konnte nicht gelesen werden.',
-      ]);
+      setImportErrors([error instanceof Error ? error.message : t('import.readFailed')]);
     } finally {
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
@@ -154,7 +159,15 @@ export default function WorkoutUnitsPage() {
     setImportPkg(null);
     setImportPreview(null);
     toast.show(
-      `${result.createdUnits} Einheit(en) importiert, ${result.createdExercises} neue Übungen.`,
+      t('import.success', {
+        units: t(result.createdUnits === 1 ? 'count.unitOne' : 'count.unitOther', {
+          count: result.createdUnits,
+        }),
+        exercises: t(
+          result.createdExercises === 1 ? 'count.exerciseOne' : 'count.exerciseOther',
+          { count: result.createdExercises },
+        ),
+      }),
       'success',
     );
   };
@@ -162,16 +175,16 @@ export default function WorkoutUnitsPage() {
   return (
     <>
       <PageHeader
-        title="Bibliothek"
+        title={t('title')}
         action={
           <div className="flex gap-1">
             <IconButton
-              label="Übungseinheit importieren"
+              label={t('unit.importAction')}
               onClick={() => fileInputRef.current?.click()}
             >
               <Upload size={22} aria-hidden="true" />
             </IconButton>
-            <IconButton label="Neue Übungseinheit" onClick={() => setCreateOpen(true)}>
+            <IconButton label={t('unit.create')} onClick={() => setCreateOpen(true)}>
               <Plus size={22} aria-hidden="true" />
             </IconButton>
           </div>
@@ -189,16 +202,16 @@ export default function WorkoutUnitsPage() {
       <LibraryTabs active="units" />
 
       {units === undefined ? (
-        <p className="text-center text-sm text-muted">Wird geladen …</p>
+        <p className="text-center text-sm text-muted">{tCommon('state.loading')}</p>
       ) : units.length === 0 ? (
         <EmptyState
           icon={<Layers size={28} aria-hidden="true" />}
-          title="Noch keine Übungseinheiten"
-          description="Lege wiederverwendbare Einheiten wie „Push“, „Pull“ oder „Ganzkörper A“ an. Du kannst sie später zu Plänen hinzufügen oder direkt starten."
+          title={t('unit.empty.title')}
+          description={t('unit.empty.description')}
           action={
             <Button variant="primary" onClick={() => setCreateOpen(true)}>
               <Plus size={18} aria-hidden="true" />
-              Übungseinheit anlegen
+              {t('unit.createAction')}
             </Button>
           }
         />
@@ -215,8 +228,13 @@ export default function WorkoutUnitsPage() {
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-semibold">{unit.name}</p>
                     <p className="text-xs text-muted">
-                      {summary.exerciseCount} Übungen ·{' '}
-                      {formatSets(summary.totalTargetSets)}
+                      {t(
+                        summary.exerciseCount === 1
+                          ? 'count.exerciseOne'
+                          : 'count.exerciseOther',
+                        { count: summary.exerciseCount },
+                      )}{' '}
+                      · {formatSets(summary.totalTargetSets)}
                     </p>
                     {summary.muscleGroups.length > 0 ? (
                       <div className="mt-2 flex flex-wrap gap-1">
@@ -225,7 +243,7 @@ export default function WorkoutUnitsPage() {
                             key={group}
                             className="rounded-lg bg-surface-2 px-2 py-0.5 text-xs text-muted"
                           >
-                            {group}
+                            {muscleGroupDisplayLabel(group)}
                           </span>
                         ))}
                       </div>
@@ -233,28 +251,28 @@ export default function WorkoutUnitsPage() {
                   </div>
                   <div className="flex shrink-0 gap-1">
                     <IconButton
-                      label={`„${unit.name}“ bearbeiten`}
+                      label={t('unit.editAction', { name: unit.name })}
                       onClick={() => navigate(`/bibliothek/${unit.id}`)}
                     >
                       <Pencil size={18} aria-hidden="true" />
                     </IconButton>
                     <IconButton
-                      label={`„${unit.name}“ duplizieren`}
+                      label={t('unit.duplicateAction', { name: unit.name })}
                       onClick={async () => {
                         await duplicateWorkoutUnit(unit.id);
-                        toast.show('Übungseinheit dupliziert.', 'success');
+                        toast.show(t('unit.duplicated'), 'success');
                       }}
                     >
                       <Copy size={18} aria-hidden="true" />
                     </IconButton>
                     <IconButton
-                      label={`„${unit.name}“ teilen`}
+                      label={t('unit.shareAction', { name: unit.name })}
                       onClick={() => setShareUnitId(unit.id)}
                     >
                       <Share2 size={18} aria-hidden="true" />
                     </IconButton>
                     <IconButton
-                      label={`„${unit.name}“ löschen`}
+                      label={t('unit.deleteAction', { name: unit.name })}
                       onClick={() => setDeleteId(unit.id)}
                     >
                       <Trash2 size={18} aria-hidden="true" />
@@ -270,7 +288,7 @@ export default function WorkoutUnitsPage() {
                     onClick={() => void handleStart(unit.id)}
                   >
                     <Play size={16} aria-hidden="true" />
-                    Starten
+                    {t('unit.start')}
                   </Button>
                   <Button
                     variant="secondary"
@@ -279,7 +297,7 @@ export default function WorkoutUnitsPage() {
                     onClick={() => setAddToPlanId(unit.id)}
                   >
                     <Plus size={16} aria-hidden="true" />
-                    Zu Plan hinzufügen
+                    {t('unit.addToPlan')}
                   </Button>
                 </div>
               </li>
@@ -291,22 +309,22 @@ export default function WorkoutUnitsPage() {
       <Dialog
         open={createOpen}
         onClose={() => setCreateOpen(false)}
-        title="Neue Übungseinheit"
+        title={t('unit.create')}
       >
         <div className="grid gap-3">
           <TextField
-            label="Name"
+            label={t('field.name')}
             value={newName}
-            placeholder="z. B. Push"
+            placeholder={t('field.namePlaceholder')}
             onChange={(event) => setNewName(event.target.value)}
           />
           <TextAreaField
-            label="Beschreibung (optional)"
+            label={t('field.descriptionOptional')}
             value={newDescription}
             onChange={(event) => setNewDescription(event.target.value)}
           />
           <Button variant="primary" fullWidth onClick={() => void handleCreate()}>
-            Anlegen und bearbeiten
+            {t('unit.createAndEdit')}
           </Button>
         </div>
       </Dialog>
@@ -314,10 +332,10 @@ export default function WorkoutUnitsPage() {
       <Dialog
         open={addToPlanId !== null}
         onClose={() => setAddToPlanId(null)}
-        title="Zu welchem Plan hinzufügen?"
+        title={t('planPicker.title')}
       >
         {plans.length === 0 ? (
-          <p className="text-sm text-muted">Es gibt noch keinen Trainingsplan.</p>
+          <p className="text-sm text-muted">{t('planPicker.empty')}</p>
         ) : (
           <ul className="grid gap-2">
             {plans.map((plan) => (
@@ -341,7 +359,7 @@ export default function WorkoutUnitsPage() {
       <Dialog
         open={importErrors.length > 0}
         onClose={() => setImportErrors([])}
-        title="Import nicht möglich"
+        title={t('import.unavailableTitle')}
       >
         <ul className="list-disc space-y-1 pl-5 text-sm text-danger">
           {importErrors.map((error, index) => (
@@ -356,22 +374,30 @@ export default function WorkoutUnitsPage() {
           setImportPkg(null);
           setImportPreview(null);
         }}
-        title="Übungseinheiten importieren?"
+        title={t('import.confirmTitle')}
       >
         {importPreview ? (
           <div className="grid gap-3">
             <p className="text-sm">
-              {importPreview.unitNames.length} Einheit(en):{' '}
+              {t('import.previewUnits', {
+                units: t(
+                  importPreview.unitNames.length === 1
+                    ? 'count.unitOne'
+                    : 'count.unitOther',
+                  { count: importPreview.unitNames.length },
+                ),
+              })}{' '}
               <span className="text-muted">{importPreview.unitNames.join(', ')}</span>
             </p>
             <p className="text-sm text-muted">
-              {importPreview.newExercises} neue Übungen, {importPreview.reusedExercises}{' '}
-              werden wiederverwendet. Bestehende Einheiten und deine Historie bleiben
-              unverändert.
+              {t('import.previewSummary', {
+                newExercises: importPreview.newExercises,
+                reusedExercises: importPreview.reusedExercises,
+              })}
             </p>
             {importPreview.alreadyImported ? (
               <p className="rounded-xl border border-warning/50 bg-surface-2 p-2 text-xs text-warning">
-                Diese Datei wurde bereits importiert. Ein erneuter Import legt Kopien an.
+                {t('import.alreadyImported')}
               </p>
             ) : null}
             <Button
@@ -379,7 +405,7 @@ export default function WorkoutUnitsPage() {
               fullWidth
               onClick={() => void handleConfirmImport()}
             >
-              Jetzt importieren
+              {t('import.confirm')}
             </Button>
           </div>
         ) : null}
@@ -389,13 +415,13 @@ export default function WorkoutUnitsPage() {
         open={deleteId !== null}
         onCancel={() => setDeleteId(null)}
         destructive
-        title="Übungseinheit löschen?"
-        description="Die Einheit wird aus der Bibliothek entfernt. Bereits zu Plänen hinzugefügte Kopien und deine Trainingshistorie bleiben unverändert."
-        confirmLabel="Löschen"
+        title={t('unit.delete.title')}
+        description={t('unit.delete.description')}
+        confirmLabel={tCommon('action.delete')}
         onConfirm={async () => {
           if (deleteId) await deleteWorkoutUnit(deleteId);
           setDeleteId(null);
-          toast.show('Übungseinheit gelöscht.', 'success');
+          toast.show(t('unit.delete.success'), 'success');
         }}
       />
     </>

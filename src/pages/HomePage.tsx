@@ -17,11 +17,7 @@ import { listTemplates } from '@/db/repositories/templates';
 import { getPlanWithDays, listPlansWithDays } from '@/db/repositories/plans';
 import { getPlanScheduleState } from '@/db/repositories/schedules';
 import { getActiveDeload } from '@/db/repositories/planDeload';
-import {
-  DELOAD_INTENSITY_LABELS,
-  DELOAD_PERCENT,
-  deloadRemainingDays,
-} from '@/services/deload';
+import { DELOAD_PERCENT, deloadRemainingDays } from '@/services/deload';
 import { planCycleWeek } from '@/services/home';
 import { estimateUnitMinutes } from '@/services/sessionEstimate';
 import { buildCoachInsights } from '@/services/coachFeed';
@@ -119,7 +115,7 @@ export default function HomePage() {
       ? {
           remainingDays: deloadRemainingDays(deloadPeriod, new Date()),
           endDate: formatDate(deloadPeriod.endDate),
-          intensityLabel: DELOAD_INTENSITY_LABELS[deloadPeriod.intensity],
+          intensityLabel: tHome(`hero.deloadIntensity.${deloadPeriod.intensity}`),
           percent: DELOAD_PERCENT[deloadPeriod.intensity],
         }
       : undefined;
@@ -164,7 +160,7 @@ export default function HomePage() {
       cycleWeek,
       deload,
     };
-  }, [activePlanId]);
+  }, [activePlanId, tHome]);
 
   const overview = useLiveQuery(async () => {
     const dataset = await loadAnalyticsDataset();
@@ -201,10 +197,7 @@ export default function HomePage() {
           navigate(`/training/${error.activeSessionId}`);
           return;
         }
-        toast.show(
-          error instanceof Error ? error.message : tHome('errors.startFailed'),
-          'error',
-        );
+        toast.show(tHome('errors.startFailed'), 'error');
       }
     },
     [navigate, toast, tHome],
@@ -226,10 +219,7 @@ export default function HomePage() {
         navigate(`/training/${error.activeSessionId}`);
         return;
       }
-      toast.show(
-        error instanceof Error ? error.message : tHome('errors.startFailed'),
-        'error',
-      );
+      toast.show(tHome('errors.startFailed'), 'error');
     }
   }, [navigate, toast, tHome]);
 
@@ -243,10 +233,7 @@ export default function HomePage() {
           navigate(`/training/${error.activeSessionId}`);
           return;
         }
-        toast.show(
-          error instanceof Error ? error.message : tHome('errors.startFailed'),
-          'error',
-        );
+        toast.show(tHome('errors.startFailed'), 'error');
       }
     },
     [navigate, toast, tHome],
@@ -263,10 +250,7 @@ export default function HomePage() {
         navigate(`/training/${error.activeSessionId}?add=cardio`);
         return;
       }
-      toast.show(
-        error instanceof Error ? error.message : tHome('errors.startFailed'),
-        'error',
-      );
+      toast.show(tHome('errors.startFailed'), 'error');
     }
   }, [navigate, toast, tHome]);
 
@@ -281,10 +265,7 @@ export default function HomePage() {
         navigate(`/training/${error.activeSessionId}`);
         return;
       }
-      toast.show(
-        error instanceof Error ? error.message : tHome('errors.startFailed'),
-        'error',
-      );
+      toast.show(tHome('errors.startFailed'), 'error');
     }
   }, [navigate, toast, tHome, overview?.lastSession?.id]);
 

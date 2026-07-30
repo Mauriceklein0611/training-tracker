@@ -36,6 +36,30 @@ export interface ProgressionSuggestion {
   suggestedReps?: number;
   /** Sets the suggestion is based on. */
   consideredSets: number;
+  /** Language-neutral display message for the UI; legacy German text stays for compatibility. */
+  display?: {
+    headline:
+      | 'insufficient'
+      | 'increaseHold'
+      | 'increaseWeight'
+      | 'holdWeight'
+      | 'increaseReps'
+      | 'addRep'
+      | 'reduceWeight'
+      | 'holdRange';
+    reason:
+      | 'noDuration'
+      | 'durationBest'
+      | 'tooFewSets'
+      | 'noRepRange'
+      | 'upperLimit'
+      | 'noHeavierWeight'
+      | 'upperBodyweight'
+      | 'insideRange'
+      | 'belowRange'
+      | 'mixedRange';
+    params?: Record<string, string | number>;
+  };
 }
 
 export interface ProgressionConfig {
@@ -91,12 +115,17 @@ export function nextWeightDown(
   return next > 0 ? next : null;
 }
 
-function insufficient(reason: string, consideredSets = 0): ProgressionSuggestion {
+function insufficient(
+  reason: string,
+  consideredSets = 0,
+  display?: ProgressionSuggestion['display'],
+): ProgressionSuggestion {
   return {
     action: 'insufficient_data',
     headline: 'Noch nicht genügend Daten',
     reason,
     consideredSets,
+    display,
   };
 }
 
@@ -120,7 +149,10 @@ export function suggestProgression(
       (set) => set.completedAt && isWorkingSet(set) && set.durationSeconds != null,
     );
     if (timed.length === 0) {
-      return insufficient('Für diese Übung wurden noch keine Zeiten erfasst.');
+      return insufficient('Für diese Übung wurden noch keine Zeiten erfasst.', 0, {
+        headline: 'insufficient',
+        reason: 'noDuration',
+      });
     }
     const best = Math.max(...timed.map((set) => set.durationSeconds ?? 0));
     return {
@@ -128,6 +160,11 @@ export function suggestProgression(
       headline: 'Haltezeit steigern',
       reason: `Längster Satz zuletzt ${Math.round(best)} Sekunden. Versuche beim nächsten Mal etwas länger zu halten.`,
       consideredSets: timed.length,
+      display: {
+        headline: 'increaseHold',
+        reason: 'durationBest',
+        params: { best: Math.round(best) },
+      },
     };
   }
 
@@ -142,6 +179,11 @@ export function suggestProgression(
       `Es liegen erst ${basis.length} vollständige Arbeitssätze vor. ` +
         `Ab ${MIN_SETS_FOR_SUGGESTION} Sätzen entsteht eine Empfehlung.`,
       basis.length,
+      {
+        headline: 'insufficient',
+        reason: 'tooFewSets',
+        params: { value: basis.length, minimum: MIN_SETS_FOR_SUGGESTION },
+      },
     );
   }
 
@@ -151,6 +193,10 @@ export function suggestProgression(
       'Für diese Übung ist kein Ziel-Wiederholungsbereich hinterlegt. ' +
         'Trage ihn im Trainingsplan ein, damit eine Empfehlung möglich wird.',
       basis.length,
+      {
+        headline: 'insufficient',
+        reason: 'noRepRange',
+      },
     );
   }
 
@@ -204,6 +250,15 @@ export function suggestProgression(
             `${targetRepMax} Wiederholungen erreicht.${rirNote}`,
           suggestedWeightKg: next,
           consideredSets: basis.length,
+          display: {
+            headline: 'increaseWeight',
+            reason: 'upperLimit',
+            params: {
+              value: basis.length,
+              maximum: targetRepMax,
+              rir: averageRir == null ? '' : Math.round(averageRir * 10) / 10,
+            },
+          },
         };
       }
       return {
@@ -213,6 +268,10 @@ export function suggestProgression(
           'Der Wiederholungsbereich ist ausgereizt, aber es ist kein schwereres ' +
           'Gewicht hinterlegt. Ergänze die verfügbaren Gewichte in der Übung.',
         consideredSets: basis.length,
+        display: {
+          headline: 'holdWeight',
+          reason: 'noHeavierWeight',
+        },
       };
     }
     // Bodyweight and reps-only: more repetitions is the progression.
@@ -224,6 +283,15 @@ export function suggestProgression(
         `erreicht.${rirNote} Ohne Zusatzgewicht führt der Weg über mehr Wiederholungen.`,
       suggestedReps: targetRepMax + 1,
       consideredSets: basis.length,
+      display: {
+        headline: 'increaseReps',
+        reason: 'upperBodyweight',
+        params: {
+          value: basis.length,
+          maximum: targetRepMax,
+          rir: averageRir == null ? '' : Math.round(averageRir * 10) / 10,
+        },
+      },
     };
   }
 
@@ -238,6 +306,15 @@ export function suggestProgression(
       suggestedWeightKg: topWeight ?? undefined,
       suggestedReps: Math.min(targetRepMax, Math.max(...reps) + 1),
       consideredSets: basis.length,
+      display: {
+        headline: 'addRep',
+        reason: 'insideRange',
+        params: {
+          minimum: targetRepMin,
+          maximum: targetRepMax,
+          rir: averageRir == null ? '' : Math.round(averageRir * 10) / 10,
+        },
+      },
     };
   }
 
@@ -251,6 +328,15 @@ export function suggestProgression(
         `unteren Grenze von ${targetRepMin} Wiederholungen.${rirNote} Etwas ` +
         'weniger Gewicht kann helfen, den Zielbereich wieder zu treffen.',
       consideredSets: basis.length,
+      display: {
+        headline: 'reduceWeight',
+        reason: 'belowRange',
+        params: {
+          value: belowMin,
+          minimum: targetRepMin,
+          rir: averageRir == null ? '' : Math.round(averageRir * 10) / 10,
+        },
+      },
     };
     if (weighted && topWeight != null) {
       const down = nextWeightDown(topWeight, config);
@@ -268,5 +354,14 @@ export function suggestProgression(
       `${rirNote} Halte das Gewicht und arbeite auf gleichmäßige Sätze hin.`,
     suggestedWeightKg: topWeight ?? undefined,
     consideredSets: basis.length,
+    display: {
+      headline: 'holdRange',
+      reason: 'mixedRange',
+      params: {
+        minimum: targetRepMin,
+        maximum: targetRepMax,
+        rir: averageRir == null ? '' : Math.round(averageRir * 10) / 10,
+      },
+    },
   };
 }

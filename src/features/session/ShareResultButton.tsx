@@ -19,25 +19,44 @@ import {
 } from '@/services/cardioMetrics';
 import { formatDate, formatDurationLong } from '@/utils/date';
 import { formatNumber, formatVolume } from '@/utils/format';
+import { useTranslation } from 'react-i18next';
 
 /** Builds the card input from a summary, honouring the include toggles. */
-function toInput(summary: SessionSummary, includeRecords: boolean): ShareCardInput {
+function toInput(
+  summary: SessionSummary,
+  includeRecords: boolean,
+  labels: {
+    duration: string;
+    workingSets: string;
+    volume: string;
+    cardioTime: string;
+    distance: string;
+    averagePace: string;
+    averageRpe: string;
+  },
+): ShareCardInput {
   const stats: { label: string; value: string }[] = [];
   if (summary.durationSeconds != null) {
-    stats.push({ label: 'Dauer', value: formatDurationLong(summary.durationSeconds) });
+    stats.push({
+      label: labels.duration,
+      value: formatDurationLong(summary.durationSeconds),
+    });
   }
   if (summary.hasStrength) {
-    stats.push({ label: 'Arbeitssätze', value: formatNumber(summary.workingSetCount) });
-    stats.push({ label: 'Volumen', value: formatVolume(summary.volume.volumeKg) });
+    stats.push({
+      label: labels.workingSets,
+      value: formatNumber(summary.workingSetCount),
+    });
+    stats.push({ label: labels.volume, value: formatVolume(summary.volume.volumeKg) });
   }
   if (summary.hasCardio) {
     stats.push({
-      label: 'Cardio-Zeit',
+      label: labels.cardioTime,
       value: formatDuration(summary.cardio.totalDurationSeconds),
     });
     if (summary.cardio.totalDistanceMeters > 0) {
       stats.push({
-        label: 'Distanz',
+        label: labels.distance,
         value: formatCardioDistance(
           summary.cardio.totalDistanceMeters,
           summary.cardioModality,
@@ -45,10 +64,13 @@ function toInput(summary: SessionSummary, includeRecords: boolean): ShareCardInp
       });
     }
     if (summary.cardioPace) {
-      stats.push({ label: 'Ø Pace', value: formatPace(summary.cardioPace) });
+      stats.push({ label: labels.averagePace, value: formatPace(summary.cardioPace) });
     }
     if (summary.cardioAvgRpe != null) {
-      stats.push({ label: 'Ø RPE', value: formatNumber(summary.cardioAvgRpe, 1) });
+      stats.push({
+        label: labels.averageRpe,
+        value: formatNumber(summary.cardioAvgRpe, 1),
+      });
     }
   }
 
@@ -72,6 +94,7 @@ function toInput(summary: SessionSummary, includeRecords: boolean): ShareCardInp
  * which the user can switch off before sharing.
  */
 export function ShareResultButton({ summary }: { summary: SessionSummary }) {
+  const { t } = useTranslation('session');
   const toast = useToast();
   const [open, setOpen] = useState(false);
   const [includeRecords, setIncludeRecords] = useState(true);
@@ -79,8 +102,19 @@ export function ShareResultButton({ summary }: { summary: SessionSummary }) {
 
   const hasRecords = summary.newRecords.length > 0;
   const svg = useMemo(
-    () => buildShareCardSvg(toInput(summary, includeRecords && hasRecords)),
-    [summary, includeRecords, hasRecords],
+    () =>
+      buildShareCardSvg(
+        toInput(summary, includeRecords && hasRecords, {
+          duration: t('share.duration'),
+          workingSets: t('share.workingSets'),
+          volume: t('share.volume'),
+          cardioTime: t('share.cardioTime'),
+          distance: t('share.distance'),
+          averagePace: t('share.averagePace'),
+          averageRpe: t('share.averageRpe'),
+        }),
+      ),
+    [summary, includeRecords, hasRecords, t],
   );
 
   const handleShare = async () => {
@@ -88,11 +122,10 @@ export function ShareResultButton({ summary }: { summary: SessionSummary }) {
     try {
       const blob = await svgToPngBlob(svg);
       const outcome = await shareImage(blob, 'training-ergebnis.png');
-      if (outcome === 'downloaded') toast.show('Grafik gespeichert.', 'success');
-      else if (outcome === 'failed')
-        toast.show('Teilen nicht möglich. Bitte erneut versuchen.', 'error');
+      if (outcome === 'downloaded') toast.show(t('share.saved'), 'success');
+      else if (outcome === 'failed') toast.show(t('share.failed'), 'error');
     } catch {
-      toast.show('Grafik konnte nicht erzeugt werden.', 'error');
+      toast.show(t('share.generationFailed'), 'error');
     } finally {
       setBusy(false);
     }
@@ -102,22 +135,22 @@ export function ShareResultButton({ summary }: { summary: SessionSummary }) {
     <>
       <Button variant="secondary" fullWidth onClick={() => setOpen(true)}>
         <Share2 size={18} aria-hidden="true" />
-        Ergebnis teilen
+        {t('share.action')}
       </Button>
 
       <Dialog
         open={open}
         onClose={() => setOpen(false)}
-        title="Ergebnis teilen"
-        description="Die Grafik entsteht lokal auf deinem Gerät. Es werden keine Körperdaten aufgenommen."
+        title={t('share.title')}
+        description={t('share.description')}
         footer={
           <>
             <Button variant="secondary" onClick={() => setOpen(false)}>
-              Schließen
+              {t('share.close')}
             </Button>
             <Button variant="primary" disabled={busy} onClick={() => void handleShare()}>
               <Share2 size={18} aria-hidden="true" />
-              {busy ? 'Wird erzeugt …' : 'Teilen'}
+              {busy ? t('share.creating') : t('share.share')}
             </Button>
           </>
         }
@@ -125,12 +158,12 @@ export function ShareResultButton({ summary }: { summary: SessionSummary }) {
         <div className="grid gap-3">
           <img
             src={svgDataUrl(svg)}
-            alt="Vorschau der Ergebnisgrafik"
+            alt={t('share.previewAlt')}
             className="w-full rounded-xl border border-border"
           />
           {hasRecords ? (
             <CheckboxField
-              label="Persönliche Bestleistung anzeigen"
+              label={t('share.includeRecord')}
               checked={includeRecords}
               onChange={setIncludeRecords}
             />

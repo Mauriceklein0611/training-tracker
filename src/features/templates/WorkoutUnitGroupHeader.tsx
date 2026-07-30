@@ -1,6 +1,6 @@
+import { useTranslation } from 'react-i18next';
 import { Segmented } from '@/components/ui/Field';
 import { setWorkoutUnitGroupOptions } from '@/db/repositories/workoutUnits';
-import { GROUP_TYPE_LABELS } from '@/services/grouping';
 import type { GroupRestMode, GroupType } from '@/types';
 
 /**
@@ -22,6 +22,7 @@ export function WorkoutUnitGroupHeader({
   groupRestMode: GroupRestMode;
   memberCount: number;
 }) {
+  const { t } = useTranslation('library');
   return (
     <div className="mb-2 grid gap-2">
       <div className="flex items-center gap-2">
@@ -29,11 +30,17 @@ export function WorkoutUnitGroupHeader({
           {letter}
         </span>
         <span className="text-sm font-semibold">
-          {GROUP_TYPE_LABELS[groupType]} · {memberCount} Übungen
+          {t('group.summary', {
+            type: t(`group.type.${groupType}`),
+            exercises: t(
+              memberCount === 1 ? 'count.exerciseOne' : 'count.exerciseOther',
+              { count: memberCount },
+            ),
+          })}
         </span>
       </div>
       <Segmented
-        label="Gruppentyp"
+        label={t('group.typeLabel')}
         value={groupType}
         onChange={(value) =>
           void setWorkoutUnitGroupOptions(unitId, groupId, {
@@ -41,12 +48,12 @@ export function WorkoutUnitGroupHeader({
           })
         }
         options={[
-          { value: 'superset', label: 'Supersatz' },
-          { value: 'circuit', label: 'Zirkel' },
+          { value: 'superset', label: t('group.type.superset') },
+          { value: 'circuit', label: t('group.type.circuit') },
         ]}
       />
       <Segmented
-        label="Pause"
+        label={t('group.restLabel')}
         value={groupRestMode}
         onChange={(value) =>
           void setWorkoutUnitGroupOptions(unitId, groupId, {
@@ -54,8 +61,8 @@ export function WorkoutUnitGroupHeader({
           })
         }
         options={[
-          { value: 'round', label: 'Nach jeder Runde' },
-          { value: 'each', label: 'Nach jeder Übung' },
+          { value: 'round', label: t('group.rest.round') },
+          { value: 'each', label: t('group.rest.each') },
         ]}
       />
     </div>

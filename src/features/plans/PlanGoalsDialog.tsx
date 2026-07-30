@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Dialog } from '@/components/ui/Dialog';
 import { Button } from '@/components/ui/Button';
 import {
@@ -8,7 +9,6 @@ import {
   TextField,
 } from '@/components/ui/Field';
 import { updatePlan, type PlanEditableFields } from '@/db/repositories/plans';
-import { EXPERIENCE_LEVEL_LABELS, PLAN_GOAL_TYPE_LABELS } from '@/services/planGoals';
 import { parseNumberInput } from '@/services/validation';
 import type { ExperienceLevel, PlanGoalType, TrainingPlan } from '@/types';
 
@@ -22,6 +22,8 @@ export function PlanGoalsDialog({
   open: boolean;
   onClose: () => void;
 }) {
+  const { t } = useTranslation('plans');
+  const { t: tCommon } = useTranslation();
   const [form, setForm] = useState<PlanEditableFields>({});
 
   // Load the plan's current values whenever the dialog opens.
@@ -63,10 +65,10 @@ export function PlanGoalsDialog({
   };
 
   return (
-    <Dialog open={open} onClose={onClose} title="Ziele & Fokus" size="lg">
+    <Dialog open={open} onClose={onClose} title={t('goalsDialog.title')} size="lg">
       <div className="grid gap-3">
         <SelectField
-          label="Zieltyp"
+          label={t('goalsDialog.goalType')}
           value={form.goalType ?? ''}
           onChange={(event) =>
             setForm((f) => ({
@@ -75,24 +77,26 @@ export function PlanGoalsDialog({
             }))
           }
         >
-          <option value="">Nicht festgelegt</option>
-          {Object.entries(PLAN_GOAL_TYPE_LABELS).map(([value, label]) => (
+          <option value="">{t('goalsDialog.unset')}</option>
+          {(
+            ['muscle', 'strength', 'fitness', 'fatloss', 'maintenance', 'custom'] as const
+          ).map((value) => (
             <option key={value} value={value}>
-              {label}
+              {t(`goal.${value}`)}
             </option>
           ))}
         </SelectField>
 
         {form.goalType === 'custom' ? (
           <TextField
-            label="Eigenes Ziel"
+            label={t('goalsDialog.customGoal')}
             value={form.goalText ?? ''}
             onChange={(event) => setForm((f) => ({ ...f, goalText: event.target.value }))}
           />
         ) : null}
 
         <SelectField
-          label="Erfahrungsniveau"
+          label={t('goalsDialog.experience')}
           value={form.experienceLevel ?? ''}
           onChange={(event) =>
             setForm((f) => ({
@@ -102,17 +106,17 @@ export function PlanGoalsDialog({
             }))
           }
         >
-          <option value="">Nicht festgelegt</option>
-          {Object.entries(EXPERIENCE_LEVEL_LABELS).map(([value, label]) => (
+          <option value="">{t('goalsDialog.unset')}</option>
+          {(['beginner', 'intermediate', 'advanced'] as const).map((value) => (
             <option key={value} value={value}>
-              {label}
+              {t(`goalsDialog.experienceOptions.${value}`)}
             </option>
           ))}
         </SelectField>
 
         <div className="grid grid-cols-2 gap-3">
           <NumberField
-            label="Einheiten / Woche"
+            label={t('goalsDialog.sessionsWeek')}
             value={
               form.sessionsPerWeekTarget != null ? String(form.sessionsPerWeekTarget) : ''
             }
@@ -121,7 +125,7 @@ export function PlanGoalsDialog({
             }
           />
           <NumberField
-            label="Dauer (Wochen)"
+            label={t('goalsDialog.durationWeeks')}
             value={form.plannedWeeks != null ? String(form.plannedWeeks) : ''}
             onChange={(event) =>
               setForm((f) => ({ ...f, plannedWeeks: num(event.target.value) }))
@@ -130,7 +134,7 @@ export function PlanGoalsDialog({
         </div>
 
         <TextField
-          label="Startdatum"
+          label={t('goalsDialog.startDate')}
           type="date"
           value={form.startDate ?? ''}
           onChange={(event) => setForm((f) => ({ ...f, startDate: event.target.value }))}
@@ -138,14 +142,14 @@ export function PlanGoalsDialog({
 
         <div className="grid grid-cols-2 gap-3">
           <NumberField
-            label="Zielgewicht (kg)"
+            label={t('goalsDialog.targetWeight')}
             value={form.targetBodyWeightKg != null ? String(form.targetBodyWeightKg) : ''}
             onChange={(event) =>
               setForm((f) => ({ ...f, targetBodyWeightKg: num(event.target.value) }))
             }
           />
           <NumberField
-            label="Ziel-KFA (%)"
+            label={t('goalsDialog.targetBodyFat')}
             value={
               form.targetBodyFatPercent != null ? String(form.targetBodyFatPercent) : ''
             }
@@ -156,25 +160,22 @@ export function PlanGoalsDialog({
         </div>
 
         <TextAreaField
-          label="Fokus / Notiz"
+          label={t('goalsDialog.focus')}
           value={form.focusNote ?? ''}
           onChange={(event) => setForm((f) => ({ ...f, focusNote: event.target.value }))}
         />
         <TextAreaField
-          label="Einschränkungen"
+          label={t('goalsDialog.restrictions')}
           value={form.restrictions ?? ''}
-          placeholder="z. B. Verletzungen, fehlendes Equipment"
+          placeholder={t('goalsDialog.restrictionsPlaceholder')}
           onChange={(event) =>
             setForm((f) => ({ ...f, restrictions: event.target.value }))
           }
         />
 
-        <p className="text-xs text-muted">
-          Ziele sind Zielwerte, keine Messwerte. Sie werden nur angezeigt und nie als
-          erreichte Werte gewertet.
-        </p>
+        <p className="text-xs text-muted">{t('goalsDialog.hint')}</p>
         <Button variant="primary" fullWidth onClick={() => void handleSave()}>
-          Speichern
+          {tCommon('action.save')}
         </Button>
       </div>
     </Dialog>

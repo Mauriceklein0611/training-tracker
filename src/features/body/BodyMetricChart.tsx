@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react';
+import type { TFunction } from 'i18next';
+import { useTranslation } from 'react-i18next';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { CheckboxField, Segmented, SelectField } from '@/components/ui/Field';
 import { ChartFrame, DataTable, TrendLineChart } from '@/features/analytics/Charts';
 import {
-  BODY_RANGE_LABELS,
   BODY_METRIC_OPTIONS,
   availableBodyMetrics,
   buildBodyMetricSeries,
@@ -16,12 +17,44 @@ import type { BodyWeightEntry } from '@/types';
 import { formatCm, formatKg, formatPercentValue } from '@/utils/format';
 import { formatDate } from '@/utils/date';
 
-const RANGE_OPTIONS: { value: BodyMetricRange; label: string }[] = [
-  { value: '4w', label: '4 Wo.' },
-  { value: '12w', label: '12 Wo.' },
-  { value: '6m', label: '6 Mon.' },
-  { value: 'all', label: 'Alles' },
-];
+const RANGE_VALUES: BodyMetricRange[] = ['4w', '12w', '6m', 'all'];
+
+function metricLabel(t: TFunction<'more'>, key: string): string {
+  switch (key) {
+    case 'weightKg':
+      return t('screens.body.chart.metrics.weightKg');
+    case 'bodyFatPercent':
+      return t('screens.body.chart.metrics.bodyFatPercent');
+    case 'neckCm':
+      return t('screens.body.chart.metrics.neckCm');
+    case 'shoulderCm':
+      return t('screens.body.chart.metrics.shoulderCm');
+    case 'chestCm':
+      return t('screens.body.chart.metrics.chestCm');
+    case 'waistCm':
+      return t('screens.body.chart.metrics.waistCm');
+    case 'hipCm':
+      return t('screens.body.chart.metrics.hipCm');
+    case 'bicepsLeftCm':
+      return t('screens.body.chart.metrics.bicepsLeftCm');
+    case 'bicepsRightCm':
+      return t('screens.body.chart.metrics.bicepsRightCm');
+    case 'forearmLeftCm':
+      return t('screens.body.chart.metrics.forearmLeftCm');
+    case 'forearmRightCm':
+      return t('screens.body.chart.metrics.forearmRightCm');
+    case 'thighLeftCm':
+      return t('screens.body.chart.metrics.thighLeftCm');
+    case 'thighRightCm':
+      return t('screens.body.chart.metrics.thighRightCm');
+    case 'calfLeftCm':
+      return t('screens.body.chart.metrics.calfLeftCm');
+    case 'calfRightCm':
+      return t('screens.body.chart.metrics.calfRightCm');
+    default:
+      return key;
+  }
+}
 
 function formatByUnit(unit: BodyMetricUnit): (value: number) => string {
   if (unit === 'kg') return (value) => formatKg(value);
@@ -31,6 +64,7 @@ function formatByUnit(unit: BodyMetricUnit): (value: number) => string {
 
 /** Body-data diagrams: one selectable series over a chosen timeframe. */
 export function BodyMetricChart({ entries }: { entries: BodyWeightEntry[] }) {
+  const { t } = useTranslation('more');
   const available = useMemo(() => availableBodyMetrics(entries), [entries]);
   const [metricKey, setMetricKey] = useState<string>('weightKg');
   const [range, setRange] = useState<BodyMetricRange>('12w');
@@ -67,53 +101,65 @@ export function BodyMetricChart({ entries }: { entries: BodyWeightEntry[] }) {
   if (available.length === 0) {
     return (
       <Card>
-        <CardHeader title="Diagramme" as="h2" />
-        <p className="text-sm text-muted">
-          Sobald du eine Messreihe an mindestens zwei Tagen erfasst hast, erscheint hier
-          ihr Verlauf.
-        </p>
+        <CardHeader title={t('screens.body.chart.title')} as="h2" />
+        <p className="text-sm text-muted">{t('screens.body.chart.insufficient')}</p>
       </Card>
     );
   }
 
   const formatValue = formatByUnit(option.unit);
+  const optionLabel = metricLabel(t, option.key);
   const first = series[0]?.value;
   const last = series[series.length - 1]?.value;
   const change = first != null && last != null ? last - first : null;
 
   const summary =
     series.length === 0
-      ? 'Für diesen Zeitraum liegen keine Messungen vor.'
-      : `${option.label}: ${series.length} Messungen im Zeitraum ${BODY_RANGE_LABELS[range]}. ` +
-        `Zuletzt ${formatValue(last as number)}` +
-        (change != null
-          ? `, Veränderung ${change > 0 ? '+' : ''}${formatValue(change)} seit Beginn des Zeitraums.`
-          : '.');
+      ? t('screens.body.chart.noMeasurements')
+      : t('screens.body.chart.summary', {
+          label: optionLabel,
+          amount: series.length,
+          range: t(`screens.body.chart.rangeLong.${range}`),
+          latest: formatValue(last as number),
+          change:
+            change != null
+              ? t('screens.body.chart.change', {
+                  value: `${change > 0 ? '+' : ''}${formatValue(change)}`,
+                })
+              : t('screens.body.chart.noChange'),
+        });
 
   return (
     <Card>
-      <CardHeader title="Diagramme" subtitle="Verlauf einer Messreihe" as="h2" />
+      <CardHeader
+        title={t('screens.body.chart.title')}
+        subtitle={t('screens.body.chart.subtitle')}
+        as="h2"
+      />
       <div className="grid gap-2">
         <SelectField
-          label="Messreihe"
+          label={t('screens.body.chart.series')}
           value={activeKey}
           onChange={(event) => setMetricKey(event.target.value)}
         >
           {available.map((entry) => (
             <option key={entry.key} value={entry.key}>
-              {entry.label}
+              {metricLabel(t, entry.key)}
             </option>
           ))}
         </SelectField>
         <Segmented
-          label="Zeitraum"
-          options={RANGE_OPTIONS}
+          label={t('screens.body.chart.range')}
+          options={RANGE_VALUES.map((value) => ({
+            value,
+            label: t(`screens.body.chart.ranges.${value}`),
+          }))}
           value={range}
           onChange={setRange}
         />
         <CheckboxField
-          label="Gleitenden Trend anzeigen"
-          hint="Geglätteter Verlauf derselben Messreihe. Die Rohwerte bleiben sichtbar."
+          label={t('screens.body.chart.showTrend')}
+          hint={t('screens.body.chart.trendHint')}
           checked={showTrend}
           onChange={setShowTrend}
         />
@@ -121,13 +167,24 @@ export function BodyMetricChart({ entries }: { entries: BodyWeightEntry[] }) {
 
       <div className="mt-3">
         <ChartFrame
-          title={option.label}
+          title={optionLabel}
           empty={series.length === 0}
           summary={summary}
           table={
             <DataTable
-              caption={`${option.label} je Messung`}
-              columns={trendEnabled ? ['Datum', 'Wert', 'Trend'] : ['Datum', 'Wert']}
+              caption={t('screens.body.chart.caption', { label: optionLabel })}
+              columns={
+                trendEnabled
+                  ? [
+                      t('screens.body.chart.columns.date'),
+                      t('screens.body.chart.columns.value'),
+                      t('screens.body.chart.columns.trend'),
+                    ]
+                  : [
+                      t('screens.body.chart.columns.date'),
+                      t('screens.body.chart.columns.value'),
+                    ]
+              }
               rows={chartData.map((point, index) =>
                 trendEnabled
                   ? [

@@ -1,5 +1,6 @@
 import type { TrackingType, WeightMode } from '@/types';
 import { requiredFieldsFor } from '@/services/metrics';
+import { t } from '@/i18n';
 
 /**
  * Input validation for a single set, expressed as messages per field.
@@ -27,44 +28,40 @@ export function validateSetInput(
   const required = requiredFieldsFor(trackingType);
 
   if (values.weightKg != null) {
-    if (Number.isNaN(values.weightKg)) errors.weightKg = 'Bitte eine Zahl eingeben.';
-    else if (values.weightKg < 0) errors.weightKg = 'Gewicht darf nicht negativ sein.';
-    else if (values.weightKg > 1000)
-      errors.weightKg = 'Gewicht wirkt unrealistisch hoch.';
+    if (Number.isNaN(values.weightKg)) errors.weightKg = t('common:validation.number');
+    else if (values.weightKg < 0) errors.weightKg = t('common:validation.weightNegative');
+    else if (values.weightKg > 1000) errors.weightKg = t('common:validation.weightHigh');
   } else if (required.weight && weightMode !== 'none') {
-    errors.weightKg = 'Gewicht fehlt.';
+    errors.weightKg = t('common:validation.weightMissing');
   }
 
   if (values.reps != null) {
-    if (Number.isNaN(values.reps)) errors.reps = 'Bitte eine Zahl eingeben.';
+    if (Number.isNaN(values.reps)) errors.reps = t('common:validation.number');
     else if (!Number.isInteger(values.reps))
-      errors.reps = 'Wiederholungen müssen ganzzahlig sein.';
-    else if (values.reps < 0) errors.reps = 'Wiederholungen dürfen nicht negativ sein.';
-    else if (values.reps > 10000)
-      errors.reps = 'Wiederholungen wirken unrealistisch hoch.';
+      errors.reps = t('common:validation.repsInteger');
+    else if (values.reps < 0) errors.reps = t('common:validation.repsNegative');
+    else if (values.reps > 10000) errors.reps = t('common:validation.repsHigh');
   } else if (required.reps) {
-    errors.reps = 'Wiederholungen fehlen.';
+    errors.reps = t('common:validation.repsMissing');
   }
 
   if (values.durationSeconds != null) {
     if (Number.isNaN(values.durationSeconds))
-      errors.durationSeconds = 'Bitte eine Zahl eingeben.';
+      errors.durationSeconds = t('common:validation.number');
     else if (values.durationSeconds < 0)
-      errors.durationSeconds = 'Dauer darf nicht negativ sein.';
+      errors.durationSeconds = t('common:validation.durationNegative');
     else if (values.durationSeconds > 86400)
-      errors.durationSeconds = 'Dauer wirkt unrealistisch.';
+      errors.durationSeconds = t('common:validation.durationHigh');
   } else if (required.duration) {
-    errors.durationSeconds = 'Dauer fehlt.';
+    errors.durationSeconds = t('common:validation.durationMissing');
   }
 
   if (values.rir != null && !Number.isNaN(values.rir)) {
-    if (values.rir < 0 || values.rir > 10)
-      errors.rir = 'RIR muss zwischen 0 und 10 liegen.';
+    if (values.rir < 0 || values.rir > 10) errors.rir = t('common:validation.rirRange');
   }
 
   if (values.rpe != null && !Number.isNaN(values.rpe)) {
-    if (values.rpe < 1 || values.rpe > 10)
-      errors.rpe = 'RPE muss zwischen 1 und 10 liegen.';
+    if (values.rpe < 1 || values.rpe > 10) errors.rpe = t('common:validation.rpeRange');
   }
 
   return errors;
@@ -89,13 +86,13 @@ export type CardioFieldErrors = Partial<Record<keyof CardioSetInputValues, strin
 
 /** Plausibility bounds for cardio inputs (technical, never medical). */
 const CARDIO_BOUNDS = {
-  durationSeconds: { max: 86400, label: 'Dauer' },
-  distanceMeters: { max: 1_000_000, label: 'Distanz' },
-  averageHeartRateBpm: { min: 20, max: 300, label: 'Herzfrequenz' },
-  caloriesKcal: { max: 100_000, label: 'Kalorien' },
-  elevationGainMeters: { max: 100_000, label: 'Höhenmeter' },
-  cadenceRpm: { max: 400, label: 'Kadenz' },
-  resistanceLevel: { max: 100, label: 'Widerstand' },
+  durationSeconds: { max: 86400, label: 'duration' },
+  distanceMeters: { max: 1_000_000, label: 'distance' },
+  averageHeartRateBpm: { min: 20, max: 300, label: 'heartRate' },
+  caloriesKcal: { max: 100_000, label: 'calories' },
+  elevationGainMeters: { max: 100_000, label: 'elevation' },
+  cadenceRpm: { max: 400, label: 'cadence' },
+  resistanceLevel: { max: 100, label: 'resistance' },
 } as const;
 
 /**
@@ -111,18 +108,33 @@ export function validateCardioSetInput(values: CardioSetInputValues): CardioFiel
   const checkNonNegative = (
     key: keyof CardioSetInputValues,
     value: number | null | undefined,
-    bound: { min?: number; max: number; label: string },
+    bound: {
+      min?: number;
+      max: number;
+      label: keyof typeof CARDIO_BOUNDS extends never
+        ? never
+        : | 'duration'
+          | 'distance'
+          | 'heartRate'
+          | 'calories'
+          | 'elevation'
+          | 'cadence'
+          | 'resistance';
+    },
   ) => {
     if (value == null) return;
     if (!Number.isFinite(value)) {
-      errors[key] = 'Bitte eine gültige Zahl eingeben.';
+      errors[key] = t('common:validation.validNumber');
     } else if (value < (bound.min ?? 0)) {
+      const field = t(`common:validation.field.${bound.label}`);
       errors[key] =
         bound.min != null
-          ? `${bound.label} muss mindestens ${bound.min} betragen.`
-          : `${bound.label} darf nicht negativ sein.`;
+          ? t('common:validation.minimum', { field, minimum: bound.min })
+          : t('common:validation.negative', { field });
     } else if (value > bound.max) {
-      errors[key] = `${bound.label} wirkt unrealistisch.`;
+      errors[key] = t('common:validation.unrealistic', {
+        field: t(`common:validation.field.${bound.label}`),
+      });
     }
   };
 
@@ -151,10 +163,9 @@ export function validateCardioSetInput(values: CardioSetInputValues): CardioFiel
   );
 
   if (values.rpe != null && Number.isFinite(values.rpe)) {
-    if (values.rpe < 1 || values.rpe > 10)
-      errors.rpe = 'RPE muss zwischen 1 und 10 liegen.';
+    if (values.rpe < 1 || values.rpe > 10) errors.rpe = t('common:validation.rpeRange');
   } else if (values.rpe != null) {
-    errors.rpe = 'Bitte eine gültige Zahl eingeben.';
+    errors.rpe = t('common:validation.validNumber');
   }
 
   return errors;
@@ -184,18 +195,18 @@ export function validateExerciseForm(
   const errors: Partial<Record<keyof ExerciseFormValues, string>> = {};
   const name = values.name.trim();
 
-  if (!name) errors.name = 'Bitte gib einen Namen ein.';
-  else if (name.length > 80) errors.name = 'Der Name ist zu lang (max. 80 Zeichen).';
+  if (!name) errors.name = t('common:validation.nameMissing');
+  else if (name.length > 80) errors.name = t('common:validation.nameLong');
   else if (
     existingNames.some((existing) => existing.toLowerCase() === name.toLowerCase())
   ) {
-    errors.name = 'Eine Übung mit diesem Namen existiert bereits.';
+    errors.name = t('common:validation.nameExists');
   }
 
   if (!Number.isFinite(values.weightMultiplier) || values.weightMultiplier <= 0) {
-    errors.weightMultiplier = 'Der Multiplikator muss größer als 0 sein.';
+    errors.weightMultiplier = t('common:validation.multiplierPositive');
   } else if (values.weightMultiplier > 10) {
-    errors.weightMultiplier = 'Der Multiplikator wirkt unrealistisch hoch.';
+    errors.weightMultiplier = t('common:validation.multiplierHigh');
   }
 
   if (
@@ -203,7 +214,7 @@ export function validateExerciseForm(
     values.defaultRestSeconds < 0 ||
     values.defaultRestSeconds > 3600
   ) {
-    errors.defaultRestSeconds = 'Die Pause muss zwischen 0 und 3600 Sekunden liegen.';
+    errors.defaultRestSeconds = t('common:validation.restRange');
   }
 
   return errors;

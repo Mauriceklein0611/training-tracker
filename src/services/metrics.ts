@@ -7,6 +7,7 @@ import type {
   WeightMode,
   WorkoutSet,
 } from '@/types';
+import { t } from '@/i18n';
 import {
   effectiveSetExecution,
   executionKey,
@@ -178,13 +179,13 @@ export function weightFieldLabel(
   if (trackingType === 'duration' || trackingType === 'reps_only') return null;
   switch (weightMode) {
     case 'per_hand':
-      return 'Gewicht je Hand (kg)';
+      return t('domain:weightField.per_hand');
     case 'total':
-      return 'Gewicht gesamt (kg)';
+      return t('domain:weightField.total');
     case 'added_weight':
-      return 'Zusatzgewicht (kg)';
+      return t('domain:weightField.added_weight');
     case 'assistance':
-      return 'Unterstützung (kg)';
+      return t('domain:weightField.assistance');
     case 'none':
       return null;
   }

@@ -5,21 +5,19 @@ Tailwind + Dexie/IndexedDB + Zod + Recharts + i18next + vite-plugin-pwa). No
 account, no backend, no cloud, no external runtime APIs, no telemetry, no direct
 LLM API. Code, types and technical comments are English. Mobile-first.
 
-## UI language (#31, partially migrated)
+## UI language (#31)
 
 The app is DE/EN. **German is the source of truth**: put a new string in
 `src/i18n/locales/de/<namespace>.ts` first — the typecheck then demands the
 English counterpart, because each `en` file is declared against the German type.
 Never add a visible literal to a component.
 
-**The migration is incomplete and that is expected.** Migrated: app shell,
-navigation, shared primitives, Mehr hub, settings, home (incl. plan hero, coach
-feed, free-workout dialog), local storage, exercise catalog, community, and the
-shared domain labels. Still German-only: live workout, plans, library, history,
-analytics, glossary, body data, equipment, data & backup, AI analyses, the
-exercise form dialog, `PlanPackageTools`, validation messages. Migrate an area as
-a whole, keep the existing German tests green, and add an English test that
-asserts no leftovers of the other language.
+The migration is complete across the app shell, navigation, shared primitives,
+home, live workout, plans, library, history, analytics and comparisons,
+glossary, body data, equipment, exercises, data and backup, AI analyses,
+settings, validation messages, and community/support and feedback. Keep every
+area bilingual, preserve the existing German tests, and add English coverage
+for new visible behavior.
 
 **A format must never inherit the display language.** `utils/format` and
 `utils/date` are locale-aware; `csv.ts` therefore keeps its own German label maps

@@ -10,17 +10,10 @@ import {
   requiredFieldsFor,
   weightFieldLabel,
 } from '@/services/metrics';
-import { effectiveSetExecution, equipmentLabel } from '@/services/equipment';
-import { cardioModalityLabel } from '@/services/cardio';
+import { effectiveSetExecution } from '@/services/equipment';
 import { describeCardioSet } from '@/services/cardioMetrics';
 import { restDeviationSeconds } from '@/services/rest';
-import {
-  SET_TYPES,
-  setTypeLabel,
-  describeSet,
-  formatKg,
-  formatSignedSeconds,
-} from '@/utils/format';
+import { SET_TYPES, describeSet, formatKg, formatSignedSeconds } from '@/utils/format';
 import { cn } from '@/utils/cn';
 import { InfoHint } from '@/components/ui/InfoHint';
 import { useAutosave } from '@/hooks/useAutosave';
@@ -33,6 +26,7 @@ import {
   type RecordBaseline,
 } from '@/services/comparison';
 import type { EffortInput } from '@/types';
+import { useTranslation } from 'react-i18next';
 
 interface Draft {
   setType: SetType;
@@ -128,6 +122,8 @@ export function SetEditor({
   /** Compact effort labels for experienced users (G6). */
   expertLabels?: boolean;
 }) {
+  const { t } = useTranslation('session');
+  const { t: tDomain } = useTranslation('domain');
   /*
    * The draft is seeded from the record once and then belongs to the user.
    * It is deliberately NOT re-synced from the live query: persisting on blur
@@ -259,10 +255,7 @@ export function SetEditor({
       autosave.disable();
     } catch {
       // Surface the failure instead of swallowing it, and allow another attempt.
-      toast.show(
-        'Der Satz konnte nicht gespeichert werden. Bitte erneut versuchen.',
-        'error',
-      );
+      toast.show(t('setEditor.setSaveFailed'), 'error');
     } finally {
       completingRef.current = false;
       setIsCompleting(false);
@@ -278,9 +271,14 @@ export function SetEditor({
   return (
     <div className="rounded-2xl border border-accent/40 bg-surface-2 p-3">
       <div className="mb-2 flex items-center justify-between gap-2">
-        <span className="text-sm font-semibold">Satz {set.position + 1}</span>
+        <span className="text-sm font-semibold">
+          {t('setEditor.setHeading', { position: set.position + 1 })}
+        </span>
         <div className="flex items-center gap-1">
-          <IconButton label={`Satz ${set.position + 1} verwerfen`} onClick={onDelete}>
+          <IconButton
+            label={t('setEditor.discardSet', { position: set.position + 1 })}
+            onClick={onDelete}
+          >
             <Trash2 size={18} aria-hidden="true" />
           </IconButton>
         </div>
@@ -294,13 +292,16 @@ export function SetEditor({
       {comparison ? (
         <div className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
           <span className="text-muted">
-            {comparison.matchedBy === 'same-position' ? 'Letztes Mal' : 'Zuletzt'}:
+            {comparison.matchedBy === 'same-position'
+              ? t('setEditor.lastTime')
+              : t('setEditor.previously')}
+            :
           </span>
           {/* Tap the previous values to prefill the inputs (a suggestion chip). */}
           <button
             type="button"
             onClick={applyPrevious}
-            aria-label="Letzte Werte übernehmen"
+            aria-label={t('setEditor.applyPrevious')}
             className="numeric inline-flex items-center gap-1 rounded-full bg-surface-3 px-2 py-0.5 font-medium text-accent active:bg-surface-2"
           >
             <ArrowDownToLine size={12} aria-hidden="true" />
@@ -308,7 +309,7 @@ export function SetEditor({
           </button>
 
           {!comparison.sameExecution ? (
-            <span className="text-muted">(andere Ausführung – nur zur Referenz)</span>
+            <span className="text-muted">({t('setEditor.differentExecution')})</span>
           ) : null}
 
           {comparison.deltas.map((delta) => (
@@ -329,12 +330,12 @@ export function SetEditor({
 
           {comparison.isRecord ? (
             <span className="rounded-full bg-surface-3 px-1.5 py-0.5 font-semibold text-accent">
-              ★ Neuer Bestwert
+              ★ {t('setEditor.newRecord')}
             </span>
           ) : null}
 
           {comparison.matchedBy === 'last-working-set' ? (
-            <span className="text-muted">(letzter Arbeitssatz)</span>
+            <span className="text-muted">({t('setEditor.lastWorkingSet')})</span>
           ) : null}
         </div>
       ) : null}
@@ -342,9 +343,9 @@ export function SetEditor({
       {liveOneRm != null ? (
         <div className="mb-2 flex items-center gap-1 text-xs text-muted">
           <span>
-            Geschätztes 1RM:{' '}
+            {t('setEditor.estimatedOneRm')}{' '}
             <span className="numeric font-medium text-text">
-              ca. {formatKg(liveOneRm)}
+              {t('setEditor.estimatePrefix', { value: formatKg(liveOneRm) })}
             </span>
           </span>
           <InfoHint term="e1rm" />
@@ -370,7 +371,7 @@ export function SetEditor({
 
       <div className="grid grid-cols-2 gap-2">
         <SelectField
-          label="Satzart"
+          label={t('field.setType')}
           containerClassName="col-span-2"
           value={draft.setType}
           onChange={(event) => {
@@ -382,7 +383,7 @@ export function SetEditor({
         >
           {SET_TYPES.map((type) => (
             <option key={type} value={type}>
-              {setTypeLabel(type)}
+              {tDomain(`setType.${type}`)}
             </option>
           ))}
         </SelectField>
@@ -400,7 +401,7 @@ export function SetEditor({
 
         {fields.reps ? (
           <NumberField
-            label="Wiederholungen"
+            label={t('field.repetitions')}
             value={draft.reps}
             error={visibleErrors.reps}
             onChange={(event) => update('reps', event.target.value)}
@@ -410,7 +411,7 @@ export function SetEditor({
 
         {fields.duration ? (
           <NumberField
-            label="Dauer (s)"
+            label={t('field.durationSeconds')}
             value={draft.duration}
             error={visibleErrors.durationSeconds}
             onChange={(event) => update('duration', event.target.value)}
@@ -441,7 +442,7 @@ export function SetEditor({
         onClick={handleComplete}
       >
         <Check size={20} aria-hidden="true" />
-        {isCompleting ? 'Wird gespeichert …' : 'Satz abschließen · Pause starten'}
+        {isCompleting ? t('action.saving') : t('setEditor.completeSet')}
       </Button>
     </div>
   );
@@ -457,6 +458,8 @@ export function CompletedSetRow({
   sessionExercise: SessionExercise;
   onEdit?: () => void;
 }) {
+  const { t } = useTranslation('session');
+  const { t: tDomain } = useTranslation('domain');
   const deviation = restDeviationSeconds(set);
   // The set's own execution snapshot wins, so a dumbbell set stays labelled as
   // dumbbells even after the exercise switches back to a barbell.
@@ -472,13 +475,13 @@ export function CompletedSetRow({
       </span>
       <span className="numeric min-w-0 flex-1 truncate font-medium">{summary}</span>
       {isCardio && execution.cardioModality ? (
-        <Badge>{cardioModalityLabel(execution.cardioModality)}</Badge>
+        <Badge>{tDomain(`cardioModality.${execution.cardioModality}`)}</Badge>
       ) : execution.equipment !== 'unspecified' ? (
-        <Badge>{equipmentLabel(execution.equipment)}</Badge>
+        <Badge>{tDomain(`equipment.${execution.equipment}`)}</Badge>
       ) : null}
       {set.setType !== 'working' ? (
         <Badge tone={set.setType === 'warmup' ? 'default' : 'accent'}>
-          {setTypeLabel(set.setType)}
+          {tDomain(`setType.${set.setType}`)}
         </Badge>
       ) : null}
       {set.rir != null ? <span className="text-xs text-muted">RIR {set.rir}</span> : null}
@@ -488,7 +491,7 @@ export function CompletedSetRow({
             'numeric text-xs',
             deviation >= 0 ? 'text-muted' : 'text-warning',
           )}
-          title="Abweichung von der Zielpause"
+          title={t('setEditor.restDeviation')}
         >
           {formatSignedSeconds(deviation)}
         </span>
@@ -508,7 +511,10 @@ export function CompletedSetRow({
     <button
       type="button"
       onClick={onEdit}
-      aria-label={`${isCardio ? 'Abschnitt' : 'Satz'} ${set.position + 1} bearbeiten`}
+      aria-label={t('setEditor.editRow', {
+        kind: isCardio ? t('setEditor.section') : t('setEditor.set'),
+        position: set.position + 1,
+      })}
       className="flex min-h-[44px] w-full items-center gap-2 rounded-xl bg-surface-2 px-2 py-1.5 text-left active:bg-surface-3"
     >
       {content}

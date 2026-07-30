@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import { Dialog } from '@/components/ui/Dialog';
 import { SelectField, TextAreaField, TextField } from '@/components/ui/Field';
@@ -6,7 +7,6 @@ import {
   createPlan,
   PLAN_STRUCTURE_TEMPLATES,
   SPLIT_TYPE_DAY_COUNT,
-  SPLIT_TYPE_LABELS,
 } from '@/db/repositories/plans';
 import type { PlanSplitType } from '@/types';
 import { useToast } from '@/hooks/useToast';
@@ -36,6 +36,8 @@ export function CreatePlanDialog({
   onClose: () => void;
   onCreated: (planId: string) => void;
 }) {
+  const { t } = useTranslation('plans');
+  const { t: tCommon } = useTranslation();
   const toast = useToast();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -62,7 +64,7 @@ export function CreatePlanDialog({
   const handleCreate = async () => {
     const trimmed = name.trim();
     if (!trimmed) {
-      toast.show('Bitte gib einen Namen ein.', 'error');
+      toast.show(t('create.nameRequired'), 'error');
       return;
     }
     setBusy(true);
@@ -89,11 +91,8 @@ export function CreatePlanDialog({
       }
       reset();
       onCreated(planId);
-    } catch (error) {
-      toast.show(
-        error instanceof Error ? error.message : 'Plan konnte nicht erstellt werden.',
-        'error',
-      );
+    } catch {
+      toast.show(t('create.failed'), 'error');
     } finally {
       setBusy(false);
     }
@@ -106,7 +105,7 @@ export function CreatePlanDialog({
         reset();
         onClose();
       }}
-      title="Neuer Trainingsplan"
+      title={t('create.title')}
       footer={
         <>
           <Button
@@ -116,50 +115,57 @@ export function CreatePlanDialog({
               onClose();
             }}
           >
-            Abbrechen
+            {tCommon('action.cancel')}
           </Button>
           <Button variant="primary" disabled={busy} onClick={() => void handleCreate()}>
-            Erstellen
+            {t('create.create')}
           </Button>
         </>
       }
     >
       <div className="grid gap-4">
         <TextField
-          label="Name"
+          label={t('create.name')}
           value={name}
-          placeholder="z. B. Muskelaufbau"
+          placeholder={t('create.namePlaceholder')}
           onChange={(event) => setName(event.target.value)}
         />
         <SelectField
-          label="Struktur"
-          hint={`Erzeugt ${previewDayCount} ${
-            previewDayCount === 1 ? 'Trainingstag' : 'Trainingstage'
-          } — Namen kannst du danach frei ändern. Es werden keine Übungen hinzugefügt.`}
+          label={t('create.structure')}
+          hint={t('create.structureHint', {
+            count: previewDayCount,
+            days: t(previewDayCount === 1 ? 'create.dayOne' : 'create.dayOther'),
+          })}
           value={structure}
           onChange={(event) => setStructure(event.target.value)}
         >
-          <optgroup label="Split">
+          <optgroup label={t('create.splitGroup')}>
             {SPLIT_OPTIONS.map((type) => (
               <option key={type} value={`split:${type}`}>
-                {SPLIT_TYPE_LABELS[type]}
+                {t(`split.${type}`)}
               </option>
             ))}
           </optgroup>
-          <optgroup label="Vorlagen">
+          <optgroup label={t('create.templatesGroup')}>
             {PLAN_STRUCTURE_TEMPLATES.filter((entry) => entry.id !== 'single').map(
               (entry) => (
                 <option key={entry.id} value={`structure:${entry.id}`}>
-                  {entry.label}
+                  {
+                    (
+                      t('create.structureTemplates', {
+                        returnObjects: true,
+                      }) as Record<string, string>
+                    )[entry.id]
+                  }
                 </option>
               ),
             )}
           </optgroup>
         </SelectField>
         <TextAreaField
-          label="Beschreibung"
+          label={t('create.description')}
           value={description}
-          placeholder="Optional"
+          placeholder={t('create.optional')}
           onChange={(event) => setDescription(event.target.value)}
         />
       </div>

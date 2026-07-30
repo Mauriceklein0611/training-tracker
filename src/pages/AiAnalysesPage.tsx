@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { useTranslation } from 'react-i18next';
 import {
   AlertTriangle,
   Check,
@@ -27,13 +28,24 @@ import type { ValidatedAiImport } from '@/services/aiResponse';
 import { readFileAsText } from '@/utils/download';
 import { formatDateTime } from '@/utils/date';
 
-const STATUS_LABEL: Record<AiProposalStatus, string> = {
-  pending: 'offen',
-  applied: 'übernommen',
-  skipped: 'übersprungen',
-  conflict: 'Konflikt',
-  invalid: 'ungültig',
-};
+const STATUS_KEY = {
+  pending: 'aiAnalyses.status.pending',
+  applied: 'aiAnalyses.status.applied',
+  skipped: 'aiAnalyses.status.skipped',
+  conflict: 'aiAnalyses.status.conflict',
+  invalid: 'aiAnalyses.status.invalid',
+} as const satisfies Record<AiProposalStatus, string>;
+
+const FIELD_KEY = {
+  sets: 'aiAnalyses.fields.sets',
+  repMin: 'aiAnalyses.fields.repMin',
+  repMax: 'aiAnalyses.fields.repMax',
+  restSeconds: 'aiAnalyses.fields.restSeconds',
+  durationSeconds: 'aiAnalyses.fields.durationSeconds',
+  distanceMeters: 'aiAnalyses.fields.distanceMeters',
+  rpe: 'aiAnalyses.fields.rpe',
+  description: 'aiAnalyses.fields.description',
+} as const;
 
 const STATUS_TONE: Record<
   AiProposalStatus,
@@ -46,20 +58,58 @@ const STATUS_TONE: Record<
   invalid: 'danger',
 };
 
-const FIELD_LABELS: Record<string, string> = {
-  sets: 'Sätze',
-  repMin: 'Wdh. von',
-  repMax: 'Wdh. bis',
-  restSeconds: 'Pause (s)',
-  description: 'Beschreibung',
-};
+function useLocalizedAiServiceMessage() {
+  const { t } = useTranslation('data');
 
-function changeLines(proposal: StoredAiProposal) {
-  return Object.entries(proposal.changes).map(([field, to]) => ({
-    label: FIELD_LABELS[field] ?? field,
-    from: proposal.expected?.[field] != null ? String(proposal.expected[field]) : '–',
-    to: String(to),
-  }));
+  return (message: string) => {
+    switch (message) {
+      case 'Der Zielplan existiert nicht.':
+        return t('aiAnalyses.serviceMessage.targetPlanMissing');
+      case 'Die Zielübung existiert nicht in diesem Plan.':
+        return t('aiAnalyses.serviceMessage.targetExerciseMissing');
+      case 'Wiederholungsbereich min > max.':
+        return t('aiAnalyses.serviceMessage.invalidRepRange');
+      case 'Die aktuelle Beschreibung weicht von der erwarteten ab.':
+        return t('aiAnalyses.serviceMessage.descriptionMismatch');
+      case 'Die Zielübung existiert nicht mehr.':
+        return t('aiAnalyses.serviceMessage.targetExerciseGone');
+      case 'Der Plan wurde inzwischen geändert.':
+        return t('aiAnalyses.serviceMessage.planChanged');
+      case 'Der Zielplan existiert nicht mehr.':
+        return t('aiAnalyses.serviceMessage.targetPlanGone');
+      case 'Die Beschreibung wurde inzwischen geändert.':
+        return t('aiAnalyses.serviceMessage.descriptionChanged');
+      case 'Diese Antwortdatei wurde bereits importiert — Planänderungen werden nicht erneut angewendet.':
+        return t('aiAnalyses.serviceMessage.duplicateBlocked');
+      case 'Ohne gültige Exportreferenz können keine Planänderungen übernommen werden.':
+        return t('aiAnalyses.serviceMessage.referenceMissing');
+      case 'Der referenzierte Export ist unbekannt — Planänderungen sind gesperrt.':
+        return t('aiAnalyses.serviceMessage.referenceUnknown');
+      case 'Die Exportreferenz passt nicht zum gespeicherten Export — Planänderungen sind gesperrt.':
+        return t('aiAnalyses.serviceMessage.referenceMismatch');
+      case 'Deine Pläne haben sich seit diesem Export geändert. Vorschläge mit abweichenden Ausgangswerten werden als Konflikt markiert.':
+        return t('aiAnalyses.serviceMessage.plansChanged');
+    }
+
+    const changed = message.match(
+      /^Erwartet ([^=]+)=([^,]+), aktuell ([^.]+)\. Der Plan wurde seit dem Export geändert\.$/,
+    );
+    if (changed) {
+      const fieldKey = FIELD_KEY[changed[1] as keyof typeof FIELD_KEY];
+      return t('aiAnalyses.serviceMessage.changedValue', {
+        field: fieldKey ? t(fieldKey) : changed[1],
+        expected:
+          changed[2] === 'nicht gesetzt'
+            ? t('aiAnalyses.serviceMessage.unset')
+            : changed[2],
+        current:
+          changed[3] === 'nicht gesetzt'
+            ? t('aiAnalyses.serviceMessage.unset')
+            : changed[3],
+      });
+    }
+    return t('aiAnalyses.serviceMessage.unknown');
+  };
 }
 
 /** A single proposal card; selectable only while it is still pending. */
@@ -74,22 +124,37 @@ function ProposalCard({
   selected: boolean;
   onToggle?: () => void;
 }) {
+  const { t } = useTranslation('data');
+  const localizeServiceMessage = useLocalizedAiServiceMessage();
+  const lines = Object.entries(proposal.changes).map(([field, to]) => {
+    const fieldKey = FIELD_KEY[field as keyof typeof FIELD_KEY];
+    return {
+      label: fieldKey ? t(fieldKey) : field,
+      from: proposal.expected?.[field] != null ? String(proposal.expected[field]) : '–',
+      to: String(to),
+    };
+  });
+
   return (
     <div className="rounded-xl border border-border bg-surface p-3">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="truncate font-medium">
-            {proposal.exerciseName ?? proposal.templateName ?? 'Plan'}
+            {proposal.exerciseName ??
+              proposal.templateName ??
+              t('aiAnalyses.planFallback')}
           </p>
           {proposal.templateName && proposal.exerciseName ? (
             <p className="text-xs text-muted">{proposal.templateName}</p>
           ) : null}
         </div>
-        <Badge tone={STATUS_TONE[proposal.status]}>{STATUS_LABEL[proposal.status]}</Badge>
+        <Badge tone={STATUS_TONE[proposal.status]}>
+          {t(STATUS_KEY[proposal.status])}
+        </Badge>
       </div>
 
       <dl className="mt-2 grid gap-1 text-sm">
-        {changeLines(proposal).map((line) => (
+        {lines.map((line) => (
           <div key={line.label} className="flex flex-wrap items-baseline gap-x-2">
             <dt className="text-muted">{line.label}:</dt>
             <dd className="numeric">
@@ -107,7 +172,7 @@ function ProposalCard({
       {proposal.issue ? (
         <p className="mt-1 text-xs font-medium text-warning">
           <span aria-hidden="true">⚠ </span>
-          {proposal.issue}
+          {localizeServiceMessage(proposal.issue)}
         </p>
       ) : null}
 
@@ -119,7 +184,7 @@ function ProposalCard({
             onChange={onToggle}
             className="h-6 w-6 accent-[var(--accent)]"
           />
-          Übernehmen
+          {t('aiAnalyses.apply')}
         </label>
       ) : null}
     </div>
@@ -128,6 +193,8 @@ function ProposalCard({
 
 /** Plain-text feedback. Rendered as text nodes only — never as markup. */
 function FeedbackView({ feedback }: { feedback: ValidatedAiImport['feedback'] }) {
+  const { t } = useTranslation('data');
+
   return (
     <div className="grid gap-3">
       {feedback.headline ? <p className="font-semibold">{feedback.headline}</p> : null}
@@ -138,7 +205,7 @@ function FeedbackView({ feedback }: { feedback: ValidatedAiImport['feedback'] })
       {feedback.strengths.length > 0 ? (
         <div>
           <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">
-            Stärken
+            {t('aiAnalyses.feedback.strengths')}
           </h3>
           <ul className="mt-1 grid list-disc gap-1 pl-5 text-sm">
             {feedback.strengths.map((item, index) => (
@@ -151,7 +218,7 @@ function FeedbackView({ feedback }: { feedback: ValidatedAiImport['feedback'] })
       {feedback.observations.length > 0 ? (
         <div>
           <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">
-            Beobachtungen
+            {t('aiAnalyses.feedback.observations')}
           </h3>
           <ul className="mt-1 grid gap-2 text-sm">
             {feedback.observations.map((item, index) => (
@@ -167,7 +234,7 @@ function FeedbackView({ feedback }: { feedback: ValidatedAiImport['feedback'] })
       {feedback.recommendations.length > 0 ? (
         <div>
           <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">
-            Empfehlungen
+            {t('aiAnalyses.feedback.recommendations')}
           </h3>
           <ul className="mt-1 grid list-disc gap-1 pl-5 text-sm">
             {feedback.recommendations.map((item, index) => (
@@ -179,7 +246,7 @@ function FeedbackView({ feedback }: { feedback: ValidatedAiImport['feedback'] })
 
       {feedback.nextAnalysisAfter ? (
         <p className="text-xs text-muted">
-          Empfohlene nächste Analyse ab: {feedback.nextAnalysisAfter}
+          {t('aiAnalyses.feedback.next', { date: feedback.nextAnalysisAfter })}
         </p>
       ) : null}
     </div>
@@ -187,6 +254,9 @@ function FeedbackView({ feedback }: { feedback: ValidatedAiImport['feedback'] })
 }
 
 export default function AiAnalysesPage() {
+  const { t } = useTranslation('data');
+  const { t: tCommon } = useTranslation('common');
+  const localizeServiceMessage = useLocalizedAiServiceMessage();
   const toast = useToast();
   const analyses = useLiveQuery(() => listAiAnalyses(), [], []);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -208,7 +278,18 @@ export default function AiAnalysesPage() {
   const startReview = async (text: string) => {
     const result = await importAiResponse(text);
     if (!result.ok) {
-      toast.show(`Datei abgelehnt: ${result.errors[0]}`, 'error');
+      const firstError = result.errors[0] ?? '';
+      const detail =
+        firstError === 'Die Datei ist kein gültiges JSON.'
+          ? t('aiAnalyses.toast.invalidJson')
+          : firstError.includes('Vorschlag ohne Änderung')
+            ? t('aiAnalyses.toast.proposalWithoutChange')
+            : firstError.includes('Doppelte proposalId')
+              ? t('aiAnalyses.toast.duplicateProposal')
+              : firstError.includes('expected fehlt für Feld')
+                ? t('aiAnalyses.toast.expectedMissing')
+                : t('aiAnalyses.toast.invalidResponse');
+      toast.show(t('aiAnalyses.toast.rejected', { detail }), 'error');
       return;
     }
     setReview(result.value);
@@ -226,7 +307,7 @@ export default function AiAnalysesPage() {
     try {
       await startReview(await readFileAsText(file));
     } catch {
-      toast.show('Die Datei konnte nicht gelesen werden.', 'error');
+      toast.show(t('toast.fileReadFailed'), 'error');
     }
   };
 
@@ -243,8 +324,10 @@ export default function AiAnalysesPage() {
       const applied = analysis.proposals.filter((p) => p.status === 'applied').length;
       toast.show(
         applied > 0
-          ? `${applied} Vorschlag/Vorschläge übernommen — du kannst den Import unten rückgängig machen.`
-          : 'Analyse gespeichert. Keine Planänderung übernommen.',
+          ? applied === 1
+            ? t('aiAnalyses.toast.appliedOne')
+            : t('aiAnalyses.toast.appliedOther', { value: applied })
+          : t('aiAnalyses.toast.savedWithoutChanges'),
         'success',
       );
       setReview(null);
@@ -261,12 +344,16 @@ export default function AiAnalysesPage() {
     if (result.ok) {
       toast.show(
         result.restoredPlans > 0
-          ? `Import rückgängig gemacht — ${result.restoredPlans} Plan/Pläne zurückgesetzt.`
-          : 'Import als rückgängig markiert. Die betroffenen Pläne gibt es nicht mehr.',
+          ? result.restoredPlans === 1
+            ? t('aiAnalyses.toast.undoRestoredOne')
+            : t('aiAnalyses.toast.undoRestoredOther', {
+                value: result.restoredPlans,
+              })
+          : t('aiAnalyses.toast.undoWithoutPlans'),
         'success',
       );
     } else {
-      toast.show('Dieser Import lässt sich nicht mehr rückgängig machen.', 'error');
+      toast.show(t('aiAnalyses.toast.undoUnavailable'), 'error');
     }
   };
 
@@ -276,25 +363,25 @@ export default function AiAnalysesPage() {
   return (
     <>
       <PageHeader
-        title="KI-Analysen"
-        subtitle="Antwortdatei importieren — nichts wird ungeprüft übernommen"
+        title={t('aiAnalyses.title')}
+        subtitle={t('aiAnalyses.subtitle')}
         backTo="/mehr"
       />
 
       {review ? (
         <Card className="mb-4">
           <div className="mb-3 flex items-center justify-between gap-2">
-            <h2 className="text-base font-semibold">Import prüfen</h2>
+            <h2 className="text-base font-semibold">{t('aiAnalyses.review.title')}</h2>
             <Button variant="ghost" size="sm" onClick={() => setReview(null)}>
               <X size={16} aria-hidden="true" />
-              Verwerfen
+              {t('aiAnalyses.review.discard')}
             </Button>
           </div>
 
           {review.duplicate ? (
             <p className="mb-3 flex items-start gap-2 rounded-xl bg-surface-2 p-2 text-sm text-warning">
               <AlertTriangle size={16} className="mt-0.5 shrink-0" aria-hidden="true" />
-              Diese Antwortdatei wurde offenbar schon einmal importiert.
+              {t('aiAnalyses.review.duplicate')}
             </p>
           ) : null}
           {review.warnings.map((warning) => (
@@ -307,7 +394,7 @@ export default function AiAnalysesPage() {
                 className="mt-0.5 shrink-0 text-warning"
                 aria-hidden="true"
               />
-              {warning}
+              {localizeServiceMessage(warning)}
             </p>
           ))}
 
@@ -316,12 +403,12 @@ export default function AiAnalysesPage() {
           {review.proposals.length > 0 ? (
             <div className="mt-4">
               <h3 className="mb-2 text-sm font-semibold">
-                Planvorschläge ({review.proposals.length})
+                {t('aiAnalyses.review.proposals', {
+                  value: review.proposals.length,
+                })}
               </h3>
               <p className="mb-2 text-xs leading-relaxed text-muted">
-                Nur ausgewählte, gültige Vorschläge werden übernommen. Vorher wird vom
-                aktuellen Plan ein Wiederherstellungspunkt gesichert, sodass du den
-                letzten Import jederzeit rückgängig machen kannst.
+                {t('aiAnalyses.review.proposalHint')}
               </p>
               <div className="grid gap-2">
                 {review.proposals.map((proposal) => (
@@ -345,7 +432,7 @@ export default function AiAnalysesPage() {
             </div>
           ) : (
             <p className="mt-4 text-sm text-muted">
-              Diese Analyse enthält keine Planvorschläge.
+              {t('aiAnalyses.review.noProposals')}
             </p>
           )}
 
@@ -353,16 +440,19 @@ export default function AiAnalysesPage() {
             <Button variant="primary" disabled={busy} onClick={() => void handleCommit()}>
               <Check size={18} aria-hidden="true" />
               {pendingCount > 0
-                ? `Übernehmen (${selected.size} von ${pendingCount})`
-                : 'Analyse speichern'}
+                ? t('aiAnalyses.review.applySelected', {
+                    selected: selected.size,
+                    total: pendingCount,
+                  })
+                : t('aiAnalyses.review.save')}
             </Button>
           </div>
         </Card>
       ) : (
         <Card className="mb-4">
           <CardHeader
-            title="Antwortdatei importieren"
-            subtitle="Die von der KI erzeugte training-ai-response.json"
+            title={t('aiAnalyses.import.title')}
+            subtitle={t('aiAnalyses.import.subtitle')}
             as="h2"
           />
           <div className="grid gap-3">
@@ -375,13 +465,13 @@ export default function AiAnalysesPage() {
             />
             <Button variant="secondary" onClick={() => fileInput.current?.click()}>
               <Upload size={18} aria-hidden="true" />
-              Datei wählen
+              {t('aiAnalyses.import.choose')}
             </Button>
             <TextAreaField
-              label="… oder JSON einfügen"
+              label={t('aiAnalyses.import.paste')}
               value={paste}
               rows={4}
-              placeholder='{ "format": "training-ai-response", … }'
+              placeholder={t('aiAnalyses.import.pastePlaceholder')}
               onChange={(event) => setPaste(event.target.value)}
             />
             <Button
@@ -390,18 +480,18 @@ export default function AiAnalysesPage() {
               onClick={() => void handlePaste()}
             >
               <ClipboardPaste size={18} aria-hidden="true" />
-              Eingefügtes JSON prüfen
+              {t('aiAnalyses.import.checkPaste')}
             </Button>
           </div>
         </Card>
       )}
 
-      <h2 className="mb-2 text-base font-semibold">Frühere Analysen</h2>
+      <h2 className="mb-2 text-base font-semibold">{t('aiAnalyses.history.title')}</h2>
       {analyses.length === 0 ? (
         <EmptyState
           icon={<Sparkles size={26} aria-hidden="true" />}
-          title="Noch keine Analysen"
-          description="Exportiere deine Daten unter Daten & Sicherung, lade sie bei ChatGPT hoch und importiere hier die Antwortdatei. Feedback wird nur angezeigt; Planänderungen wendest du bewusst und einzeln an."
+          title={t('aiAnalyses.history.emptyTitle')}
+          description={t('aiAnalyses.history.emptyDescription')}
         />
       ) : (
         <ul className="grid gap-2">
@@ -423,17 +513,25 @@ export default function AiAnalysesPage() {
                     aria-expanded={open}
                   >
                     <p className="truncate font-medium">
-                      {analysis.headline || analysis.summary || 'KI-Analyse'}
+                      {analysis.headline ||
+                        analysis.summary ||
+                        t('aiAnalyses.history.fallbackTitle')}
                     </p>
                     <p className="mt-0.5 text-xs text-muted">
-                      {formatDateTime(analysis.importedAt)} · {analysis.proposals.length}{' '}
-                      Vorschläge
-                      {applied > 0 ? ` · ${applied} übernommen` : ''}
+                      {formatDateTime(analysis.importedAt)} ·{' '}
+                      {analysis.proposals.length === 1
+                        ? t('aiAnalyses.history.proposalOne')
+                        : t('aiAnalyses.history.proposalOther', {
+                            value: analysis.proposals.length,
+                          })}
+                      {applied > 0
+                        ? t('aiAnalyses.history.applied', { value: applied })
+                        : ''}
                     </p>
                   </button>
                   <button
                     type="button"
-                    aria-label="Analyse löschen"
+                    aria-label={t('aiAnalyses.history.deleteLabel')}
                     className="shrink-0 touch-target text-muted"
                     onClick={() => setRemove(analysis)}
                   >
@@ -443,13 +541,13 @@ export default function AiAnalysesPage() {
 
                 {analysis.undoneAt ? (
                   <p className="mt-2 text-xs text-muted">
-                    <Badge tone="default">rückgängig gemacht</Badge>
+                    <Badge tone="default">{t('aiAnalyses.history.undone')}</Badge>
                   </p>
                 ) : analysis.id === undoableId ? (
                   <div className="mt-2">
                     <Button variant="ghost" size="sm" onClick={() => setUndo(analysis)}>
                       <Undo2 size={16} aria-hidden="true" />
-                      Import rückgängig machen
+                      {t('aiAnalyses.history.undo')}
                     </Button>
                   </div>
                 ) : null}
@@ -488,9 +586,10 @@ export default function AiAnalysesPage() {
 
       <ConfirmDialog
         open={undo != null}
-        title="Import rückgängig machen?"
-        description="Die von diesem Import betroffenen Pläne werden auf den Stand vor dem Import zurückgesetzt. Spätere manuelle Änderungen an diesen Plänen gehen dabei verloren. Trainingsverlauf und abgeschlossene Sessions bleiben unberührt."
-        confirmLabel="Rückgängig machen"
+        title={t('aiAnalyses.undoDialog.title')}
+        description={t('aiAnalyses.undoDialog.description')}
+        confirmLabel={t('aiAnalyses.undoDialog.confirm')}
+        cancelLabel={tCommon('action.cancel')}
         onCancel={() => setUndo(null)}
         onConfirm={() => {
           if (undo) void handleUndo(undo);
@@ -499,15 +598,16 @@ export default function AiAnalysesPage() {
 
       <ConfirmDialog
         open={remove != null}
-        title="Analyse löschen?"
-        description="Das gespeicherte Feedback und die Vorschlagsliste werden entfernt. Bereits übernommene Planänderungen bleiben bestehen."
-        confirmLabel="Löschen"
+        title={t('aiAnalyses.deleteDialog.title')}
+        description={t('aiAnalyses.deleteDialog.description')}
+        confirmLabel={tCommon('action.delete')}
+        cancelLabel={tCommon('action.cancel')}
         destructive
         onCancel={() => setRemove(null)}
         onConfirm={async () => {
           if (remove) await deleteAiAnalysis(remove.id);
           setRemove(null);
-          toast.show('Analyse gelöscht.', 'info');
+          toast.show(t('aiAnalyses.toast.deleted'), 'info');
         }}
       />
     </>

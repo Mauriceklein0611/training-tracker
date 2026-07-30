@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { BlockMetrics } from '@/services/blockComparison';
 import {
   formatKg,
@@ -60,8 +61,9 @@ function Cell({
 const GRID = 'sm:grid-cols-[1.4fr_repeat(3,minmax(0,1fr))]';
 
 function Row({ row }: { row: MetricRow }) {
-  const aText = row.a == null ? 'keine Daten' : row.format(row.a);
-  const bText = row.b == null ? 'keine Daten' : row.format(row.b);
+  const { t } = useTranslation('comparisons');
+  const aText = row.a == null ? t('metrics.noData') : row.format(row.a);
+  const bText = row.b == null ? t('metrics.noData') : row.format(row.b);
   const delta = formatDelta(row);
   return (
     <div className="border-t border-border py-2 first:border-0">
@@ -139,6 +141,7 @@ export function MetricsCompareTable({
   subA?: ReactNode;
   subB?: ReactNode;
 }) {
+  const { t } = useTranslation('comparisons');
   const kg = formatVolume;
   const n =
     (digits = 0) =>
@@ -146,25 +149,40 @@ export function MetricsCompareTable({
       formatNumber(value, digits);
 
   const absolute: MetricRow[] = [
-    { label: 'Einheiten', a: a.sessions, b: b.sessions, format: n() },
-    { label: 'Trainingstage', a: a.trainingDays, b: b.trainingDays, format: n() },
+    { label: t('metrics.rows.sessions'), a: a.sessions, b: b.sessions, format: n() },
     {
-      label: 'Dauer gesamt',
+      label: t('metrics.rows.trainingDays'),
+      a: a.trainingDays,
+      b: b.trainingDays,
+      format: n(),
+    },
+    {
+      label: t('metrics.rows.totalDuration'),
       a: a.durationSeconds,
       b: b.durationSeconds,
       format: formatDurationLong,
     },
-    { label: 'Arbeitssätze', a: a.workingSets, b: b.workingSets, format: n() },
-    { label: 'Wiederholungen', a: a.totalReps, b: b.totalReps, format: n() },
-    { label: 'Volumen', a: a.volumeKg, b: b.volumeKg, format: kg },
     {
-      label: 'Versch. Übungen',
+      label: t('metrics.rows.workingSets'),
+      a: a.workingSets,
+      b: b.workingSets,
+      format: n(),
+    },
+    {
+      label: t('metrics.rows.repetitions'),
+      a: a.totalReps,
+      b: b.totalReps,
+      format: n(),
+    },
+    { label: t('metrics.rows.volume'), a: a.volumeKg, b: b.volumeKg, format: kg },
+    {
+      label: t('metrics.rows.distinctExercises'),
       a: a.distinctExercises,
       b: b.distinctExercises,
       format: n(),
     },
     {
-      label: 'Bestes e1RM',
+      label: t('metrics.rows.bestE1rm'),
       a: a.bestEstimatedOneRepMax,
       b: b.bestEstimatedOneRepMax,
       format: (value) => formatKg(value),
@@ -173,20 +191,25 @@ export function MetricsCompareTable({
 
   const perWeek: MetricRow[] = [
     {
-      label: 'Einheiten / Wo.',
+      label: t('metrics.rows.sessionsPerWeek'),
       a: a.sessionsPerWeek,
       b: b.sessionsPerWeek,
       format: n(1),
     },
     {
-      label: 'Sätze / Wo.',
+      label: t('metrics.rows.setsPerWeek'),
       a: a.workingSetsPerWeek,
       b: b.workingSetsPerWeek,
       format: n(1),
     },
-    { label: 'Volumen / Wo.', a: a.volumePerWeekKg, b: b.volumePerWeekKg, format: kg },
     {
-      label: 'Dauer / Wo.',
+      label: t('metrics.rows.volumePerWeek'),
+      a: a.volumePerWeekKg,
+      b: b.volumePerWeekKg,
+      format: kg,
+    },
+    {
+      label: t('metrics.rows.durationPerWeek'),
       a: a.durationPerWeekSeconds,
       b: b.durationPerWeekSeconds,
       format: formatDurationLong,
@@ -196,27 +219,32 @@ export function MetricsCompareTable({
   const distance = (m: number) => formatCardioDistance(m, undefined);
   const hasCardio = a.cardioActivities > 0 || b.cardioActivities > 0;
   const cardio: MetricRow[] = [
-    { label: 'Einheiten', a: a.cardioActivities, b: b.cardioActivities, format: n() },
     {
-      label: 'Dauer gesamt',
+      label: t('metrics.rows.sessions'),
+      a: a.cardioActivities,
+      b: b.cardioActivities,
+      format: n(),
+    },
+    {
+      label: t('metrics.rows.totalDuration'),
       a: a.cardioDurationSeconds,
       b: b.cardioDurationSeconds,
       format: formatDurationLong,
     },
     {
-      label: 'Distanz gesamt',
+      label: t('metrics.rows.totalDistance'),
       a: distanceOrNull(a.cardioDistanceMeters),
       b: distanceOrNull(b.cardioDistanceMeters),
       format: distance,
     },
     {
-      label: 'Ø Dauer / Einheit',
+      label: t('metrics.rows.averageDuration'),
       a: a.cardioActivities > 0 ? a.cardioDurationSeconds / a.cardioActivities : null,
       b: b.cardioActivities > 0 ? b.cardioDurationSeconds / b.cardioActivities : null,
       format: formatDurationLong,
     },
     {
-      label: 'Ø Distanz / Einheit',
+      label: t('metrics.rows.averageDistance'),
       a:
         a.cardioActivities > 0 && a.cardioDistanceMeters > 0
           ? a.cardioDistanceMeters / a.cardioActivities
@@ -228,37 +256,37 @@ export function MetricsCompareTable({
       format: distance,
     },
     {
-      label: 'Ø Pace',
+      label: t('metrics.rows.averagePace'),
       a: aggregatePaceMinPerKm(a.cardioDurationSeconds, a.cardioDistanceMeters),
       b: aggregatePaceMinPerKm(b.cardioDurationSeconds, b.cardioDistanceMeters),
       format: (value) => formatPace({ kind: 'min_per_km', value }),
     },
     {
-      label: 'Ø Geschwindigkeit',
+      label: t('metrics.rows.averageSpeed'),
       a: aggregateSpeedKmH(a.cardioDurationSeconds, a.cardioDistanceMeters),
       b: aggregateSpeedKmH(b.cardioDurationSeconds, b.cardioDistanceMeters),
       format: (value) => formatPace({ kind: 'km_per_h', value }),
     },
     {
-      label: 'Ø Cardio-RPE',
+      label: t('metrics.rows.averageCardioRpe'),
       a: a.cardioAvgRpe,
       b: b.cardioAvgRpe,
       format: n(1),
     },
     {
-      label: 'Einheiten / Wo.',
+      label: t('metrics.rows.sessionsPerWeek'),
       a: a.cardioActivitiesPerWeek,
       b: b.cardioActivitiesPerWeek,
       format: n(1),
     },
     {
-      label: 'Minuten / Wo.',
+      label: t('metrics.rows.minutesPerWeek'),
       a: a.cardioMinutesPerWeek,
       b: b.cardioMinutesPerWeek,
       format: (value) => `${formatNumber(value, 0)} min`,
     },
     {
-      label: 'Distanz / Wo.',
+      label: t('metrics.rows.distancePerWeek'),
       a: distanceOrNull(a.cardioDistancePerWeekMeters),
       b: distanceOrNull(b.cardioDistancePerWeekMeters),
       format: distance,
@@ -266,16 +294,16 @@ export function MetricsCompareTable({
   ];
 
   const averages: MetricRow[] = [
-    { label: 'Ø RIR', a: a.avgRir, b: b.avgRir, format: n(1) },
-    { label: 'Ø RPE', a: a.avgRpe, b: b.avgRpe, format: n(1) },
+    { label: t('metrics.rows.averageRir'), a: a.avgRir, b: b.avgRir, format: n(1) },
+    { label: t('metrics.rows.averageRpe'), a: a.avgRpe, b: b.avgRpe, format: n(1) },
     {
-      label: 'Pausenziel erreicht',
+      label: t('metrics.rows.restTargetMet'),
       a: a.restTargetMetRatio,
       b: b.restTargetMetRatio,
       format: formatPercent,
     },
     {
-      label: 'Ø Pausenabweichung',
+      label: t('metrics.rows.averageRestDeviation'),
       a: a.avgRestDeviationSeconds,
       b: b.avgRestDeviationSeconds,
       // Already a signed value; a delta of a signed deviation would mislead.
@@ -283,13 +311,13 @@ export function MetricsCompareTable({
       delta: false,
     },
     {
-      label: 'Ø Körpergewicht',
+      label: t('metrics.rows.averageBodyWeight'),
       a: a.avgBodyWeightKg,
       b: b.avgBodyWeightKg,
       format: (v) => formatKg(v),
     },
     {
-      label: 'Ø Körperfett',
+      label: t('metrics.rows.averageBodyFat'),
       a: a.avgBodyFatPercent,
       b: b.avgBodyFatPercent,
       format: formatPercentValue,
@@ -330,16 +358,13 @@ export function MetricsCompareTable({
         <span className="text-right font-semibold text-muted">Δ</span>
       </div>
 
-      <Section title="Absolut" rows={absolute} />
-      <Section title="Pro Woche (normalisiert)" rows={perWeek} />
-      {hasCardio ? <Section title="Cardio" rows={cardio} /> : null}
-      <Section title="Durchschnitte" rows={averages} />
+      <Section title={t('metrics.sections.absolute')} rows={absolute} />
+      <Section title={t('metrics.sections.perWeek')} rows={perWeek} />
+      {hasCardio ? <Section title={t('metrics.sections.cardio')} rows={cardio} /> : null}
+      <Section title={t('metrics.sections.averages')} rows={averages} />
 
       <p className="mt-3 text-xs leading-relaxed text-muted">
-        „keine Daten" bedeutet, dass für diesen Zeitraum nichts erfasst wurde. Δ ist die
-        reine Differenz B − A und wird nur bei vergleichbaren Werten gezeigt. Es werden
-        keine Werte geschätzt und keine Schlüsse gezogen — die Einordnung bleibt dir
-        überlassen.
+        {t('metrics.explanation')}
       </p>
     </div>
   );

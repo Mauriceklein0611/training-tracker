@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { ClipboardCopy, Download, FileJson, Share2, Upload } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { Card, CardHeader } from '@/components/ui/Card';
@@ -25,7 +26,6 @@ import { uuid } from '@/utils/id';
 import { useSettings } from '@/hooks/useSettings';
 import { useToast } from '@/hooks/useToast';
 import {
-  BACKUP_COUNT_LABELS,
   backupFileName,
   createBackup,
   importBackup,
@@ -69,6 +69,8 @@ interface PendingImport {
 }
 
 export default function DataPage() {
+  const { t } = useTranslation('data');
+  const { t: tCommon } = useTranslation('common');
   const toast = useToast();
   const { settings, update } = useSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -83,6 +85,52 @@ export default function DataPage() {
   const [aiOptions, setAiOptions] = useState<AiExportOptions>(DEFAULT_AI_EXPORT_OPTIONS);
   // Only shown after a failed attempt, so the form does not scold while typing.
   const [periodErrors, setPeriodErrors] = useState<ExportPeriodErrors>({});
+
+  const localizePeriodErrors = (errors: ExportPeriodErrors): ExportPeriodErrors => ({
+    customFrom:
+      errors.customFrom === 'Bitte ein Startdatum wählen.'
+        ? t('periodValidation.startRequired')
+        : errors.customFrom
+          ? t('periodValidation.invalidDate')
+          : undefined,
+    customTo:
+      errors.customTo === 'Bitte ein Enddatum wählen.'
+        ? t('periodValidation.endRequired')
+        : errors.customTo === 'Das Enddatum darf nicht vor dem Startdatum liegen.'
+          ? t('periodValidation.invalidOrder')
+          : errors.customTo
+            ? t('periodValidation.invalidDate')
+            : undefined,
+  });
+
+  const localizeBackupMessage = (message: string) => {
+    if (
+      message ===
+      'Die Datei ist keine gültige JSON-Datei und konnte nicht gelesen werden.'
+    ) {
+      return t('restore.invalidJson');
+    }
+    if (message.startsWith('Diese Datei wurde mit einem neueren Exportformat')) {
+      return t('restore.newerExport');
+    }
+    if (message.startsWith('Diese Datei stammt aus einer neueren Datenbankversion')) {
+      return t('restore.newerDatabase');
+    }
+    const orphanExercises = message.match(/^(\d+) Übungseinträge/);
+    if (orphanExercises) {
+      return t('restore.orphanExercises', { value: orphanExercises[1] });
+    }
+    if (message.startsWith('1 Satz verweist')) return t('restore.orphanSetOne');
+    const orphanSets = message.match(/^(\d+) Sätze verweisen/);
+    if (orphanSets) return t('restore.orphanSets', { value: orphanSets[1] });
+    const activeSessions = message.match(
+      /^Die Datei enthält (\d+) aktive Trainingseinheiten/,
+    );
+    if (activeSessions) {
+      return t('restore.activeSessions', { value: activeSessions[1] });
+    }
+    return t('restore.invalidFile');
+  };
 
   /** Merges one context field into the settings; empty strings are dropped. */
   const updateContext = async (changes: Partial<AnalysisContext>) => {
@@ -102,12 +150,12 @@ export default function DataPage() {
       const backup = await createBackup();
       downloadJson(backupFileName(), backup);
       await markBackupCreated();
-      toast.show('Sicherung erstellt.', 'success');
+      toast.show(t('toast.backupCreated'), 'success');
     } catch (error) {
       toast.show(
         error instanceof Error
-          ? `Export fehlgeschlagen: ${error.message}`
-          : 'Export fehlgeschlagen.',
+          ? t('toast.exportFailed', { detail: error.message })
+          : t('toast.exportFailedGeneric'),
         'error',
       );
     } finally {
@@ -135,7 +183,7 @@ export default function DataPage() {
       });
     } catch (error) {
       setImportErrors([
-        error instanceof Error ? error.message : 'Die Datei konnte nicht gelesen werden.',
+        error instanceof Error ? error.message : t('toast.fileReadFailed'),
       ]);
     } finally {
       // Allow selecting the same file again after a failed attempt.
@@ -143,16 +191,16 @@ export default function DataPage() {
     }
   };
 
-  const RESET_KEYWORD = 'ZURÜCKSETZEN';
+  const resetKeyword = t('danger.resetKeyword');
 
   const handleDeleteHistory = async () => {
     setBusy('reset');
     try {
       await deleteTrainingHistory();
       setHistoryConfirm(false);
-      toast.show('Trainingshistorie gelöscht.', 'success');
+      toast.show(t('toast.historyDeleted'), 'success');
     } catch {
-      toast.show('Löschen fehlgeschlagen.', 'error');
+      toast.show(t('toast.deleteFailed'), 'error');
     } finally {
       setBusy(null);
     }
@@ -166,7 +214,7 @@ export default function DataPage() {
       // stale React state (open session, cached queries) survives the wipe.
       window.location.assign('/');
     } catch {
-      toast.show('Zurücksetzen fehlgeschlagen.', 'error');
+      toast.show(t('toast.resetFailed'), 'error');
       setBusy(null);
     }
   };
@@ -183,8 +231,8 @@ export default function DataPage() {
       );
       toast.show(
         mode === 'replace'
-          ? `Daten ersetzt: ${added} Datensätze importiert.`
-          : `Zusammengeführt: ${added} neu, ${skipped} bereits vorhanden.`,
+          ? t('toast.dataReplaced', { value: added })
+          : t('toast.dataMerged', { added, skipped }),
         'success',
       );
       setPending(null);
@@ -193,8 +241,8 @@ export default function DataPage() {
       // The import runs in one transaction, so nothing was written on failure.
       toast.show(
         error instanceof Error
-          ? `Import fehlgeschlagen: ${error.message} Es wurden keine Daten verändert.`
-          : 'Import fehlgeschlagen. Es wurden keine Daten verändert.',
+          ? t('toast.importFailed', { detail: error.message })
+          : t('toast.importFailedGeneric'),
         'error',
       );
     } finally {
@@ -205,18 +253,29 @@ export default function DataPage() {
   /** What the file will contain, listed before anything leaves the device. */
   const exportContents = [
     aiOptions.period === 'all'
-      ? 'gesamte Trainingshistorie'
+      ? t('aiExport.contents.entireHistory')
       : aiOptions.period === 'custom'
-        ? `Zeitraum ${aiOptions.customFrom || '?'} bis ${aiOptions.customTo || '?'}`
-        : `letzte ${aiOptions.period === '30d' ? 30 : 90} Tage`,
-    'Übungen, Sätze, Gewichte, Wiederholungen, Pausen',
-    aiOptions.includeWarmupSets ? 'inklusive Aufwärmsätze' : 'ohne Aufwärmsätze',
-    aiOptions.includeNotes ? 'inklusive Notizen' : 'ohne Notizen',
-    aiOptions.includeBodyWeight ? 'inklusive Körperdaten' : 'ohne Körperdaten',
+        ? t('aiExport.contents.customPeriod', {
+            from: aiOptions.customFrom || '?',
+            to: aiOptions.customTo || '?',
+          })
+        : t('aiExport.contents.lastDays', {
+            value: aiOptions.period === '30d' ? 30 : 90,
+          }),
+    t('aiExport.contents.training'),
+    aiOptions.includeWarmupSets
+      ? t('aiExport.contents.warmupIncluded')
+      : t('aiExport.contents.warmupExcluded'),
+    aiOptions.includeNotes
+      ? t('aiExport.contents.notesIncluded')
+      : t('aiExport.contents.notesExcluded'),
+    aiOptions.includeBodyWeight
+      ? t('aiExport.contents.bodyIncluded')
+      : t('aiExport.contents.bodyExcluded'),
     buildContextBlock(settings.analysisContext)
-      ? 'deine Angaben zum Trainingskontext'
-      : 'keine Kontextangaben hinterlegt',
-    'Planungskontext: aktiver Plan, Planziele, Trainingsblöcke und aktiver Deload',
+      ? t('aiExport.contents.contextIncluded')
+      : t('aiExport.contents.contextExcluded'),
+    t('aiExport.contents.planning'),
   ];
 
   const buildExportFile = async () => {
@@ -269,9 +328,9 @@ export default function DataPage() {
    */
   const handleShareForAi = async () => {
     const errors = validateExportPeriod(aiOptions);
-    setPeriodErrors(errors);
+    setPeriodErrors(localizePeriodErrors(errors));
     if (hasExportPeriodErrors(errors)) {
-      toast.show('Bitte den Zeitraum vervollständigen.', 'error');
+      toast.show(t('toast.completePeriod'), 'error');
       return;
     }
 
@@ -281,15 +340,27 @@ export default function DataPage() {
       const result = await shareJsonExport({
         fileName: aiExportFileName(),
         data: file,
-        title: 'Trainingsdaten zur Analyse',
+        title: t('aiExport.shareTitle'),
         textPrefix: AI_ANALYSIS_PROMPT,
       });
-      toast.show(result.message, result.outcome === 'failed' ? 'error' : 'success');
+      const shareMessage =
+        result.outcome === 'shared-file'
+          ? t('aiExport.shareResult.sharedFile')
+          : result.outcome === 'shared-text'
+            ? t('aiExport.shareResult.sharedText')
+            : result.outcome === 'cancelled'
+              ? t('aiExport.shareResult.cancelled')
+              : result.outcome === 'downloaded'
+                ? result.copiedToClipboard
+                  ? t('aiExport.shareResult.downloadedCopied')
+                  : t('aiExport.shareResult.downloaded')
+                : t('aiExport.shareResult.failed');
+      toast.show(shareMessage, result.outcome === 'failed' ? 'error' : 'success');
     } catch (error) {
       toast.show(
         error instanceof Error
-          ? `Teilen fehlgeschlagen: ${error.message}`
-          : 'Teilen fehlgeschlagen.',
+          ? t('toast.shareFailed', { detail: error.message })
+          : t('toast.shareFailedGeneric'),
         'error',
       );
     } finally {
@@ -302,21 +373,21 @@ export default function DataPage() {
     // Validate before touching the database: an incomplete custom period must
     // never silently widen the export to the whole history.
     const errors = validateExportPeriod(aiOptions);
-    setPeriodErrors(errors);
+    setPeriodErrors(localizePeriodErrors(errors));
     if (hasExportPeriodErrors(errors)) {
-      toast.show('Bitte den Zeitraum vervollständigen.', 'error');
+      toast.show(t('toast.completePeriod'), 'error');
       return;
     }
 
     setBusy('ai');
     try {
       downloadJson(aiExportFileName(), await buildExportFile());
-      toast.show('KI-Export erstellt.', 'success');
+      toast.show(t('toast.aiExportCreated'), 'success');
     } catch (error) {
       toast.show(
         error instanceof Error
-          ? `Export fehlgeschlagen: ${error.message}`
-          : 'Export fehlgeschlagen.',
+          ? t('toast.exportFailed', { detail: error.message })
+          : t('toast.exportFailedGeneric'),
         'error',
       );
     } finally {
@@ -346,12 +417,12 @@ export default function DataPage() {
           kind === 'sets' ? setsCsv(dataset) : sessionsCsv(dataset),
         );
       }
-      toast.show('CSV-Datei erstellt.', 'success');
+      toast.show(t('toast.csvCreated'), 'success');
     } catch (error) {
       toast.show(
         error instanceof Error
-          ? `Export fehlgeschlagen: ${error.message}`
-          : 'Export fehlgeschlagen.',
+          ? t('toast.exportFailed', { detail: error.message })
+          : t('toast.exportFailedGeneric'),
         'error',
       );
     } finally {
@@ -361,15 +432,11 @@ export default function DataPage() {
 
   return (
     <>
-      <PageHeader title="Daten & Sicherung" backTo="/mehr" />
+      <PageHeader title={t('title')} backTo="/mehr" />
 
       <div className="grid gap-4">
         <Card>
-          <CardHeader
-            title="Vollständige Sicherung"
-            subtitle="Enthält alle Übungen, Pläne, Trainingseinheiten, Sätze, Körpergewichtseinträge und Einstellungen. Diese Datei kann vollständig wieder eingespielt werden."
-            as="h2"
-          />
+          <CardHeader title={t('backup.title')} subtitle={t('backup.subtitle')} as="h2" />
           <Button
             variant="primary"
             size="lg"
@@ -378,19 +445,21 @@ export default function DataPage() {
             onClick={() => void handleBackup()}
           >
             <Download size={20} aria-hidden="true" />
-            {busy === 'backup' ? 'Wird erstellt …' : 'Vollständige Sicherung erstellen'}
+            {busy === 'backup' ? t('busy.creating') : t('backup.create')}
           </Button>
           <p className="mt-2 text-xs leading-relaxed text-muted">
-            Letzte Sicherung:{' '}
-            {settings.lastBackupAt ? formatDateTime(settings.lastBackupAt) : 'noch nie'}.
-            Die Datei wird lokal erzeugt und nur dorthin gespeichert, wo du sie ablegst.
+            {t('backup.last')}{' '}
+            {settings.lastBackupAt
+              ? formatDateTime(settings.lastBackupAt)
+              : t('backup.never')}
+            . {t('backup.localHint')}
           </p>
         </Card>
 
         <Card>
           <CardHeader
-            title="Sicherung wiederherstellen"
-            subtitle="Wähle eine zuvor erstellte Sicherungsdatei. Sie wird zuerst geprüft — importiert wird erst nach deiner Bestätigung."
+            title={t('restore.title')}
+            subtitle={t('restore.subtitle')}
             as="h2"
           />
           <input
@@ -408,7 +477,7 @@ export default function DataPage() {
             onClick={() => fileInputRef.current?.click()}
           >
             <Upload size={20} aria-hidden="true" />
-            Sicherungsdatei auswählen
+            {t('restore.choose')}
           </Button>
 
           {importErrors.length > 0 ? (
@@ -418,11 +487,11 @@ export default function DataPage() {
             >
               <p className="font-semibold text-danger">
                 <span aria-hidden="true">⚠ </span>
-                Die Datei konnte nicht verwendet werden
+                {t('restore.unusable')}
               </p>
               <ul className="mt-1.5 list-disc pl-5 text-xs leading-relaxed text-muted">
                 {importErrors.map((message) => (
-                  <li key={message}>{message}</li>
+                  <li key={message}>{localizeBackupMessage(message)}</li>
                 ))}
               </ul>
             </div>
@@ -431,13 +500,13 @@ export default function DataPage() {
 
         <Card>
           <CardHeader
-            title="Export für eine KI-Analyse"
-            subtitle="Eine aufbereitete, selbsterklärende Datei für ChatGPT und vergleichbare Sprachmodelle. Sie enthält ausschließlich das, was du hier auswählst."
+            title={t('aiExport.title')}
+            subtitle={t('aiExport.subtitle')}
             as="h2"
           />
           <div className="grid gap-3">
             <SelectField
-              label="Zeitraum"
+              label={t('aiExport.period.label')}
               value={aiOptions.period}
               onChange={(event) =>
                 setAiOptions((current) => ({
@@ -446,16 +515,16 @@ export default function DataPage() {
                 }))
               }
             >
-              <option value="all">Gesamte Historie</option>
-              <option value="30d">Letzte 30 Tage</option>
-              <option value="90d">Letzte 90 Tage</option>
-              <option value="custom">Benutzerdefiniert</option>
+              <option value="all">{t('aiExport.period.all')}</option>
+              <option value="30d">{t('aiExport.period.days30')}</option>
+              <option value="90d">{t('aiExport.period.days90')}</option>
+              <option value="custom">{t('aiExport.period.custom')}</option>
             </SelectField>
 
             {aiOptions.period === 'custom' ? (
               <div className="grid grid-cols-2 gap-2">
                 <TextField
-                  label="Von"
+                  label={t('aiExport.period.from')}
                   type="date"
                   required
                   value={aiOptions.customFrom ?? ''}
@@ -470,7 +539,7 @@ export default function DataPage() {
                   }}
                 />
                 <TextField
-                  label="Bis"
+                  label={t('aiExport.period.to')}
                   type="date"
                   required
                   value={aiOptions.customTo ?? ''}
@@ -488,24 +557,24 @@ export default function DataPage() {
             ) : null}
 
             <CheckboxField
-              label="Notizen einschließen"
-              hint="Notizen zu Trainings, Übungen und Körpergewicht."
+              label={t('aiExport.options.notes')}
+              hint={t('aiExport.options.notesHint')}
               checked={aiOptions.includeNotes}
               onChange={(checked) =>
                 setAiOptions((current) => ({ ...current, includeNotes: checked }))
               }
             />
             <CheckboxField
-              label="Körperdaten einschließen"
-              hint="Gewicht, Körperfettanteil und Umfangsmaße."
+              label={t('aiExport.options.body')}
+              hint={t('aiExport.options.bodyHint')}
               checked={aiOptions.includeBodyWeight}
               onChange={(checked) =>
                 setAiOptions((current) => ({ ...current, includeBodyWeight: checked }))
               }
             />
             <CheckboxField
-              label="Aufwärmsätze einschließen"
-              hint="Standardmäßig ausgeschlossen, damit Volumen und Bestleistungen nicht verfälscht werden."
+              label={t('aiExport.options.warmup')}
+              hint={t('aiExport.options.warmupHint')}
               checked={aiOptions.includeWarmupSets}
               onChange={(checked) =>
                 setAiOptions((current) => ({ ...current, includeWarmupSets: checked }))
@@ -514,15 +583,14 @@ export default function DataPage() {
 
             {/* Stated plainly before anything can leave the device. */}
             <div className="rounded-xl bg-surface-2 p-3">
-              <p className="text-xs font-semibold">Die Datei enthält:</p>
+              <p className="text-xs font-semibold">{t('aiExport.contents.heading')}</p>
               <ul className="mt-1 list-disc pl-4 text-xs leading-relaxed text-muted">
                 {exportContents.map((entry) => (
                   <li key={entry}>{entry}</li>
                 ))}
               </ul>
               <p className="mt-2 text-xs leading-relaxed text-muted">
-                Die Datei wird lokal erzeugt. Beim Teilen entscheidet dein Gerät, welche
-                Apps angeboten werden — die App überträgt selbst nichts.
+                {t('aiExport.privacyHint')}
               </p>
             </div>
 
@@ -534,7 +602,7 @@ export default function DataPage() {
               onClick={() => void handleShareForAi()}
             >
               <Share2 size={20} aria-hidden="true" />
-              {busy === 'share' ? 'Wird vorbereitet …' : 'Mit KI analysieren'}
+              {busy === 'share' ? t('busy.preparing') : t('aiExport.share')}
             </Button>
 
             <Button
@@ -544,7 +612,7 @@ export default function DataPage() {
               onClick={() => void handleAiExport()}
             >
               <FileJson size={18} aria-hidden="true" />
-              {busy === 'ai' ? 'Wird erstellt …' : 'Nur als Datei speichern'}
+              {busy === 'ai' ? t('busy.creating') : t('aiExport.saveFile')}
             </Button>
 
             <Button
@@ -553,20 +621,18 @@ export default function DataPage() {
               onClick={async () => {
                 const ok = await copyToClipboard(AI_ANALYSIS_PROMPT);
                 toast.show(
-                  ok
-                    ? 'Analyseanweisung in die Zwischenablage kopiert.'
-                    : 'Kopieren wurde vom Browser blockiert. Bitte markiere den Text manuell.',
+                  ok ? t('toast.promptCopied') : t('toast.promptCopyBlocked'),
                   ok ? 'success' : 'error',
                 );
               }}
             >
               <ClipboardCopy size={18} aria-hidden="true" />
-              Analyseanweisung kopieren
+              {t('aiExport.copyPrompt')}
             </Button>
 
             <details className="rounded-xl border border-border bg-surface-2 p-3">
               <summary className="min-h-[44px] cursor-pointer list-none py-2 text-xs font-medium text-accent">
-                Anweisung anzeigen
+                {t('aiExport.showPrompt')}
               </summary>
               <p className="mt-2 text-xs leading-relaxed text-muted">
                 {AI_ANALYSIS_PROMPT}
@@ -577,27 +643,27 @@ export default function DataPage() {
 
         <Card>
           <CardHeader
-            title="Angaben zum Trainingskontext"
-            subtitle="Vollständig freiwillig. Diese Angaben werden nur in den KI-Export übernommen und beeinflussen keine Berechnung in der App."
+            title={t('context.title')}
+            subtitle={t('context.subtitle')}
             as="h2"
           />
           <details>
             <summary className="min-h-[44px] cursor-pointer list-none py-2 text-sm font-medium text-accent">
               {buildContextBlock(settings.analysisContext)
-                ? 'Angaben bearbeiten'
-                : 'Angaben hinzufügen'}
+                ? t('context.edit')
+                : t('context.add')}
             </summary>
             <div className="mt-3 grid gap-3">
               <TextField
-                label="Trainingsziel"
+                label={t('context.goal')}
                 value={settings.analysisContext?.goal ?? ''}
-                placeholder="z. B. Kraftaufbau im Oberkörper"
+                placeholder={t('context.goalPlaceholder')}
                 onChange={(event) => void updateContext({ goal: event.target.value })}
               />
               <NumberField
-                label="Gewünschte Trainingstage pro Woche"
+                label={t('context.days')}
                 value={String(settings.analysisContext?.trainingDaysPerWeekTarget ?? '')}
-                placeholder="z. B. 4"
+                placeholder={t('context.daysPlaceholder')}
                 onChange={(event) => {
                   const parsed = parseNumberInput(event.target.value);
                   void updateContext({
@@ -609,16 +675,16 @@ export default function DataPage() {
                 }}
               />
               <TextAreaField
-                label="Verfügbares Equipment"
+                label={t('context.equipment')}
                 rows={2}
                 value={settings.analysisContext?.equipment ?? ''}
-                placeholder="z. B. Langhantel, Kurzhanteln bis 30 kg, Klimmzugstange"
+                placeholder={t('context.equipmentPlaceholder')}
                 onChange={(event) =>
                   void updateContext({ equipment: event.target.value })
                 }
               />
               <SelectField
-                label="Aktuelle Phase"
+                label={t('context.phase')}
                 value={settings.analysisContext?.phase ?? ''}
                 onChange={(event) =>
                   void updateContext({
@@ -626,73 +692,64 @@ export default function DataPage() {
                   })
                 }
               >
-                <option value="">Keine Angabe</option>
-                <option value="bulk">Aufbau</option>
-                <option value="maintenance">Erhaltung</option>
-                <option value="cut">Diät</option>
+                <option value="">{t('context.phaseNone')}</option>
+                <option value="bulk">{t('context.phaseBulk')}</option>
+                <option value="maintenance">{t('context.phaseMaintenance')}</option>
+                <option value="cut">{t('context.phaseCut')}</option>
               </SelectField>
               <TextAreaField
-                label="Einschränkungen oder Hinweise"
+                label={t('context.limitations')}
                 rows={2}
                 value={settings.analysisContext?.limitations ?? ''}
-                placeholder="z. B. linke Schulter empfindlich beim Überkopfdrücken"
+                placeholder={t('context.limitationsPlaceholder')}
                 onChange={(event) =>
                   void updateContext({ limitations: event.target.value })
                 }
               />
               <TextAreaField
-                label="Gewünschter Analyseschwerpunkt"
+                label={t('context.focus')}
                 rows={2}
                 value={settings.analysisContext?.focus ?? ''}
-                placeholder="z. B. Warum stagniert mein Bankdrücken?"
+                placeholder={t('context.focusPlaceholder')}
                 onChange={(event) => void updateContext({ focus: event.target.value })}
               />
               <p className="text-xs leading-relaxed text-muted">
-                Leere Felder erscheinen nicht in der Exportdatei.
+                {t('context.emptyHint')}
               </p>
             </div>
           </details>
         </Card>
 
         <Card>
-          <CardHeader
-            title="CSV-Export"
-            subtitle="Für Tabellenkalkulationen. UTF-8 mit korrekt maskierten Sonderzeichen."
-            as="h2"
-          />
+          <CardHeader title={t('csv.title')} subtitle={t('csv.subtitle')} as="h2" />
           <div className="grid gap-2">
             <Button disabled={busy !== null} onClick={() => void handleCsv('sets')}>
-              Sätze als CSV
+              {t('csv.sets')}
             </Button>
             <Button disabled={busy !== null} onClick={() => void handleCsv('sessions')}>
-              Trainingseinheiten als CSV
+              {t('csv.sessions')}
             </Button>
             <Button disabled={busy !== null} onClick={() => void handleCsv('exercises')}>
-              Übungen als CSV
+              {t('csv.exercises')}
             </Button>
             <Button disabled={busy !== null} onClick={() => void handleCsv('bodyweight')}>
-              Körperdaten als CSV
+              {t('csv.body')}
             </Button>
           </div>
         </Card>
 
         <Card className="border-danger/40">
-          <CardHeader
-            title="Gefahrenzone"
-            subtitle="Diese Aktionen können nicht rückgängig gemacht werden. Erstelle vorher eine Sicherung."
-            as="h2"
-          />
+          <CardHeader title={t('danger.title')} subtitle={t('danger.subtitle')} as="h2" />
           <div className="grid gap-2">
             <Button
               variant="secondary"
               disabled={busy !== null}
               onClick={() => setHistoryConfirm(true)}
             >
-              Trainingshistorie löschen
+              {t('danger.deleteHistory')}
             </Button>
             <p className="text-xs leading-relaxed text-muted">
-              Löscht alle Trainingseinheiten, Sätze, Pausen und aktive Entwürfe. Übungen,
-              Trainingspläne und Körperdaten bleiben erhalten.
+              {t('danger.deleteHistoryHint')}
             </p>
             <Button
               variant="danger"
@@ -700,12 +757,10 @@ export default function DataPage() {
               disabled={busy !== null}
               onClick={() => setResetOpen(true)}
             >
-              App vollständig zurücksetzen
+              {t('danger.resetApp')}
             </Button>
             <p className="text-xs leading-relaxed text-muted">
-              Löscht alle lokalen Daten: Übungen, Pläne, Trainings, Körperdaten,
-              Equipment-Profile, KI-Analysen und Einstellungen. Die App startet danach wie
-              frisch installiert.
+              {t('danger.resetAppHint')}
             </p>
           </div>
         </Card>
@@ -715,22 +770,24 @@ export default function DataPage() {
       <Dialog
         open={Boolean(pending) && !replaceConfirm}
         onClose={() => setPending(null)}
-        title="Sicherung importieren"
-        description={pending ? `Datei: ${pending.fileName}` : undefined}
+        title={t('importDialog.title')}
+        description={
+          pending ? t('importDialog.file', { name: pending.fileName }) : undefined
+        }
         footer={
           <>
             <Button variant="secondary" onClick={() => setPending(null)}>
-              Abbrechen
+              {tCommon('action.cancel')}
             </Button>
             <Button
               variant="primary"
               disabled={busy !== null}
               onClick={() => void runImport('merge')}
             >
-              Zusammenführen
+              {t('importDialog.merge')}
             </Button>
             <Button variant="danger" onClick={() => setReplaceConfirm(true)}>
-              Ersetzen
+              {t('importDialog.replace')}
             </Button>
           </>
         }
@@ -738,11 +795,11 @@ export default function DataPage() {
         {pending ? (
           <div className="grid gap-3">
             <div>
-              <h3 className="text-sm font-semibold">Enthaltene Datensätze</h3>
+              <h3 className="text-sm font-semibold">{t('importDialog.records')}</h3>
               <ul className="mt-1.5 grid gap-1 text-sm">
                 {(Object.keys(pending.counts) as (keyof BackupCounts)[]).map((key) => (
                   <li key={key} className="flex justify-between gap-3">
-                    <span className="text-muted">{BACKUP_COUNT_LABELS[key]}</span>
+                    <span className="text-muted">{t(`importDialog.counts.${key}`)}</span>
                     <span className="numeric font-medium">{pending.counts[key]}</span>
                   </li>
                 ))}
@@ -753,11 +810,11 @@ export default function DataPage() {
               <div className="rounded-xl border border-warning/50 bg-surface-2 p-3">
                 <p className="text-sm font-semibold text-warning">
                   <span aria-hidden="true">⚠ </span>
-                  Hinweise
+                  {t('importDialog.notes')}
                 </p>
                 <ul className="mt-1 list-disc pl-5 text-xs leading-relaxed text-muted">
                   {pending.warnings.map((warning) => (
-                    <li key={warning}>{warning}</li>
+                    <li key={warning}>{localizeBackupMessage(warning)}</li>
                   ))}
                 </ul>
               </div>
@@ -765,14 +822,16 @@ export default function DataPage() {
 
             <div className="rounded-xl bg-surface-2 p-3 text-xs leading-relaxed text-muted">
               <p>
-                <span className="font-semibold text-text">Zusammenführen:</span> fügt nur
-                Datensätze hinzu, die noch nicht vorhanden sind. Vorhandene Daten bleiben
-                unverändert — nichts wird überschrieben.
+                <span className="font-semibold text-text">
+                  {t('importDialog.mergeLabel')}
+                </span>{' '}
+                {t('importDialog.mergeDescription')}
               </p>
               <p className="mt-1.5">
-                <span className="font-semibold text-text">Ersetzen:</span> löscht zuerst
-                alle aktuellen Trainingsdaten auf diesem Gerät und spielt anschließend die
-                Datei ein.
+                <span className="font-semibold text-text">
+                  {t('importDialog.replaceLabel')}
+                </span>{' '}
+                {t('importDialog.replaceDescription')}
               </p>
             </div>
           </div>
@@ -781,10 +840,10 @@ export default function DataPage() {
 
       <ConfirmDialog
         open={replaceConfirm}
-        title="Alle vorhandenen Daten ersetzen?"
-        description="Sämtliche Übungen, Pläne, Trainingseinheiten, Sätze und Körpergewichtseinträge auf diesem Gerät werden gelöscht und durch den Inhalt der Datei ersetzt. Dieser Schritt kann nicht rückgängig gemacht werden. Erstelle vorher eine Sicherung, wenn du dir nicht sicher bist."
-        confirmLabel="Daten endgültig ersetzen"
-        cancelLabel="Abbrechen"
+        title={t('danger.replaceTitle')}
+        description={t('danger.replaceDescription')}
+        confirmLabel={t('danger.replaceConfirm')}
+        cancelLabel={tCommon('action.cancel')}
         destructive
         onCancel={() => setReplaceConfirm(false)}
         onConfirm={() => void runImport('replace')}
@@ -792,10 +851,10 @@ export default function DataPage() {
 
       <ConfirmDialog
         open={historyConfirm}
-        title="Trainingshistorie löschen?"
-        description="Alle Trainingseinheiten, Sätze, Pausen und aktive Entwürfe werden endgültig gelöscht. Übungen, Trainingspläne und Körperdaten bleiben erhalten. Dieser Schritt kann nicht rückgängig gemacht werden."
-        confirmLabel="Historie endgültig löschen"
-        cancelLabel="Abbrechen"
+        title={t('danger.historyTitle')}
+        description={t('danger.historyDescription')}
+        confirmLabel={t('danger.historyConfirm')}
+        cancelLabel={tCommon('action.cancel')}
         destructive
         onCancel={() => setHistoryConfirm(false)}
         onConfirm={() => void handleDeleteHistory()}
@@ -808,8 +867,8 @@ export default function DataPage() {
           setResetOpen(false);
           setResetInput('');
         }}
-        title="App vollständig zurücksetzen?"
-        description="Alle lokalen Daten werden unwiderruflich gelöscht — Übungen, Pläne, Trainings, Körperdaten, Equipment-Profile, KI-Analysen und Einstellungen. Erstelle vorher unbedingt eine Sicherung, falls du die Daten behalten möchtest."
+        title={t('danger.resetTitle')}
+        description={t('danger.resetDescription')}
         footer={
           <>
             <Button
@@ -819,26 +878,24 @@ export default function DataPage() {
                 setResetInput('');
               }}
             >
-              Abbrechen
+              {tCommon('action.cancel')}
             </Button>
             <Button
               variant="danger"
-              disabled={
-                busy !== null || resetInput.trim().toUpperCase() !== RESET_KEYWORD
-              }
+              disabled={busy !== null || resetInput.trim().toUpperCase() !== resetKeyword}
               onClick={() => void handleResetAll()}
             >
-              Alles löschen
+              {t('danger.deleteAll')}
             </Button>
           </>
         }
       >
         <TextField
-          label={`Zum Bestätigen „${RESET_KEYWORD}" eingeben`}
+          label={t('danger.resetInput', { keyword: resetKeyword })}
           value={resetInput}
           autoCapitalize="characters"
           autoCorrect="off"
-          placeholder={RESET_KEYWORD}
+          placeholder={resetKeyword}
           onChange={(event) => setResetInput(event.target.value)}
         />
       </Dialog>

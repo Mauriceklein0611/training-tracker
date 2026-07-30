@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import {
@@ -32,7 +33,6 @@ import {
   getPlanWithDays,
   LastDayError,
   moveDay,
-  SPLIT_TYPE_LABELS,
   updatePlan,
 } from '@/db/repositories/plans';
 import {
@@ -60,6 +60,8 @@ import {
 } from '@/services/grouping';
 
 export default function TemplateEditPage() {
+  const { t } = useTranslation('plans');
+  const { t: tCommon } = useTranslation();
   const { planId = '' } = useParams();
   const navigate = useNavigate();
   const toast = useToast();
@@ -93,9 +95,9 @@ export default function TemplateEditPage() {
   if (plan === undefined) {
     return (
       <>
-        <PageHeader title="Plan" backTo="/plaene" />
+        <PageHeader title={t('editor.plan')} backTo="/plaene" />
         <p className="text-sm text-muted" role="status">
-          Wird geladen …
+          {t('editor.loading')}
         </p>
       </>
     );
@@ -104,13 +106,13 @@ export default function TemplateEditPage() {
   if (!plan) {
     return (
       <>
-        <PageHeader title="Plan" backTo="/plaene" />
+        <PageHeader title={t('editor.plan')} backTo="/plaene" />
         <EmptyState
-          title="Plan nicht gefunden"
-          description="Dieser Trainingsplan existiert nicht mehr."
+          title={t('editor.notFound')}
+          description={t('editor.notFoundDescription')}
           action={
             <Button variant="primary" onClick={() => navigate('/plaene')}>
-              Zurück zur Übersicht
+              {t('editor.backOverview')}
             </Button>
           }
         />
@@ -144,17 +146,14 @@ export default function TemplateEditPage() {
         navigate(`/training/${error.activeSessionId}`);
         return;
       }
-      toast.show(
-        error instanceof Error ? error.message : 'Start fehlgeschlagen.',
-        'error',
-      );
+      toast.show(t('editor.startFailed'), 'error');
     }
   };
 
   const handleSaveAsUnit = async () => {
     if (!activeDayId) return;
     await saveTemplateAsWorkoutUnit(activeDayId);
-    toast.show('Als Übungseinheit in der Bibliothek gespeichert.', 'success');
+    toast.show(t('editor.savedUnit'), 'success');
   };
 
   const handleDeleteDay = async () => {
@@ -162,11 +161,13 @@ export default function TemplateEditPage() {
       await deleteDay(activeDayId);
       setSelectedDayId('');
       setDeleteDayOpen(false);
-      toast.show('Trainingstag gelöscht.', 'success');
+      toast.show(t('editor.deletedDay'), 'success');
     } catch (error) {
       setDeleteDayOpen(false);
       toast.show(
-        error instanceof LastDayError ? error.message : 'Löschen fehlgeschlagen.',
+        error instanceof LastDayError
+          ? t('editor.lastDayCannotDelete')
+          : t('editor.deleteFailed'),
         'error',
       );
     }
@@ -178,12 +179,13 @@ export default function TemplateEditPage() {
     <>
       <PageHeader
         title={plan.plan.name}
-        subtitle={`${SPLIT_TYPE_LABELS[plan.plan.splitType]} · ${days.length} ${
-          days.length === 1 ? 'Tag' : 'Tage'
-        }`}
+        subtitle={`${t(`split.${plan.plan.splitType}`)} · ${t(
+          days.length === 1 ? 'count.dayOne' : 'count.dayOther',
+          { count: days.length },
+        )}`}
         backTo="/plaene"
         action={
-          <IconButton label="Plan-Einstellungen" onClick={() => setSettingsOpen(true)}>
+          <IconButton label={t('editor.settings')} onClick={() => setSettingsOpen(true)}>
             <Settings2 size={20} aria-hidden="true" />
           </IconButton>
         }
@@ -210,7 +212,7 @@ export default function TemplateEditPage() {
         onClick={() => setScheduleOpen(true)}
       >
         <CalendarRange size={18} className="text-accent" aria-hidden="true" />
-        Zeitplan &amp; Pausentage
+        {t('editor.scheduleRest')}
       </Button>
 
       <Button
@@ -221,7 +223,7 @@ export default function TemplateEditPage() {
         onClick={() => setCalendarOpen(true)}
       >
         <CalendarDays size={18} className="text-accent" aria-hidden="true" />
-        Kalender
+        {t('editor.calendar')}
       </Button>
 
       <Button
@@ -232,7 +234,7 @@ export default function TemplateEditPage() {
         onClick={() => setGoalsOpen(true)}
       >
         <Target size={18} className="text-accent" aria-hidden="true" />
-        Ziele &amp; Fokus
+        {t('editor.goals')}
       </Button>
 
       {/* Day navigation — hidden for a single-day plan to stay simple. */}
@@ -264,14 +266,14 @@ export default function TemplateEditPage() {
           {!isSingleDay ? (
             <>
               <IconButton
-                label="Tag nach links"
+                label={t('editor.moveLeft')}
                 onClick={() => void moveDay(activeDayId, -1)}
                 {...(dayIndex <= 0 ? { disabled: true } : {})}
               >
                 <ChevronLeft size={18} aria-hidden="true" />
               </IconButton>
               <IconButton
-                label="Tag nach rechts"
+                label={t('editor.moveRight')}
                 onClick={() => void moveDay(activeDayId, 1)}
                 {...(dayIndex >= days.length - 1 ? { disabled: true } : {})}
               >
@@ -280,17 +282,17 @@ export default function TemplateEditPage() {
             </>
           ) : null}
           <IconButton
-            label="Tag duplizieren"
+            label={t('editor.duplicateDay')}
             onClick={async () => {
               const copy = await duplicateDay(activeDayId);
               setSelectedDayId(copy.id);
-              toast.show('Trainingstag dupliziert.', 'success');
+              toast.show(t('editor.duplicatedDay'), 'success');
             }}
           >
             <Copy size={18} aria-hidden="true" />
           </IconButton>
           <IconButton
-            label="Tag löschen"
+            label={t('editor.deleteDay')}
             onClick={() => setDeleteDayOpen(true)}
             {...(isSingleDay ? { disabled: true } : {})}
           >
@@ -302,18 +304,18 @@ export default function TemplateEditPage() {
       <div className="mb-3 flex justify-end">
         <Button variant="secondary" size="sm" onClick={() => setPickerOpen(true)}>
           <Plus size={18} aria-hidden="true" />
-          Übung
+          {t('editor.exercise')}
         </Button>
       </div>
 
       {exercises.length === 0 ? (
         <EmptyState
-          title="Noch keine Übungen an diesem Tag"
-          description="Füge Übungen hinzu und lege Ziel-Sätze, Ziel-Wiederholungen und die Pausenzeit fest. Die Reihenfolge kannst du jederzeit ändern."
+          title={t('editor.emptyTitle')}
+          description={t('editor.emptyDescription')}
           action={
             <Button variant="primary" onClick={() => setPickerOpen(true)}>
               <Plus size={18} aria-hidden="true" />
-              Übung hinzufügen
+              {t('editor.addExercise')}
             </Button>
           }
         />
@@ -366,7 +368,7 @@ export default function TemplateEditPage() {
           className="mt-4 flex min-h-[48px] w-full items-center gap-2 rounded-2xl border border-border bg-surface px-4 text-sm font-medium active:bg-surface-2"
         >
           <Layers size={18} className="text-accent" aria-hidden="true" />
-          Als Übungseinheit in Bibliothek speichern
+          {t('editor.saveUnit')}
         </button>
       ) : null}
 
@@ -380,7 +382,9 @@ export default function TemplateEditPage() {
           onClick={() => void handleStart()}
         >
           <Play size={20} aria-hidden="true" />
-          {activeSession ? 'Training läuft bereits' : `„${activeDay?.name}“ starten`}
+          {activeSession
+            ? t('editor.running')
+            : t('editor.start', { name: activeDay?.name ?? '' })}
         </Button>
       ) : null}
 
@@ -404,7 +408,7 @@ export default function TemplateEditPage() {
       <Dialog
         open={scheduleOpen}
         onClose={() => setScheduleOpen(false)}
-        title="Zeitplan"
+        title={t('editor.schedule')}
         size="lg"
       >
         <ScheduleEditor planId={plan.plan.id} />
@@ -429,7 +433,7 @@ export default function TemplateEditPage() {
       <Dialog
         open={calendarOpen}
         onClose={() => setCalendarOpen(false)}
-        title="Kalender"
+        title={t('editor.calendar')}
         size="lg"
       >
         <PlanCalendarView plan={plan.plan} />
@@ -438,31 +442,31 @@ export default function TemplateEditPage() {
       <Dialog
         open={renameDayOpen}
         onClose={() => setRenameDayOpen(false)}
-        title="Trainingstag umbenennen"
+        title={t('editor.renameDay')}
         footer={
           <>
             <Button variant="secondary" onClick={() => setRenameDayOpen(false)}>
-              Abbrechen
+              {tCommon('action.cancel')}
             </Button>
             <Button
               variant="primary"
               onClick={async () => {
                 const trimmed = dayName.trim();
                 if (!trimmed) {
-                  toast.show('Bitte gib einen Namen ein.', 'error');
+                  toast.show(t('editor.nameRequired'), 'error');
                   return;
                 }
                 await updateTemplate(activeDayId, { name: trimmed });
                 setRenameDayOpen(false);
               }}
             >
-              Speichern
+              {tCommon('action.save')}
             </Button>
           </>
         }
       >
         <TextField
-          label="Name des Trainingstags"
+          label={t('editor.dayName')}
           value={dayName}
           onChange={(event) => setDayName(event.target.value)}
         />
@@ -470,11 +474,15 @@ export default function TemplateEditPage() {
 
       <ConfirmDialog
         open={deleteDayOpen}
-        title="Trainingstag löschen?"
-        description={`„${activeDay?.name ?? ''}“ mit ${exercises.length} ${
-          exercises.length === 1 ? 'Übung' : 'Übungen'
-        } wird entfernt. Bereits absolvierte Trainings bleiben vollständig erhalten.`}
-        confirmLabel="Tag löschen"
+        title={t('editor.deleteDayTitle')}
+        description={t('editor.deleteDayDescription', {
+          name: activeDay?.name ?? '',
+          exercises: t(
+            exercises.length === 1 ? 'count.exerciseOne' : 'count.exerciseOther',
+            { count: exercises.length },
+          ),
+        })}
+        confirmLabel={t('editor.deleteDay')}
         destructive
         onCancel={() => setDeleteDayOpen(false)}
         onConfirm={() => void handleDeleteDay()}
@@ -497,6 +505,8 @@ function PlanSettingsDialog({
   description: string;
   onClose: () => void;
 }) {
+  const { t } = useTranslation('plans');
+  const { t: tCommon } = useTranslation();
   const toast = useToast();
   const [draftName, setDraftName] = useState(name);
   const [draftDescription, setDraftDescription] = useState(description);
@@ -512,46 +522,43 @@ function PlanSettingsDialog({
   const handleSave = async () => {
     const trimmed = draftName.trim();
     if (!trimmed) {
-      toast.show('Bitte gib einen Namen ein.', 'error');
+      toast.show(t('editor.nameRequired'), 'error');
       return;
     }
     await updatePlan(planId, { name: trimmed, description: draftDescription });
     onClose();
-    toast.show('Plan gespeichert.', 'success');
+    toast.show(t('editor.savedPlan'), 'success');
   };
 
   return (
     <Dialog
       open={open}
       onClose={onClose}
-      title="Plan-Einstellungen"
+      title={t('editor.settings')}
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>
-            Abbrechen
+            {tCommon('action.cancel')}
           </Button>
           <Button variant="primary" onClick={() => void handleSave()}>
-            Speichern
+            {tCommon('action.save')}
           </Button>
         </>
       }
     >
       <div className="grid gap-4">
         <TextField
-          label="Planname"
+          label={t('editor.planName')}
           value={draftName}
           onChange={(event) => setDraftName(event.target.value)}
         />
         <TextAreaField
-          label="Beschreibung"
+          label={t('editor.description')}
           value={draftDescription}
-          placeholder="Optional"
+          placeholder={t('editor.optional')}
           onChange={(event) => setDraftDescription(event.target.value)}
         />
-        <p className="text-xs text-muted">
-          Einen Deload startest du unten in der Plan-Ansicht („Deload") — als zeitlich
-          begrenzte Woche, ohne die Planwerte zu überschreiben.
-        </p>
+        <p className="text-xs text-muted">{t('editor.settingsHint')}</p>
       </div>
     </Dialog>
   );

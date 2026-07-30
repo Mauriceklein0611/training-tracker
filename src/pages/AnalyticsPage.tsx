@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { muscleGroupDisplayLabel } from '@/constants/muscleGroups';
 import { Link } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { ChevronRight, GitCompareArrows } from 'lucide-react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card, CardHeader, EmptyState, Stat } from '@/components/ui/Card';
-import { equipmentLabel } from '@/services/equipment';
 import { Segmented, SelectField, TextField } from '@/components/ui/Field';
 import {
   DataTable,
@@ -14,11 +15,7 @@ import {
   SimpleLineChart,
 } from '@/features/analytics/Charts';
 import { loadAnalyticsDataset } from '@/services/dataset';
-import {
-  DELOAD_FILTER_LABELS,
-  filterDatasetByDeload,
-  type DeloadFilter,
-} from '@/services/analysisFilters';
+import { filterDatasetByDeload, type DeloadFilter } from '@/services/analysisFilters';
 import {
   computeAnalytics,
   computeExerciseCardioRecords,
@@ -61,14 +58,6 @@ import {
   formatPace,
 } from '@/services/cardioMetrics';
 
-const RANGE_OPTIONS: { value: AnalyticsRangeKey; label: string }[] = [
-  { value: '7d', label: '7 T.' },
-  { value: '30d', label: '30 T.' },
-  { value: '90d', label: '90 T.' },
-  { value: 'all', label: 'Gesamt' },
-  { value: 'custom', label: 'Eigen' },
-];
-
 type Metric =
   | 'volume'
   | 'topSet'
@@ -79,17 +68,6 @@ type Metric =
   | 'cardioDistance'
   | 'cardioPace';
 
-const METRIC_LABELS: Record<Metric, string> = {
-  volume: 'Volumen je Einheit',
-  topSet: 'Schwerster Satz (Gesamtlast)',
-  oneRm: 'Geschätztes 1RM (Schätzwert)',
-  reps: 'Wiederholungen je Einheit',
-  duration: 'Längster Zeitsatz',
-  cardioDuration: 'Dauer je Einheit',
-  cardioDistance: 'Distanz je Einheit',
-  cardioPace: 'Pace / Geschwindigkeit',
-};
-
 // Which metrics make sense for which kind of exercise. A cardio activity like
 // "Laufen" must never offer Volumen, schwerster Satz, 1RM or Wiederholungen as
 // primary options, and a strength exercise never offers pace/distance.
@@ -97,6 +75,9 @@ const STRENGTH_METRICS: Metric[] = ['volume', 'topSet', 'oneRm', 'reps', 'durati
 const CARDIO_METRICS: Metric[] = ['cardioDuration', 'cardioDistance', 'cardioPace'];
 
 export default function AnalyticsPage() {
+  const { t } = useTranslation('analytics');
+  const { t: tCommon } = useTranslation();
+  const { t: tDomain } = useTranslation('domain');
   const { settings } = useSettings();
   const [rangeKey, setRangeKey] = useState<AnalyticsRangeKey>(
     settings.defaultAnalyticsRange,
@@ -112,6 +93,23 @@ export default function AnalyticsPage() {
   const [view, setView] = useState<'overview' | 'strength' | 'cardio' | 'body'>(
     'overview',
   );
+  const rangeOptions: { value: AnalyticsRangeKey; label: string }[] = [
+    { value: '7d', label: t('range.days7') },
+    { value: '30d', label: t('range.days30') },
+    { value: '90d', label: t('range.days90') },
+    { value: 'all', label: t('range.all') },
+    { value: 'custom', label: t('range.custom') },
+  ];
+  const metricLabels: Record<Metric, string> = {
+    volume: t('metrics.volume'),
+    topSet: t('metrics.topSet'),
+    oneRm: t('metrics.oneRm'),
+    reps: t('metrics.reps'),
+    duration: t('metrics.duration'),
+    cardioDuration: t('metrics.cardioDuration'),
+    cardioDistance: t('metrics.cardioDistance'),
+    cardioPace: t('metrics.cardioPace'),
+  };
 
   const range = useMemo(() => {
     switch (rangeKey) {
@@ -222,7 +220,10 @@ export default function AnalyticsPage() {
       (analytics?.muscleGroups ?? [])
         .filter((group) => group.directSets > 0)
         .slice(0, 10)
-        .map((group) => ({ label: group.muscleGroup, value: group.directSets })),
+        .map((group) => ({
+          label: muscleGroupDisplayLabel(group.muscleGroup),
+          value: group.directSets,
+        })),
     [analytics],
   );
 
@@ -318,10 +319,7 @@ export default function AnalyticsPage() {
 
   return (
     <>
-      <PageHeader
-        title="Analyse"
-        subtitle="Berechnet ausschließlich aus deinen lokalen Daten"
-      />
+      <PageHeader title={t('title')} subtitle={t('subtitle')} />
 
       {/* The three comparison entry points live in one "Vergleichen" card so
        * they read as a single tool, not three competing actions. */}
@@ -334,13 +332,13 @@ export default function AnalyticsPage() {
           className="mb-1 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted"
         >
           <GitCompareArrows size={14} className="text-accent" aria-hidden="true" />
-          Vergleichen
+          {t('compare.title')}
         </h2>
         <div className="grid">
           {[
-            { to: '/analyse/vergleich', label: 'Zeiträume' },
-            { to: '/analyse/plaene-vergleich', label: 'Trainingspläne' },
-            { to: '/analyse/einheiten-vergleich', label: 'Übungseinheiten' },
+            { to: '/analyse/vergleich', label: t('compare.periods') },
+            { to: '/analyse/plaene-vergleich', label: t('compare.plans') },
+            { to: '/analyse/einheiten-vergleich', label: t('compare.units') },
           ].map((entry) => (
             <Link
               key={entry.to}
@@ -355,9 +353,9 @@ export default function AnalyticsPage() {
       </section>
 
       <Segmented
-        label="Zeitraum"
+        label={t('range.label')}
         className="mb-3"
-        options={RANGE_OPTIONS}
+        options={rangeOptions}
         value={rangeKey}
         onChange={setRangeKey}
       />
@@ -365,13 +363,13 @@ export default function AnalyticsPage() {
       {rangeKey === 'custom' ? (
         <div className="mb-4 grid grid-cols-2 gap-2">
           <TextField
-            label="Von"
+            label={t('range.from')}
             type="date"
             value={customFrom}
             onChange={(event) => setCustomFrom(event.target.value)}
           />
           <TextField
-            label="Bis"
+            label={t('range.to')}
             type="date"
             value={customTo}
             onChange={(event) => setCustomTo(event.target.value)}
@@ -380,29 +378,29 @@ export default function AnalyticsPage() {
       ) : null}
 
       <SelectField
-        label="Deload"
+        label={t('deload.label')}
         className="mb-4"
         value={deloadFilter}
         onChange={(event) => setDeloadFilter(event.target.value as DeloadFilter)}
       >
-        {(Object.keys(DELOAD_FILTER_LABELS) as DeloadFilter[]).map((key) => (
+        {(['include', 'exclude', 'only'] as DeloadFilter[]).map((key) => (
           <option key={key} value={key}>
-            {DELOAD_FILTER_LABELS[key]}
+            {t(`deload.${key}`)}
           </option>
         ))}
       </SelectField>
 
       {hasData ? (
         <Segmented
-          label="Ansicht"
+          label={t('view.label')}
           className="mb-4"
           value={view}
           onChange={setView}
           options={[
-            { value: 'overview', label: 'Übersicht' },
-            { value: 'strength', label: 'Kraft' },
-            { value: 'cardio', label: 'Cardio' },
-            { value: 'body', label: 'Körper' },
+            { value: 'overview', label: t('view.overview') },
+            { value: 'strength', label: t('view.strength') },
+            { value: 'cardio', label: t('view.cardio') },
+            { value: 'body', label: t('view.body') },
           ]}
         />
       ) : null}
@@ -412,41 +410,38 @@ export default function AnalyticsPage() {
           <SkeletonStats count={6} />
         </div>
       ) : !hasData ? (
-        <EmptyState
-          title="Noch keine Auswertung möglich"
-          description="Schließe deine erste Trainingseinheit ab, damit hier Trainingshäufigkeit, Volumen, Pausenverhalten und Bestleistungen berechnet werden können. Es werden ausschließlich Werte angezeigt, die sich aus deinen erfassten Sätzen ergeben."
-        />
+        <EmptyState title={t('empty.title')} description={t('empty.description')} />
       ) : (
         <div className="grid gap-4">
           {view === 'overview' ? (
             <>
               {data?.review ? <PeriodReviewCard review={data.review} /> : null}
-              <section aria-label="Kennzahlen" className="grid grid-cols-2 gap-2">
+              <section aria-label={t('overview.aria')} className="grid grid-cols-2 gap-2">
                 <Stat
-                  label="Einheiten"
+                  label={t('overview.sessions')}
                   value={formatNumber(analytics.sessionCount)}
                   tone="accent"
                 />
                 <Stat
-                  label="Trainingstage"
+                  label={t('overview.trainingDays')}
                   value={formatNumber(analytics.trainingDays)}
                 />
                 <Stat
-                  label="Tage / Woche"
+                  label={t('overview.daysPerWeek')}
                   value={formatNumber(analytics.trainingDaysPerWeek, 1)}
-                  hint="Durchschnitt"
+                  hint={t('overview.average')}
                 />
                 <Stat
-                  label="Regelmäßigkeit"
+                  label={t('overview.consistency')}
                   value={formatPercent(analytics.consistency)}
-                  hint="Wochen mit Training"
+                  hint={t('overview.weeksWithTraining')}
                 />
                 <Stat
-                  label="Gesamtdauer"
+                  label={t('overview.totalDuration')}
                   value={formatDurationLong(analytics.totalDurationSeconds)}
                 />
                 <Stat
-                  label="Ø Dauer"
+                  label={t('overview.averageDuration')}
                   value={
                     analytics.averageDurationSeconds == null
                       ? '–'
@@ -454,21 +449,26 @@ export default function AnalyticsPage() {
                   }
                 />
                 <Stat
-                  label="Arbeitssätze"
+                  label={t('overview.workingSets')}
                   value={formatNumber(analytics.workingSetCount)}
                   sparkline={analytics.weekly.map((week) => week.workingSets)}
                 />
-                <Stat label="Wiederholungen" value={formatNumber(analytics.totalReps)} />
                 <Stat
-                  label="Volumen"
+                  label={t('overview.repetitions')}
+                  value={formatNumber(analytics.totalReps)}
+                />
+                <Stat
+                  label={t('overview.volume')}
                   value={formatVolume(analytics.volume.volumeKg)}
-                  hint="nur gewichtete Übungen"
+                  hint={t('overview.weightedOnly')}
                   sparkline={analytics.weekly.map((week) => week.volumeKg)}
                 />
                 <Stat
-                  label="Serie"
-                  value={`${formatNumber(analytics.streakWeeks)} Wo.`}
-                  hint="Wochen in Folge"
+                  label={t('overview.streak')}
+                  value={t('overview.weekShort', {
+                    value: formatNumber(analytics.streakWeeks),
+                  })}
+                  hint={t('overview.consecutiveWeeks')}
                 />
               </section>
             </>
@@ -477,19 +477,28 @@ export default function AnalyticsPage() {
           {view === 'strength' ? (
             <>
               <ChartFrame
-                title="Trainingsvolumen je Woche"
+                title={t('strength.weeklyVolume')}
                 empty={weeklyPoints.length === 0}
                 summary={
                   weeklyPoints.length === 0
-                    ? 'Keine Wochen mit gewichtetem Volumen im Zeitraum.'
-                    : `Wöchentliches Volumen gewichteter Übungen über ${weeklyPoints.length} Wochen. ` +
-                      `Höchster Wert ${formatVolume(Math.max(...weeklyPoints.map((p) => p.value)))}, ` +
-                      `zuletzt ${formatVolume(weeklyPoints[weeklyPoints.length - 1].value)}.`
+                    ? t('strength.noWeeklyVolume')
+                    : t('strength.weeklyVolumeSummary', {
+                        count: weeklyPoints.length,
+                        highest: formatVolume(
+                          Math.max(...weeklyPoints.map((point) => point.value)),
+                        ),
+                        latest: formatVolume(weeklyPoints[weeklyPoints.length - 1].value),
+                      })
                 }
                 table={
                   <DataTable
-                    caption="Volumen je Woche"
-                    columns={['Woche', 'Volumen', 'Sätze', 'Einheiten']}
+                    caption={t('strength.volumeCaption')}
+                    columns={[
+                      t('table.week'),
+                      t('table.volume'),
+                      t('table.sets'),
+                      t('table.sessions'),
+                    ]}
                     rows={analytics.weekly.map((week) => [
                       formatDate(week.week),
                       formatVolume(week.volumeKg),
@@ -503,22 +512,32 @@ export default function AnalyticsPage() {
               </ChartFrame>
 
               <ChartFrame
-                title="Arbeitssätze je Muskelgruppe"
+                title={t('strength.muscleSets')}
                 empty={musclePoints.length === 0}
                 summary={
                   musclePoints.length === 0
-                    ? 'Keine Sätze mit zugeordneter Muskelgruppe im Zeitraum.'
-                    : `Direkte Arbeitssätze pro Muskelgruppe. Am meisten trainiert: ` +
-                      `${musclePoints[0].label} mit ${musclePoints[0].value} ${
-                        musclePoints[0].value === 1 ? 'Satz' : 'Sätzen'
-                      }.`
+                    ? t('strength.noMuscleSets')
+                    : t('strength.muscleSummary', {
+                        name: musclePoints[0].label,
+                        count: musclePoints[0].value,
+                        sets:
+                          musclePoints[0].value === 1
+                            ? tCommon('units.setOne')
+                            : tCommon('units.setOther'),
+                      })
                 }
                 table={
                   <DataTable
-                    caption="Sätze je Muskelgruppe"
-                    columns={['Muskelgruppe', 'Direkt', 'Indirekt', 'Wdh.', 'Volumen']}
+                    caption={t('strength.muscleCaption')}
+                    columns={[
+                      t('table.muscleGroup'),
+                      t('table.direct'),
+                      t('table.indirect'),
+                      t('table.reps'),
+                      t('table.volume'),
+                    ]}
                     rows={analytics.muscleGroups.map((group) => [
-                      group.muscleGroup,
+                      muscleGroupDisplayLabel(group.muscleGroup),
                       group.directSets,
                       group.indirectSets,
                       group.totalReps,
@@ -545,7 +564,7 @@ export default function AnalyticsPage() {
                       }
                     />
                     <p className="mt-1 text-center text-xs text-muted">
-                      Tippe eine Region an für Details.
+                      {t('strength.tapRegion')}
                     </p>
                     {regionDetail ? (
                       <div className="mt-2 rounded-xl border border-border bg-surface-2 p-3 text-sm">
@@ -557,23 +576,23 @@ export default function AnalyticsPage() {
                                 key={group.muscleGroup}
                                 className="flex justify-between gap-2"
                               >
-                                <span className="text-muted">{group.muscleGroup}</span>
+                                <span className="text-muted">
+                                  {muscleGroupDisplayLabel(group.muscleGroup)}
+                                </span>
                                 <span className="numeric">
-                                  {formatNumber(group.directSets)} direkt ·{' '}
-                                  {formatVolume(group.volumeKg)}
+                                  {formatNumber(group.directSets)} {t('strength.direct')}{' '}
+                                  · {formatVolume(group.volumeKg)}
                                 </span>
                               </li>
                             ))}
                           </ul>
                         ) : (
-                          <p className="mt-1 text-muted">
-                            In diesem Zeitraum keine Sätze für diese Region.
-                          </p>
+                          <p className="mt-1 text-muted">{t('strength.noRegionSets')}</p>
                         )}
                         {(data?.regionExercises[selectedSlug!] ?? []).length > 0 ? (
                           <div className="mt-2 border-t border-border pt-2">
                             <p className="mb-1 text-xs font-medium uppercase tracking-wide text-muted">
-                              Übungen
+                              {t('strength.exercises')}
                             </p>
                             <ul className="grid gap-1">
                               {(data?.regionExercises[selectedSlug!] ?? [])
@@ -601,17 +620,17 @@ export default function AnalyticsPage() {
 
               <Card>
                 <CardHeader
-                  title="Entwicklung je Übung"
-                  subtitle="Wähle eine Übung und die Kennzahl, die dich interessiert."
+                  title={t('strength.development')}
+                  subtitle={t('strength.developmentSubtitle')}
                   as="h3"
                 />
                 <div className="grid gap-2">
                   <SelectField
-                    label="Übung"
+                    label={t('strength.exercise')}
                     value={exerciseId}
                     onChange={(event) => setExerciseId(event.target.value)}
                   >
-                    <option value="">Bitte auswählen</option>
+                    <option value="">{t('strength.choose')}</option>
                     {trackedExercises.map((entry) => (
                       <option key={entry.id} value={entry.id}>
                         {entry.name}
@@ -619,14 +638,14 @@ export default function AnalyticsPage() {
                     ))}
                   </SelectField>
                   <SelectField
-                    label="Kennzahl"
+                    label={t('strength.metric')}
                     value={metric}
                     disabled={!exerciseId}
                     onChange={(event) => setMetric(event.target.value as Metric)}
                   >
                     {availableMetrics.map((key) => (
                       <option key={key} value={key}>
-                        {METRIC_LABELS[key]}
+                        {metricLabels[key]}
                       </option>
                     ))}
                   </SelectField>
@@ -635,20 +654,32 @@ export default function AnalyticsPage() {
                 {exerciseId ? (
                   <div className="mt-3">
                     <ChartFrame
-                      title={`${selectedExercise?.name ?? 'Übung'} — ${METRIC_LABELS[metric]}`}
+                      title={`${selectedExercise?.name ?? t('view.strength')} — ${metricLabels[metric]}`}
                       empty={seriesPoints.every((point) => point.value == null)}
                       summary={
                         metric === 'oneRm'
-                          ? `Schätzwert nach Epley, nur für ${ONE_RM_MIN_REPS}–${ONE_RM_MAX_REPS} Wiederholungen und Übungen mit externem Gewicht. Kein Messwert.`
-                          : `Verlauf über ${seriesPoints.length} Trainingseinheiten. Lücken bedeuten, dass der Wert für diese Einheit fachlich nicht berechenbar ist.`
+                          ? t('strength.oneRmSummary', {
+                              min: ONE_RM_MIN_REPS,
+                              max: ONE_RM_MAX_REPS,
+                            })
+                          : t('strength.seriesSummary', {
+                              count: seriesPoints.length,
+                            })
                       }
                       table={
                         <DataTable
-                          caption={`${METRIC_LABELS[metric]} je Einheit`}
+                          caption={t('strength.perSession', {
+                            metric: metricLabels[metric],
+                          })}
                           columns={
                             isCardioExercise
-                              ? ['Datum', 'Wert', 'Abschnitte']
-                              : ['Datum', 'Wert', 'Sätze', 'Wdh.']
+                              ? [t('table.date'), t('table.value'), t('table.sections')]
+                              : [
+                                  t('table.date'),
+                                  t('table.value'),
+                                  t('table.sets'),
+                                  t('table.reps'),
+                                ]
                           }
                           rows={(data?.series ?? []).map((point) =>
                             isCardioExercise
@@ -686,10 +717,10 @@ export default function AnalyticsPage() {
               </Card>
 
               <Card>
-                <CardHeader title="Pausen" as="h3" />
+                <CardHeader title={t('strength.rests')} as="h3" />
                 <div className="grid grid-cols-2 gap-2">
                   <Stat
-                    label="Ø Pause"
+                    label={t('strength.averageRest')}
                     value={
                       analytics.restStatistics.averageActualSeconds == null
                         ? '–'
@@ -697,25 +728,24 @@ export default function AnalyticsPage() {
                     }
                   />
                   <Stat
-                    label="Ø Abweichung"
+                    label={t('strength.averageDeviation')}
                     value={formatSignedSeconds(
                       analytics.restStatistics.averageDeviationSeconds,
                     )}
-                    hint="von der Zielpause"
+                    hint={t('strength.targetRestHint')}
                   />
                   <Stat
-                    label="Ziel erreicht"
+                    label={t('strength.targetMet')}
                     value={formatPercent(analytics.restStatistics.targetMetRatio)}
-                    hint="Anteil der Pausen"
+                    hint={t('strength.restShare')}
                   />
                   <Stat
-                    label="Bewertete Pausen"
+                    label={t('strength.evaluatedRests')}
                     value={formatNumber(analytics.restStatistics.evaluatedSets)}
                   />
                 </div>
                 <p className="mt-2 text-xs leading-relaxed text-muted">
-                  Bewertet werden nur Sätze mit Zielpause und tatsächlich erfasster Pause.
-                  Eine positive Abweichung bedeutet eine längere Pause als geplant.
+                  {t('strength.restExplanation')}
                 </p>
               </Card>
             </>
@@ -723,30 +753,26 @@ export default function AnalyticsPage() {
 
           {view === 'cardio' && analytics.cardio.activities === 0 ? (
             <EmptyState
-              title="Kein Cardio im Zeitraum"
-              description="Sobald du eine Cardioeinheit erfasst hast, erscheinen hier Dauer, Distanz, Pace und deine Cardio-Bestwerte."
+              title={t('cardio.emptyTitle')}
+              description={t('cardio.emptyDescription')}
             />
           ) : null}
 
           {view === 'cardio' && analytics.cardio.activities > 0 ? (
             <Card>
-              <CardHeader
-                title="Cardio"
-                subtitle="Getrennt von Kraft ausgewertet"
-                as="h3"
-              />
+              <CardHeader title="Cardio" subtitle={t('cardio.subtitle')} as="h3" />
               <div className="grid grid-cols-2 gap-2">
                 <Stat
-                  label="Aktivitäten"
+                  label={t('cardio.activities')}
                   value={formatNumber(analytics.cardio.activities)}
                 />
                 <Stat
-                  label="Cardio-Dauer"
+                  label={t('cardio.duration')}
                   value={formatCardioDuration(analytics.cardio.totalDurationSeconds)}
                 />
                 {analytics.cardio.totalDistanceMeters > 0 ? (
                   <Stat
-                    label="Distanz"
+                    label={t('cardio.distance')}
                     value={formatCardioDistance(
                       analytics.cardio.totalDistanceMeters,
                       undefined,
@@ -755,43 +781,48 @@ export default function AnalyticsPage() {
                 ) : null}
                 {analytics.cardio.averageHeartRateBpm != null ? (
                   <Stat
-                    label="Ø Herzfrequenz"
+                    label={t('cardio.heartRate')}
                     value={`${Math.round(analytics.cardio.averageHeartRateBpm)} bpm`}
-                    hint="aufgezeichnet"
+                    hint={t('cardio.recorded')}
                   />
                 ) : null}
                 {analytics.cardio.totalCaloriesKcal > 0 ? (
                   <Stat
-                    label="Kalorien"
+                    label={t('cardio.calories')}
                     value={`${formatNumber(analytics.cardio.totalCaloriesKcal)} kcal`}
-                    hint="erfasst"
+                    hint={t('cardio.captured')}
                   />
                 ) : null}
                 {analytics.cardio.totalElevationGainMeters > 0 ? (
                   <Stat
-                    label="Höhenmeter"
+                    label={t('cardio.elevation')}
                     value={`${formatNumber(analytics.cardio.totalElevationGainMeters)} m`}
                   />
                 ) : null}
               </div>
               <p className="mt-2 text-xs leading-relaxed text-muted">
-                Cardio fließt nicht in Kraftvolumen, 1RM oder Arbeitssätze ein. Pace und
-                Geschwindigkeit werden nur je Aktivität und Modalität ausgewertet.
+                {t('cardio.explanation')}
               </p>
 
               <div className="mt-3 grid gap-4">
                 <ChartFrame
-                  title="Cardio-Minuten je Woche"
+                  title={t('cardio.weeklyMinutes')}
                   empty={cardioMinutePoints.length === 0}
                   summary={
                     cardioMinutePoints.length === 0
-                      ? 'Keine Cardio-Minuten im Zeitraum.'
-                      : `Cardio-Minuten über ${cardioMinutePoints.length} Wochen.`
+                      ? t('cardio.noMinutes')
+                      : t('cardio.minutesSummary', {
+                          count: cardioMinutePoints.length,
+                        })
                   }
                   table={
                     <DataTable
-                      caption="Cardio-Minuten je Woche"
-                      columns={['Woche', 'Minuten', 'Aktivitäten']}
+                      caption={t('cardio.weeklyMinutes')}
+                      columns={[
+                        t('table.week'),
+                        t('table.minutes'),
+                        t('table.activities'),
+                      ]}
                       rows={(analytics.cardioWeekly ?? []).map((week) => [
                         formatDate(week.week),
                         Math.round(week.minutes),
@@ -808,13 +839,15 @@ export default function AnalyticsPage() {
 
                 {cardioDistancePoints.length > 0 ? (
                   <ChartFrame
-                    title="Cardio-Distanz je Woche"
+                    title={t('cardio.weeklyDistance')}
                     empty={false}
-                    summary={`Distanz in km über ${cardioDistancePoints.length} Wochen. Nur Wochen mit erfasster Distanz.`}
+                    summary={t('cardio.distanceSummary', {
+                      count: cardioDistancePoints.length,
+                    })}
                     table={
                       <DataTable
-                        caption="Cardio-Distanz je Woche"
-                        columns={['Woche', 'Distanz (km)']}
+                        caption={t('cardio.weeklyDistance')}
+                        columns={[t('table.week'), t('table.distanceKm')]}
                         rows={(analytics.cardioWeekly ?? [])
                           .filter((week) => week.distanceMeters > 0)
                           .map((week) => [
@@ -836,20 +869,13 @@ export default function AnalyticsPage() {
 
           {view === 'body' ? (
             <Card>
-              <CardHeader
-                title="Körperdaten"
-                subtitle="Gewicht, Körperfett und Umfangsmaße"
-                as="h3"
-              />
-              <p className="mb-3 text-sm text-muted">
-                Körperdaten werden separat gepflegt und im Verlaufskalender violett
-                markiert.
-              </p>
+              <CardHeader title={t('body.title')} subtitle={t('body.subtitle')} as="h3" />
+              <p className="mb-3 text-sm text-muted">{t('body.text')}</p>
               <Link
                 to="/mehr/koerpergewicht"
                 className="inline-flex min-h-[44px] items-center gap-2 rounded-2xl border border-border bg-surface px-4 text-sm font-medium text-accent active:bg-surface-2"
               >
-                Körperdaten öffnen
+                {t('body.open')}
               </Link>
             </Card>
           ) : null}
@@ -857,9 +883,9 @@ export default function AnalyticsPage() {
           {view === 'overview' ? (
             <>
               <Card>
-                <CardHeader title="Persönliche Bestleistungen" as="h3" />
+                <CardHeader title={t('records.title')} as="h3" />
                 {analytics.personalRecords.length === 0 ? (
-                  <p className="text-sm text-muted">Noch keine Bestleistungen erfasst.</p>
+                  <p className="text-sm text-muted">{t('records.empty')}</p>
                 ) : (
                   <ul className="grid gap-2">
                     {analytics.personalRecords.map((record) => (
@@ -872,22 +898,28 @@ export default function AnalyticsPage() {
                           {record.equipment !== 'unspecified' ? (
                             <span className="font-normal text-muted">
                               {' '}
-                              · {equipmentLabel(record.equipment)}
+                              · {tDomain(`equipment.${record.equipment}`)}
                             </span>
                           ) : null}
                         </p>
                         <p className="numeric mt-0.5 text-sm text-muted">
                           {record.bestLoadKg != null
-                            ? `Bestlast ${formatKg(record.bestLoadKg)}${record.bestLoadReps ? ` × ${record.bestLoadReps}` : ''}`
+                            ? `${t('records.bestLoad', {
+                                value: formatKg(record.bestLoadKg),
+                              })}${record.bestLoadReps ? ` × ${record.bestLoadReps}` : ''}`
                             : null}
                           {record.bestEstimatedOneRepMax != null
-                            ? ` · 1RM ≈ ${formatKg(record.bestEstimatedOneRepMax)} (Schätzwert)`
+                            ? ` · ${t('records.estimate', {
+                                value: formatKg(record.bestEstimatedOneRepMax),
+                              })}`
                             : null}
                           {record.bestReps != null
-                            ? ` · max. ${record.bestReps} Wdh.`
+                            ? ` · ${t('records.maxReps', { count: record.bestReps })}`
                             : null}
                           {record.bestDurationSeconds != null
-                            ? ` · max. ${Math.round(record.bestDurationSeconds)} s`
+                            ? ` · ${t('records.maxSeconds', {
+                                count: Math.round(record.bestDurationSeconds),
+                              })}`
                             : null}
                         </p>
                       </li>
@@ -898,11 +930,7 @@ export default function AnalyticsPage() {
 
               {analytics.setsWithoutVolume > 0 ? (
                 <p className="text-xs leading-relaxed text-muted">
-                  Hinweis zur Datenqualität: {analytics.setsWithoutVolume} Arbeitssätze im
-                  Zeitraum haben kein berechenbares Kilogramm-Volumen (Körpergewicht,
-                  unterstützte oder zeitbasierte Übungen). Sie fließen bewusst nicht in
-                  die Volumenzahlen ein, werden aber bei Sätzen und Wiederholungen
-                  mitgezählt.
+                  {t('dataQuality', { count: analytics.setsWithoutVolume })}
                 </p>
               ) : null}
             </>

@@ -1,4 +1,5 @@
 import { useId, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Bar,
   BarChart,
@@ -84,6 +85,7 @@ export function ChartFrame({
   empty?: boolean;
 }) {
   const id = useId();
+  const { t } = useTranslation('analytics');
   return (
     <section
       aria-labelledby={id}
@@ -94,9 +96,7 @@ export function ChartFrame({
       </h3>
       <p className="mt-1 text-xs leading-relaxed text-muted">{summary}</p>
       {empty ? (
-        <p className="py-6 text-center text-sm text-muted">
-          Für diesen Zeitraum liegen keine Daten vor.
-        </p>
+        <p className="py-6 text-center text-sm text-muted">{t('chart.empty')}</p>
       ) : (
         <>
           {/* The SVG is decorative: the summary and table carry the information. */}
@@ -106,7 +106,7 @@ export function ChartFrame({
           {table ? (
             <details className="mt-2">
               <summary className="min-h-[44px] cursor-pointer list-none py-2 text-xs font-medium text-accent">
-                Werte als Tabelle anzeigen
+                {t('chart.showTable')}
               </summary>
               <div className="overflow-x-auto">{table}</div>
             </details>

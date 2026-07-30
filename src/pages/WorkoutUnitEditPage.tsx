@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { useTranslation } from 'react-i18next';
 import { Pencil, Play, Plus } from 'lucide-react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Button, IconButton } from '@/components/ui/Button';
@@ -29,6 +30,8 @@ import {
 } from '@/services/grouping';
 
 export default function WorkoutUnitEditPage() {
+  const { t } = useTranslation('library');
+  const { t: tCommon } = useTranslation();
   const { unitId = '' } = useParams();
   const navigate = useNavigate();
   const toast = useToast();
@@ -47,8 +50,8 @@ export default function WorkoutUnitEditPage() {
   if (data === undefined) {
     return (
       <>
-        <PageHeader title="Übungseinheit" backTo="/bibliothek" />
-        <p className="text-center text-sm text-muted">Wird geladen …</p>
+        <PageHeader title={t('unit.title')} backTo="/bibliothek" />
+        <p className="text-center text-sm text-muted">{tCommon('state.loading')}</p>
       </>
     );
   }
@@ -56,13 +59,13 @@ export default function WorkoutUnitEditPage() {
   if (data === null) {
     return (
       <>
-        <PageHeader title="Übungseinheit" backTo="/bibliothek" />
+        <PageHeader title={t('unit.title')} backTo="/bibliothek" />
         <EmptyState
-          title="Nicht gefunden"
-          description="Diese Übungseinheit existiert nicht mehr."
+          title={t('unit.notFound.title')}
+          description={t('unit.notFound.description')}
           action={
             <Button variant="primary" onClick={() => navigate('/bibliothek')}>
-              Zur Bibliothek
+              {t('unit.notFound.back')}
             </Button>
           }
         />
@@ -97,10 +100,7 @@ export default function WorkoutUnitEditPage() {
         navigate(`/training/${error.activeSessionId}`);
         return;
       }
-      toast.show(
-        error instanceof Error ? error.message : 'Start fehlgeschlagen.',
-        'error',
-      );
+      toast.show(t('unit.startFailed'), 'error');
     }
   };
 
@@ -111,7 +111,7 @@ export default function WorkoutUnitEditPage() {
         subtitle={unit.description || undefined}
         backTo="/bibliothek"
         action={
-          <IconButton label="Einheit bearbeiten" onClick={openEdit}>
+          <IconButton label={t('unit.edit')} onClick={openEdit}>
             <Pencil size={20} aria-hidden="true" />
           </IconButton>
         }
@@ -119,17 +119,17 @@ export default function WorkoutUnitEditPage() {
 
       <Button variant="secondary" size="sm" onClick={() => setPickerOpen(true)}>
         <Plus size={18} aria-hidden="true" />
-        Übung hinzufügen
+        {t('exercise.add')}
       </Button>
 
       {exercises.length === 0 ? (
         <EmptyState
-          title="Noch keine Übungen"
-          description="Füge Übungen zu dieser Einheit hinzu. Ziele und Gruppen kannst du danach direkt hier einstellen."
+          title={t('exercise.empty.title')}
+          description={t('exercise.empty.description')}
           action={
             <Button variant="primary" onClick={() => setPickerOpen(true)}>
               <Plus size={18} aria-hidden="true" />
-              Übung hinzufügen
+              {t('exercise.add')}
             </Button>
           }
         />
@@ -181,7 +181,9 @@ export default function WorkoutUnitEditPage() {
           onClick={() => void handleStart()}
         >
           <Play size={20} aria-hidden="true" />
-          {activeSession ? 'Training läuft bereits' : `„${unit.name}“ starten`}
+          {activeSession
+            ? t('unit.startAlreadyRunning')
+            : t('unit.startNamed', { name: unit.name })}
         </Button>
       ) : null}
 
@@ -193,24 +195,20 @@ export default function WorkoutUnitEditPage() {
         }}
       />
 
-      <Dialog
-        open={editOpen}
-        onClose={() => setEditOpen(false)}
-        title="Einheit bearbeiten"
-      >
+      <Dialog open={editOpen} onClose={() => setEditOpen(false)} title={t('unit.edit')}>
         <div className="grid gap-3">
           <TextField
-            label="Name"
+            label={t('field.name')}
             value={name}
             onChange={(event) => setName(event.target.value)}
           />
           <TextAreaField
-            label="Beschreibung"
+            label={t('field.description')}
             value={description}
             onChange={(event) => setDescription(event.target.value)}
           />
           <Button variant="primary" fullWidth onClick={() => void handleSaveMeta()}>
-            Speichern
+            {tCommon('action.save')}
           </Button>
         </div>
       </Dialog>

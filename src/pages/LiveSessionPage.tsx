@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { CheckCircle2, Plus, Trash2, X } from 'lucide-react';
@@ -41,6 +42,8 @@ import { formatSections, formatSets } from '@/utils/format';
  * 44 px tall. Every change is written to IndexedDB immediately.
  */
 export default function LiveSessionPage() {
+  const { t } = useTranslation('session');
+  const { t: tCommon } = useTranslation();
   const { sessionId = '' } = useParams();
   const navigate = useNavigate();
   const toast = useToast();
@@ -148,7 +151,7 @@ export default function LiveSessionPage() {
   if (detail === undefined) {
     return (
       <p className="p-6 text-center text-sm text-muted" role="status">
-        Trainingseinheit wird geladen …
+        {t('live.loading')}
       </p>
     );
   }
@@ -157,11 +160,11 @@ export default function LiveSessionPage() {
     return (
       <div className="pt-6">
         <EmptyState
-          title="Trainingseinheit nicht gefunden"
-          description="Diese Einheit existiert nicht mehr."
+          title={t('live.notFound')}
+          description={t('live.notFoundDescription')}
           action={
             <Button variant="primary" onClick={() => navigate('/')}>
-              Zur Startseite
+              {t('live.home')}
             </Button>
           }
         />
@@ -172,14 +175,14 @@ export default function LiveSessionPage() {
   const handleFinish = async () => {
     await finishSession(sessionId);
     setFinishOpen(false);
-    toast.show('Training abgeschlossen.', 'success');
+    toast.show(t('live.finished'), 'success');
     navigate(`/verlauf/${sessionId}`, { replace: true });
   };
 
   const handleDiscard = async () => {
     await deleteSession(sessionId);
     setDiscardOpen(false);
-    toast.show('Training verworfen.', 'info');
+    toast.show(t('live.discarded'), 'info');
     navigate('/', { replace: true });
   };
 
@@ -198,10 +201,13 @@ export default function LiveSessionPage() {
                 ? formatSections(completedSectionCount)
                 : formatSets(completedSetCount)}
               {progress.totalExercises > 0
-                ? ` · Übung ${Math.min(
-                    progress.doneExercises + 1,
-                    progress.totalExercises,
-                  )} von ${progress.totalExercises}`
+                ? ` · ${t('live.exerciseProgress', {
+                    current: Math.min(
+                      progress.doneExercises + 1,
+                      progress.totalExercises,
+                    ),
+                    total: progress.totalExercises,
+                  })}`
                 : ''}
             </p>
             {progress.totalExercises > 0 ? (
@@ -211,7 +217,7 @@ export default function LiveSessionPage() {
                 aria-valuemin={0}
                 aria-valuemax={progress.totalExercises}
                 aria-valuenow={progress.doneExercises}
-                aria-label="Fortschritt der Übungen"
+                aria-label={t('live.progressAria')}
               >
                 <div
                   className="h-full rounded-full bg-accent transition-[width] duration-300"
@@ -223,7 +229,7 @@ export default function LiveSessionPage() {
             ) : null}
           </div>
           <IconButton
-            label="Training verwerfen"
+            label={t('live.discard')}
             onClick={() => setDiscardOpen(true)}
             className="shrink-0"
           >
@@ -231,7 +237,7 @@ export default function LiveSessionPage() {
           </IconButton>
           <Button variant="success" size="sm" onClick={() => setFinishOpen(true)}>
             <CheckCircle2 size={18} aria-hidden="true" />
-            Beenden
+            {t('live.finishShort')}
           </Button>
         </div>
       </header>
@@ -250,12 +256,12 @@ export default function LiveSessionPage() {
 
       {detail.exercises.length === 0 ? (
         <EmptyState
-          title="Noch keine Übungen"
-          description="Füge die erste Übung hinzu. Du kannst Übungen jederzeit ergänzen, entfernen oder neu anordnen — auch mitten im Training."
+          title={t('live.emptyTitle')}
+          description={t('live.emptyDescription')}
           action={
             <Button variant="primary" onClick={() => setPickerOpen(true)}>
               <Plus size={18} aria-hidden="true" />
-              Übung hinzufügen
+              {t('live.addExercise')}
             </Button>
           }
         />
@@ -279,15 +285,15 @@ export default function LiveSessionPage() {
           onClick={() => setPickerOpen(true)}
         >
           <Plus size={18} aria-hidden="true" />
-          Übung hinzufügen
+          {t('live.addExercise')}
         </Button>
       ) : null}
 
       <div className="mt-4">
         <TextAreaField
-          label="Notiz zum Training"
+          label={t('live.note')}
           value={notes ?? detail.session.notes}
-          placeholder="Wie lief die Einheit? Schlaf, Energie, Schmerzen …"
+          placeholder={t('live.notePlaceholder')}
           onChange={(event) => setNotes(event.target.value)}
           onBlur={() => {
             if (notes != null) void updateSession(sessionId, { notes });
@@ -307,12 +313,12 @@ export default function LiveSessionPage() {
         onClick={() => setFinishOpen(true)}
       >
         <CheckCircle2 size={20} aria-hidden="true" />
-        Training beenden
+        {t('live.finish')}
       </Button>
 
       <ExercisePickerDialog
         open={pickerOpen}
-        title={pickerCardioOnly ? 'Cardio-Aktivität wählen' : 'Übung hinzufügen'}
+        title={pickerCardioOnly ? t('live.chooseCardio') : t('live.addExercise')}
         trackingTypeFilter={pickerCardioOnly ? 'cardio' : undefined}
         onClose={() => {
           setPickerOpen(false);
@@ -329,19 +335,19 @@ export default function LiveSessionPage() {
       <Dialog
         open={finishOpen}
         onClose={() => setFinishOpen(false)}
-        title="Training beenden?"
+        title={t('live.finishTitle')}
         description={
           isCardioOnly
-            ? 'Nicht abgeschlossene Abschnitte werden verworfen, alle erfassten Abschnitte bleiben gespeichert.'
-            : 'Nicht abgeschlossene Sätze werden verworfen, alle erfassten Sätze bleiben gespeichert.'
+            ? t('live.finishCardioDescription')
+            : t('live.finishStrengthDescription')
         }
         footer={
           <>
             <Button variant="secondary" onClick={() => setFinishOpen(false)}>
-              Weiter trainieren
+              {t('live.continue')}
             </Button>
             <Button variant="success" onClick={() => void handleFinish()}>
-              Training abschließen
+              {t('live.complete')}
             </Button>
           </>
         }
@@ -349,31 +355,31 @@ export default function LiveSessionPage() {
         {summary ? (
           <SessionSummaryView summary={summary} />
         ) : (
-          <p className="text-sm text-muted">Zusammenfassung wird berechnet …</p>
+          <p className="text-sm text-muted">{t('live.calculating')}</p>
         )}
       </Dialog>
 
       <ConfirmDialog
         open={discardOpen}
-        title="Training verwerfen?"
+        title={t('live.discardTitle')}
         description={
           completedSetCount > 0
-            ? `Diese Einheit enthält bereits ${
-                isCardioOnly
+            ? t('live.discardWithData', {
+                value: isCardioOnly
                   ? formatSections(completedSectionCount)
-                  : formatSets(completedSetCount)
-              }. Beim Verwerfen werden sie endgültig gelöscht. Möchtest du sie stattdessen speichern, brich ab und wähle „Beenden“.`
-            : 'Die Einheit wird ohne Speichern verworfen.'
+                  : formatSets(completedSetCount),
+              })
+            : t('live.discardEmpty')
         }
-        confirmLabel="Endgültig verwerfen"
-        cancelLabel="Abbrechen"
+        confirmLabel={t('live.discardForever')}
+        cancelLabel={tCommon('action.cancel')}
         destructive
         onCancel={() => setDiscardOpen(false)}
         onConfirm={() => void handleDiscard()}
       >
         <Button variant="secondary" fullWidth onClick={() => setDiscardOpen(false)}>
           <Trash2 size={18} aria-hidden="true" />
-          Doch nicht verwerfen
+          {t('live.keep')}
         </Button>
       </ConfirmDialog>
     </>

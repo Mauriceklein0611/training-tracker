@@ -1,5 +1,6 @@
 import { X } from 'lucide-react';
-import { isKnownMuscleGroup } from '@/constants/muscleGroups';
+import { useTranslation } from 'react-i18next';
+import { isKnownMuscleGroup, muscleGroupDisplayLabel } from '@/constants/muscleGroups';
 import { cn } from '@/utils/cn';
 
 /**
@@ -19,9 +20,10 @@ export function MuscleGroupChips({
   onRemovePrimary?: () => void;
   onRemoveSecondary?: (label: string) => void;
 }) {
+  const { t } = useTranslation('more');
   const hasAny = Boolean(primary) || secondary.length > 0;
   if (!hasAny) {
-    return <p className="text-sm text-muted">Noch keine Muskelgruppe gewählt.</p>;
+    return <p className="text-sm text-muted">{t('screens.exercise.chips.empty')}</p>;
   }
 
   return (
@@ -58,6 +60,8 @@ function Chip({
   custom: boolean;
   onRemove?: () => void;
 }) {
+  const { t } = useTranslation('more');
+  const displayLabel = muscleGroupDisplayLabel(label);
   return (
     <li
       className={cn(
@@ -69,13 +73,17 @@ function Chip({
       )}
     >
       <span className="min-w-0 truncate">
-        {label}
-        {custom ? <span className="ml-1 text-xs text-warning">(eigen)</span> : null}
+        {displayLabel}
+        {custom ? (
+          <span className="ml-1 text-xs text-warning">
+            {t('screens.exercise.chips.custom')}
+          </span>
+        ) : null}
       </span>
       {onRemove ? (
         <button
           type="button"
-          aria-label={`${label} entfernen`}
+          aria-label={t('screens.exercise.chips.remove', { label: displayLabel })}
           onClick={onRemove}
           className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-muted active:bg-surface-3"
         >

@@ -5,7 +5,6 @@ import { NumberField, SelectField } from '@/components/ui/Field';
 import { editCompletedSet } from '@/db/repositories/sessions';
 import { allowedWeightModes } from '@/services/exerciseRules';
 import {
-  EQUIPMENT_LABELS,
   EQUIPMENT_VALUES,
   effectiveSetExecution,
   suggestedMultiplierForWeightMode,
@@ -13,7 +12,7 @@ import {
 } from '@/services/equipment';
 import { requiredFieldsFor, weightFieldLabel } from '@/services/metrics';
 import { hasErrors, parseNumberInput, validateSetInput } from '@/services/validation';
-import { SET_TYPES, setTypeLabel, weightModeLabel } from '@/utils/format';
+import { SET_TYPES } from '@/utils/format';
 import { EditCardioSetDialog } from '@/features/session/EditCardioSetDialog';
 import { useToast } from '@/hooks/useToast';
 import type {
@@ -23,6 +22,7 @@ import type {
   WeightMode,
   WorkoutSet,
 } from '@/types';
+import { useTranslation } from 'react-i18next';
 
 interface Draft {
   setType: SetType;
@@ -57,6 +57,8 @@ export function EditSetDialog({
   sessionExercise: SessionExercise;
   onClose: () => void;
 }) {
+  const { t } = useTranslation('session');
+  const { t: tDomain } = useTranslation('domain');
   const toast = useToast();
   // Cardio sections have their own field set and repository path.
   const isCardio = effectiveSetExecution(set, sessionExercise).trackingType === 'cardio';
@@ -128,9 +130,7 @@ export function EditSetDialog({
     if (draft.weightMode === 'per_hand') {
       const parsed = toNumber(draft.multiplier);
       if (parsed == null || !Number.isFinite(parsed) || parsed <= 0 || parsed > 10) {
-        setMultiplierError(
-          'Bitte einen gültigen Multiplikator zwischen 0 und 10 eingeben.',
-        );
+        setMultiplierError(t('edit.multiplierInvalid'));
         return;
       }
       weightMultiplier = parsed;
@@ -145,15 +145,10 @@ export function EditSetDialog({
         weightMultiplier,
         trackingType,
       });
-      toast.show('Satz aktualisiert.', 'success');
+      toast.show(t('edit.setUpdated'), 'success');
       onClose();
-    } catch (error) {
-      toast.show(
-        error instanceof Error
-          ? error.message
-          : 'Der Satz konnte nicht gespeichert werden.',
-        'error',
-      );
+    } catch {
+      toast.show(t('edit.setFailed'), 'error');
     } finally {
       setSaving(false);
     }
@@ -174,29 +169,29 @@ export function EditSetDialog({
     <Dialog
       open={open}
       onClose={onClose}
-      title={`Satz ${set.position + 1} bearbeiten`}
-      description="Korrigiert die erfassten Werte. Reihenfolge, Pausen und Zeitstempel bleiben erhalten."
+      title={t('edit.setTitle', { position: set.position + 1 })}
+      description={t('edit.description')}
       footer={
         <>
           <Button variant="secondary" onClick={onClose} disabled={saving}>
-            Abbrechen
+            {t('action.cancel')}
           </Button>
           <Button variant="primary" onClick={() => void handleSave()} disabled={saving}>
-            {saving ? 'Speichern …' : 'Speichern'}
+            {saving ? t('action.saving') : t('action.save')}
           </Button>
         </>
       }
     >
       <div className="grid grid-cols-2 gap-2">
         <SelectField
-          label="Satzart"
+          label={t('field.setType')}
           containerClassName="col-span-2"
           value={draft.setType}
           onChange={(event) => update('setType', event.target.value)}
         >
           {SET_TYPES.map((type) => (
             <option key={type} value={type}>
-              {setTypeLabel(type)}
+              {tDomain(`setType.${type}`)}
             </option>
           ))}
         </SelectField>
@@ -213,7 +208,7 @@ export function EditSetDialog({
 
         {fields.reps ? (
           <NumberField
-            label="Wiederholungen"
+            label={t('field.repetitions')}
             value={draft.reps}
             error={visibleErrors.reps}
             onChange={(event) => update('reps', event.target.value)}
@@ -222,7 +217,7 @@ export function EditSetDialog({
 
         {fields.duration ? (
           <NumberField
-            label="Dauer (s)"
+            label={t('field.durationSeconds')}
             value={draft.duration}
             error={visibleErrors.durationSeconds}
             onChange={(event) => update('duration', event.target.value)}
@@ -230,14 +225,14 @@ export function EditSetDialog({
         ) : null}
 
         <NumberField
-          label="RIR (optional)"
+          label={t('field.rirOptional')}
           decimal
           value={draft.rir}
           error={visibleErrors.rir}
           onChange={(event) => update('rir', event.target.value)}
         />
         <NumberField
-          label="RPE (optional)"
+          label={t('field.rpeOptional')}
           decimal
           value={draft.rpe}
           error={visibleErrors.rpe}
@@ -247,19 +242,19 @@ export function EditSetDialog({
         {trackingType === 'weight_reps' ? (
           <>
             <SelectField
-              label="Ausrüstung"
+              label={t('field.equipment')}
               containerClassName="col-span-2"
               value={draft.equipment}
               onChange={(event) => chooseEquipment(event.target.value as Equipment)}
             >
               {EQUIPMENT_VALUES.map((value) => (
                 <option key={value} value={value}>
-                  {EQUIPMENT_LABELS[value]}
+                  {tDomain(`equipment.${value}`)}
                 </option>
               ))}
             </SelectField>
             <SelectField
-              label="Gewichtskonvention"
+              label={t('field.weightMode')}
               containerClassName={
                 draft.weightMode === 'per_hand' ? undefined : 'col-span-2'
               }
@@ -269,13 +264,13 @@ export function EditSetDialog({
             >
               {modes.map((mode) => (
                 <option key={mode} value={mode}>
-                  {weightModeLabel(mode)}
+                  {tDomain(`weightMode.${mode}`)}
                 </option>
               ))}
             </SelectField>
             {draft.weightMode === 'per_hand' ? (
               <NumberField
-                label="Multiplikator"
+                label={t('field.multiplier')}
                 decimal
                 value={draft.multiplier}
                 error={multiplierError}

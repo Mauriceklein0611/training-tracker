@@ -1,5 +1,6 @@
 import { Lightbulb } from 'lucide-react';
-import { plateauMessages, type PlateauAnalysis } from '@/services/plateau';
+import { useTranslation } from 'react-i18next';
+import type { PlateauAnalysis } from '@/services/plateau';
 import { formatDate } from '@/utils/date';
 
 /**
@@ -8,8 +9,21 @@ import { formatDate } from '@/utils/date';
  * only when there is genuinely something conservative to say.
  */
 export function PlateauHint({ analysis }: { analysis: PlateauAnalysis }) {
-  const messages = plateauMessages(analysis);
-  if (messages.length === 0) return null;
+  const { t } = useTranslation('analytics');
+  if (
+    (analysis.status !== 'plateau' && analysis.status !== 'regress') ||
+    !analysis.metric
+  ) {
+    return null;
+  }
+  const metric = t(`plateau.metric.${analysis.metric}`);
+  const messages = [
+    t(analysis.status === 'regress' ? 'plateau.regress' : 'plateau.flat', {
+      count: analysis.windowSize,
+      metric,
+    }),
+    t('plateau.caveat'),
+  ];
 
   return (
     <div
@@ -18,7 +32,7 @@ export function PlateauHint({ analysis }: { analysis: PlateauAnalysis }) {
     >
       <div className="flex items-center gap-2 text-sm font-semibold text-accent">
         <Lightbulb size={16} aria-hidden="true" />
-        Hinweis
+        {t('plateau.title')}
       </div>
       <div className="mt-1.5 grid gap-1.5">
         {messages.map((message, index) => (
@@ -36,8 +50,12 @@ export function PlateauHint({ analysis }: { analysis: PlateauAnalysis }) {
       </div>
       {analysis.fromDate && analysis.toDate ? (
         <p className="mt-2 text-xs text-muted">
-          Zeitraum: {formatDate(analysis.fromDate)} – {formatDate(analysis.toDate)} ·{' '}
-          {analysis.windowSize} Einheiten · Kennzahl: {analysis.metricLabel}
+          {t('plateau.period', {
+            from: formatDate(analysis.fromDate),
+            to: formatDate(analysis.toDate),
+            count: analysis.windowSize,
+            metric,
+          })}
         </p>
       ) : null}
     </div>
