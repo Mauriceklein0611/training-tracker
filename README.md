@@ -611,14 +611,20 @@ by `backup.test.ts` and `exportLanguageIndependence.test.ts`.
 The infrastructure is complete and these areas are fully bilingual: bottom
 navigation, app shell (startup, crash fallback, update banner), shared
 primitives (back button, confirm dialog), the _Mehr_ hub, the settings screen,
-the home screen and the community/support surfaces.
+the home screen including its plan hero, coach feed and free-workout dialog, the
+local-storage screen, the exercise catalog, the community/support surfaces, and
+the shared domain labels (tracking types, weight modes, set types).
 
 **Still German-only** and tracked in #31: live workout, plans, library, history,
 analytics, glossary, body data, equipment profiles, data & backup, AI analyses,
-storage, the dialogs opened from home (StartFreeDialog, PlanPackageTools), the
-domain label maps in `src/utils/format.ts` (tracking types, weight modes, set
-types) and the validation messages. Add a string by putting it in the German
-namespace first — the typecheck then demands the English counterpart.
+the exercise form dialog, `PlanPackageTools`, and the validation messages. Add a
+string by putting it in the German namespace first — the typecheck then demands
+the English counterpart.
+
+Two label groups stay German **by design** until export and display are split:
+`BODY_MEASUREMENT_FIELDS` (part of the body CSV header) and the maps feeding the
+AI export (group types, plan goals, experience level, deload intensity, schedule
+mode). The deload intensity is therefore still German in the English plan hero.
 
 ---
 
