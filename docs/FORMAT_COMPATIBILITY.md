@@ -30,6 +30,22 @@ General rules:
 - Imports are strict (Zod), treat input as untrusted, render free text as text
   only, run in a single Dexie transaction and roll back fully on any error.
 - CSV is export-only; header order and meaning are versioned by test.
+- **Formats never inherit the display language (#31).** `utils/format` and
+  `utils/date` are locale-aware (decimal comma vs point, date order, month
+  names), but nothing that leaves the app as a format may use them: `csv.ts`
+  keeps its own German label maps and its own `Number(...toFixed())` number
+  formatting, and no export service imports `utils/format` at all. The one
+  shared constant is `BODY_MEASUREMENT_FIELDS`, whose `label` is part of the
+  body CSV header — it therefore stays **canonical German** and must not be
+  localised in place; a localised UI label needs a separate lookup.
+  `services/exportLanguageIndependence.test.ts` asserts that the same dataset
+  produces byte-identical sets/sessions/exercises/body CSV and AI export in
+  German and English.
+- The label maps that feed the **AI export** (`GROUP_TYPE_LABELS`,
+  `PLAN_GOAL_TYPE_LABELS`, `EXPERIENCE_LEVEL_LABELS`, `DELOAD_INTENSITY_LABELS`,
+  `SCHEDULE_MODE_LABELS`) are part of that document's content and stay canonical
+  German for the same reason. Localising any of them requires splitting the
+  export value from the display value first.
 
 | Format                             | Direction               | Name (in content)                       | Version field                           | Version              | Supported imports |
 | ---------------------------------- | ----------------------- | --------------------------------------- | --------------------------------------- | -------------------- | ----------------- |

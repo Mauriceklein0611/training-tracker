@@ -595,9 +595,16 @@ both languages work fully offline like the rest of the PWA.
 
 Routes (`/mehr/glossar`, `/bibliothek`) are stable, bookmarkable identifiers.
 Data keys (`dayKey`/`weekKey`), format names, version fields, enum values, CSV
-headers and every stored value stay language independent — the same database
-exports byte-identical domain data in both languages (guarded by test). User
-content is never rewritten.
+headers and every stored value stay language independent, and user content is
+never rewritten.
+
+**Formats must not inherit the display language.** `csv.ts` keeps its own German
+label maps and its own number formatting, no export service imports
+`utils/format`, and the label maps feeding the AI export stay canonical German.
+`BODY_MEASUREMENT_FIELDS.label` is part of the body CSV header, so it stays
+German even in the English UI — a localised display label needs a separate
+lookup. Backup, CSV and AI export are asserted byte-identical across languages
+by `backup.test.ts` and `exportLanguageIndependence.test.ts`.
 
 ### Migration status
 
