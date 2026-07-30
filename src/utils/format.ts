@@ -56,6 +56,28 @@ export function setTypeShort(type: SetType): string {
   return t(`domain:setTypeShort.${type}`);
 }
 
+const FREE_EQUIPMENT_KEYS = {
+  Bank: 'bench',
+  'Dip-Barren': 'dipBars',
+  Kabelzug: 'cableMachine',
+  Kettlebell: 'kettlebell',
+  Klimmzugstange: 'pullUpBar',
+  Körpergewicht: 'bodyweight',
+  Kurzhantel: 'dumbbell',
+  Kurzhanteln: 'dumbbell',
+  Langhantel: 'barbell',
+  Maschine: 'machine',
+  'SZ-Stange': 'ezBar',
+  'TRX/Schlingentrainer': 'suspensionTrainer',
+  Widerstandsband: 'resistanceBand',
+} as const;
+
+/** Localises known canonical catalog equipment while preserving custom text. */
+export function freeEquipmentDisplayLabel(value: string): string {
+  const key = FREE_EQUIPMENT_KEYS[value as keyof typeof FREE_EQUIPMENT_KEYS];
+  return key ? t(`domain:freeEquipment.${key}`) : value;
+}
+
 /** Common German muscle group suggestions for the exercise form. */
 export const MUSCLE_GROUP_SUGGESTIONS = [
   'Brust',

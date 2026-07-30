@@ -18,6 +18,7 @@ import {
 import { useSettings } from '@/hooks/useSettings';
 import { useToast } from '@/hooks/useToast';
 import type { EquipmentProfile } from '@/types';
+import { freeEquipmentDisplayLabel } from '@/utils/format';
 
 export default function EquipmentProfilesPage() {
   const { t, i18n } = useTranslation('more');
@@ -107,7 +108,7 @@ export default function EquipmentProfilesPage() {
                   </p>
                   <p className="mt-1 truncate text-sm text-muted">
                     {profile.equipment.length > 0
-                      ? profile.equipment.join(', ')
+                      ? profile.equipment.map(freeEquipmentDisplayLabel).join(', ')
                       : t('screens.equipmentProfiles.list.noneSelected')}
                   </p>
                 </div>
@@ -270,7 +271,9 @@ function ProfileEditor({
                     className="h-5 w-5 accent-[var(--accent)]"
                     onChange={() => toggle(item)}
                   />
-                  <span className="min-w-0 truncate">{item}</span>
+                  <span className="min-w-0 truncate">
+                    {freeEquipmentDisplayLabel(item)}
+                  </span>
                 </label>
               ))}
             </div>

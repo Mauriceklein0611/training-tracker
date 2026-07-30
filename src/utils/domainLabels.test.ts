@@ -4,6 +4,7 @@ import {
   SET_TYPES,
   TRACKING_TYPES,
   WEIGHT_MODES,
+  freeEquipmentDisplayLabel,
   setTypeLabel,
   setTypeShort,
   trackingTypeHelp,
@@ -72,5 +73,14 @@ describe('domain labels', () => {
       const badges = SET_TYPES.map(setTypeShort);
       expect(new Set(badges).size, language).toBe(badges.length);
     }
+  });
+
+  it('localises known catalog equipment and preserves custom text', () => {
+    setLanguage('de');
+    expect(freeEquipmentDisplayLabel('Langhantel')).toBe('Langhantel');
+    setLanguage('en');
+    expect(freeEquipmentDisplayLabel('Langhantel')).toBe('Barbell');
+    expect(freeEquipmentDisplayLabel('Dip-Barren')).toBe('Dip bars');
+    expect(freeEquipmentDisplayLabel('My custom rack')).toBe('My custom rack');
   });
 });

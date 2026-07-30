@@ -21,7 +21,11 @@ import { useSettings } from '@/hooks/useSettings';
 import { useToast } from '@/hooks/useToast';
 import type { Exercise, ExerciseOrigin } from '@/types';
 import { MuscleGroupChips } from '@/features/exercises/MuscleGroupChips';
-import { trackingTypeLabel, weightModeLabel } from '@/utils/format';
+import {
+  freeEquipmentDisplayLabel,
+  trackingTypeLabel,
+  weightModeLabel,
+} from '@/utils/format';
 import { muscleGroupDisplayLabel } from '@/constants/muscleGroups';
 import { exerciseDisplayName, exerciseSearchText } from '@/utils/exerciseDisplay';
 
@@ -149,7 +153,7 @@ export default function ExercisesPage() {
             <option value="">{t('filter.all')}</option>
             {filters.equipment.map((item) => (
               <option key={item} value={item}>
-                {item}
+                {freeEquipmentDisplayLabel(item)}
               </option>
             ))}
           </SelectField>
@@ -219,7 +223,9 @@ export default function ExercisesPage() {
                     </div>
                   ) : null}
                   {exercise.equipment ? (
-                    <p className="mt-1 text-sm text-muted">{exercise.equipment}</p>
+                    <p className="mt-1 text-sm text-muted">
+                      {freeEquipmentDisplayLabel(exercise.equipment)}
+                    </p>
                   ) : null}
                   <p className="mt-1 text-xs text-muted">
                     {trackingTypeLabel(exercise.trackingType)} ·{' '}
