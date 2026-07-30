@@ -10,6 +10,7 @@ import {
   startFreeSession,
 } from '@/db/repositories/sessions';
 import { ToastProvider } from '@/components/ui/ToastProvider';
+import { setLanguage } from '@/i18n';
 import ExercisesPage from '@/pages/ExercisesPage';
 import { resetDatabase } from '@/tests/dbTestUtils';
 
@@ -183,5 +184,55 @@ describe('exercise management', () => {
     await waitFor(async () => {
       expect(await db.exercises.count()).toBe(0);
     });
+  });
+
+  it('renders the catalog in English without German leftovers', async () => {
+    await createExercise({ ...BASE, name: 'Bankdrücken' });
+    setLanguage('en');
+    renderExercises();
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Exercises' }),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText('Search')).toHaveAttribute(
+      'placeholder',
+      'Name, synonym, muscle group, equipment',
+    );
+    expect(screen.getByLabelText('Origin')).toBeInTheDocument();
+    // The user's own exercise name is content and is never translated.
+    expect(await screen.findByRole('link', { name: 'Bankdrücken' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Edit Bankdrücken' })).toBeInTheDocument();
+    // Asserted per element rather than over the whole tree: the exercise form
+    // dialog lives in the same document and is migrated in a later stage of #31.
+    expect(screen.queryByLabelText('Suchen')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Herkunft')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Muskelgruppe')).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /Bankdrücken bearbeiten/ }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/Pause \d+s/)).not.toBeInTheDocument();
+    expect(screen.getByText(/Rest 120s/)).toBeInTheDocument();
+  });
+
+  it('translates the empty state and the delete confirmation', async () => {
+    setLanguage('en');
+    const user = userEvent.setup();
+    const { unmount } = renderExercises();
+    expect(await screen.findByText('No exercises yet')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /Create the first exercise/ }),
+    ).toBeInTheDocument();
+    unmount();
+
+    await createExercise({ ...BASE, name: 'Bankdrücken' });
+    renderExercises();
+    await user.click(await screen.findByRole('button', { name: 'Delete Bankdrücken' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('Delete exercise?')).toBeInTheDocument();
+    expect(
+      within(dialog).getByRole('button', { name: 'Delete permanently' }),
+    ).toBeInTheDocument();
+    // Cancel keeps its shared translation from the common namespace.
+    expect(within(dialog).getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
   });
 });

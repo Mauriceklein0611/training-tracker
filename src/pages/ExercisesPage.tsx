@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { useTranslation } from 'react-i18next';
 import { Archive, ArchiveRestore, Pencil, Plus, Trash2 } from 'lucide-react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Button, IconButton } from '@/components/ui/Button';
@@ -23,6 +24,9 @@ import { MuscleGroupChips } from '@/features/exercises/MuscleGroupChips';
 import { trackingTypeLabel, weightModeLabel } from '@/utils/format';
 
 export default function ExercisesPage() {
+  // The local variable `exercises` holds the rows, so the namespace hook is
+  // named explicitly rather than shadowing it.
+  const { t } = useTranslation('exercises');
   const toast = useToast();
   const { settings } = useSettings();
   const exercises = useLiveQuery(() => listExercises(), [], []);
@@ -56,10 +60,7 @@ export default function ExercisesPage() {
 
   const handleArchive = async (exercise: Exercise) => {
     await setExerciseArchived(exercise.id, !exercise.archived);
-    toast.show(
-      exercise.archived ? 'Übung wiederhergestellt.' : 'Übung archiviert.',
-      'success',
-    );
+    toast.show(exercise.archived ? t('toast.restored') : t('toast.archived'), 'success');
   };
 
   /**
@@ -68,10 +69,7 @@ export default function ExercisesPage() {
    */
   const handleDeleteRequest = async (exercise: Exercise) => {
     if (await isExerciseInUse(exercise.id)) {
-      toast.show(
-        'Diese Übung wurde bereits trainiert und kann nicht gelöscht werden. Archiviere sie stattdessen.',
-        'error',
-      );
+      toast.show(t('toast.usedInTraining'), 'error');
       return;
     }
     setDeleteTarget(exercise);
@@ -81,10 +79,10 @@ export default function ExercisesPage() {
     if (!deleteTarget) return;
     try {
       await deleteExercise(deleteTarget.id);
-      toast.show('Übung gelöscht.', 'success');
+      toast.show(t('toast.deleted'), 'success');
     } catch (error) {
       toast.show(
-        error instanceof Error ? error.message : 'Löschen fehlgeschlagen.',
+        error instanceof Error ? error.message : t('toast.deleteFailed'),
         'error',
       );
     } finally {
@@ -95,7 +93,7 @@ export default function ExercisesPage() {
   return (
     <>
       <PageHeader
-        title="Übungen"
+        title={t('title')}
         backTo="/mehr"
         action={
           <Button
@@ -107,35 +105,35 @@ export default function ExercisesPage() {
             }}
           >
             <Plus size={18} aria-hidden="true" />
-            Neu
+            {t('new')}
           </Button>
         }
       />
 
       <div className="mb-4 grid gap-3">
         <TextField
-          label="Suchen"
+          label={t('search.label')}
           type="search"
           value={search}
-          placeholder="Name, Synonym, Muskelgruppe, Equipment"
+          placeholder={t('search.placeholder')}
           onChange={(event) => setSearch(event.target.value)}
         />
         <SelectField
-          label="Herkunft"
+          label={t('filter.originLabel')}
           value={origin}
           onChange={(event) => setOrigin(event.target.value as '' | ExerciseOrigin)}
         >
-          <option value="">Alle</option>
-          <option value="system">Systemübungen</option>
-          <option value="custom">Eigene Übungen</option>
+          <option value="">{t('filter.all')}</option>
+          <option value="system">{t('filter.originSystem')}</option>
+          <option value="custom">{t('filter.originCustom')}</option>
         </SelectField>
         <div className="grid grid-cols-2 gap-3">
           <SelectField
-            label="Muskelgruppe"
+            label={t('filter.muscleGroup')}
             value={muscleGroup}
             onChange={(event) => setMuscleGroup(event.target.value)}
           >
-            <option value="">Alle</option>
+            <option value="">{t('filter.all')}</option>
             {filters.muscleGroups.map((group) => (
               <option key={group} value={group}>
                 {group}
@@ -143,11 +141,11 @@ export default function ExercisesPage() {
             ))}
           </SelectField>
           <SelectField
-            label="Equipment"
+            label={t('filter.equipment')}
             value={equipment}
             onChange={(event) => setEquipment(event.target.value)}
           >
-            <option value="">Alle</option>
+            <option value="">{t('filter.all')}</option>
             {filters.equipment.map((item) => (
               <option key={item} value={item}>
                 {item}
@@ -157,7 +155,7 @@ export default function ExercisesPage() {
         </div>
         {archivedCount > 0 ? (
           <CheckboxField
-            label={`Archivierte Übungen anzeigen (${archivedCount})`}
+            label={t('filter.showArchived', { count: archivedCount })}
             checked={showArchived}
             onChange={setShowArchived}
           />
@@ -166,11 +164,11 @@ export default function ExercisesPage() {
 
       {visible.length === 0 ? (
         <EmptyState
-          title={exercises.length === 0 ? 'Noch keine Übungen' : 'Keine Treffer'}
+          title={exercises.length === 0 ? t('empty.noneTitle') : t('empty.noMatchTitle')}
           description={
             exercises.length === 0
-              ? 'Die App bringt einen Katalog klassischer Übungen mit. Lege zusätzlich eigene Übungen an und bestimme, wie sie erfasst werden und wie das Gewicht zu verstehen ist.'
-              : 'Passe Suche oder Filter an.'
+              ? t('empty.noneDescription')
+              : t('empty.noMatchDescription')
           }
           action={
             exercises.length === 0 ? (
@@ -182,7 +180,7 @@ export default function ExercisesPage() {
                 }}
               >
                 <Plus size={18} aria-hidden="true" />
-                Erste Übung anlegen
+                {t('empty.noneAction')}
               </Button>
             ) : undefined
           }
@@ -206,7 +204,9 @@ export default function ExercisesPage() {
                     {exercise.origin === 'system' ? (
                       <Badge tone="accent">System</Badge>
                     ) : null}
-                    {exercise.archived ? <Badge tone="warning">Archiviert</Badge> : null}
+                    {exercise.archived ? (
+                      <Badge tone="warning">{t('row.archivedBadge')}</Badge>
+                    ) : null}
                   </p>
                   {exercise.primaryMuscleGroup ||
                   exercise.secondaryMuscleGroups.length > 0 ? (
@@ -226,12 +226,12 @@ export default function ExercisesPage() {
                     {exercise.weightMode === 'per_hand'
                       ? ` (×${exercise.weightMultiplier})`
                       : ''}{' '}
-                    · Pause {exercise.defaultRestSeconds}s
+                    · {t('row.rest', { seconds: exercise.defaultRestSeconds })}
                   </p>
                 </div>
                 <div className="flex shrink-0 gap-1">
                   <IconButton
-                    label={`${exercise.name} bearbeiten`}
+                    label={t('row.edit', { name: exercise.name })}
                     onClick={() => {
                       setEditing(exercise);
                       setFormOpen(true);
@@ -242,8 +242,8 @@ export default function ExercisesPage() {
                   <IconButton
                     label={
                       exercise.archived
-                        ? `${exercise.name} wiederherstellen`
-                        : `${exercise.name} archivieren`
+                        ? t('row.restore', { name: exercise.name })
+                        : t('row.archive', { name: exercise.name })
                     }
                     onClick={() => void handleArchive(exercise)}
                   >
@@ -254,7 +254,7 @@ export default function ExercisesPage() {
                     )}
                   </IconButton>
                   <IconButton
-                    label={`${exercise.name} löschen`}
+                    label={t('row.delete', { name: exercise.name })}
                     onClick={() => void handleDeleteRequest(exercise)}
                   >
                     <Trash2 size={18} aria-hidden="true" />
@@ -276,9 +276,9 @@ export default function ExercisesPage() {
 
       <ConfirmDialog
         open={Boolean(deleteTarget)}
-        title="Übung löschen?"
-        description={`„${deleteTarget?.name ?? ''}“ wird endgültig entfernt. Diese Übung wurde noch in keinem Training verwendet, es gehen also keine Trainingsdaten verloren.`}
-        confirmLabel="Endgültig löschen"
+        title={t('deleteDialog.title')}
+        description={t('deleteDialog.description', { name: deleteTarget?.name ?? '' })}
+        confirmLabel={t('deleteDialog.confirm')}
         destructive
         onCancel={() => setDeleteTarget(null)}
         onConfirm={() => void confirmDelete()}
