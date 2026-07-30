@@ -11,12 +11,14 @@ import { domain as deDomain } from '@/i18n/locales/de/domain';
 import { home as deHome } from '@/i18n/locales/de/home';
 import { more as deMore } from '@/i18n/locales/de/more';
 import { settings as deSettings } from '@/i18n/locales/de/settings';
+import { storage as deStorage } from '@/i18n/locales/de/storage';
 import { common as enCommon } from '@/i18n/locales/en/common';
 import { community as enCommunity } from '@/i18n/locales/en/community';
 import { domain as enDomain } from '@/i18n/locales/en/domain';
 import { home as enHome } from '@/i18n/locales/en/home';
 import { more as enMore } from '@/i18n/locales/en/more';
 import { settings as enSettings } from '@/i18n/locales/en/settings';
+import { storage as enStorage } from '@/i18n/locales/en/storage';
 
 export type Language = 'de' | 'en';
 
@@ -35,6 +37,7 @@ export const resources = {
     home: deHome,
     more: deMore,
     settings: deSettings,
+    storage: deStorage,
   },
   en: {
     common: enCommon,
@@ -43,6 +46,7 @@ export const resources = {
     home: enHome,
     more: enMore,
     settings: enSettings,
+    storage: enStorage,
   },
 } satisfies Record<Language, Record<string, object>>;
 
