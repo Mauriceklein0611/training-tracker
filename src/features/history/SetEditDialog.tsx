@@ -6,7 +6,7 @@ import { deleteSet, updateSet } from '@/db/repositories/sessions';
 import { requiredFieldsFor, weightFieldLabel } from '@/services/metrics';
 import { hasErrors, parseNumberInput, validateSetInput } from '@/services/validation';
 import type { SessionExercise, SetType, WorkoutSet } from '@/types';
-import { SET_TYPE_LABELS } from '@/utils/format';
+import { SET_TYPES, setTypeLabel } from '@/utils/format';
 import { useToast } from '@/hooks/useToast';
 
 /**
@@ -135,9 +135,9 @@ export function SetEditDialog({
             setForm((current) => ({ ...current, setType: event.target.value as SetType }))
           }
         >
-          {(Object.keys(SET_TYPE_LABELS) as SetType[]).map((type) => (
+          {SET_TYPES.map((type) => (
             <option key={type} value={type}>
-              {SET_TYPE_LABELS[type]}
+              {setTypeLabel(type)}
             </option>
           ))}
         </SelectField>

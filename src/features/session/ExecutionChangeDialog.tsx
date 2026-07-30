@@ -14,7 +14,7 @@ import {
 } from '@/services/equipment';
 import { weightFieldLabel } from '@/services/metrics';
 import { parseNumberInput } from '@/services/validation';
-import { WEIGHT_MODE_LABELS } from '@/utils/format';
+import { weightModeLabel } from '@/utils/format';
 import { useToast } from '@/hooks/useToast';
 import type { Equipment, SessionExercise, WeightMode } from '@/types';
 
@@ -134,16 +134,12 @@ export function ExecutionChangeDialog({
           <p>
             <span className="font-medium">Standard</span> (gespeicherte Übung):{' '}
             {equipmentLabel(standard?.equipment)} ·{' '}
-            {
-              WEIGHT_MODE_LABELS[
-                standard?.weightMode ?? sessionExercise.weightModeSnapshot
-              ]
-            }
+            {weightModeLabel(standard?.weightMode ?? sessionExercise.weightModeSnapshot)}
             {standard?.weightMode === 'per_hand' ? ` ×${standard.weightMultiplier}` : ''}
           </p>
           <p>
             <span className="font-medium">Aktuell</span> (dieses Training):{' '}
-            {equipmentLabel(current.equipment)} · {WEIGHT_MODE_LABELS[current.weightMode]}
+            {equipmentLabel(current.equipment)} · {weightModeLabel(current.weightMode)}
             {current.weightMode === 'per_hand' ? ` ×${current.weightMultiplier}` : ''}
           </p>
         </div>
@@ -168,7 +164,7 @@ export function ExecutionChangeDialog({
         >
           {modes.map((mode) => (
             <option key={mode} value={mode}>
-              {WEIGHT_MODE_LABELS[mode]}
+              {weightModeLabel(mode)}
             </option>
           ))}
         </SelectField>

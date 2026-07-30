@@ -2,7 +2,7 @@ import type { AnalyticsDataset } from '@/services/analytics';
 import { buildSetContexts } from '@/services/analytics';
 import { effectiveSetExecution, equipmentLabel } from '@/services/equipment';
 import { isCompleted } from '@/services/metrics';
-import { WEIGHT_MODE_LABELS } from '@/utils/format';
+import { weightModeLabel } from '@/utils/format';
 
 /**
  * The distinct execution variants an exercise was actually performed with
@@ -21,7 +21,7 @@ export function distinctExerciseVariants(
     const execution = effectiveSetExecution(context.set, context.sessionExercise);
     const equipment =
       execution.equipment === 'unspecified' ? '' : equipmentLabel(execution.equipment);
-    const mode = WEIGHT_MODE_LABELS[execution.weightMode];
+    const mode = weightModeLabel(execution.weightMode);
     const parts = [equipment, execution.weightMode === 'total' ? '' : mode].filter(
       Boolean,
     );

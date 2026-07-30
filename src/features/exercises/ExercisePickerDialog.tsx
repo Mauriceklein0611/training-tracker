@@ -11,7 +11,7 @@ import { isExerciseAvailable } from '@/db/repositories/equipmentProfiles';
 import { ExerciseFormDialog } from '@/features/exercises/ExerciseFormDialog';
 import { useSettings } from '@/hooks/useSettings';
 import type { Exercise } from '@/types';
-import { TRACKING_TYPE_LABELS } from '@/utils/format';
+import { trackingTypeLabel } from '@/utils/format';
 
 /**
  * Picker used by the plan editor and the live view.
@@ -131,7 +131,7 @@ export function ExercisePickerDialog({
                       <span className="block truncate text-xs text-muted">
                         {[exercise.primaryMuscleGroup, exercise.equipment]
                           .filter(Boolean)
-                          .join(' · ') || TRACKING_TYPE_LABELS[exercise.trackingType]}
+                          .join(' · ') || trackingTypeLabel(exercise.trackingType)}
                       </span>
                     </span>
                     <Plus size={18} className="shrink-0 text-accent" aria-hidden="true" />

@@ -32,10 +32,11 @@ import {
 } from '@/services/cardio';
 import {
   EQUIPMENT_SUGGESTIONS,
-  TRACKING_TYPE_HELP,
-  TRACKING_TYPE_LABELS,
-  WEIGHT_MODE_HELP,
-  WEIGHT_MODE_LABELS,
+  trackingTypeHelp,
+  TRACKING_TYPES,
+  trackingTypeLabel,
+  weightModeHelp,
+  weightModeLabel,
 } from '@/utils/format';
 import { useToast } from '@/hooks/useToast';
 
@@ -396,14 +397,14 @@ export function ExerciseFormDialog({
           <SelectField
             label="Tracking-Typ"
             value={form.trackingType}
-            hint={TRACKING_TYPE_HELP[form.trackingType]}
+            hint={trackingTypeHelp(form.trackingType)}
             onChange={(event) =>
               handleTrackingTypeChange(event.target.value as TrackingType)
             }
           >
-            {(Object.keys(TRACKING_TYPE_LABELS) as TrackingType[]).map((type) => (
+            {TRACKING_TYPES.map((type) => (
               <option key={type} value={type}>
-                {TRACKING_TYPE_LABELS[type]}
+                {trackingTypeLabel(type)}
               </option>
             ))}
           </SelectField>
@@ -445,13 +446,13 @@ export function ExerciseFormDialog({
             <SelectField
               label="Gewichtskonvention"
               value={form.weightMode}
-              hint={WEIGHT_MODE_HELP[form.weightMode]}
+              hint={weightModeHelp(form.weightMode)}
               disabled={weightModes.length <= 1}
               onChange={(event) => update('weightMode', event.target.value as WeightMode)}
             >
               {weightModes.map((mode) => (
                 <option key={mode} value={mode}>
-                  {WEIGHT_MODE_LABELS[mode]}
+                  {weightModeLabel(mode)}
                 </option>
               ))}
             </SelectField>

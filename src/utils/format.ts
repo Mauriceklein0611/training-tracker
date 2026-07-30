@@ -1,63 +1,60 @@
 import { localeTag, t } from '@/i18n';
 import type { BodyMeasurements, SetType, TrackingType, WeightMode } from '@/types';
 
-/** German UI labels for the domain enums, in one place. */
+/**
+ * Display labels for the domain enums, resolved in the active language (#31).
+ *
+ * These are presentation only. The CSV export keeps its own German label maps
+ * and the AI export keeps its own, so no format can inherit the UI language
+ * (asserted by `services/exportLanguageIndependence.test.ts`). Stored values are
+ * always the enum key, never a label.
+ *
+ * The enum orders are exported separately because several screens render a
+ * picker over all values and must not depend on object key order of a
+ * translation file.
+ */
+export const TRACKING_TYPES: readonly TrackingType[] = [
+  'weight_reps',
+  'bodyweight_reps',
+  'assisted_bodyweight_reps',
+  'reps_only',
+  'duration',
+  'cardio',
+];
 
-export const TRACKING_TYPE_LABELS: Record<TrackingType, string> = {
-  weight_reps: 'Gewicht + Wiederholungen',
-  bodyweight_reps: 'Körpergewicht',
-  assisted_bodyweight_reps: 'Unterstützt',
-  reps_only: 'Nur Wiederholungen',
-  duration: 'Zeit',
-  cardio: 'Cardio',
-};
+export const WEIGHT_MODES: readonly WeightMode[] = [
+  'per_hand',
+  'total',
+  'added_weight',
+  'assistance',
+  'none',
+];
 
-export const TRACKING_TYPE_HELP: Record<TrackingType, string> = {
-  weight_reps:
-    'Externes Gewicht und Wiederholungen, z. B. Bankdrücken oder Kurzhantelcurls.',
-  bodyweight_reps:
-    'Eigengewicht mit optionalem Zusatzgewicht, z. B. Klimmzüge oder Dips.',
-  assisted_bodyweight_reps:
-    'Unterstützte Eigengewichtsübung, z. B. Klimmzüge an der Maschine oder mit Band.',
-  reps_only: 'Nur Wiederholungen ohne sinnvolle Last, z. B. TRX-Rudern oder Mobilität.',
-  duration: 'Zeit statt Wiederholungen, z. B. Plank oder Dead Hang.',
-  cardio:
-    'Ausdauertraining mit Dauer und/oder Distanz, z. B. Laufen, Radfahren oder Rudern. ' +
-    'Wird getrennt von Kraft ausgewertet.',
-};
+export const SET_TYPES: readonly SetType[] = ['warmup', 'working', 'drop', 'failure'];
 
-export const WEIGHT_MODE_LABELS: Record<WeightMode, string> = {
-  per_hand: 'Je Hand',
-  total: 'Gesamt',
-  added_weight: 'Zusatzgewicht',
-  assistance: 'Unterstützung',
-  none: 'Kein Gewicht',
-};
+export function trackingTypeLabel(type: TrackingType): string {
+  return t(`domain:trackingType.${type}`);
+}
 
-export const WEIGHT_MODE_HELP: Record<WeightMode, string> = {
-  per_hand:
-    'Der eingetragene Wert gilt pro Hantel. Der Multiplikator bestimmt die Gesamtlast.',
-  total:
-    'Der eingetragene Wert ist bereits die Gesamtlast, z. B. Langhantel inklusive Stange.',
-  added_weight: 'Zusätzliches Gewicht zum Körpergewicht, z. B. Gewichtsgürtel.',
-  assistance:
-    'Unterstützung, die die Last verringert, z. B. Gegengewicht an der Maschine.',
-  none: 'Für diese Übung wird kein Gewicht erfasst.',
-};
+export function trackingTypeHelp(type: TrackingType): string {
+  return t(`domain:trackingTypeHelp.${type}`);
+}
 
-export const SET_TYPE_LABELS: Record<SetType, string> = {
-  warmup: 'Aufwärmsatz',
-  working: 'Arbeitssatz',
-  drop: 'Dropsatz',
-  failure: 'Bis Versagen',
-};
+export function weightModeLabel(mode: WeightMode): string {
+  return t(`domain:weightMode.${mode}`);
+}
 
-export const SET_TYPE_SHORT: Record<SetType, string> = {
-  warmup: 'A',
-  working: 'W',
-  drop: 'D',
-  failure: 'V',
-};
+export function weightModeHelp(mode: WeightMode): string {
+  return t(`domain:weightModeHelp.${mode}`);
+}
+
+export function setTypeLabel(type: SetType): string {
+  return t(`domain:setType.${type}`);
+}
+
+export function setTypeShort(type: SetType): string {
+  return t(`domain:setTypeShort.${type}`);
+}
 
 /** Common German muscle group suggestions for the exercise form. */
 export const MUSCLE_GROUP_SUGGESTIONS = [

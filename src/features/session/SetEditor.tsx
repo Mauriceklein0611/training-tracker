@@ -15,7 +15,8 @@ import { cardioModalityLabel } from '@/services/cardio';
 import { describeCardioSet } from '@/services/cardioMetrics';
 import { restDeviationSeconds } from '@/services/rest';
 import {
-  SET_TYPE_LABELS,
+  SET_TYPES,
+  setTypeLabel,
   describeSet,
   formatKg,
   formatSignedSeconds,
@@ -379,9 +380,9 @@ export function SetEditor({
             setDraft((current) => ({ ...current, setType }));
           }}
         >
-          {(Object.keys(SET_TYPE_LABELS) as SetType[]).map((type) => (
+          {SET_TYPES.map((type) => (
             <option key={type} value={type}>
-              {SET_TYPE_LABELS[type]}
+              {setTypeLabel(type)}
             </option>
           ))}
         </SelectField>
@@ -477,7 +478,7 @@ export function CompletedSetRow({
       ) : null}
       {set.setType !== 'working' ? (
         <Badge tone={set.setType === 'warmup' ? 'default' : 'accent'}>
-          {SET_TYPE_LABELS[set.setType]}
+          {setTypeLabel(set.setType)}
         </Badge>
       ) : null}
       {set.rir != null ? <span className="text-xs text-muted">RIR {set.rir}</span> : null}

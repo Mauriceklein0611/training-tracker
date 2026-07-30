@@ -20,7 +20,7 @@ import { useSettings } from '@/hooks/useSettings';
 import { useToast } from '@/hooks/useToast';
 import type { Exercise, ExerciseOrigin } from '@/types';
 import { MuscleGroupChips } from '@/features/exercises/MuscleGroupChips';
-import { TRACKING_TYPE_LABELS, WEIGHT_MODE_LABELS } from '@/utils/format';
+import { trackingTypeLabel, weightModeLabel } from '@/utils/format';
 
 export default function ExercisesPage() {
   const toast = useToast();
@@ -221,8 +221,8 @@ export default function ExercisesPage() {
                     <p className="mt-1 text-sm text-muted">{exercise.equipment}</p>
                   ) : null}
                   <p className="mt-1 text-xs text-muted">
-                    {TRACKING_TYPE_LABELS[exercise.trackingType]} ·{' '}
-                    {WEIGHT_MODE_LABELS[exercise.weightMode]}
+                    {trackingTypeLabel(exercise.trackingType)} ·{' '}
+                    {weightModeLabel(exercise.weightMode)}
                     {exercise.weightMode === 'per_hand'
                       ? ` (×${exercise.weightMultiplier})`
                       : ''}{' '}

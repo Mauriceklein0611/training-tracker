@@ -13,7 +13,7 @@ import {
 } from '@/services/equipment';
 import { requiredFieldsFor, weightFieldLabel } from '@/services/metrics';
 import { hasErrors, parseNumberInput, validateSetInput } from '@/services/validation';
-import { SET_TYPE_LABELS, WEIGHT_MODE_LABELS } from '@/utils/format';
+import { SET_TYPES, setTypeLabel, weightModeLabel } from '@/utils/format';
 import { EditCardioSetDialog } from '@/features/session/EditCardioSetDialog';
 import { useToast } from '@/hooks/useToast';
 import type {
@@ -194,9 +194,9 @@ export function EditSetDialog({
           value={draft.setType}
           onChange={(event) => update('setType', event.target.value)}
         >
-          {(Object.keys(SET_TYPE_LABELS) as SetType[]).map((type) => (
+          {SET_TYPES.map((type) => (
             <option key={type} value={type}>
-              {SET_TYPE_LABELS[type]}
+              {setTypeLabel(type)}
             </option>
           ))}
         </SelectField>
@@ -269,7 +269,7 @@ export function EditSetDialog({
             >
               {modes.map((mode) => (
                 <option key={mode} value={mode}>
-                  {WEIGHT_MODE_LABELS[mode]}
+                  {weightModeLabel(mode)}
                 </option>
               ))}
             </SelectField>

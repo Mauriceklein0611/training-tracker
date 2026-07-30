@@ -7,11 +7,13 @@
  */
 import { common as deCommon } from '@/i18n/locales/de/common';
 import { community as deCommunity } from '@/i18n/locales/de/community';
+import { domain as deDomain } from '@/i18n/locales/de/domain';
 import { home as deHome } from '@/i18n/locales/de/home';
 import { more as deMore } from '@/i18n/locales/de/more';
 import { settings as deSettings } from '@/i18n/locales/de/settings';
 import { common as enCommon } from '@/i18n/locales/en/common';
 import { community as enCommunity } from '@/i18n/locales/en/community';
+import { domain as enDomain } from '@/i18n/locales/en/domain';
 import { home as enHome } from '@/i18n/locales/en/home';
 import { more as enMore } from '@/i18n/locales/en/more';
 import { settings as enSettings } from '@/i18n/locales/en/settings';
@@ -29,6 +31,7 @@ export const resources = {
   de: {
     common: deCommon,
     community: deCommunity,
+    domain: deDomain,
     home: deHome,
     more: deMore,
     settings: deSettings,
@@ -36,6 +39,7 @@ export const resources = {
   en: {
     common: enCommon,
     community: enCommunity,
+    domain: enDomain,
     home: enHome,
     more: enMore,
     settings: enSettings,

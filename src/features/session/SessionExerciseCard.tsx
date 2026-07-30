@@ -49,12 +49,7 @@ import { resolveEffectiveTarget } from '@/services/sessionTargets';
 import { suggestProgression } from '@/services/progression';
 import { ProgressionHint } from '@/features/session/ProgressionHint';
 import { db } from '@/db/db';
-import {
-  TRACKING_TYPE_LABELS,
-  formatKg,
-  formatSections,
-  formatSets,
-} from '@/utils/format';
+import { trackingTypeLabel, formatKg, formatSections, formatSets } from '@/utils/format';
 import { formatDate } from '@/utils/date';
 import type { EffortInput, SessionExercise, TemplateExercise, WorkoutSet } from '@/types';
 
@@ -497,7 +492,7 @@ export function SessionExerciseCard({
           </h2>
           <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted">
             {highlightNext ? <Badge tone="accent">Als Nächstes</Badge> : null}
-            <Badge>{TRACKING_TYPE_LABELS[sessionExercise.trackingTypeSnapshot]}</Badge>
+            <Badge>{trackingTypeLabel(sessionExercise.trackingTypeSnapshot)}</Badge>
             {describeTarget(effectiveTarget, isCardio) ? (
               <span>Ziel: {describeTarget(effectiveTarget, isCardio)}</span>
             ) : null}

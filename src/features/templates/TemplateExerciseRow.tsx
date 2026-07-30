@@ -9,7 +9,7 @@ import {
 } from '@/db/repositories/templates';
 import { ExerciseTargetFields } from '@/features/templates/ExerciseTargetFields';
 import type { Exercise, TemplateExercise } from '@/types';
-import { TRACKING_TYPE_LABELS } from '@/utils/format';
+import { trackingTypeLabel } from '@/utils/format';
 
 /**
  * One exercise row inside the template editor. Kept as its own component so the
@@ -65,7 +65,7 @@ export function TemplateExerciseRow({
           </p>
           <p className="text-xs text-muted">
             {exercise
-              ? TRACKING_TYPE_LABELS[exercise.trackingType]
+              ? trackingTypeLabel(exercise.trackingType)
               : 'Diese Übung existiert nicht mehr.'}
           </p>
         </div>
