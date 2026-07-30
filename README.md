@@ -523,15 +523,21 @@ All URLs live in a single typed config file, [`src/config/externalLinks.ts`](src
   not rendered — the app never ships a dead link.
 
 Both forms are structurally identical, one fully German and one fully English
-(no mixed bilingual form): required category (Bug report · Feature request ·
-General feedback · Question · Other), required short title and description,
-plus **steps to reproduce, expected behaviour and actual behaviour, shown and
-required by conditional logic only for the bug category**. Optional: device/OS,
+(no mixed bilingual form): a required category first, then a required short
+title and description, plus **steps to reproduce, expected behaviour and actual
+behaviour, shown and required by conditional logic only for the bug category**.
+Optional: device/OS,
 browser, contact e-mail, and a single image screenshot (max 5 MB) preceded by an
 explicit warning not to upload sensitive data. A required checkbox acknowledges
 the privacy notice, and Tally's CAPTCHA block guards against spam. The thank-you
 page confirms receipt without promising that every request will be implemented
 or answered personally.
+
+The category list currently differs between the two forms: German asks
+**Fehlermeldung · Feature-Wunsch · Allgemeines Feedback · Frage · Sonstiges**
+(#33), the English form still asks **General feedback · Feature request · Bug
+report · Usability issue · Other** because its update could not be saved yet.
+Aligning it is the one open item of #33.
 
 Manage responses in the Tally dashboard and copy relevant ones into GitHub
 issues manually, never publishing personal details. Owner e-mail notifications
