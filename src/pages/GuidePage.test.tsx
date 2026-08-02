@@ -37,4 +37,17 @@ describe('GuidePage', () => {
     ).toBeVisible();
     expect(screen.getByText(/do not share local storage/i)).toBeVisible();
   });
+
+  it('provides a detailed plan tutorial without a fake helpfulness poll', () => {
+    renderGuide('/hilfe/trainingsplaene');
+
+    expect(
+      screen.getByRole('heading', { name: 'Trainingspläne Schritt für Schritt' }),
+    ).toBeVisible();
+    expect(
+      screen.getByRole('heading', { name: 'Freie Rotation oder feste Wochentage' }),
+    ).toBeVisible();
+    expect(screen.getByText(/Arbeitssätze und passende Zielwerte/)).toBeVisible();
+    expect(screen.queryByText('War das hilfreich?')).not.toBeInTheDocument();
+  });
 });

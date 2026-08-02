@@ -74,8 +74,9 @@ General rules:
   released backup contract.
 - **Origin migration is explicit:** `training-tracker-4xu.pages.dev` and
   `app.exerivo.com` have separate IndexedDB stores. The legacy origin therefore
-  remains usable for export and is not redirected until migration has been
-  communicated and tested.
+  remains usable for export through September 2, 2026. The canonical onboarding
+  and Settings link to that export path during the time-boxed migration window;
+  after the cutoff the legacy client redirects to `app.exerivo.com`.
 - AI exports, AI response imports, plan/builder/unit packages, comparison
   exports, shares and CSV headers are not changed by the rebrand.
 

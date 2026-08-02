@@ -33,8 +33,10 @@ export function PageHeader({
           </IconButton>
         ) : null}
         <div className="min-w-0 flex-1">
-          <h1 className="truncate text-xl font-bold leading-tight">{title}</h1>
-          {subtitle ? <p className="truncate text-sm text-muted">{subtitle}</p> : null}
+          <h1 className="break-words text-xl font-bold leading-tight">{title}</h1>
+          {subtitle ? (
+            <p className="mt-0.5 text-sm leading-snug text-muted">{subtitle}</p>
+          ) : null}
         </div>
         {action ? <div className="shrink-0">{action}</div> : null}
       </div>

@@ -8,6 +8,9 @@ export interface OnboardingResource {
   openImport: string;
   openPlans: string;
   openGuide: string;
+  openLegacy: string;
+  continueWithoutLegacy: string;
+  migrationDeadline: string;
   steps: Array<{
     id: string;
     title: string;

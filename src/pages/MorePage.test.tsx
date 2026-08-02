@@ -54,6 +54,15 @@ describe('MorePage', () => {
     );
   });
 
+  it('shows complete descriptions instead of truncating them', () => {
+    renderPage();
+    const description = screen.getByText(
+      'Antwortdatei importieren, Feedback und geprüfte Vorschläge',
+    );
+    expect(description).toBeVisible();
+    expect(description).not.toHaveClass('truncate');
+  });
+
   it('shows the support card above the tool groups', () => {
     const { container } = renderPage();
     const card = screen.getByText('Kostenlos. Privat. Unabhängig.');

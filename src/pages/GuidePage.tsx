@@ -3,10 +3,7 @@ import { BookOpen, Search } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Badge, Card, EmptyState } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
 import { guideResource } from '@/features/guide/guideResource';
-
-const FEEDBACK_PREFIX = 'training-tracker.guide-helpful.';
 
 export default function GuidePage() {
   const { articleId } = useParams();
@@ -14,14 +11,6 @@ export default function GuidePage() {
   const article = resource.articles.find((entry) => entry.id === articleId);
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState<string | null>(null);
-  const [feedback, setFeedback] = useState<string | null>(() => {
-    if (!articleId) return null;
-    try {
-      return localStorage.getItem(`${FEEDBACK_PREFIX}${articleId}`);
-    } catch {
-      return null;
-    }
-  });
 
   const categories = useMemo(
     () => Array.from(new Set(resource.articles.map((entry) => entry.category))),
@@ -74,14 +63,6 @@ export default function GuidePage() {
     const related = article.relatedArticleIds
       .map((id) => resource.articles.find((entry) => entry.id === id))
       .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry));
-    const saveFeedback = (value: 'yes' | 'no') => {
-      setFeedback(value);
-      try {
-        localStorage.setItem(`${FEEDBACK_PREFIX}${article.id}`, value);
-      } catch {
-        // Feedback is optional; unavailable storage never blocks the guide.
-      }
-    };
 
     return (
       <>
@@ -146,22 +127,6 @@ export default function GuidePage() {
               </div>
             </section>
           ) : null}
-
-          <Card>
-            <h2 className="text-sm font-semibold">{resource.ui.helpful}</h2>
-            {feedback ? (
-              <p className="mt-2 text-sm text-muted">{resource.ui.helpfulThanks}</p>
-            ) : (
-              <div className="mt-3 flex gap-2">
-                <Button size="sm" onClick={() => saveFeedback('yes')}>
-                  {resource.ui.helpfulYes}
-                </Button>
-                <Button size="sm" onClick={() => saveFeedback('no')}>
-                  {resource.ui.helpfulNo}
-                </Button>
-              </div>
-            )}
-          </Card>
         </article>
       </>
     );

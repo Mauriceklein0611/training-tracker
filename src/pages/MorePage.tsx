@@ -104,7 +104,7 @@ export default function MorePage() {
                     <Icon size={22} className="shrink-0 text-accent" aria-hidden="true" />
                     <span className="min-w-0 flex-1">
                       <span className="block font-medium">{t(`${key}.label`)}</span>
-                      <span className="block truncate text-sm text-muted">
+                      <span className="mt-0.5 block text-sm leading-snug text-muted">
                         {t(`${key}.description`)}
                       </span>
                     </span>

@@ -81,6 +81,12 @@ export const settings = {
     lastBackup: 'Letzte Sicherung:',
     never: 'noch nie',
   },
+  legacyMigration: {
+    sectionTitle: 'Daten aus der alten App sichern',
+    description:
+      'Falls du die bisherige pages.dev-App verwendet hast, kannst du sie noch bis zum 2. September 2026 öffnen und dort ein vollständiges Backup erstellen.',
+    openLegacy: 'Alte App für Backup öffnen',
+  },
   ios: {
     sectionTitle: 'Auf dem iPhone installieren',
     step1: 'Diese Seite in Safari öffnen.',

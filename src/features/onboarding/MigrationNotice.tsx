@@ -1,12 +1,22 @@
+import { useEffect } from 'react';
 import { ExternalLink, MoveRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { APP_URL, appOrigin } from '@/config/brand';
+import { APP_URL, appOrigin, isLegacyMigrationAvailable } from '@/config/brand';
 import { getLanguage } from '@/i18n';
 import { onboarding as deOnboarding } from '@/i18n/locales/de/onboarding';
 import { onboarding as enOnboarding } from '@/i18n/locales/en/onboarding';
 
-export function MigrationNotice() {
-  if (appOrigin() !== 'legacy') return null;
+export function MigrationNotice({ showNotice = true }: { showNotice?: boolean }) {
+  const origin = appOrigin();
+  const migrationAvailable = isLegacyMigrationAvailable();
+
+  useEffect(() => {
+    if (origin === 'legacy' && !migrationAvailable) {
+      window.location.replace(APP_URL);
+    }
+  }, [migrationAvailable, origin]);
+
+  if (origin !== 'legacy' || !migrationAvailable || !showNotice) return null;
   const copy = (getLanguage() === 'de' ? deOnboarding : enOnboarding).migration;
 
   return (

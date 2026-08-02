@@ -10,6 +10,9 @@ export const onboarding: OnboardingResource = {
   openImport: 'Import backup',
   openPlans: 'Create training plan',
   openGuide: 'Open guide',
+  openLegacy: 'Yes, open the old app for backup',
+  continueWithoutLegacy: 'No, start fresh',
+  migrationDeadline: 'Access to the old app will be removed on September 2, 2026.',
   steps: [
     {
       id: 'welcome',
@@ -28,8 +31,8 @@ export const onboarding: OnboardingResource = {
     },
     {
       id: 'import',
-      title: 'Already used the app?',
-      text: 'If you used Exerivo at the old pages.dev address, import your full backup here.',
+      title: 'Have you used the old app before?',
+      text: 'Open the previous app once, create a full backup under Explore → Data & backup, then import it here. If you are new, you can continue right away.',
     },
     {
       id: 'plan',
@@ -49,7 +52,7 @@ export const onboarding: OnboardingResource = {
   ],
   migration: {
     title: 'Exerivo has moved',
-    text: 'Create a full backup at this old address first. Then open app.exerivo.com and import the file there.',
+    text: 'Create a full backup at this old address first. Then open app.exerivo.com and import the file there. This migration access ends on September 2, 2026.',
     backup: 'Create backup',
     newApp: 'Open new app',
   },
