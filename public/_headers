@@ -17,6 +17,12 @@
 /assets/*
   Cache-Control: public, max-age=31536000, immutable
 
+/brand/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/icons/*
+  Cache-Control: public, max-age=31536000, immutable
+
 # The service worker and its manifest must never be served stale, otherwise the
 # app could not pick up new versions.
 /sw.js

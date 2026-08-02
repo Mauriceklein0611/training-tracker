@@ -432,7 +432,11 @@ export default function HomePage() {
           <h2 id="templates-heading" className="text-base font-semibold">
             {tHome('plans.heading')}
           </h2>
-          <Link to="/plaene" className="text-sm font-medium text-accent">
+          <Link
+            to="/plaene"
+            className="text-sm font-medium text-accent"
+            aria-label={tHome('plans.seeAllLabel')}
+          >
             {tHome('plans.seeAll')}
           </Link>
         </div>

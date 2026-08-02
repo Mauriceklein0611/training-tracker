@@ -35,6 +35,7 @@ export const home = {
   plans: {
     heading: 'Trainingspläne',
     seeAll: 'Alle ansehen',
+    seeAllLabel: 'Alle Trainingspläne ansehen',
     emptyTitle: 'Noch keine Trainingspläne',
     emptyDescription:
       'Lege einen Plan an, um wiederkehrende Trainings mit festen Übungen, Ziel-Sätzen und Pausenzeiten zu starten. Für spontane Einheiten reicht das freie Training.',
