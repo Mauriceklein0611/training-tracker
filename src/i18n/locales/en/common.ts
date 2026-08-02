@@ -8,8 +8,8 @@ export const common: Common = {
     plans: 'Plans',
     history: 'History',
     analytics: 'Analytics',
-    more: 'More',
-    moreLabel: 'Open more sections',
+    more: 'Explore',
+    moreLabel: 'Explore additional sections',
   },
   state: {
     loading: 'Loading …',
