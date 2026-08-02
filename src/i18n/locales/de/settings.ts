@@ -95,6 +95,7 @@ export const settings = {
     guide: 'Hilfe & Leitfaden',
     whatsNew: 'Was ist neu?',
     website: 'Exerivo-Website',
+    imprint: 'Impressum',
     repeatOnboarding: 'Onboarding erneut starten',
   },
 };

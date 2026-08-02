@@ -22,6 +22,7 @@ export const SITE_URL = normalizedPublicUrl(
   import.meta.env.VITE_SITE_URL,
   DEFAULT_SITE_URL,
 );
+export const IMPRINT_URL = new URL('impressum', SITE_URL).toString();
 
 /** Canonical PWA origin. Never contains credentials or user data. */
 export const APP_URL = normalizedPublicUrl(import.meta.env.VITE_APP_URL, DEFAULT_APP_URL);

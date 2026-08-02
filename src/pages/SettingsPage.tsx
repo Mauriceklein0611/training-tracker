@@ -14,7 +14,7 @@ import { playRestFinishedSound, primeAudio, vibrate } from '@/services/sound';
 import { isSpeechSupported, speak } from '@/services/speech';
 import type { AnalyticsRangeKey, AppSettings, EffortInput, ExplainMode } from '@/types';
 import { formatDateTime } from '@/utils/date';
-import { APP_VERSION, SITE_URL } from '@/config/brand';
+import { APP_VERSION, IMPRINT_URL, SITE_URL } from '@/config/brand';
 import { resetOnboarding } from '@/services/onboarding';
 
 export default function SettingsPage() {
@@ -261,6 +261,15 @@ export default function SettingsPage() {
               className="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-xl border border-border bg-surface-2 px-4 font-medium"
             >
               {tSettings('about.website')}
+              <ExternalLink size={17} aria-hidden="true" />
+            </a>
+            <a
+              href={IMPRINT_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-xl border border-border bg-surface-2 px-4 font-medium"
+            >
+              {tSettings('about.imprint')}
               <ExternalLink size={17} aria-hidden="true" />
             </a>
             <Button

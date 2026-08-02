@@ -94,6 +94,7 @@ export const settings: Settings = {
     guide: 'Help & guide',
     whatsNew: "What's new?",
     website: 'Exerivo website',
+    imprint: 'Legal notice',
     repeatOnboarding: 'Restart onboarding',
   },
 };
