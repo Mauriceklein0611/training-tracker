@@ -16,10 +16,12 @@ Production architecture:
 - canonical PWA: <https://app.exerivo.com/>
 - temporary migration origin: <https://training-tracker-4xu.pages.dev/>
 
-The temporary origin intentionally remains available during migration so users
-can export their origin-bound IndexedDB data. Exerivo shows an export/import
-assistant instead of redirecting that origin prematurely. The built-in bilingual
-guide under `/hilfe` and first-run onboarding are bundled for offline use.
+The temporary origin remains available until September 2, 2026 so existing
+users can export their origin-bound IndexedDB data. New users always enter via
+`app.exerivo.com`; first-run onboarding and Settings expose the legacy backup
+link only during this migration window. After the cutoff, the legacy client
+redirects to the canonical PWA. The built-in bilingual guide under `/hilfe` and
+first-run onboarding are bundled for offline use.
 
 ---
 

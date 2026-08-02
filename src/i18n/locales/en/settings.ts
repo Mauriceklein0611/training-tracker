@@ -80,6 +80,12 @@ export const settings: Settings = {
     lastBackup: 'Last backup:',
     never: 'never',
   },
+  legacyMigration: {
+    sectionTitle: 'Back up data from the old app',
+    description:
+      'If you used the previous pages.dev app, you can still open it and create a full backup until September 2, 2026.',
+    openLegacy: 'Open old app for backup',
+  },
   ios: {
     sectionTitle: 'Install on iPhone',
     step1: 'Open this page in Safari.',

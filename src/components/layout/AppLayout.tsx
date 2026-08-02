@@ -33,7 +33,7 @@ export function AppLayout() {
           isLiveSession ? 'pb-8' : 'pb-[calc(72px+env(safe-area-inset-bottom,0px))]',
         )}
       >
-        {isLiveSession ? null : <MigrationNotice />}
+        <MigrationNotice showNotice={!isLiveSession} />
         {/* A crash inside one screen must not take down the navigation. */}
         <ErrorBoundary>
           <Outlet />

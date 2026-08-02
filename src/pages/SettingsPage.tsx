@@ -14,13 +14,20 @@ import { playRestFinishedSound, primeAudio, vibrate } from '@/services/sound';
 import { isSpeechSupported, speak } from '@/services/speech';
 import type { AnalyticsRangeKey, AppSettings, EffortInput, ExplainMode } from '@/types';
 import { formatDateTime } from '@/utils/date';
-import { APP_VERSION, IMPRINT_URL, SITE_URL } from '@/config/brand';
+import {
+  APP_VERSION,
+  IMPRINT_URL,
+  LEGACY_APP_URL,
+  SITE_URL,
+  isLegacyMigrationAvailable,
+} from '@/config/brand';
 import { resetOnboarding } from '@/services/onboarding';
 
 export default function SettingsPage() {
   const { settings, update } = useSettings();
   const { t: tSettings } = useTranslation('settings');
   const showIosHint = isIos() && !isStandalone();
+  const showLegacyMigration = isLegacyMigrationAvailable();
 
   return (
     <>
@@ -219,6 +226,25 @@ export default function SettingsPage() {
             </p>
           </div>
         </Card>
+
+        {showLegacyMigration ? (
+          <Card>
+            <CardHeader
+              title={tSettings('legacyMigration.sectionTitle')}
+              subtitle={tSettings('legacyMigration.description')}
+              as="h2"
+            />
+            <a
+              href={LEGACY_APP_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl border border-border bg-surface-2 px-4 text-center font-medium"
+            >
+              {tSettings('legacyMigration.openLegacy')}
+              <ExternalLink size={17} aria-hidden="true" />
+            </a>
+          </Card>
+        ) : null}
 
         {showIosHint ? (
           <Card>
