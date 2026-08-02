@@ -12,10 +12,12 @@ import { comparisons as deComparisons } from '@/i18n/locales/de/comparisons';
 import { data as deData } from '@/i18n/locales/de/data';
 import { domain as deDomain } from '@/i18n/locales/de/domain';
 import { exercises as deExercises } from '@/i18n/locales/de/exercises';
+import { guide as deGuide } from '@/i18n/locales/de/guide';
 import { home as deHome } from '@/i18n/locales/de/home';
 import { history as deHistory } from '@/i18n/locales/de/history';
 import { library as deLibrary } from '@/i18n/locales/de/library';
 import { more as deMore } from '@/i18n/locales/de/more';
+import { onboarding as deOnboarding } from '@/i18n/locales/de/onboarding';
 import { plans as dePlans } from '@/i18n/locales/de/plans';
 import { settings as deSettings } from '@/i18n/locales/de/settings';
 import { session as deSession } from '@/i18n/locales/de/session';
@@ -27,10 +29,12 @@ import { comparisons as enComparisons } from '@/i18n/locales/en/comparisons';
 import { data as enData } from '@/i18n/locales/en/data';
 import { domain as enDomain } from '@/i18n/locales/en/domain';
 import { exercises as enExercises } from '@/i18n/locales/en/exercises';
+import { guide as enGuide } from '@/i18n/locales/en/guide';
 import { home as enHome } from '@/i18n/locales/en/home';
 import { history as enHistory } from '@/i18n/locales/en/history';
 import { library as enLibrary } from '@/i18n/locales/en/library';
 import { more as enMore } from '@/i18n/locales/en/more';
+import { onboarding as enOnboarding } from '@/i18n/locales/en/onboarding';
 import { plans as enPlans } from '@/i18n/locales/en/plans';
 import { settings as enSettings } from '@/i18n/locales/en/settings';
 import { session as enSession } from '@/i18n/locales/en/session';
@@ -54,10 +58,12 @@ export const resources = {
     data: deData,
     domain: deDomain,
     exercises: deExercises,
+    guide: deGuide,
     home: deHome,
     history: deHistory,
     library: deLibrary,
     more: deMore,
+    onboarding: deOnboarding,
     plans: dePlans,
     settings: deSettings,
     session: deSession,
@@ -71,10 +77,12 @@ export const resources = {
     data: enData,
     domain: enDomain,
     exercises: enExercises,
+    guide: enGuide,
     home: enHome,
     history: enHistory,
     library: enLibrary,
     more: enMore,
+    onboarding: enOnboarding,
     plans: enPlans,
     settings: enSettings,
     session: enSession,

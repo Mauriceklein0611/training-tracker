@@ -1,6 +1,6 @@
-# Agent instructions — Training Tracker
+# Agent instructions — Exerivo (`training-tracker` repository)
 
-Private, local, offline-first training PWA (React 18 + TypeScript + Vite +
+Private, local, offline-first Exerivo training PWA (React 18 + TypeScript + Vite +
 Tailwind + Dexie/IndexedDB + Zod + Recharts + i18next + vite-plugin-pwa). No
 account, no backend, no cloud, no external runtime APIs, no telemetry, no direct
 LLM API. Code, types and technical comments are English. Mobile-first.

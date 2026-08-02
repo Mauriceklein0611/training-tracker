@@ -88,4 +88,12 @@ export const settings: Settings = {
     step4: 'From now on, start the app from the home screen icon.',
     note: 'As an installed app the tracker runs full screen and works entirely without an internet connection.',
   },
+  about: {
+    sectionTitle: 'About Exerivo',
+    version: 'Version {{version}}',
+    guide: 'Help & guide',
+    whatsNew: "What's new?",
+    website: 'Exerivo website',
+    repeatOnboarding: 'Restart onboarding',
+  },
 };

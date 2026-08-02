@@ -2,6 +2,8 @@ import { Outlet, useLocation } from 'react-router-dom';
 import { BottomNav } from '@/components/layout/BottomNav';
 import { UpdatePrompt } from '@/components/UpdatePrompt';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { MigrationNotice } from '@/features/onboarding/MigrationNotice';
+import { OnboardingDialog } from '@/features/onboarding/OnboardingDialog';
 import { cn } from '@/utils/cn';
 
 /**
@@ -20,6 +22,7 @@ export function AppLayout() {
     // bleed (-mx-4 / px-4) keeps lining up with the content.
     <div className="inset-x-safe min-h-dvh bg-bg">
       <UpdatePrompt />
+      {isLiveSession ? null : <OnboardingDialog />}
       <main
         id="main"
         className={cn(
@@ -30,6 +33,7 @@ export function AppLayout() {
           isLiveSession ? 'pb-8' : 'pb-[calc(72px+env(safe-area-inset-bottom,0px))]',
         )}
       >
+        {isLiveSession ? null : <MigrationNotice />}
         {/* A crash inside one screen must not take down the navigation. */}
         <ErrorBoundary>
           <Outlet />

@@ -7,6 +7,7 @@ import {
   createBackup,
   importBackup,
   parseBackupFile,
+  preImportBackupFileName,
   validateBackupJson,
 } from '@/services/backup';
 import { createExercise } from '@/db/repositories/exercises';
@@ -92,7 +93,13 @@ describe('createBackup', () => {
 
   it('names the file with the export date', () => {
     expect(backupFileName(new Date('2026-07-21T09:00:00Z'))).toBe(
-      'training-backup-2026-07-21.json',
+      'exerivo-backup-2026-07-21.json',
+    );
+  });
+
+  it('uses a distinct Exerivo filename for the pre-import safety copy', () => {
+    expect(preImportBackupFileName(new Date('2026-07-21T09:00:00Z'))).toBe(
+      'exerivo-pre-import-backup-2026-07-21.json',
     );
   });
 });

@@ -85,7 +85,7 @@ export function buildShareCardSvg(input: ShareCardInput): string {
   </defs>
   <rect width="${size}" height="${size}" fill="url(#bg)" />
   <rect x="40" y="40" width="${size - 80}" height="${size - 80}" rx="40" fill="none" stroke="#1b2530" stroke-width="2" />
-  <text x="90" y="180" font-family="${FONT}" font-size="44" font-weight="600" fill="${accent}">Training Tracker</text>
+  <text x="90" y="180" font-family="${FONT}" font-size="44" font-weight="600" fill="${accent}">Exerivo</text>
   <text x="90" y="320" font-family="${FONT}" font-size="88" font-weight="800" fill="#f1f5f9">${escapeXml(
     input.title,
   )}</text>

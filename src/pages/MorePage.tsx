@@ -66,6 +66,7 @@ const GROUPS: { titleKey: MoreGroupKey; items: MoreItem[] }[] = [
     titleKey: 'groups.app',
     items: [
       { to: '/mehr/einstellungen', key: 'settings', Icon: Settings },
+      { to: '/hilfe', key: 'guide', Icon: BookOpen },
       { to: '/mehr/glossar', key: 'glossary', Icon: BookOpen },
       { to: '/mehr/datenschutz', key: 'privacy', Icon: ShieldCheck },
     ],

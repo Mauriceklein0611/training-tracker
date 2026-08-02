@@ -44,6 +44,10 @@ export const more: More = {
     label: 'Glossary',
     description: 'Terms like RPE, RIR, e1RM and volume explained',
   },
+  guide: {
+    label: 'Help & guide',
+    description: 'Getting started, training, analytics, installation and backups',
+  },
   privacy: {
     label: 'Privacy',
     description: 'What is stored — and what is not',

@@ -503,7 +503,12 @@ export async function importBackup(
   return { mode, added, skipped };
 }
 
-/** `training-backup-2026-07-21.json` */
+/** `exerivo-backup-2026-07-21.json` */
 export function backupFileName(date: Date = new Date()): string {
-  return `training-backup-${dayKey(date)}.json`;
+  return `exerivo-backup-${dayKey(date)}.json`;
+}
+
+/** Safety copy downloaded immediately before a merge or replace import. */
+export function preImportBackupFileName(date: Date = new Date()): string {
+  return `exerivo-pre-import-backup-${dayKey(date)}.json`;
 }

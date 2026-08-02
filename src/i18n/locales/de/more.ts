@@ -49,6 +49,10 @@ export const more = {
     label: 'Glossar',
     description: 'Fachbegriffe wie RPE, RIR, e1RM und Volumen erklärt',
   },
+  guide: {
+    label: 'Hilfe & Leitfaden',
+    description: 'Erste Schritte, Training, Analysen, Installation und Backups',
+  },
   privacy: {
     label: 'Datenschutz',
     description: 'Was gespeichert wird — und was nicht',

@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { ClipboardCopy, Download, FileJson, Share2, Upload } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { PageHeader } from '@/components/layout/PageHeader';
+import { HelpButton } from '@/features/guide/HelpButton';
 import { Button } from '@/components/ui/Button';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { ConfirmDialog, Dialog } from '@/components/ui/Dialog';
@@ -29,6 +30,7 @@ import {
   backupFileName,
   createBackup,
   importBackup,
+  preImportBackupFileName,
   parseBackupFile,
   type BackupCounts,
   type BackupFile,
@@ -223,6 +225,11 @@ export default function DataPage() {
     if (!pending) return;
     setBusy('import');
     try {
+      // A restorable safety copy is downloaded before either merge or replace.
+      // It uses the exact released backup contract and never mutates the DB.
+      const safetyBackup = await createBackup();
+      downloadJson(preImportBackupFileName(), safetyBackup);
+      await markBackupCreated();
       const result = await importBackup(pending.backup, mode);
       const added = Object.values(result.added).reduce((sum, value) => sum + value, 0);
       const skipped = Object.values(result.skipped).reduce(
@@ -432,7 +439,11 @@ export default function DataPage() {
 
   return (
     <>
-      <PageHeader title={t('title')} backTo="/mehr" />
+      <PageHeader
+        title={t('title')}
+        backTo="/mehr"
+        action={<HelpButton articleId="backup-import" compact />}
+      />
 
       <div className="grid gap-4">
         <Card>
@@ -821,6 +832,7 @@ export default function DataPage() {
             ) : null}
 
             <div className="rounded-xl bg-surface-2 p-3 text-xs leading-relaxed text-muted">
+              <p className="mb-2">{t('importDialog.safetyBackup')}</p>
               <p>
                 <span className="font-semibold text-text">
                   {t('importDialog.mergeLabel')}

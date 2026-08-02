@@ -32,7 +32,7 @@ describe('SupportHint', () => {
   it('is an inline card, not a modal', () => {
     renderHint();
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    expect(screen.getByText(/Danke, dass du den Training Tracker nutzt/)).toBeVisible();
+    expect(screen.getByText(/Danke, dass du Exerivo nutzt/)).toBeVisible();
   });
 
   it('records that it was shown exactly once', () => {
@@ -68,7 +68,7 @@ describe('SupportHint', () => {
   it('localises to English', () => {
     setLanguage('en');
     renderHint();
-    expect(screen.getByText(/Thanks for using Training Tracker/)).toBeInTheDocument();
+    expect(screen.getByText(/Thanks for using Exerivo/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Later' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Don’t show again' })).toBeInTheDocument();
   });

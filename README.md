@@ -1,6 +1,6 @@
-# Training Tracker
+# Exerivo
 
-A private, offline-first strength **and cardio** training tracker, built as an
+Exerivo is a private, offline-first strength **and cardio** training tracker, built as an
 installable Progressive Web App for a single user on a single phone.
 
 There is no account, no backend, no sync and no analytics. Every workout you
@@ -9,6 +9,17 @@ record stays in the browser's local database on the device you recorded it on.
 The user interface is fully available in German and English. Switching the
 display language does not rewrite user-created content or historical workout
 snapshots. The source code and this documentation are in English.
+
+Production architecture:
+
+- product website: <https://exerivo.com/>
+- canonical PWA: <https://app.exerivo.com/>
+- temporary migration origin: <https://training-tracker-4xu.pages.dev/>
+
+The temporary origin intentionally remains available during migration so users
+can export their origin-bound IndexedDB data. Exerivo shows an export/import
+assistant instead of redirecting that origin prematurely. The built-in bilingual
+guide under `/hilfe` and first-run onboarding are bundled for offline use.
 
 ---
 
@@ -311,7 +322,7 @@ Under _Mehr → Daten & Sicherung_.
 ### Creating a backup
 
 "Vollständige Sicherung erstellen" writes
-`training-backup-YYYY-MM-DD.json` containing the export format version, the
+`exerivo-backup-YYYY-MM-DD.json` containing the export format version, the
 database schema version, the export timestamp, settings, exercises, templates,
 template exercises, sessions, session exercises, sets and body data entries.
 

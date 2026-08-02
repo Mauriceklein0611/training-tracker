@@ -13,7 +13,7 @@ previous supported version, the current version, an invalid and an
 unsupported-future fixture. Raise a schema version only on a real persistence
 change; prefer optional/additive fields.
 
-Last full matrix audit (2026-07-29): every version in the table below was
+Last full matrix audit (2026-08-02): every version in the table below was
 cross-checked against its code constant (`SCHEMA_VERSION` 28, `AI_EXPORT_VERSION`
 3, `SUPPORTED_RESPONSE_SCHEMA_VERSION` 2, `PLAN_BUILDER_KIT_VERSION` 3,
 `PLAN_PACKAGE_SCHEMA_VERSION` 4 with `SUPPORTED_PLAN_PACKAGE_VERSIONS` [1, 2, 3,
@@ -57,6 +57,27 @@ General rules:
 | Workout unit package               | export + import + share | `format: training-workout-unit-package` | `schemaVersion`                         | 2                    | 1, 2              |
 | Block comparison export            | export                  | (comparison doc)                        | —                                       | —                    | —                 |
 | CSV (sets/sessions/exercises/body) | export                  | header row                              | header (by test)                        | —                    | —                 |
+
+## Exerivo rebrand and domain migration (2026-08-02)
+
+- **No persisted schema change:** Dexie stays at schema 28. The database name
+  `training-tracker`, existing `training-tracker.*` localStorage keys, record
+  ids and relationships remain unchanged so the rebrand cannot orphan data.
+- **No wire-format rename:** released content identifiers such as
+  `app: training-tracker`, `training-plan-package` and the AI contracts remain
+  stable. Rebranding those identifiers would break compatibility and is not a
+  UI change.
+- **Backup format stays 1:** only the downloaded filename changes from
+  `training-backup-...` to `exerivo-backup-...`. The JSON content remains
+  byte-structure compatible. Before every merge or replace import, the app now
+  downloads an `exerivo-pre-import-backup-...` safety copy using the same
+  released backup contract.
+- **Origin migration is explicit:** `training-tracker-4xu.pages.dev` and
+  `app.exerivo.com` have separate IndexedDB stores. The legacy origin therefore
+  remains usable for export and is not redirected until migration has been
+  communicated and tested.
+- AI exports, AI response imports, plan/builder/unit packages, comparison
+  exports, shares and CSV headers are not changed by the rebrand.
 
 ## Cardio + structured equipment (schema 28)
 
