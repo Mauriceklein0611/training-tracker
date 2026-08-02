@@ -14,6 +14,7 @@ export const common = {
     history: 'Verlauf',
     analytics: 'Analyse',
     more: 'Mehr',
+    moreLabel: 'Weitere Bereiche öffnen',
   },
   state: {
     loading: 'Wird geladen …',
