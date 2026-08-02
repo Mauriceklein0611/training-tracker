@@ -74,21 +74,34 @@ function insideRoundedRect(x, y, rect) {
   return (x - cx) ** 2 + (y - cy) ** 2 <= r * r;
 }
 
+function insideRotatedRoundedRect(x, y, rect, angle) {
+  const [x0, y0, x1, y1] = rect;
+  const cx = (x0 + x1) / 2;
+  const cy = (y0 + y1) / 2;
+  const dx = x - cx;
+  const dy = y - cy;
+  const cos = Math.cos(-angle);
+  const sin = Math.sin(-angle);
+  const localX = cx + dx * cos - dy * sin;
+  const localY = cy + dx * sin + dy * cos;
+  return insideRoundedRect(localX, localY, rect);
+}
+
 /**
- * Exerivo "E" glyph, described as rounded rectangles in a 0..1 box.
- * `scale` shrinks the glyph towards the centre (used for maskable safe zones).
+ * Exerivo's three-bar mark, described as rounded rectangles in a 0..1 box.
+ * `scale` shrinks the mark towards the centre (used for maskable safe zones).
  */
-function glyphShapes(scale) {
+function markShapes(scale) {
   const s = (v) => 0.5 + (v - 0.5) * scale;
   const rect = (x0, y0, x1, y1, r, color) => ({
     rect: [s(x0), s(y0), s(x1), s(y1), r * scale],
     color,
+    angle: (-6 * Math.PI) / 180,
   });
   return [
-    rect(0.21, 0.19, 0.34, 0.81, 0.065, FG), // stem
-    rect(0.3, 0.2, 0.79, 0.33, 0.065, FG), // top
-    rect(0.3, 0.435, 0.69, 0.565, 0.065, FG_MID), // middle
-    rect(0.3, 0.67, 0.79, 0.8, 0.065, FG_DIM), // bottom
+    rect(0.29, 0.24, 0.73, 0.36, 0.06, FG),
+    rect(0.24, 0.44, 0.68, 0.56, 0.06, FG_MID),
+    rect(0.19, 0.64, 0.63, 0.76, 0.06, FG_DIM),
   ];
 }
 
@@ -98,7 +111,7 @@ function glyphShapes(scale) {
  */
 function renderIcon(size, { maskable = false } = {}) {
   const rgba = Buffer.alloc(size * size * 4);
-  const shapes = glyphShapes(maskable ? 0.72 : 1);
+  const shapes = markShapes(maskable ? 0.78 : 1);
   const tile = [0.0, 0.0, 1.0, 1.0, maskable ? 0 : 0.22];
   const ss = 3; // supersampling factor for smooth edges
 
@@ -114,7 +127,7 @@ function renderIcon(size, { maskable = false } = {}) {
           if (!insideRoundedRect(x, y, tile)) continue;
           bgHits++;
           for (const shape of shapes) {
-            if (insideRoundedRect(x, y, shape.rect)) {
+            if (insideRotatedRoundedRect(x, y, shape.rect, shape.angle)) {
               const key = shape.color.join(',');
               fgHits.set(key, (fgHits.get(key) ?? 0) + 1);
               break;
@@ -147,12 +160,12 @@ function renderIcon(size, { maskable = false } = {}) {
 mkdirSync(OUT_DIR, { recursive: true });
 
 const targets = [
-  ['icon-192.png', 192, {}],
-  ['icon-512.png', 512, {}],
-  ['icon-maskable-512.png', 512, { maskable: true }],
+  ['exerivo-icon-192-v1.png', 192, {}],
+  ['exerivo-icon-512-v1.png', 512, {}],
+  ['exerivo-icon-maskable-512-v1.png', 512, { maskable: true }],
   // iOS ignores transparency and squares the icon itself, so a full-bleed
   // variant looks correct on the home screen.
-  ['apple-touch-icon-180.png', 180, { maskable: true }],
+  ['exerivo-apple-touch-180-v1.png', 180, { maskable: true }],
 ];
 
 for (const [name, size, opts] of targets) {

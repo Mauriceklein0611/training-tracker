@@ -1,4 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-labelledby="title">
+  <title id="title">Exerivo</title>
   <rect width="100" height="100" rx="22" fill="#0b0f14" />
   <g transform="rotate(-6 50 50)">
     <rect x="29" y="24" width="44" height="12" rx="6" fill="#22d3ee" />

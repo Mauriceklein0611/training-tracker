@@ -43,10 +43,20 @@ const manifest = {
   theme_color: '#0b0f14',
   categories: ['health', 'fitness', 'productivity'],
   icons: [
-    { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
-    { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
     {
-      src: '/icons/icon-maskable-512.png',
+      src: '/icons/exerivo-icon-192-v1.png',
+      sizes: '192x192',
+      type: 'image/png',
+      purpose: 'any',
+    },
+    {
+      src: '/icons/exerivo-icon-512-v1.png',
+      sizes: '512x512',
+      type: 'image/png',
+      purpose: 'any',
+    },
+    {
+      src: '/icons/exerivo-icon-maskable-512-v1.png',
       sizes: '512x512',
       type: 'image/png',
       purpose: 'maskable',
@@ -75,11 +85,19 @@ export default defineConfig({
             // interrupt a running workout.
             registerType: 'prompt',
             injectRegister: null,
-            includeAssets: ['favicon.svg', 'icons/apple-touch-icon-180.png'],
+            includeAssets: [
+              'brand/exerivo-mark-v1.svg',
+              'icons/exerivo-apple-touch-180-v1.png',
+            ],
             manifest,
             workbox: {
               // Precache the whole app shell so the app starts offline.
               globPatterns: ['**/*.{js,css,html,svg,png,ico,webmanifest}'],
+              // Brand assets are added explicitly through the manifest and
+              // includeAssets. Excluding their directory copies here avoids
+              // duplicate entries and keeps superseded icon files out of the
+              // new service-worker cache.
+              globIgnores: ['favicon.svg', 'brand/**/*', 'icons/**/*'],
               // SPA fallback for client-side routes.
               navigateFallback: '/index.html',
               navigateFallbackDenylist: [/^\/_/],
