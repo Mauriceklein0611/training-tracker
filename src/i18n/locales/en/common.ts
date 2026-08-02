@@ -9,6 +9,7 @@ export const common: Common = {
     history: 'History',
     analytics: 'Analytics',
     more: 'More',
+    moreLabel: 'Open more sections',
   },
   state: {
     loading: 'Loading …',

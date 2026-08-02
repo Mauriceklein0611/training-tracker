@@ -27,6 +27,7 @@ export function BottomNav() {
             <NavLink
               to={to}
               end={end}
+              aria-label={key === 'nav.more' ? t('nav.moreLabel') : undefined}
               className="flex min-h-[56px] flex-col items-center justify-center px-1 py-1.5"
             >
               {({ isActive }) => (
