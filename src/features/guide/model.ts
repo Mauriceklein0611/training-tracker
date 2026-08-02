@@ -27,10 +27,6 @@ export interface GuideResource {
     noResults: string;
     updated: string;
     related: string;
-    helpful: string;
-    helpfulYes: string;
-    helpfulNo: string;
-    helpfulThanks: string;
     note: string;
     warning: string;
   };
