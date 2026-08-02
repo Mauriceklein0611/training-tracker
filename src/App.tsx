@@ -33,6 +33,7 @@ const SettingsPage = lazy(() => import('@/pages/SettingsPage'));
 const StoragePage = lazy(() => import('@/pages/StoragePage'));
 const PrivacyPage = lazy(() => import('@/pages/PrivacyPage'));
 const GlossaryPage = lazy(() => import('@/pages/GlossaryPage'));
+const GuidePage = lazy(() => import('@/pages/GuidePage'));
 const LiveSessionPage = lazy(() => import('@/pages/LiveSessionPage'));
 
 function PageFallback() {
@@ -79,6 +80,8 @@ export default function App() {
           <Route path="/mehr/speicher" element={<StoragePage />} />
           <Route path="/mehr/datenschutz" element={<PrivacyPage />} />
           <Route path="/mehr/glossar" element={<GlossaryPage />} />
+          <Route path="/hilfe" element={<GuidePage />} />
+          <Route path="/hilfe/:articleId" element={<GuidePage />} />
           <Route path="/training/:sessionId" element={<LiveSessionPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>

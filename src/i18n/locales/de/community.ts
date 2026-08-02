@@ -26,12 +26,12 @@ export const community = {
   },
   /** Discreet, opt-out home hint after proven usage (#32). */
   hint: {
-    title: 'Danke, dass du den Training Tracker nutzt.',
+    title: 'Danke, dass du Exerivo nutzt.',
     text: 'Die App bleibt kostenlos und werbefrei. Wenn sie dir hilft, kannst du sie unterstützen oder weiterempfehlen — beides freiwillig.',
   },
   share: {
-    title: 'Training Tracker',
-    text: 'Training Tracker — private, lokale Trainingsdokumentation für Kraft und Cardio. Kein Konto, keine Werbung.',
+    title: 'Exerivo',
+    text: 'Exerivo — dein lokaler Trainingstracker für Kraft und Cardio. Kein Konto, keine Werbung.',
     copied: 'Link kopiert.',
     unavailable:
       'Teilen ist in diesem Browser nicht möglich. Du kannst die Adresse aus der Adresszeile kopieren.',

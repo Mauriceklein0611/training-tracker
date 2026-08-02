@@ -89,6 +89,15 @@ export const settings = {
     step4: 'Die App künftig über das Symbol auf dem Home-Bildschirm starten.',
     note: 'Als installierte App läuft der Tracker im Vollbild und funktioniert vollständig ohne Internetverbindung.',
   },
+  about: {
+    sectionTitle: 'Über Exerivo',
+    version: 'Version {{version}}',
+    guide: 'Hilfe & Leitfaden',
+    whatsNew: 'Was ist neu?',
+    website: 'Exerivo-Website',
+    imprint: 'Impressum',
+    repeatOnboarding: 'Onboarding erneut starten',
+  },
 };
 
 export type Settings = typeof settings;

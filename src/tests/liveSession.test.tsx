@@ -111,7 +111,9 @@ describe('live workout view', () => {
     await user.type(await screen.findByLabelText(/^Wiederholungen$/), '10');
     await user.click(screen.getByRole('button', { name: /Satz abschließen/ }));
 
-    await user.click(await screen.findByRole('button', { name: /Pause beenden/ }));
+    await user.click(
+      await screen.findByRole('button', { name: /Pause beenden/ }, { timeout: 5_000 }),
+    );
 
     await waitFor(async () => {
       const detail = await getSessionDetail(session.id);

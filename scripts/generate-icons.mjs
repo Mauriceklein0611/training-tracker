@@ -15,7 +15,8 @@ const OUT_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', 'public', 'i
 
 const BG = [11, 15, 20]; // #0b0f14 — app background / theme colour
 const FG = [34, 211, 238]; // #22d3ee — accent
-const FG_DIM = [14, 165, 233]; // #0ea5e9 — outer plates
+const FG_MID = [52, 211, 153]; // #34d399 — evolution / progress
+const FG_DIM = [14, 165, 233]; // #0ea5e9 — depth
 
 /** CRC-32 as required by the PNG specification. */
 const CRC_TABLE = (() => {
@@ -74,7 +75,7 @@ function insideRoundedRect(x, y, rect) {
 }
 
 /**
- * Dumbbell glyph, described as rounded rectangles in a 0..1 box.
+ * Exerivo "E" glyph, described as rounded rectangles in a 0..1 box.
  * `scale` shrinks the glyph towards the centre (used for maskable safe zones).
  */
 function glyphShapes(scale) {
@@ -84,11 +85,10 @@ function glyphShapes(scale) {
     color,
   });
   return [
-    rect(0.26, 0.455, 0.74, 0.545, 0.03, FG), // bar
-    rect(0.16, 0.32, 0.28, 0.68, 0.05, FG), // left inner plate
-    rect(0.72, 0.32, 0.84, 0.68, 0.05, FG), // right inner plate
-    rect(0.08, 0.395, 0.16, 0.605, 0.035, FG_DIM), // left outer plate
-    rect(0.84, 0.395, 0.92, 0.605, 0.035, FG_DIM), // right outer plate
+    rect(0.21, 0.19, 0.34, 0.81, 0.065, FG), // stem
+    rect(0.3, 0.2, 0.79, 0.33, 0.065, FG), // top
+    rect(0.3, 0.435, 0.69, 0.565, 0.065, FG_MID), // middle
+    rect(0.3, 0.67, 0.79, 0.8, 0.065, FG_DIM), // bottom
   ];
 }
 

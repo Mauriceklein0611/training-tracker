@@ -180,6 +180,8 @@ export const data = {
     replace: 'Ersetzen',
     records: 'Enthaltene Datensätze',
     notes: 'Hinweise',
+    safetyBackup:
+      'Vor dem Import lädt Exerivo automatisch eine vollständige Sicherheitskopie deiner aktuell gespeicherten Daten herunter.',
     mergeLabel: 'Zusammenführen:',
     mergeDescription:
       'fügt nur Datensätze hinzu, die noch nicht vorhanden sind. Vorhandene Daten bleiben unverändert — nichts wird überschrieben.',

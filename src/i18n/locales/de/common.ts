@@ -6,7 +6,7 @@
  * typecheck instead of silently falling back at runtime.
  */
 export const common = {
-  appName: 'Training Tracker',
+  appName: 'Exerivo',
   nav: {
     label: 'Hauptnavigation',
     home: 'Home',
@@ -42,7 +42,7 @@ export const common = {
       'Offline nicht verfügbar — dafür ist eine Internetverbindung nötig. Die App selbst funktioniert offline uneingeschränkt weiter.',
   },
   footer: {
-    tagline: 'Training Tracker — private, lokale Trainingsdokumentation.',
+    tagline: 'Exerivo — dein lokaler Trainingstracker.',
     privacy: 'Kein Konto, kein Server, keine Übertragung deiner Daten.',
   },
   greeting: {

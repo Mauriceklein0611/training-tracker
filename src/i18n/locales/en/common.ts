@@ -1,7 +1,7 @@
 import type { Common } from '@/i18n/locales/de/common';
 
 export const common: Common = {
-  appName: 'Training Tracker',
+  appName: 'Exerivo',
   nav: {
     label: 'Main navigation',
     home: 'Home',
@@ -36,7 +36,7 @@ export const common: Common = {
       'Unavailable offline — this needs an internet connection. The app itself keeps working fully offline.',
   },
   footer: {
-    tagline: 'Training Tracker — private, local training log.',
+    tagline: 'Exerivo — your local training tracker.',
     privacy: 'No account, no server, no transfer of your data.',
   },
   greeting: {

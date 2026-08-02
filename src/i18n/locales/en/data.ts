@@ -177,6 +177,8 @@ export const data: Data = {
     replace: 'Replace',
     records: 'Included records',
     notes: 'Notes',
+    safetyBackup:
+      'Before importing, Exerivo automatically downloads a full safety copy of the data currently stored here.',
     mergeLabel: 'Merge:',
     mergeDescription:
       'adds only records that are not present yet. Existing data remains unchanged—nothing is overwritten.',

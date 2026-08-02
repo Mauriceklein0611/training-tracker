@@ -1,4 +1,6 @@
+import { ExternalLink } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { CheckboxField, NumberField, SelectField } from '@/components/ui/Field';
@@ -12,6 +14,8 @@ import { playRestFinishedSound, primeAudio, vibrate } from '@/services/sound';
 import { isSpeechSupported, speak } from '@/services/speech';
 import type { AnalyticsRangeKey, AppSettings, EffortInput, ExplainMode } from '@/types';
 import { formatDateTime } from '@/utils/date';
+import { APP_VERSION, IMPRINT_URL, SITE_URL } from '@/config/brand';
+import { resetOnboarding } from '@/services/onboarding';
 
 export default function SettingsPage() {
   const { settings, update } = useSettings();
@@ -230,6 +234,55 @@ export default function SettingsPage() {
             </p>
           </Card>
         ) : null}
+
+        <Card>
+          <CardHeader
+            title={tSettings('about.sectionTitle')}
+            subtitle={tSettings('about.version', { version: APP_VERSION })}
+            as="h2"
+          />
+          <div className="grid gap-2">
+            <Link
+              to="/hilfe"
+              className="inline-flex min-h-[48px] items-center justify-center rounded-xl border border-border bg-surface-2 px-4 font-medium"
+            >
+              {tSettings('about.guide')}
+            </Link>
+            <Link
+              to="/hilfe/was-ist-neu"
+              className="inline-flex min-h-[48px] items-center justify-center rounded-xl border border-border bg-surface-2 px-4 font-medium"
+            >
+              {tSettings('about.whatsNew')}
+            </Link>
+            <a
+              href={SITE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-xl border border-border bg-surface-2 px-4 font-medium"
+            >
+              {tSettings('about.website')}
+              <ExternalLink size={17} aria-hidden="true" />
+            </a>
+            <a
+              href={IMPRINT_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-xl border border-border bg-surface-2 px-4 font-medium"
+            >
+              {tSettings('about.imprint')}
+              <ExternalLink size={17} aria-hidden="true" />
+            </a>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                resetOnboarding();
+                window.location.assign('/');
+              }}
+            >
+              {tSettings('about.repeatOnboarding')}
+            </Button>
+          </div>
+        </Card>
       </div>
     </>
   );

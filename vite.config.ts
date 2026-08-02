@@ -16,23 +16,24 @@ type LocalizedWebAppManifest = Partial<ManifestOptions> & {
 };
 
 const manifest = {
-  name: 'Training Tracker',
-  short_name: 'Training',
+  id: '/',
+  name: 'Exerivo',
+  short_name: 'Exerivo',
   description:
-    'A private strength and cardio training log. All data stays on this device.',
-  lang: 'en',
+    'Kostenloser Trainingstracker für Kraft und Cardio. Alle Daten bleiben auf diesem Gerät.',
+  lang: 'de-DE',
   dir: 'ltr',
   name_localized: {
-    de: 'Training Tracker',
-    en: 'Training Tracker',
+    de: 'Exerivo',
+    en: 'Exerivo',
   },
   short_name_localized: {
-    de: 'Training',
-    en: 'Training',
+    de: 'Exerivo',
+    en: 'Exerivo',
   },
   description_localized: {
-    de: 'Private Trainingsdokumentation für Kraft und Cardio. Alle Daten bleiben auf diesem Gerät.',
-    en: 'A private strength and cardio training log. All data stays on this device.',
+    de: 'Kostenloser Trainingstracker für Kraft und Cardio. Alle Daten bleiben auf diesem Gerät.',
+    en: 'A free strength and cardio training tracker. All data stays on this device.',
   },
   start_url: '/',
   scope: '/',

@@ -22,12 +22,12 @@ export const community: Community = {
     share: 'Share the app',
   },
   hint: {
-    title: 'Thanks for using Training Tracker.',
+    title: 'Thanks for using Exerivo.',
     text: 'The app stays free and ad-free. If it helps you, you can support it or recommend it — both entirely voluntary.',
   },
   share: {
-    title: 'Training Tracker',
-    text: 'Training Tracker — a private, local training log for strength and cardio. No account, no ads.',
+    title: 'Exerivo',
+    text: 'Exerivo — your local strength and cardio training tracker. No account, no ads.',
     copied: 'Link copied.',
     unavailable:
       'Sharing is not available in this browser. You can copy the address from the address bar.',

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { appShareUrl, shareApp } from '@/features/community/shareApp';
 
-const PAYLOAD = { title: 'Training Tracker', text: 'A private training log.' };
+const PAYLOAD = { title: 'Exerivo', text: 'A private training log.' };
 
 function stub(name: 'share' | 'clipboard', value: unknown) {
   Object.defineProperty(navigator, name, { configurable: true, value });
