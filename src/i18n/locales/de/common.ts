@@ -13,8 +13,8 @@ export const common = {
     plans: 'Pläne',
     history: 'Verlauf',
     analytics: 'Analyse',
-    more: 'Mehr',
-    moreLabel: 'Weitere Bereiche öffnen',
+    more: 'Entdecken',
+    moreLabel: 'Weitere Bereiche entdecken',
   },
   state: {
     loading: 'Wird geladen …',
