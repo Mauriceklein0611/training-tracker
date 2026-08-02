@@ -33,6 +33,7 @@ export const home: Home = {
   plans: {
     heading: 'Training plans',
     seeAll: 'See all',
+    seeAllLabel: 'See all training plans',
     emptyTitle: 'No training plans yet',
     emptyDescription:
       'Create a plan to start recurring workouts with fixed exercises, target sets and rest times. For spontaneous sessions a free workout is enough.',
