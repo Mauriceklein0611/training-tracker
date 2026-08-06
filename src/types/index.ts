@@ -919,12 +919,17 @@ export interface AppSettings {
   /** The user switched the support hint off for good (#32). Absent → not off. */
   supportHintDismissed?: boolean;
   /**
-   * Body height in centimetres, asked for during onboarding (#44). Optional and
-   * purely a personal figure — nothing is calculated from it without it, and an
-   * absent value simply means the user did not enter one. Body *weight* is not
-   * duplicated here: it stays a dated {@link BodyWeightEntry}, so it keeps its
-   * history.
+   * Personal profile (#44, #46). All three are optional, local and purely
+   * descriptive: the app works exactly the same without them. Body *weight* is
+   * deliberately not part of this — it stays a dated {@link BodyWeightEntry} so
+   * it keeps its history.
+   *
+   * `displayName` only personalises the greeting. `birthDate` is stored rather
+   * than an age, so the age can be derived and never silently goes stale.
    */
+  displayName?: string;
+  birthDate?: ISODate;
+  /** Body height in centimetres. */
   heightCm?: number;
   restSoundEnabled: boolean;
   restVibrationEnabled: boolean;

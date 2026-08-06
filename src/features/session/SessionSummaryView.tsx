@@ -230,6 +230,12 @@ export function SessionSummaryView({ summary }: { summary: SessionSummary }) {
         </>
       )}
 
+      {/* No body weight for that day means no estimate — said once, plainly,
+          instead of quietly leaving the figure out (#46). */}
+      {summary.calories == null ? (
+        <p className="text-xs text-muted">{t('summary.caloriesMissing')}</p>
+      ) : null}
+
       {baselineNames.length > 0 ? (
         <div className="rounded-2xl border border-border bg-surface p-3">
           <h3 className="text-sm font-semibold">{t('summary.baselineTitle')}</h3>

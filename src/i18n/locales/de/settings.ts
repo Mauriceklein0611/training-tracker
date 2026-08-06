@@ -31,13 +31,10 @@ export const settings = {
     termsExpert: 'Kompakt (erfahren)',
   },
   body: {
-    sectionTitle: 'Körperdaten',
-    heightLabel: 'Körpergröße (cm)',
-    heightHint:
-      'Freiwillig und nur für die Einordnung deiner Werte. Leer lassen ist in Ordnung.',
-    weightHint:
-      'Dein Gewicht wird als datierter Eintrag geführt, damit der Verlauf erhalten bleibt. Aus dem zuletzt erfassten Gewicht schätzt Exerivo den Kalorienverbrauch je Übung — eine Näherung ohne Herzfrequenz.',
-    weightLink: 'Körpergewicht erfassen',
+    sectionTitle: 'Persönliche Angaben',
+    movedHint:
+      'Name, Alter und Körpergröße stehen im Profil, das Gewicht unter Körperdaten — damit nichts doppelt eingegeben wird.',
+    profileLink: 'Profil öffnen',
   },
   rest: {
     sectionTitle: 'Pausensignal',

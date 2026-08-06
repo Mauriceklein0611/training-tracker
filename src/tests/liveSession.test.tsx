@@ -35,6 +35,14 @@ function renderLiveSession(sessionId: string) {
   );
 }
 
+/**
+ * Opens the seeded exercise. Cards start collapsed (#46), so every test that
+ * records something goes through the same tap the user makes.
+ */
+async function openExercise(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(await screen.findByRole('button', { name: /Bankdrücken/ }));
+}
+
 async function seedSession() {
   const exercise = await createExercise({
     name: 'Bankdrücken',
@@ -57,17 +65,55 @@ beforeEach(async () => {
 });
 
 describe('live workout view', () => {
-  it('shows the running workout with its exercise', async () => {
+  it('lists its exercises collapsed and opens one on tap', async () => {
+    const user = userEvent.setup();
     const session = await seedSession();
     renderLiveSession(session.id);
 
     expect(
       await screen.findByRole('heading', { name: /Testtraining/ }),
     ).toBeInTheDocument();
+
+    // Collapsed: the exercise is one row, and nothing can be recorded yet.
+    expect(await screen.findByRole('button', { name: /Bankdrücken/ })).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    );
+    expect(
+      screen.queryByRole('button', { name: /Ersten Satz erfassen/ }),
+    ).not.toBeInTheDocument();
+
+    await openExercise(user);
+
     // The exercise name also appears in icon-button labels, so target the heading.
     expect(
       await screen.findByRole('heading', { name: /Bankdrücken/, level: 2 }),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /Ersten Satz erfassen/ }),
+    ).toBeInTheDocument();
+  });
+
+  it('keeps the exercise open once a set is being recorded', async () => {
+    const user = userEvent.setup();
+    const session = await seedSession();
+    renderLiveSession(session.id);
+
+    await openExercise(user);
+    await user.click(await screen.findByRole('button', { name: /Ersten Satz erfassen/ }));
+    await user.type(await screen.findByLabelText(/Gewicht gesamt/), '60');
+    await user.type(await screen.findByLabelText(/^Wiederholungen$/), '10');
+    await user.click(screen.getByRole('button', { name: /Satz abschließen/ }));
+
+    // A workout in progress must not fold itself away after a set.
+    expect(await screen.findByLabelText(/Gewicht gesamt/)).toBeInTheDocument();
+
+    // Collapsing is always available, and the row then summarises the work.
+    await user.click(screen.getByRole('button', { name: /Bankdrücken einklappen/ }));
+    expect(await screen.findByRole('button', { name: /Bankdrücken/ })).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    );
   });
 
   it('records a set and starts the rest from an absolute timestamp', async () => {
@@ -75,6 +121,7 @@ describe('live workout view', () => {
     const session = await seedSession();
     renderLiveSession(session.id);
 
+    await openExercise(user);
     await user.click(await screen.findByRole('button', { name: /Ersten Satz erfassen/ }));
 
     const weight = await screen.findByLabelText(/Gewicht gesamt/);
@@ -106,6 +153,7 @@ describe('live workout view', () => {
     const session = await seedSession();
     renderLiveSession(session.id);
 
+    await openExercise(user);
     await user.click(await screen.findByRole('button', { name: /Ersten Satz erfassen/ }));
     await user.type(await screen.findByLabelText(/Gewicht gesamt/), '60');
     await user.type(await screen.findByLabelText(/^Wiederholungen$/), '10');
@@ -132,6 +180,7 @@ describe('live workout view', () => {
     const session = await seedSession();
     renderLiveSession(session.id);
 
+    await openExercise(user);
     await user.click(await screen.findByRole('button', { name: /Ersten Satz erfassen/ }));
     await user.type(await screen.findByLabelText(/Gewicht gesamt/), '60');
     await user.type(await screen.findByLabelText(/^Wiederholungen$/), '10');
@@ -165,6 +214,7 @@ describe('live workout view', () => {
     const session = await seedSession();
     renderLiveSession(session.id);
 
+    await openExercise(user);
     await user.click(await screen.findByRole('button', { name: /Ersten Satz erfassen/ }));
     // Weight entered, repetitions left empty.
     await user.type(await screen.findByLabelText(/Gewicht gesamt/), '80');
@@ -181,6 +231,7 @@ describe('live workout view', () => {
     const session = await seedSession();
     renderLiveSession(session.id);
 
+    await openExercise(user);
     await user.click(await screen.findByRole('button', { name: /Ersten Satz erfassen/ }));
     await user.type(await screen.findByLabelText(/Gewicht gesamt/), '60');
     await user.type(await screen.findByLabelText(/^Wiederholungen$/), '10');
@@ -217,6 +268,7 @@ describe('live workout view', () => {
     const session = await seedSession();
     renderLiveSession(session.id);
 
+    await openExercise(user);
     await user.click(await screen.findByRole('button', { name: /Ersten Satz erfassen/ }));
     await user.type(await screen.findByLabelText(/Gewicht gesamt/), '60');
     await user.type(await screen.findByLabelText(/^Wiederholungen$/), '10');

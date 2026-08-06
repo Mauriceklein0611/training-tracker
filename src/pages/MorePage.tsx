@@ -10,6 +10,7 @@ import {
   Settings,
   ShieldCheck,
   Sparkles,
+  UserRound,
   Wrench,
   type LucideIcon,
 } from 'lucide-react';
@@ -51,6 +52,9 @@ const GROUPS: { titleKey: MoreGroupKey; items: MoreItem[] }[] = [
   {
     titleKey: 'groups.progress',
     items: [
+      // Profile and body data sit next to each other: the profile holds the
+      // stable personal figures, the body diary the dated measurements.
+      { to: '/mehr/profil', key: 'profile', Icon: UserRound },
       { to: '/mehr/koerpergewicht', key: 'bodyData', Icon: Scale },
       { to: '/mehr/ki-analysen', key: 'aiAnalyses', Icon: Sparkles },
     ],

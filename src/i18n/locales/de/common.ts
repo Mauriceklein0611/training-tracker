@@ -50,6 +50,8 @@ export const common = {
     morning: 'Guten Morgen',
     day: 'Guten Tag',
     evening: 'Guten Abend',
+    /** Only used when a name is stored in the profile (#46). */
+    withName: '{{greeting}}, {{name}}',
   },
   relativeDay: {
     today: 'Heute',

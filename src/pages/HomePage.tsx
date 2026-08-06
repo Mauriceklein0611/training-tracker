@@ -67,6 +67,7 @@ import { formatNumber, formatVolume } from '@/utils/format';
 export default function HomePage() {
   const navigate = useNavigate();
   const { t: tHome } = useTranslation('home');
+  const { t: tCommon } = useTranslation('common');
   const toast = useToast();
   const activeSession = useActiveSession();
   const { settings, update } = useSettings();
@@ -299,7 +300,19 @@ export default function HomePage() {
 
   return (
     <>
-      <PageHeader title={dayGreeting()} subtitle={formatDayReference()} />
+      {/* The name is only used to personalise the greeting (#46); without one
+          the header reads exactly as before. */}
+      <PageHeader
+        title={
+          settings.displayName
+            ? tCommon('greeting.withName', {
+                greeting: dayGreeting(),
+                name: settings.displayName,
+              })
+            : dayGreeting()
+        }
+        subtitle={formatDayReference()}
+      />
 
       {/* Resuming an interrupted workout is always the first thing offered. */}
       {activeSession ? (

@@ -32,7 +32,7 @@ import { ensureSchedulesForPlans } from '@/db/scheduleMigration';
  * Bump this together with a new `.version()` block below and record the change
  * in MIGRATIONS so the settings screen can show what the database went through.
  */
-export const SCHEMA_VERSION = 29;
+export const SCHEMA_VERSION = 30;
 
 export const MIGRATIONS: { version: number; description: string }[] = [
   { version: 1, description: 'Initiales Schema: Übungen, Pläne, Einheiten, Sätze.' },
@@ -229,9 +229,17 @@ export const MIGRATIONS: { version: number; description: string }[] = [
   {
     version: 29,
     description:
-      'Körpergröße in den Einstellungen: ein optionales Feld, das im Onboarding ' +
+      'Körpergröße als optionales Feld, das im Onboarding ' +
       'abgefragt werden kann. Rein additiv, ohne Backfill; das Körpergewicht ' +
       'bleibt ein datierter Körpereintrag und wird nicht dupliziert.',
+  },
+  {
+    version: 30,
+    description:
+      'Profilangaben in den Einstellungen: optionaler Anzeigename für die ' +
+      'persönliche Begrüßung und optionales Geburtsdatum, aus dem das Alter ' +
+      'abgeleitet wird. Rein additiv, ohne Backfill; das Alter selbst wird ' +
+      'nicht gespeichert, damit es nicht veraltet.',
   },
 ];
 
@@ -742,6 +750,21 @@ export class TrainingDatabase extends Dexie {
         .toCollection()
         .modify((settings) => {
           settings.schemaVersion = 29;
+        });
+    });
+
+    // ---- v30 ------------------------------------------------------------
+    // Profile fields in the settings (#46): optional displayName and birthDate.
+    // Purely additive: two optional fields, no store or index change and NO
+    // backfill — a name or a birth date is never derived from anything, and the
+    // age is computed on read so it cannot go stale. Only the recorded schema
+    // version is bumped.
+    this.version(30).upgrade(async (tx) => {
+      await tx
+        .table<AppSettings>('settings')
+        .toCollection()
+        .modify((settings) => {
+          settings.schemaVersion = 30;
         });
     });
   }

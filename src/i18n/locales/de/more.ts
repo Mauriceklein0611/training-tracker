@@ -25,6 +25,10 @@ export const more = {
     label: 'Equipment-Profile',
     description: 'Verfügbares Equipment je Ort — filtert die Übungsauswahl',
   },
+  profile: {
+    label: 'Profil',
+    description: 'Name, Alter und Körpergröße — freiwillig, bleibt auf dem Gerät',
+  },
   bodyData: {
     label: 'Körperdaten',
     description: 'Gewicht, Körperfett und Umfangsmaße',
@@ -70,6 +74,40 @@ export const more = {
       new: 'Neu',
       save: 'Speichern',
       saving: 'Speichern …',
+    },
+    profile: {
+      title: 'Profil',
+      subtitle: 'Freiwillige Angaben — sie bleiben auf diesem Gerät',
+      personal: {
+        title: 'Persönlich',
+        subtitle: 'Nur für die Begrüßung und die Einordnung deiner Werte',
+        name: 'Name',
+        namePlaceholder: 'z. B. Maurice',
+        nameHint: 'Erscheint in der Begrüßung auf der Startseite. Leer lassen ist okay.',
+        birthDate: 'Geburtsdatum',
+        birthDateHint:
+          'Daraus wird dein Alter berechnet — gespeichert wird nur das Datum.',
+        age: 'Alter',
+        ageValue: '{{value}} Jahre',
+        height: 'Körpergröße (cm)',
+        heightHint: 'Wird zusammen mit dem Gewicht für den BMI genutzt.',
+        invalidBirthDate: 'Bitte ein gültiges Datum zwischen 1900 und heute angeben.',
+        invalidHeight: 'Größe bitte zwischen 50 und 280 cm angeben.',
+        saved: 'Profil gespeichert.',
+      },
+      body: {
+        title: 'Körperdaten',
+        subtitle:
+          'Das Gewicht wird als datierter Eintrag geführt, damit der Verlauf erhalten bleibt — deshalb steht es hier nur zur Ansicht.',
+        currentWeight: 'Aktuelles Gewicht',
+        weightDate: 'erfasst am {{date}}',
+        noWeight: 'Noch kein Gewicht erfasst',
+        weightPurpose:
+          'Aus dem Gewicht schätzt Exerivo den Kalorienverbrauch je Übung — eine Näherung ohne Herzfrequenz.',
+        bmi: 'BMI',
+        bmiHint: 'aus Größe und aktuellem Gewicht',
+        openBody: 'Körpergewicht erfassen',
+      },
     },
     body: {
       title: 'Körperdaten',

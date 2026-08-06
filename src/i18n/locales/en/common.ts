@@ -44,6 +44,7 @@ export const common: Common = {
     morning: 'Good morning',
     day: 'Good afternoon',
     evening: 'Good evening',
+    withName: '{{greeting}}, {{name}}',
   },
   relativeDay: {
     today: 'Today',
