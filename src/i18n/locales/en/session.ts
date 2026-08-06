@@ -99,6 +99,8 @@ export const session: Session = {
     captured: 'captured',
     caloriesEstimated: 'Calories (estimated)',
     caloriesEstimatedHint: 'Approximation from body weight and time, no heart rate',
+    caloriesMissing:
+      'Calories could not be estimated — no body weight is recorded for that day.',
     elevation: 'Elevation gain',
     newRecordOne: 'New personal best!',
     newRecordOther: '{{value}} new personal bests!',
@@ -266,6 +268,8 @@ export const session: Session = {
     home: 'Back to home',
     finished: 'Workout completed.',
     discarded: 'Workout discarded.',
+    caloriesUnavailable: 'Calorie estimate off: no body weight recorded.',
+    caloriesAction: 'Add it now',
     exerciseProgress: 'Exercise {{current}} of {{total}}',
     progressAria: 'Exercise progress',
     discard: 'Discard workout',

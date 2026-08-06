@@ -20,6 +20,10 @@ export const more: More = {
     label: 'Equipment profiles',
     description: 'Available equipment per place — filters the exercise picker',
   },
+  profile: {
+    label: 'Profile',
+    description: 'Name, age and height — optional, stays on this device',
+  },
   bodyData: {
     label: 'Body data',
     description: 'Weight, body fat and circumference measurements',
@@ -65,6 +69,39 @@ export const more: More = {
       new: 'New',
       save: 'Save',
       saving: 'Saving …',
+    },
+    profile: {
+      title: 'Profile',
+      subtitle: 'Optional details — they stay on this device',
+      personal: {
+        title: 'Personal',
+        subtitle: 'Only used for the greeting and to put your figures in context',
+        name: 'Name',
+        namePlaceholder: 'e.g. Maurice',
+        nameHint: 'Appears in the greeting on the home screen. Leaving it empty is fine.',
+        birthDate: 'Date of birth',
+        birthDateHint: 'Your age is derived from it — only the date is stored.',
+        age: 'Age',
+        ageValue: '{{value}} years',
+        height: 'Body height (cm)',
+        heightHint: 'Used together with your weight for the BMI.',
+        invalidBirthDate: 'Please enter a valid date between 1900 and today.',
+        invalidHeight: 'Please enter a height between 50 and 280 cm.',
+        saved: 'Profile saved.',
+      },
+      body: {
+        title: 'Body data',
+        subtitle:
+          'Your weight is kept as a dated entry so its history stays intact — which is why it is only shown here.',
+        currentWeight: 'Current weight',
+        weightDate: 'recorded on {{date}}',
+        noWeight: 'No weight recorded yet',
+        weightPurpose:
+          'Exerivo uses your weight to estimate the calories burned per exercise — an approximation without heart rate.',
+        bmi: 'BMI',
+        bmiHint: 'from height and current weight',
+        openBody: 'Record body weight',
+      },
     },
     body: {
       title: 'Body data',

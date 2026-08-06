@@ -84,36 +84,19 @@ export default function SettingsPage() {
         </Card>
 
         <Card>
-          <CardHeader title={tSettings('body.sectionTitle')} as="h2" />
-          <div className="grid gap-4">
-            {/* Height is a settings value; the weight stays a dated body entry so
-                its history is never flattened into a single current number. */}
-            <NumberField
-              label={tSettings('body.heightLabel')}
-              value={settings.heightCm == null ? '' : String(settings.heightCm)}
-              hint={tSettings('body.heightHint')}
-              onChange={(event) => {
-                const raw = event.target.value.trim();
-                if (raw === '') {
-                  void update({ heightCm: undefined });
-                  return;
-                }
-                const value = parseNumberInput(raw);
-                if (value == null || Number.isNaN(value)) return;
-                if (value < 50 || value > 280) return;
-                void update({ heightCm: Math.round(value) });
-              }}
-            />
-            <div>
-              <p className="text-sm text-muted">{tSettings('body.weightHint')}</p>
-              <Link
-                to="/mehr/koerpergewicht"
-                className="mt-2 inline-flex min-h-[44px] items-center text-sm font-medium text-accent"
-              >
-                {tSettings('body.weightLink')}
-              </Link>
-            </div>
-          </div>
+          {/* Personal figures live in the profile, not here — one place per
+              value, so nothing is entered twice (#46). */}
+          <CardHeader
+            title={tSettings('body.sectionTitle')}
+            subtitle={tSettings('body.movedHint')}
+            as="h2"
+          />
+          <Link
+            to="/mehr/profil"
+            className="inline-flex min-h-[44px] items-center text-sm font-medium text-accent"
+          >
+            {tSettings('body.profileLink')}
+          </Link>
         </Card>
 
         <Card>

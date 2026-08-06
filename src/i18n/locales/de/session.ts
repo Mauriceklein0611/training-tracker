@@ -98,6 +98,8 @@ export const session = {
     captured: 'erfasst',
     caloriesEstimated: 'Kalorien (geschätzt)',
     caloriesEstimatedHint: 'Näherung aus Körpergewicht und Zeit, ohne Herzfrequenz',
+    caloriesMissing:
+      'Kalorien konnten nicht geschätzt werden — für diesen Tag ist kein Körpergewicht hinterlegt.',
     elevation: 'Höhenmeter',
     newRecordOne: 'Neue persönliche Bestleistung!',
     newRecordOther: '{{value}} neue persönliche Bestleistungen!',
@@ -268,6 +270,8 @@ export const session = {
     home: 'Zur Startseite',
     finished: 'Training abgeschlossen.',
     discarded: 'Training verworfen.',
+    caloriesUnavailable: 'Kalorienschätzung inaktiv: kein Körpergewicht hinterlegt.',
+    caloriesAction: 'Jetzt eintragen',
     exerciseProgress: 'Übung {{current}} von {{total}}',
     progressAria: 'Fortschritt der Übungen',
     discard: 'Training verwerfen',

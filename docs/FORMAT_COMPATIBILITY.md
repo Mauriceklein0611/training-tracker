@@ -14,7 +14,7 @@ unsupported-future fixture. Raise a schema version only on a real persistence
 change; prefer optional/additive fields.
 
 Last full matrix audit (2026-08-06): every version in the table below was
-cross-checked against its code constant (`SCHEMA_VERSION` 29, `AI_EXPORT_VERSION`
+cross-checked against its code constant (`SCHEMA_VERSION` 30, `AI_EXPORT_VERSION`
 3, `SUPPORTED_RESPONSE_SCHEMA_VERSION` 2, `PLAN_BUILDER_KIT_VERSION` 3,
 `PLAN_PACKAGE_SCHEMA_VERSION` 4 with `SUPPORTED_PLAN_PACKAGE_VERSIONS` [1, 2, 3,
 4], `WORKOUT_UNIT_PACKAGE_SCHEMA_VERSION` 2 with
@@ -49,7 +49,7 @@ General rules:
 
 | Format                             | Direction               | Name (in content)                       | Version field                           | Version              | Supported imports |
 | ---------------------------------- | ----------------------- | --------------------------------------- | --------------------------------------- | -------------------- | ----------------- |
-| Full backup                        | export + import         | `app: training-tracker`                 | `exportFormatVersion` / `schemaVersion` | format 1 / schema 29 | schema ≤ 29       |
+| Full backup                        | export + import         | `app: training-tracker`                 | `exportFormatVersion` / `schemaVersion` | format 1 / schema 30 | schema ≤ 30       |
 | AI analysis export                 | export                  | (AI export doc)                         | `exportVersion`                         | 3                    | —                 |
 | AI response import                 | import                  | `format: training-ai-response`          | `schemaVersion`                         | 2                    | 1, 2              |
 | Plan builder kit                   | export                  | `format: training-plan-builder-kit`     | `version`                               | 3                    | —                 |
@@ -57,6 +57,22 @@ General rules:
 | Workout unit package               | export + import + share | `format: training-workout-unit-package` | `schemaVersion`                         | 2                    | 1, 2              |
 | Block comparison export            | export                  | (comparison doc)                        | —                                       | —                    | —                 |
 | CSV (sets/sessions/exercises/body) | export                  | header row                              | header (by test)                        | —                    | —                 |
+
+## Profile fields (schema 30, #46)
+
+- **Schema 30 (additive, no backfill, no index/store change):** `settings` gains
+  the optional `displayName` (≤ 60 characters, greeting only) and `birthDate`
+  (`JJJJ-MM-TT`). Older settings rows and older backups validate unchanged;
+  neither value is ever derived from other data. Backup format stays **1**.
+- **The age is never stored.** It is computed from `birthDate` on read
+  (`services/profile.ts`), so it cannot go stale in the database, in an old
+  backup or in an export.
+- **`heightCm` is unchanged** — only its editing surface moved from the settings
+  screen to the new profile screen. No field rename, no migration, no semantic
+  change.
+- **Not affected:** AI export/response contracts, plan/builder/unit packages,
+  block comparison, all CSV exports, share cards. The profile values are not
+  part of any export; the AI export's `analysisContext` stays what it was.
 
 ## Body height + estimated calories (schema 29, #44)
 

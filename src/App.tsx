@@ -27,6 +27,7 @@ const ExercisesPage = lazy(() => import('@/pages/ExercisesPage'));
 const ExerciseDetailPage = lazy(() => import('@/pages/ExerciseDetailPage'));
 const EquipmentProfilesPage = lazy(() => import('@/pages/EquipmentProfilesPage'));
 const BodyWeightPage = lazy(() => import('@/pages/BodyWeightPage'));
+const ProfilePage = lazy(() => import('@/pages/ProfilePage'));
 const DataPage = lazy(() => import('@/pages/DataPage'));
 const AiAnalysesPage = lazy(() => import('@/pages/AiAnalysesPage'));
 const SettingsPage = lazy(() => import('@/pages/SettingsPage'));
@@ -73,6 +74,7 @@ export default function App() {
           <Route path="/mehr/uebungen" element={<ExercisesPage />} />
           <Route path="/mehr/uebungen/:exerciseId" element={<ExerciseDetailPage />} />
           <Route path="/mehr/equipment" element={<EquipmentProfilesPage />} />
+          <Route path="/mehr/profil" element={<ProfilePage />} />
           <Route path="/mehr/koerpergewicht" element={<BodyWeightPage />} />
           <Route path="/mehr/daten" element={<DataPage />} />
           <Route path="/mehr/ki-analysen" element={<AiAnalysesPage />} />

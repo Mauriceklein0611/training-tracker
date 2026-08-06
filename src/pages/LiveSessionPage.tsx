@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { CheckCircle2, Plus, Trash2, X } from 'lucide-react';
+import { CheckCircle2, Flame, Plus, Trash2, X } from 'lucide-react';
 import { db } from '@/db/db';
 import {
   addExerciseToSession,
@@ -283,6 +283,23 @@ export default function LiveSessionPage() {
       <div className="mb-3">
         <PreCheckInCard sessionId={sessionId} value={detail.session.preCheckIn} />
       </div>
+
+      {/*
+       * Without a body weight there is no calorie estimate. Saying so once —
+       * with the way to fix it — beats leaving the figure silently absent (#46).
+       */}
+      {bodyWeightKg === null && detail.exercises.length > 0 ? (
+        <Link
+          to="/mehr/profil"
+          className="mb-3 flex min-h-[44px] items-center gap-2 rounded-2xl border border-border bg-surface px-3 py-2 text-sm text-muted"
+        >
+          <Flame size={16} className="shrink-0 text-accent" aria-hidden="true" />
+          <span>
+            {t('live.caloriesUnavailable')}{' '}
+            <span className="font-medium text-accent">{t('live.caloriesAction')}</span>
+          </span>
+        </Link>
+      ) : null}
 
       {detail.exercises.length === 0 ? (
         <EmptyState

@@ -31,13 +31,10 @@ export const settings: Settings = {
     termsExpert: 'Compact (experienced)',
   },
   body: {
-    sectionTitle: 'Body data',
-    heightLabel: 'Body height (cm)',
-    heightHint:
-      'Optional and only used to put your figures in context. Leaving it empty is fine.',
-    weightHint:
-      'Your weight is kept as a dated entry so its history stays intact. Exerivo uses the most recently recorded weight to estimate the calories burned per exercise — an approximation without heart rate.',
-    weightLink: 'Record body weight',
+    sectionTitle: 'Personal details',
+    movedHint:
+      'Name, age and height live in your profile, your weight under body data — so nothing has to be entered twice.',
+    profileLink: 'Open profile',
   },
   rest: {
     sectionTitle: 'Rest signal',

@@ -443,10 +443,19 @@ export function SessionExerciseCard({
   const showExecutionBadge =
     currentExecution.equipment !== 'unspecified' || isTemporaryExecution;
 
-  // "Done" = the set goal is met and nothing is mid-entry. Such an exercise
-  // collapses by default so the active one stands out; the user can still expand.
+  // "Done" = the set goal is met and nothing is mid-entry.
   const isDone = setGoalReached && !openSet && completedSets.length > 0;
-  const expanded = expandedOverride ?? !isDone;
+
+  /*
+   * Exercise cards are collapsed by default (#46), like the check-in card: a
+   * workout is worked through one exercise at a time, so an untouched and a
+   * finished exercise both stay a compact row and open on tap. Only the
+   * exercise actually in progress — a set started or recorded, or a rest still
+   * running — is open, so recording never costs an extra tap. An explicit
+   * expand/collapse by the user always wins.
+   */
+  const inProgress = !isDone && (sets.length > 0 || restRunning);
+  const expanded = expandedOverride ?? inProgress;
 
   const handleAddSet = async () => {
     if (isAdding) return;
@@ -527,20 +536,41 @@ export function SessionExerciseCard({
       : `${formatNumber(completedWorkingSets)} ${
           completedWorkingSets === 1 ? tCommon('units.setOne') : tCommon('units.setOther')
         }`;
+    // Collapsed, an exercise says what it asks for (not started) or what was
+    // achieved (done) — never both, and never a guessed value.
+    const targetSummary = describeTarget(effectiveTarget, isCardio, {
+      intervals: (value) => t('exercise.targetIntervals', { value }),
+      sets: (value) => t('exercise.targetSets', { value }),
+      reps: (min, max) => t('exercise.targetReps', { min, max }),
+      repsFrom: (min) => t('exercise.targetRepsFrom', { min }),
+    });
+    const summary = isDone
+      ? `${t('exercise.completed', { summary: doneSummary })}${
+          calories
+            ? ` · ${t('exercise.caloriesEstimate', { value: formatNumber(calories.kcal) })}`
+            : ''
+        }`
+      : (targetSummary ??
+        tDomain(`trackingType.${sessionExercise.trackingTypeSnapshot}`));
+
     return (
       <section
         aria-labelledby={`exercise-${sessionExercise.id}`}
-        className="rounded-2xl border border-border bg-surface"
+        className={`rounded-2xl border bg-surface ${
+          highlightNext ? 'border-accent ring-1 ring-accent' : 'border-border'
+        }`}
       >
         <button
           type="button"
           onClick={() => setExpandedOverride(true)}
           aria-expanded={false}
-          className="flex w-full items-center gap-3 p-3 text-left"
+          className="flex min-h-[44px] w-full items-center gap-3 p-3 text-left"
         >
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-success/15 text-success">
-            <Check size={18} aria-hidden="true" />
-          </span>
+          {isDone ? (
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-success/15 text-success">
+              <Check size={18} aria-hidden="true" />
+            </span>
+          ) : null}
           <span className="min-w-0 flex-1">
             <span
               id={`exercise-${sessionExercise.id}`}
@@ -549,13 +579,9 @@ export function SessionExerciseCard({
               <span className="text-muted">{label ?? `${index + 1}.`} </span>
               {displayName}
             </span>
-            <span className="block text-xs text-muted">
-              {t('exercise.completed', { summary: doneSummary })}
-              {calories
-                ? ` · ${t('exercise.caloriesEstimate', {
-                    value: formatNumber(calories.kcal),
-                  })}`
-                : ''}
+            <span className="block truncate text-xs text-muted">
+              {highlightNext ? `${t('exercise.next')} · ` : ''}
+              {summary}
             </span>
           </span>
           <ChevronDown size={20} className="shrink-0 text-muted" aria-hidden="true" />
@@ -618,16 +644,15 @@ export function SessionExerciseCard({
           </p>
         </div>
         <div className="flex shrink-0 gap-1">
-          {isDone ? (
-            <IconButton
-              label={t('exercise.collapse', {
-                name: displayName,
-              })}
-              onClick={() => setExpandedOverride(false)}
-            >
-              <ChevronUp size={18} aria-hidden="true" />
-            </IconButton>
-          ) : null}
+          {/* Every card can be closed again, not just a finished one (#46). */}
+          <IconButton
+            label={t('exercise.collapse', {
+              name: displayName,
+            })}
+            onClick={() => setExpandedOverride(false)}
+          >
+            <ChevronUp size={18} aria-hidden="true" />
+          </IconButton>
           <IconButton
             label={t('exercise.moveUp', {
               name: displayName,

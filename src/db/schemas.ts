@@ -528,9 +528,11 @@ export const appSettingsSchema = z.object({
   // A UI throttle for the voluntary support hint, never analytics.
   supportHintLastShownAt: isoDateTime.optional(),
   supportHintDismissed: z.boolean().optional(),
-  // Added in schema version 29 (#44); optional so older settings rows and older
-  // backups still validate, and never backfilled or guessed.
+  // Added in schema version 29 (#44) / 30 (#46); optional so older settings rows
+  // and older backups still validate, and never backfilled or guessed.
   heightCm: z.number().min(50).max(280).optional(),
+  displayName: z.string().max(60).optional(),
+  birthDate: isoDate.optional(),
   restSoundEnabled: z.boolean().default(true),
   restVibrationEnabled: z.boolean().default(true),
   // Added in schema version 5; defaulted so older backups still validate.
