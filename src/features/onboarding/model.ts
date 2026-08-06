@@ -11,6 +11,14 @@ export interface OnboardingResource {
   openLegacy: string;
   continueWithoutLegacy: string;
   migrationDeadline: string;
+  /** Labels of the optional body-data step (#44). */
+  profile: {
+    heightLabel: string;
+    weightLabel: string;
+    hint: string;
+    invalidHeight: string;
+    invalidWeight: string;
+  };
   steps: Array<{
     id: string;
     title: string;

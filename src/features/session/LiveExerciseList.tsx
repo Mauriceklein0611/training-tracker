@@ -33,6 +33,8 @@ export function LiveExerciseList({
   vibrationEnabled,
   effortInput,
   expertLabels,
+  bodyWeightKg,
+  onRestVisibilityChange,
 }: {
   detail: SessionDetail;
   sessionId: string;
@@ -41,6 +43,10 @@ export function LiveExerciseList({
   vibrationEnabled?: boolean;
   effortInput?: EffortInput;
   expertLabels?: boolean;
+  /** Body weight for the per-exercise calorie estimate; absent hides it. */
+  bodyWeightKg?: number | null;
+  /** See {@link SessionExerciseCard} — keeps the header from repeating the rest. */
+  onRestVisibilityChange?: (sessionExerciseId: string, visible: boolean) => void;
 }) {
   const { t } = useTranslation('session');
   const entries = detail.exercises;
@@ -93,6 +99,8 @@ export function LiveExerciseList({
                 vibrationEnabled={vibrationEnabled}
                 effortInput={effortInput}
                 expertLabels={expertLabels}
+                bodyWeightKg={bodyWeightKg}
+                onRestVisibilityChange={onRestVisibilityChange}
               />
               {grouped ? (
                 <button

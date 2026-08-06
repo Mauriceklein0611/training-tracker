@@ -127,6 +127,39 @@ describe('live workout view', () => {
     });
   });
 
+  it('shows the running rest once and ends it as soon as the next set is entered', async () => {
+    const user = userEvent.setup();
+    const session = await seedSession();
+    renderLiveSession(session.id);
+
+    await user.click(await screen.findByRole('button', { name: /Ersten Satz erfassen/ }));
+    await user.type(await screen.findByLabelText(/Gewicht gesamt/), '60');
+    await user.type(await screen.findByLabelText(/^Wiederholungen$/), '10');
+    await user.click(screen.getByRole('button', { name: /Satz abschließen/ }));
+
+    // The running rest settles into exactly one place — at the set it belongs
+    // to, not additionally in the workout header.
+    await waitFor(() => {
+      expect(screen.getAllByText(/Pause läuft/)).toHaveLength(1);
+    });
+
+    // The next set stays enterable during the rest — nothing is blocked …
+    await user.type(await screen.findByLabelText(/Gewicht gesamt/), '65');
+
+    // … and entering it closes the rest on its own, without an extra tap.
+    await waitFor(
+      async () => {
+        const detail = await getSessionDetail(session.id);
+        const first = detail!.exercises[0].sets.find((set) => set.completedAt)!;
+        expect(first.restEndedAt).toBeTruthy();
+      },
+      { timeout: 5_000 },
+    );
+    await waitFor(() => {
+      expect(screen.queryByText(/Pause läuft/)).not.toBeInTheDocument();
+    });
+  });
+
   it('refuses to complete a set with invalid input', async () => {
     const user = userEvent.setup();
     const session = await seedSession();

@@ -6,21 +6,29 @@ import { formatDuration } from '@/utils/date';
 import { useTranslation } from 'react-i18next';
 
 /**
- * Sticky rest countdown.
+ * Rest countdown of the running workout.
  *
  * Shows remaining time while counting down and switches to the elapsed
  * overtime once the target is reached, with a clear visual state change that
  * does not rely on colour alone (the label changes too).
+ *
+ * The bar is deliberately *not* positioned itself: it is placed either directly
+ * in the exercise (under the sets) or inside the sticky workout header, so a
+ * second `sticky top-0` element can never overlap the title (#44). Its time
+ * block and its controls sit on two rows, which keeps both readable on a narrow
+ * phone and at large font sizes.
  */
 export function RestTimerBar({
   rest,
   onEndRest,
   onAdjust,
+  className,
 }: {
   rest: ActiveRest;
   onEndRest: () => void;
   /** Nudge the rest target by ±seconds (the +15 / −15 controls). */
   onAdjust: (deltaSeconds: number) => void;
+  className?: string;
 }) {
   const { t } = useTranslation('session');
   const { progress } = rest;
@@ -33,11 +41,12 @@ export function RestTimerBar({
   return (
     <div
       className={cn(
-        'sticky top-0 z-30 -mx-4 mb-3 border-b px-4 py-3 backdrop-blur',
-        reached ? 'border-success/60 bg-surface' : 'border-border bg-surface/95',
+        'rounded-xl border px-3 py-2',
+        reached ? 'border-success/60 bg-surface' : 'border-border bg-surface-2/60',
+        className,
       )}
     >
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex items-center gap-2">
         <Timer
           size={22}
           aria-hidden="true"
@@ -47,7 +56,7 @@ export function RestTimerBar({
           )}
         />
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted">
+          <p className="truncate text-xs font-medium uppercase tracking-wide text-muted">
             {reached ? t('rest.reached') : t('rest.running')} · {rest.exerciseName}
           </p>
           <p
@@ -63,35 +72,37 @@ export function RestTimerBar({
             </span>
           </p>
         </div>
-        <div className="flex shrink-0 items-center gap-1">
-          <Button
-            variant="secondary"
-            size="sm"
-            className="px-2"
-            aria-label={t('rest.decrease')}
-            onClick={() => onAdjust(-15)}
-          >
-            <Minus size={16} aria-hidden="true" />
-            15
-          </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            className="px-2"
-            aria-label={t('rest.increase')}
-            onClick={() => onAdjust(15)}
-          >
-            <Plus size={16} aria-hidden="true" />
-            15
-          </Button>
-        </div>
+      </div>
+
+      <div className="mt-2 flex items-center gap-2">
+        <Button
+          variant="secondary"
+          size="sm"
+          className="shrink-0 px-2"
+          aria-label={t('rest.decrease')}
+          onClick={() => onAdjust(-15)}
+        >
+          <Minus size={16} aria-hidden="true" />
+          15
+        </Button>
+        <Button
+          variant="secondary"
+          size="sm"
+          className="shrink-0 px-2"
+          aria-label={t('rest.increase')}
+          onClick={() => onAdjust(15)}
+        >
+          <Plus size={16} aria-hidden="true" />
+          15
+        </Button>
         <Button
           variant={reached ? 'success' : 'secondary'}
-          className="shrink-0"
+          size="sm"
+          className="min-w-0 flex-1"
           onClick={onEndRest}
         >
           <Check size={18} aria-hidden="true" />
-          {t('rest.end')}
+          <span className="truncate">{t('rest.end')}</span>
         </Button>
       </div>
 

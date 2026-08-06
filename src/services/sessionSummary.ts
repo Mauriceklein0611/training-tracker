@@ -10,6 +10,11 @@ import {
 } from '@/services/metrics';
 import { computeRestStatistics, type RestStatistics } from '@/services/rest';
 import {
+  estimateSessionCalories,
+  resolveBodyWeightKg,
+  type CalorieEstimate,
+} from '@/services/calories';
+import {
   aggregateCardio,
   aggregatePace,
   isCardioSet,
@@ -46,6 +51,12 @@ export interface SessionSummary {
   cardioPace: Pace | null;
   /** Mean RPE across the session's cardio sections, or null when none recorded. */
   cardioAvgRpe: number | null;
+  /**
+   * Estimated energy of the workout (#44), or null when no body weight was
+   * recorded by the day of the session. Always a rough model value, never a
+   * measurement — see {@link estimateSessionCalories}.
+   */
+  calories: CalorieEstimate | null;
   /**
    * Comparison against the most recent earlier session of the *same* plan day or
    * workout unit, or null when there is no comparable prior session (e.g. a free
@@ -147,6 +158,22 @@ export function summarizeSession(
       ? cardioRpeValues.reduce((sum, value) => sum + value, 0) / cardioRpeValues.length
       : null;
 
+  // Energy estimate from the body weight that was valid on the day of the
+  // workout, so a later weigh-in never rewrites what a past session reports.
+  const setsByExercise = new Map<string, typeof sessionContexts>();
+  for (const context of sessionContexts) {
+    const list = setsByExercise.get(context.sessionExercise.id);
+    if (list) list.push(context);
+    else setsByExercise.set(context.sessionExercise.id, [context]);
+  }
+  const calories = estimateSessionCalories(
+    [...setsByExercise.values()].map((contexts) => ({
+      sets: contexts.map((context) => context.set),
+      context: contexts[0].sessionExercise,
+    })),
+    resolveBodyWeightKg(dataset.bodyWeightEntries ?? [], session.startedAt),
+  );
+
   const end = session.finishedAt ? new Date(session.finishedAt) : now;
   const durationSeconds = Math.max(
     0,
@@ -209,6 +236,7 @@ export function summarizeSession(
     cardioModality,
     cardioPace,
     cardioAvgRpe,
+    calories,
     previousComparable,
   };
 }

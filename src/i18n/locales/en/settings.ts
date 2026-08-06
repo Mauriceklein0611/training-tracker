@@ -30,6 +30,15 @@ export const settings: Settings = {
     termsBeginner: 'Spelled out (beginner)',
     termsExpert: 'Compact (experienced)',
   },
+  body: {
+    sectionTitle: 'Body data',
+    heightLabel: 'Body height (cm)',
+    heightHint:
+      'Optional and only used to put your figures in context. Leaving it empty is fine.',
+    weightHint:
+      'Your weight is kept as a dated entry so its history stays intact. Exerivo uses the most recently recorded weight to estimate the calories burned per exercise — an approximation without heart rate.',
+    weightLink: 'Record body weight',
+  },
   rest: {
     sectionTitle: 'Rest signal',
     soundLabel: 'Sound when the rest is over',

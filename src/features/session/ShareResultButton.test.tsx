@@ -42,6 +42,7 @@ function summary(overrides: Partial<SessionSummary> = {}): SessionSummary {
     cardioModality: undefined,
     cardioPace: null,
     cardioAvgRpe: null,
+    calories: null,
     previousComparable: null,
     ...overrides,
   };

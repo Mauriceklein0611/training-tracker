@@ -918,6 +918,14 @@ export interface AppSettings {
   supportHintLastShownAt?: string;
   /** The user switched the support hint off for good (#32). Absent → not off. */
   supportHintDismissed?: boolean;
+  /**
+   * Body height in centimetres, asked for during onboarding (#44). Optional and
+   * purely a personal figure — nothing is calculated from it without it, and an
+   * absent value simply means the user did not enter one. Body *weight* is not
+   * duplicated here: it stays a dated {@link BodyWeightEntry}, so it keeps its
+   * history.
+   */
+  heightCm?: number;
   restSoundEnabled: boolean;
   restVibrationEnabled: boolean;
   /** Keep the display on while a workout is running, where supported. */

@@ -13,6 +13,13 @@ export const onboarding: OnboardingResource = {
   openLegacy: 'Ja, alte App für Backup öffnen',
   continueWithoutLegacy: 'Nein, neu starten',
   migrationDeadline: 'Der Zugriff auf die alte App wird am 2. September 2026 entfernt.',
+  profile: {
+    heightLabel: 'Größe (cm)',
+    weightLabel: 'Gewicht (kg)',
+    hint: 'Beides ist freiwillig und bleibt auf diesem Gerät. Du kannst es jederzeit in den Einstellungen und unter Körperdaten ändern.',
+    invalidHeight: 'Größe bitte zwischen 50 und 280 cm angeben.',
+    invalidWeight: 'Gewicht bitte zwischen 20 und 500 kg angeben.',
+  },
   steps: [
     {
       id: 'welcome',
@@ -33,6 +40,11 @@ export const onboarding: OnboardingResource = {
       id: 'import',
       title: 'Hast du die alte App schon benutzt?',
       text: 'Öffne die bisherige App einmal, erstelle dort unter Mehr → Daten & Sicherung ein vollständiges Backup und importiere es anschließend hier. Wenn du neu bist, kannst du direkt fortfahren.',
+    },
+    {
+      id: 'profile',
+      title: 'Deine Körperdaten',
+      text: 'Größe und Gewicht helfen bei der Einordnung deiner Fortschritte. Aus deinem Gewicht schätzt Exerivo außerdem den Kalorienverbrauch je Übung — eine Näherung ohne Herzfrequenz, kein Messwert.',
     },
     {
       id: 'plan',

@@ -1,4 +1,5 @@
 import type {
+  BodyWeightEntry,
   Exercise,
   SessionExercise,
   SetWithContext,
@@ -48,6 +49,12 @@ export interface AnalyticsDataset {
   sessionExercises: SessionExercise[];
   sets: WorkoutSet[];
   exercises: Exercise[];
+  /**
+   * Body weight history, used only for the calorie estimate of a workout (#44).
+   * Optional: every existing caller that builds a dataset without it keeps
+   * working, and a workout without a recorded weight simply shows no estimate.
+   */
+  bodyWeightEntries?: BodyWeightEntry[];
 }
 
 export const UNASSIGNED_MUSCLE_GROUP = 'Ohne Zuordnung';
