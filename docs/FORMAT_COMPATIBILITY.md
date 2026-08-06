@@ -13,8 +13,8 @@ previous supported version, the current version, an invalid and an
 unsupported-future fixture. Raise a schema version only on a real persistence
 change; prefer optional/additive fields.
 
-Last full matrix audit (2026-08-02): every version in the table below was
-cross-checked against its code constant (`SCHEMA_VERSION` 28, `AI_EXPORT_VERSION`
+Last full matrix audit (2026-08-06): every version in the table below was
+cross-checked against its code constant (`SCHEMA_VERSION` 29, `AI_EXPORT_VERSION`
 3, `SUPPORTED_RESPONSE_SCHEMA_VERSION` 2, `PLAN_BUILDER_KIT_VERSION` 3,
 `PLAN_PACKAGE_SCHEMA_VERSION` 4 with `SUPPORTED_PLAN_PACKAGE_VERSIONS` [1, 2, 3,
 4], `WORKOUT_UNIT_PACKAGE_SCHEMA_VERSION` 2 with
@@ -49,7 +49,7 @@ General rules:
 
 | Format                             | Direction               | Name (in content)                       | Version field                           | Version              | Supported imports |
 | ---------------------------------- | ----------------------- | --------------------------------------- | --------------------------------------- | -------------------- | ----------------- |
-| Full backup                        | export + import         | `app: training-tracker`                 | `exportFormatVersion` / `schemaVersion` | format 1 / schema 28 | schema ≤ 28       |
+| Full backup                        | export + import         | `app: training-tracker`                 | `exportFormatVersion` / `schemaVersion` | format 1 / schema 29 | schema ≤ 29       |
 | AI analysis export                 | export                  | (AI export doc)                         | `exportVersion`                         | 3                    | —                 |
 | AI response import                 | import                  | `format: training-ai-response`          | `schemaVersion`                         | 2                    | 1, 2              |
 | Plan builder kit                   | export                  | `format: training-plan-builder-kit`     | `version`                               | 3                    | —                 |
@@ -57,6 +57,30 @@ General rules:
 | Workout unit package               | export + import + share | `format: training-workout-unit-package` | `schemaVersion`                         | 2                    | 1, 2              |
 | Block comparison export            | export                  | (comparison doc)                        | —                                       | —                    | —                 |
 | CSV (sets/sessions/exercises/body) | export                  | header row                              | header (by test)                        | —                    | —                 |
+
+## Body height + estimated calories (schema 29, #44)
+
+- **Schema 29 (additive, no backfill, no index/store change):** `settings` gains
+  the optional `heightCm` (50–280), asked for in onboarding and editable in the
+  settings. Older settings rows and older backups validate unchanged (the field
+  is optional and never defaulted), and no height is ever derived from other
+  data. Backup format stays **1**; a backup written by this version simply
+  carries one more optional settings field, and a pre-29 backup restores with no
+  height.
+- **Body weight is not duplicated:** onboarding writes the entered weight as a
+  normal dated `bodyWeightEntry` through the existing repository (one entry per
+  day, merge on re-save), so the weight keeps its history and the body-data
+  screen, CSV export and backup see it unchanged.
+- **Calories stay derived, never persisted:** `services/calories.ts` estimates
+  energy per exercise and per session from the recorded sets plus the body
+  weight valid _on the day of the session_ (`resolveBodyWeightKg`). Nothing is
+  written, so no format carries an estimate, history is never rewritten by a
+  later weigh-in, and a corrected set immediately corrects the number. The
+  manually recorded cardio value `WorkoutSet.caloriesKcal` keeps its meaning and
+  always takes precedence over the model — it is read, never overwritten.
+- **Not affected:** AI export/response contracts, plan/builder/unit packages,
+  block comparison, all CSV exports, share cards. `AnalyticsDataset` gains an
+  optional in-memory `bodyWeightEntries` field; it is not a file format.
 
 ## Exerivo rebrand and domain migration (2026-08-02)
 

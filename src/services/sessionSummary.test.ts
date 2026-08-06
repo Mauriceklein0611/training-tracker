@@ -200,3 +200,44 @@ describe('summarizeSession — strength and cardio stay separate', () => {
     expect(summary.cardioPace).toBeNull();
   });
 });
+
+describe('summarizeSession — estimated calories', () => {
+  it('reports no estimate without a body weight recorded by that day', () => {
+    expect(summarizeSession(mixedDataset(), 's1')!.calories).toBeNull();
+
+    const dataset = mixedDataset();
+    // A weigh-in *after* the session must not be applied retroactively.
+    dataset.bodyWeightEntries = [
+      {
+        id: 'bw-late',
+        date: '2026-08-01',
+        weightKg: 80,
+        notes: '',
+        createdAt: '2026-08-01T07:00:00.000Z',
+        updatedAt: '2026-08-01T07:00:00.000Z',
+      },
+    ];
+    expect(summarizeSession(dataset, 's1')!.calories).toBeNull();
+  });
+
+  it('estimates strength and cardio from the weight valid on the day', () => {
+    const dataset = mixedDataset();
+    dataset.bodyWeightEntries = [
+      {
+        id: 'bw',
+        date: '2026-07-01',
+        weightKg: 80,
+        notes: '',
+        createdAt: '2026-07-01T07:00:00.000Z',
+        updatedAt: '2026-07-01T07:00:00.000Z',
+      },
+    ];
+
+    const calories = summarizeSession(dataset, 's1')!.calories!;
+    // 10 reps × 3 s at 5 MET plus 1800 s of running at 9.8 MET, 80 kg.
+    const strength = (5 * 80 * 0.0175 * 30) / 60;
+    const running = (9.8 * 80 * 0.0175 * 1800) / 60;
+    expect(calories.kcal).toBeCloseTo(strength + running, 6);
+    expect(calories.recordedKcal).toBe(0);
+  });
+});

@@ -84,6 +84,39 @@ export default function SettingsPage() {
         </Card>
 
         <Card>
+          <CardHeader title={tSettings('body.sectionTitle')} as="h2" />
+          <div className="grid gap-4">
+            {/* Height is a settings value; the weight stays a dated body entry so
+                its history is never flattened into a single current number. */}
+            <NumberField
+              label={tSettings('body.heightLabel')}
+              value={settings.heightCm == null ? '' : String(settings.heightCm)}
+              hint={tSettings('body.heightHint')}
+              onChange={(event) => {
+                const raw = event.target.value.trim();
+                if (raw === '') {
+                  void update({ heightCm: undefined });
+                  return;
+                }
+                const value = parseNumberInput(raw);
+                if (value == null || Number.isNaN(value)) return;
+                if (value < 50 || value > 280) return;
+                void update({ heightCm: Math.round(value) });
+              }}
+            />
+            <div>
+              <p className="text-sm text-muted">{tSettings('body.weightHint')}</p>
+              <Link
+                to="/mehr/koerpergewicht"
+                className="mt-2 inline-flex min-h-[44px] items-center text-sm font-medium text-accent"
+              >
+                {tSettings('body.weightLink')}
+              </Link>
+            </div>
+          </div>
+        </Card>
+
+        <Card>
           <CardHeader title={tSettings('rest.sectionTitle')} as="h2" />
           <div className="grid gap-4">
             <CheckboxField

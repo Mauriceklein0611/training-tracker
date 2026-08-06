@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import {
   ArrowDown,
@@ -27,7 +27,9 @@ import {
 } from '@/services/equipment';
 import {
   addSet,
+  adjustRestTarget,
   completeSet,
+  endRest,
   reopenSet,
   deleteSet,
   getExerciseHistorySets,
@@ -40,6 +42,11 @@ import {
   type SessionExerciseDetail,
 } from '@/db/repositories/sessions';
 import { primeAudio } from '@/services/sound';
+import { estimateExerciseCalories } from '@/services/calories';
+import { computeRestProgress } from '@/services/rest';
+import { RestTimerBar } from '@/features/session/RestTimerBar';
+import { useInViewport } from '@/hooks/useInViewport';
+import { useNow } from '@/hooks/useNow';
 import { useToast } from '@/hooks/useToast';
 import { effectiveLoadKg, isWorkingSet } from '@/services/metrics';
 import { formatCardioDistance, formatDuration } from '@/services/cardioMetrics';
@@ -53,6 +60,12 @@ import { formatDate } from '@/utils/date';
 import type { EffortInput, SessionExercise, TemplateExercise, WorkoutSet } from '@/types';
 import { useTranslation } from 'react-i18next';
 import { exerciseDisplayName } from '@/utils/exerciseDisplay';
+
+/**
+ * Height of the sticky workout header. The inline rest bar counts as hidden as
+ * soon as it slips behind the header, which is when the header takes over.
+ */
+const STICKY_HEADER_OFFSET_PX = 96;
 
 export interface ExerciseTarget {
   targetSets?: number;
@@ -113,6 +126,8 @@ export function SessionExerciseCard({
   vibrationEnabled,
   effortInput,
   expertLabels,
+  bodyWeightKg,
+  onRestVisibilityChange,
 }: {
   detail: SessionExerciseDetail;
   sessionId: string;
@@ -130,6 +145,13 @@ export function SessionExerciseCard({
   effortInput?: EffortInput;
   /** Compact effort labels for experienced users. */
   expertLabels?: boolean;
+  /** Body weight for the calorie estimate; absent means no estimate is shown. */
+  bodyWeightKg?: number | null;
+  /**
+   * Reports whether this exercise currently shows a running rest on screen, so
+   * the workout header can stop repeating the same timer.
+   */
+  onRestVisibilityChange?: (sessionExerciseId: string, visible: boolean) => void;
 }) {
   const { t } = useTranslation('session');
   const { t: tCommon } = useTranslation('common');
@@ -161,6 +183,38 @@ export function SessionExerciseCard({
 
   const completedSets = useMemo(() => sets.filter((set) => set.completedAt), [sets]);
   const openSet = useMemo(() => sets.find((set) => !set.completedAt), [sets]);
+
+  /*
+   * The rest of *this* exercise (#44). It is shown at the set it belongs to and
+   * never blocks anything: the next set stays enterable at any time, the rest
+   * can be ended with one tap — and starting to enter the next set ends it
+   * automatically (see endRunningRest), because at that moment the user is
+   * demonstrably back at the bar. A running rest of another exercise (superset)
+   * leaves this card untouched.
+   */
+  const restingSet = useMemo(
+    () => sets.find((set) => set.restStartedAt && !set.restEndedAt),
+    [sets],
+  );
+  const restNow = useNow(1000, Boolean(restingSet));
+  const restProgress = computeRestProgress(restingSet, restNow);
+  const restRunning = restingSet != null && restProgress.running;
+
+  /** Closes a still-running rest; a no-op once it has ended. */
+  const endRunningRest = () => {
+    if (restingSet) void endRest(restingSet.id);
+  };
+
+  /*
+   * The rest is shown here, at the set it belongs to. The workout header only
+   * repeats it once this bar has been scrolled out of view, so the timer is
+   * always reachable but never visible twice at the same time.
+   */
+  const [restBarRef, restBarVisible] = useInViewport(STICKY_HEADER_OFFSET_PX);
+  useEffect(() => {
+    onRestVisibilityChange?.(sessionExercise.id, restRunning && restBarVisible);
+    return () => onRestVisibilityChange?.(sessionExercise.id, false);
+  }, [onRestVisibilityChange, sessionExercise.id, restRunning, restBarVisible]);
 
   /*
    * The rest was resolved when the exercise entered this workout (plan target →
@@ -249,6 +303,16 @@ export function SessionExerciseCard({
   }, [completedSets, lastPerformance, sessionExercise, currentExecutionKey]);
 
   const previousSets = useMemo(() => lastPerformance?.sets ?? [], [lastPerformance]);
+
+  /**
+   * Estimated energy of this exercise so far (#44). Derived on every render from
+   * the completed sets and the current body weight — never stored, so a fixed
+   * set or a corrected weight immediately corrects the number.
+   */
+  const calories = useMemo(
+    () => estimateExerciseCalories(sets, sessionExercise, bodyWeightKg ?? null),
+    [sets, sessionExercise, bodyWeightKg],
+  );
 
   /**
    * Total load of the last completed set, using *that set's own* execution
@@ -487,6 +551,11 @@ export function SessionExerciseCard({
             </span>
             <span className="block text-xs text-muted">
               {t('exercise.completed', { summary: doneSummary })}
+              {calories
+                ? ` · ${t('exercise.caloriesEstimate', {
+                    value: formatNumber(calories.kcal),
+                  })}`
+                : ''}
             </span>
           </span>
           <ChevronDown size={20} className="shrink-0 text-muted" aria-hidden="true" />
@@ -656,6 +725,26 @@ export function SessionExerciseCard({
         </p>
       ) : null}
 
+      {calories ? (
+        <p className="numeric mt-2 text-xs text-muted">
+          {t('exercise.caloriesEstimate', { value: formatNumber(calories.kcal) })}
+        </p>
+      ) : null}
+
+      {restRunning ? (
+        <div ref={restBarRef} className="mt-3">
+          <RestTimerBar
+            rest={{
+              set: restingSet,
+              exerciseName: displayName,
+              progress: restProgress,
+            }}
+            onEndRest={() => void endRest(restingSet.id)}
+            onAdjust={(delta) => void adjustRestTarget(restingSet.id, delta)}
+          />
+        </div>
+      ) : null}
+
       <div className="mt-3">
         {openSet && isCardio ? (
           <CardioSetEditor
@@ -665,7 +754,11 @@ export function SessionExerciseCard({
             targetDurationSeconds={effectiveTarget?.targetDurationSeconds}
             soundEnabled={soundEnabled}
             vibrationEnabled={vibrationEnabled}
-            onPersist={(values) => void updateSet(openSet.id, values)}
+            onPersist={(values) => {
+              // Entering the next section means the rest is over in practice.
+              endRunningRest();
+              void updateSet(openSet.id, values);
+            }}
             onComplete={(values) => handleCompleteCardio(openSet.id, values)}
             onDelete={() => void deleteSet(openSet.id)}
           />
@@ -684,7 +777,12 @@ export function SessionExerciseCard({
             targetDurationSeconds={effectiveTarget?.targetDurationSeconds}
             soundEnabled={soundEnabled}
             vibrationEnabled={vibrationEnabled}
-            onPersist={(values) => void updateSet(openSet.id, values)}
+            onPersist={(values) => {
+              // Entering the next set means the rest is over in practice, so it
+              // is closed here instead of running on into overtime.
+              endRunningRest();
+              void updateSet(openSet.id, values);
+            }}
             onComplete={(values) => handleComplete(openSet.id, values)}
             onDelete={() => void deleteSet(openSet.id)}
           />

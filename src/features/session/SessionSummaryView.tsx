@@ -43,6 +43,16 @@ export function SessionSummaryView({ summary }: { summary: SessionSummary }) {
           }
         : null;
 
+  // Estimated energy — deliberately labelled as an estimate, since it is
+  // modelled from body weight and recorded time, not measured.
+  const caloriesStat = summary.calories ? (
+    <Stat
+      label={t('summary.caloriesEstimated')}
+      value={`≈ ${formatNumber(summary.calories.kcal)} kcal`}
+      hint={t('summary.caloriesEstimatedHint')}
+    />
+  ) : null;
+
   const cardioBlock = summary.hasCardio ? (
     <div className="rounded-2xl border border-cardio/40 bg-surface p-3">
       <h3 className="flex items-center gap-2 text-sm font-semibold">
@@ -161,6 +171,7 @@ export function SessionSummaryView({ summary }: { summary: SessionSummary }) {
               label={t('summary.exercises')}
               value={formatNumber(summary.exerciseCount)}
             />
+            {caloriesStat}
           </div>
           {cardioBlock}
         </>
@@ -196,6 +207,7 @@ export function SessionSummaryView({ summary }: { summary: SessionSummary }) {
                   : t('summary.noRestRecorded')
               }
             />
+            {caloriesStat}
           </div>
 
           {summary.volume.addedWeightVolumeKg > 0 ? (

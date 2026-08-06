@@ -103,6 +103,18 @@ export const library = {
     note: 'Notiz',
     optional: 'Optional',
   },
+  summary: {
+    sets: '{{value}} Sätze',
+    intervals: '{{value}} Intervalle',
+    reps: '{{min}}–{{max}} Wdh.',
+    repsFrom: 'ab {{min}} Wdh.',
+    repsTo: 'bis {{max}} Wdh.',
+    duration: '{{value}} s',
+    distance: '{{value}} m',
+    rpe: 'RPE {{value}}',
+    rest: 'Pause {{value}} s',
+    noRest: 'ohne Pause',
+  },
   group: {
     summary: '{{type}} · {{exercises}}',
     typeLabel: 'Gruppentyp',

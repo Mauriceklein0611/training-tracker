@@ -30,6 +30,15 @@ export const settings = {
     termsBeginner: 'Ausführlich (Anfänger)',
     termsExpert: 'Kompakt (erfahren)',
   },
+  body: {
+    sectionTitle: 'Körperdaten',
+    heightLabel: 'Körpergröße (cm)',
+    heightHint:
+      'Freiwillig und nur für die Einordnung deiner Werte. Leer lassen ist in Ordnung.',
+    weightHint:
+      'Dein Gewicht wird als datierter Eintrag geführt, damit der Verlauf erhalten bleibt. Aus dem zuletzt erfassten Gewicht schätzt Exerivo den Kalorienverbrauch je Übung — eine Näherung ohne Herzfrequenz.',
+    weightLink: 'Körpergewicht erfassen',
+  },
   rest: {
     sectionTitle: 'Pausensignal',
     soundLabel: 'Ton bei abgelaufener Pause',

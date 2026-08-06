@@ -32,7 +32,7 @@ import { ensureSchedulesForPlans } from '@/db/scheduleMigration';
  * Bump this together with a new `.version()` block below and record the change
  * in MIGRATIONS so the settings screen can show what the database went through.
  */
-export const SCHEMA_VERSION = 28;
+export const SCHEMA_VERSION = 29;
 
 export const MIGRATIONS: { version: number; description: string }[] = [
   { version: 1, description: 'Initiales Schema: Übungen, Pläne, Einheiten, Sätze.' },
@@ -225,6 +225,13 @@ export const MIGRATIONS: { version: number; description: string }[] = [
       'und Ziel-RPE. Alles optional und rein additiv; bestehende Daten – auch ' +
       'zeitbasierte Kraftübungen (duration) – bleiben unverändert und werden nie ' +
       'zu Cardio umgedeutet.',
+  },
+  {
+    version: 29,
+    description:
+      'Körpergröße in den Einstellungen: ein optionales Feld, das im Onboarding ' +
+      'abgefragt werden kann. Rein additiv, ohne Backfill; das Körpergewicht ' +
+      'bleibt ein datierter Körpereintrag und wird nicht dupliziert.',
   },
 ];
 
@@ -720,6 +727,21 @@ export class TrainingDatabase extends Dexie {
         .toCollection()
         .modify((settings) => {
           settings.schemaVersion = 28;
+        });
+    });
+
+    // ---- v29 ------------------------------------------------------------
+    // Body height in the settings (#44), asked for during onboarding and used
+    // for personal context only. Purely additive: one optional field, no store
+    // or index change and NO backfill — a height is never derived from anything.
+    // Body weight deliberately stays a dated bodyWeightEntry. Only the recorded
+    // schema version is bumped.
+    this.version(29).upgrade(async (tx) => {
+      await tx
+        .table<AppSettings>('settings')
+        .toCollection()
+        .modify((settings) => {
+          settings.schemaVersion = 29;
         });
     });
   }

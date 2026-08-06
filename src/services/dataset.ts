@@ -9,11 +9,13 @@ import type { AnalyticsDataset } from '@/services/analytics';
  * personal training log stays small enough to hold in memory comfortably.
  */
 export async function loadAnalyticsDataset(): Promise<AnalyticsDataset> {
-  const [sessions, sessionExercises, sets, exercises] = await Promise.all([
-    db.workoutSessions.toArray(),
-    db.sessionExercises.toArray(),
-    db.workoutSets.toArray(),
-    db.exercises.toArray(),
-  ]);
-  return { sessions, sessionExercises, sets, exercises };
+  const [sessions, sessionExercises, sets, exercises, bodyWeightEntries] =
+    await Promise.all([
+      db.workoutSessions.toArray(),
+      db.sessionExercises.toArray(),
+      db.workoutSets.toArray(),
+      db.exercises.toArray(),
+      db.bodyWeightEntries.toArray(),
+    ]);
+  return { sessions, sessionExercises, sets, exercises, bodyWeightEntries };
 }

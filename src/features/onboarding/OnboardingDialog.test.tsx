@@ -3,7 +3,9 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import type * as BrandConfig from '@/config/brand';
+import { db } from '@/db/db';
 import { setLanguage } from '@/i18n';
+import { todayKey } from '@/utils/date';
 import { resetDatabase } from '@/tests/dbTestUtils';
 import { readOnboardingState } from '@/services/onboarding';
 import { OnboardingDialog } from '@/features/onboarding/OnboardingDialog';
@@ -55,7 +57,9 @@ describe('OnboardingDialog migration entry', () => {
     ).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Nein, neu starten' }));
-    expect(screen.getByRole('heading', { name: 'Dein erster Plan' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'Deine Körperdaten' }),
+    ).toBeInTheDocument();
   });
 
   it('renders the migration choice fully in English', async () => {
@@ -69,6 +73,38 @@ describe('OnboardingDialog migration entry', () => {
       screen.getByRole('link', { name: 'Yes, open the old app for backup' }),
     ).toHaveAttribute('href', 'https://training-tracker-4xu.pages.dev/');
     expect(screen.getByRole('button', { name: 'No, start fresh' })).toBeInTheDocument();
+  });
+
+  it('stores the optional body data as settings height and a dated weight entry', async () => {
+    const user = await openMigrationStep();
+    await user.click(screen.getByRole('button', { name: 'Nein, neu starten' }));
+
+    await user.type(screen.getByLabelText('Größe (cm)'), '183');
+    await user.type(screen.getByLabelText('Gewicht (kg)'), '81,5');
+    await user.click(screen.getByRole('button', { name: 'Weiter' }));
+
+    await waitFor(async () => {
+      expect((await db.settings.get('app-settings'))?.heightCm).toBe(183);
+    });
+    const entries = await db.bodyWeightEntries.toArray();
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({ date: todayKey(), weightKg: 81.5 });
+  });
+
+  it('keeps an implausible height in the step instead of storing it', async () => {
+    const user = await openMigrationStep();
+    await user.click(screen.getByRole('button', { name: 'Nein, neu starten' }));
+
+    await user.type(screen.getByLabelText('Größe (cm)'), '1830');
+    await user.click(screen.getByRole('button', { name: 'Weiter' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      /Größe bitte zwischen 50 und 280/,
+    );
+    expect(
+      screen.getByRole('heading', { name: 'Deine Körperdaten' }),
+    ).toBeInTheDocument();
+    expect((await db.settings.get('app-settings'))?.heightCm).toBeUndefined();
   });
 
   it('stores dismissal so the welcome dialog is not shown again', async () => {

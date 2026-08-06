@@ -99,6 +99,18 @@ export const library: Library = {
     note: 'Note',
     optional: 'Optional',
   },
+  summary: {
+    sets: '{{value}} sets',
+    intervals: '{{value}} intervals',
+    reps: '{{min}}–{{max}} reps',
+    repsFrom: 'from {{min}} reps',
+    repsTo: 'up to {{max}} reps',
+    duration: '{{value}} s',
+    distance: '{{value}} m',
+    rpe: 'RPE {{value}}',
+    rest: 'Rest {{value}} s',
+    noRest: 'no rest',
+  },
   group: {
     summary: '{{type}} · {{exercises}}',
     typeLabel: 'Group type',

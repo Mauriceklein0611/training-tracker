@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
@@ -27,6 +27,7 @@ import { useNow } from '@/hooks/useNow';
 import { useWakeLock } from '@/hooks/useWakeLock';
 import { useSettings } from '@/hooks/useSettings';
 import { useToast } from '@/hooks/useToast';
+import { resolveBodyWeightKg } from '@/services/calories';
 import { loadAnalyticsDataset } from '@/services/dataset';
 import { summarizeSession } from '@/services/sessionSummary';
 import { workoutProgress } from '@/services/sessionProgress';
@@ -59,6 +60,16 @@ export default function LiveSessionPage() {
     return new Map(rows.map((row) => [row.exerciseId, row]));
   }, [detail?.session.templateId]);
 
+  /*
+   * Body weight for the calorie estimate: the entry valid on the day of this
+   * workout, so an estimate never silently changes with a later weigh-in.
+   */
+  const bodyWeightKg = useLiveQuery(async () => {
+    if (!detail) return null;
+    const entries = await db.bodyWeightEntries.toArray();
+    return resolveBodyWeightKg(entries, detail.session.startedAt);
+  }, [detail?.session.startedAt]);
+
   const [pickerOpen, setPickerOpen] = useState(false);
   // Quick cardio entry (?add=cardio): open the picker filtered to cardio once,
   // then strip the param so a reload does not reopen it.
@@ -73,6 +84,19 @@ export default function LiveSessionPage() {
       setSearchParams(next, { replace: true });
     }
   }, [searchParams, setSearchParams]);
+
+  /*
+   * Session-exercises whose own rest bar is currently on screen. As long as one
+   * is, the header does not repeat the timer — the running rest is shown in
+   * exactly one place, and reappears up top as soon as it is scrolled away.
+   */
+  const [inlineRestIds, setInlineRestIds] = useState<string[]>([]);
+  const handleRestVisibility = useCallback((id: string, visible: boolean) => {
+    setInlineRestIds((current) => {
+      if (visible) return current.includes(id) ? current : [...current, id];
+      return current.includes(id) ? current.filter((entry) => entry !== id) : current;
+    });
+  }, []);
 
   const [finishOpen, setFinishOpen] = useState(false);
   const [discardOpen, setDiscardOpen] = useState(false);
@@ -188,7 +212,12 @@ export default function LiveSessionPage() {
 
   return (
     <>
-      {/* Reduced header: during a workout the app deliberately hides the main navigation. */}
+      {/*
+       * Reduced header: during a workout the app deliberately hides the main
+       * navigation. The rest timer lives *inside* this header, so the running
+       * rest stays visible while scrolling through the exercises and can never
+       * be overlapped by a second sticky element (#44).
+       */}
       <header className="header-safe sticky top-0 z-30 -mx-4 mb-3 border-b border-border bg-bg/95 px-4 pb-2 backdrop-blur">
         <div className="flex items-center gap-2">
           <div className="min-w-0 flex-1">
@@ -240,15 +269,16 @@ export default function LiveSessionPage() {
             {t('live.finishShort')}
           </Button>
         </div>
-      </header>
 
-      {rest ? (
-        <RestTimerBar
-          rest={rest}
-          onEndRest={() => void endRest(rest.set.id)}
-          onAdjust={(delta) => void adjustRestTarget(rest.set.id, delta)}
-        />
-      ) : null}
+        {rest && inlineRestIds.length === 0 ? (
+          <RestTimerBar
+            className="mt-2"
+            rest={rest}
+            onEndRest={() => void endRest(rest.set.id)}
+            onAdjust={(delta) => void adjustRestTarget(rest.set.id, delta)}
+          />
+        ) : null}
+      </header>
 
       <div className="mb-3">
         <PreCheckInCard sessionId={sessionId} value={detail.session.preCheckIn} />
@@ -274,6 +304,8 @@ export default function LiveSessionPage() {
           vibrationEnabled={settings.restVibrationEnabled}
           effortInput={settings.effortInput ?? 'rir'}
           expertLabels={settings.explainMode === 'expert'}
+          bodyWeightKg={bodyWeightKg}
+          onRestVisibilityChange={handleRestVisibility}
         />
       )}
 
