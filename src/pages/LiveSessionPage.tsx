@@ -11,6 +11,7 @@ import {
   endRest,
   finishSession,
   getSessionDetail,
+  type SessionDetail,
   updateSession,
 } from '@/db/repositories/sessions';
 import { Button, IconButton } from '@/components/ui/Button';
@@ -34,6 +35,44 @@ import { workoutProgress } from '@/services/sessionProgress';
 import { isCardio } from '@/services/metrics';
 import { formatDuration } from '@/utils/date';
 import { formatSections, formatSets } from '@/utils/format';
+
+/** Isolates the one-second workout clock from the exercise-list render tree. */
+function WorkoutElapsed({ startedAt, active }: { startedAt: string; active: boolean }) {
+  const now = useNow(1000, active);
+  const seconds = Math.max(0, (now.getTime() - new Date(startedAt).getTime()) / 1000);
+  return <span>{formatDuration(seconds)}</span>;
+}
+
+/** Isolates rest ticks and notifications from the full live workout page. */
+function StickyRestTimer({
+  detail,
+  hidden,
+  soundEnabled,
+  vibrationEnabled,
+  voiceEnabled,
+}: {
+  detail: SessionDetail;
+  hidden: boolean;
+  soundEnabled: boolean;
+  vibrationEnabled: boolean;
+  voiceEnabled: boolean;
+}) {
+  const rest = useActiveRest(detail, {
+    soundEnabled,
+    vibrationEnabled,
+    voiceEnabled,
+  });
+  if (!rest || hidden) return null;
+  return (
+    <RestTimerBar
+      compact
+      className="mt-2"
+      rest={rest}
+      onEndRest={() => void endRest(rest.set.id)}
+      onAdjust={(delta) => void adjustRestTarget(rest.set.id, delta)}
+    />
+  );
+}
 
 /**
  * Live workout view.
@@ -102,22 +141,11 @@ export default function LiveSessionPage() {
   const [discardOpen, setDiscardOpen] = useState(false);
   const [notes, setNotes] = useState<string | null>(null);
 
-  const rest = useActiveRest(detail, {
-    soundEnabled: settings.restSoundEnabled,
-    vibrationEnabled: settings.restVibrationEnabled,
-    voiceEnabled: settings.voiceAnnouncementsEnabled,
-  });
-
   const isActive = detail?.session.status === 'active';
 
   // Progressive enhancement: keep the display on while training, released
   // automatically when the workout ends or the setting is switched off.
   useWakeLock(isActive && settings.keepScreenAwake);
-
-  const now = useNow(1000, isActive);
-  const elapsedSeconds = detail
-    ? Math.max(0, (now.getTime() - new Date(detail.session.startedAt).getTime()) / 1000)
-    : 0;
 
   // The summary is only computed while the finish dialog is open.
   const summary = useLiveQuery(async () => {
@@ -218,14 +246,14 @@ export default function LiveSessionPage() {
        * rest stays visible while scrolling through the exercises and can never
        * be overlapped by a second sticky element (#44).
        */}
-      <header className="header-safe sticky top-0 z-30 -mx-4 mb-3 border-b border-border bg-bg/95 px-4 pb-2 backdrop-blur">
+      <header className="app-sticky-header header-safe sticky top-0 z-30 -mx-4 mb-3 border-b border-border bg-bg/95 px-4 pb-2 backdrop-blur">
         <div className="flex items-center gap-2">
           <div className="min-w-0 flex-1">
             <h1 className="truncate text-lg font-bold leading-tight">
               {detail.session.name}
             </h1>
             <p className="numeric text-sm text-muted">
-              {formatDuration(elapsedSeconds)} ·{' '}
+              <WorkoutElapsed startedAt={detail.session.startedAt} active={isActive} /> ·{' '}
               {isCardioOnly
                 ? formatSections(completedSectionCount)
                 : formatSets(completedSetCount)}
@@ -270,14 +298,13 @@ export default function LiveSessionPage() {
           </Button>
         </div>
 
-        {rest && inlineRestIds.length === 0 ? (
-          <RestTimerBar
-            className="mt-2"
-            rest={rest}
-            onEndRest={() => void endRest(rest.set.id)}
-            onAdjust={(delta) => void adjustRestTarget(rest.set.id, delta)}
-          />
-        ) : null}
+        <StickyRestTimer
+          detail={detail}
+          hidden={inlineRestIds.length > 0}
+          soundEnabled={settings.restSoundEnabled}
+          vibrationEnabled={settings.restVibrationEnabled}
+          voiceEnabled={settings.voiceAnnouncementsEnabled}
+        />
       </header>
 
       <div className="mb-3">

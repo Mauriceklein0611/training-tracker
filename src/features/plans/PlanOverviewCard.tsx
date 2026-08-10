@@ -1,7 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useTranslation } from 'react-i18next';
 import { CheckCircle2, Circle, Target } from 'lucide-react';
-import { db } from '@/db/db';
 import { Button } from '@/components/ui/Button';
 import {
   activatePlan,
@@ -12,11 +11,11 @@ import { computePlanOverview } from '@/services/planMetrics';
 import type { TrainingPlan, WorkoutSession } from '@/types';
 import { formatDate } from '@/utils/date';
 import { formatNumber } from '@/utils/format';
+import { listCompletedSessionsForPlan } from '@/db/repositories/schedules';
 
 /** Completed sessions attributed to this plan (by planId snapshot). */
 async function completedSessionsOfPlan(planId: string): Promise<WorkoutSession[]> {
-  const sessions = await db.workoutSessions.where('status').equals('completed').toArray();
-  return sessions.filter((session) => session.planId === planId);
+  return listCompletedSessionsForPlan(planId);
 }
 
 function Stat({ label, value }: { label: string; value: string }) {

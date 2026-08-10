@@ -87,6 +87,10 @@
     /* Always reserve the scrollbar gutter so switching between a scrolling and
      * a non-scrolling tab does not shift the centred column sideways. */
     scrollbar-gutter: stable;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+    overflow-x: clip;
   }
 
   body {
@@ -107,6 +111,19 @@
     /* Avoid rubber-band scrolling behind the fixed bottom navigation. */
     overscroll-behavior-y: none;
     -webkit-font-smoothing: antialiased;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: hidden;
+    overflow-x: clip;
+  }
+
+  #root {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: hidden;
+    overflow-x: clip;
   }
 
   :root.light body {
@@ -170,6 +187,18 @@
 }
 
 @layer components {
+  .app-viewport {
+    overflow-x: hidden;
+    overflow-x: clip;
+  }
+
+  /* Sticky content must never become the browser's scroll anchor when a compact
+   * rest timer appears or disappears. The exercise currently in view remains
+   * the anchor instead. */
+  .app-sticky-header {
+    overflow-anchor: none;
+  }
+
   /* Minimum touch target required across the app. */
   .touch-target {
     min-height: 44px;
@@ -224,6 +253,22 @@
   .inset-x-safe {
     padding-left: env(safe-area-inset-left, 0px);
     padding-right: env(safe-area-inset-right, 0px);
+  }
+}
+
+/* Fixed backgrounds and translucent sticky layers are a common source of iOS
+ * compositing flicker. The visual stays identical, but Safari gets an opaque,
+ * non-fixed layer that does not repaint the full workout on every timer tick. */
+@supports (-webkit-touch-callout: none) {
+  body,
+  :root.light body {
+    background-attachment: scroll;
+  }
+
+  .app-sticky-header {
+    background-color: var(--bg);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
   }
 }
 

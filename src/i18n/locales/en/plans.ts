@@ -120,6 +120,10 @@ export const plans: Plans = {
   days: {
     aria: 'Training days',
     add: 'Add training day',
+    addShort: 'Add',
+    position: 'Unit {{current}} of {{total}}',
+    previous: 'Previous',
+    next: 'Next',
   },
   goalsDialog: {
     title: 'Goals & focus',

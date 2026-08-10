@@ -71,7 +71,7 @@ export function EffortField({
         : `≈ RPE ${formatEffort(approxRpeFromRir(selected))}`;
 
   return (
-    <div className="col-span-2">
+    <div className="min-w-0 sm:col-span-2">
       <span className="mb-1 flex items-center gap-1 text-sm font-medium text-muted">
         <span>
           {label} <span className="font-normal">({t('effort.optional')})</span>

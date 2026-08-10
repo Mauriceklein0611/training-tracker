@@ -27,6 +27,7 @@ import {
 } from '@/services/grouping';
 import {
   advanceScheduleAfterWorkout,
+  getPlanScheduleState,
   getPlanScheduleView,
 } from '@/db/repositories/schedules';
 import { getWorkoutUnitWithExercises } from '@/db/repositories/workoutUnits';
@@ -232,10 +233,16 @@ export async function startSessionFromTemplate(
   // the day). Kept on the session so the calendar/analysis stay correct after a
   // later schedule change. Absent for a plan whose schedule cannot be read.
   const scheduleView = plan ? await getPlanScheduleView(plan.id) : undefined;
+  const scheduleState = plan ? await getPlanScheduleState(plan.id) : undefined;
   const scheduleModeSnapshot = scheduleView?.schedule.mode;
-  const scheduleEntryId = scheduleView?.entries.find(
-    (entry) => entry.type === 'workout' && entry.templateId === templateId,
-  )?.id;
+  const scheduledNext = scheduleState?.nextWorkout;
+  const scheduleEntryId =
+    scheduleView?.schedule.mode !== 'free-rotation' &&
+    scheduledNext?.template?.id === templateId
+      ? scheduledNext.entry.id
+      : scheduleView?.entries.find(
+          (entry) => entry.type === 'workout' && entry.templateId === templateId,
+        )?.id;
 
   const effectiveSets = (sets: number): number =>
     activeDeload ? deloadSets(sets, activeDeload.setReductionPercent) : sets;

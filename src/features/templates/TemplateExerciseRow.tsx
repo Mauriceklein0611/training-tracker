@@ -78,7 +78,7 @@ export function TemplateExerciseRow({
       onDragOver={onDragOver}
       onDrop={onDrop}
       onDragEnd={onDragEnd}
-      className="rounded-2xl border border-border bg-surface p-3"
+      className="min-w-0 max-w-full rounded-2xl border border-border bg-surface p-3"
     >
       <div className="flex items-start gap-2">
         <GripVertical
@@ -121,28 +121,29 @@ export function TemplateExerciseRow({
             )}
           </span>
         </button>
-        <div className="flex shrink-0 gap-1">
-          <IconButton
-            label={t('exercise.moveUp', { name })}
-            disabled={globalIndex === 0}
-            onClick={() => void moveTemplateExercise(entry.id, -1)}
-          >
-            <ArrowUp size={18} aria-hidden="true" />
-          </IconButton>
-          <IconButton
-            label={t('exercise.moveDown', { name })}
-            disabled={globalIndex === total - 1}
-            onClick={() => void moveTemplateExercise(entry.id, 1)}
-          >
-            <ArrowDown size={18} aria-hidden="true" />
-          </IconButton>
-          <IconButton
-            label={t('exercise.remove', { name })}
-            onClick={() => void removeTemplateExercise(entry.id)}
-          >
-            <Trash2 size={18} aria-hidden="true" />
-          </IconButton>
-        </div>
+      </div>
+
+      <div className="mt-1 flex justify-end gap-1 border-t border-border/60 pt-1">
+        <IconButton
+          label={t('exercise.moveUp', { name })}
+          disabled={globalIndex === 0}
+          onClick={() => void moveTemplateExercise(entry.id, -1)}
+        >
+          <ArrowUp size={18} aria-hidden="true" />
+        </IconButton>
+        <IconButton
+          label={t('exercise.moveDown', { name })}
+          disabled={globalIndex === total - 1}
+          onClick={() => void moveTemplateExercise(entry.id, 1)}
+        >
+          <ArrowDown size={18} aria-hidden="true" />
+        </IconButton>
+        <IconButton
+          label={t('exercise.remove', { name })}
+          onClick={() => void removeTemplateExercise(entry.id)}
+        >
+          <Trash2 size={18} aria-hidden="true" />
+        </IconButton>
       </div>
 
       <div id={detailsId} hidden={!expanded}>

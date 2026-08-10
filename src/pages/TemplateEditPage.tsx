@@ -40,6 +40,7 @@ import {
   startSessionFromTemplate,
 } from '@/db/repositories/sessions';
 import { saveTemplateAsWorkoutUnit } from '@/db/repositories/workoutUnits';
+import { getPlanProgressState } from '@/db/repositories/schedules';
 import { ExercisePickerDialog } from '@/features/exercises/ExercisePickerDialog';
 import { AddDayDialog } from '@/features/plans/AddDayDialog';
 import { PlanCalendarView } from '@/features/plans/PlanCalendarView';
@@ -68,6 +69,10 @@ export default function TemplateEditPage() {
   const activeSession = useActiveSession();
 
   const plan = useLiveQuery(() => getPlanWithDays(planId), [planId]);
+  const planProgress = useLiveQuery(
+    () => (planId ? getPlanProgressState(planId) : undefined),
+    [planId],
+  );
   const [selectedDayId, setSelectedDayId] = useState('');
   const [pickerOpen, setPickerOpen] = useState(false);
   const [dragId, setDragId] = useState<string | null>(null);
@@ -244,15 +249,18 @@ export default function TemplateEditPage() {
           activeDayId={activeDayId}
           onSelect={setSelectedDayId}
           onAdd={() => setAddDayOpen(true)}
+          statusById={planProgress?.unitStatusById}
         />
       )}
 
       {/* Day toolbar: rename / reorder / duplicate / delete the active day. */}
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1">
+      <div className="mb-3 grid min-w-0 gap-2">
+        <div className="min-w-0">
           <Button
             variant="secondary"
             size="sm"
+            fullWidth
+            className="min-w-0 justify-start whitespace-normal text-left"
             onClick={() => {
               setDayName(activeDay?.name ?? '');
               setRenameDayOpen(true);
@@ -262,7 +270,7 @@ export default function TemplateEditPage() {
             {activeDay?.name}
           </Button>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex flex-wrap items-center justify-end gap-1">
           {!isSingleDay ? (
             <>
               <IconButton
@@ -344,7 +352,7 @@ export default function TemplateEditPage() {
             return (
               <div
                 key={block.key}
-                className="rounded-2xl border border-accent/40 bg-surface-2/40 p-2"
+                className="min-w-0 max-w-full overflow-hidden rounded-2xl border border-accent/40 bg-surface-2/40 p-2"
               >
                 <TemplateGroupHeader
                   templateId={activeDayId}

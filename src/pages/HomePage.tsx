@@ -13,9 +13,8 @@ import {
   Zap,
 } from 'lucide-react';
 import { db } from '@/db/db';
-import { listTemplates } from '@/db/repositories/templates';
 import { getPlanWithDays, listPlansWithDays } from '@/db/repositories/plans';
-import { getPlanScheduleState } from '@/db/repositories/schedules';
+import { getPlanProgressState, getPlanScheduleState } from '@/db/repositories/schedules';
 import { getActiveDeload } from '@/db/repositories/planDeload';
 import { DELOAD_PERCENT, deloadRemainingDays } from '@/services/deload';
 import { planCycleWeek } from '@/services/home';
@@ -72,8 +71,6 @@ export default function HomePage() {
   const activeSession = useActiveSession();
   const { settings, update } = useSettings();
 
-  const templates = useLiveQuery(() => listTemplates(), [], []);
-
   const plans = useLiveQuery(
     async () => {
       const withDays = await listPlansWithDays();
@@ -107,7 +104,8 @@ export default function HomePage() {
     const withDays = await getPlanWithDays(activePlanId);
     if (!withDays) return null;
     const { plan, days } = withDays;
-    const state = await getPlanScheduleState(activePlanId);
+    const progressState = await getPlanProgressState(activePlanId);
+    const state = progressState.schedule;
     const deloadPeriod = await getActiveDeload(activePlanId);
 
     const next = state.nextWorkout?.template;
@@ -149,6 +147,7 @@ export default function HomePage() {
         exerciseCount: rows.length,
         estimatedMinutes: estimateUnitMinutes(rows),
         lastDoneDaysAgo,
+        dayOffset: state.nextWorkoutDayOffset,
       };
     }
 
@@ -156,7 +155,17 @@ export default function HomePage() {
       planId: plan.id,
       planName: plan.name,
       goalText: plan.goalText,
-      dayNames: days.map((day) => day.name),
+      days: days.map((day) => ({
+        templateId: day.id,
+        name: day.name,
+        status: progressState.unitStatusById.get(day.id) ?? 'upcoming',
+      })),
+      completedToday: state.completedToday?.template
+        ? {
+            templateId: state.completedToday.template.id,
+            name: state.completedToday.template.name,
+          }
+        : undefined,
       nextUnit,
       cycleWeek,
       deload,
@@ -293,11 +302,6 @@ export default function HomePage() {
       now: new Date(),
     });
 
-  const lastTemplateId = overview?.lastSession?.templateId;
-  const lastTemplate = lastTemplateId
-    ? templates.find((template) => template.id === lastTemplateId)
-    : undefined;
-
   return (
     <>
       {/* The name is only used to personalise the greeting (#46); without one
@@ -397,16 +401,11 @@ export default function HomePage() {
 
       {!activeSession ? (
         <section className="mb-6" aria-labelledby="start-heading">
-          <h2 id="start-heading" className="sr-only">
-            {tHome('start.heading')}
+          <h2 id="start-heading" className="mb-3 text-base font-semibold">
+            {tHome('start.additionalHeading')}
           </h2>
           <div className="grid gap-2">
-            <Button
-              variant="primary"
-              size="lg"
-              fullWidth
-              onClick={() => setStartFreeOpen(true)}
-            >
+            <Button variant="secondary" fullWidth onClick={() => setStartFreeOpen(true)}>
               <Zap size={20} aria-hidden="true" />
               {tHome('start.free')}
             </Button>
@@ -419,16 +418,6 @@ export default function HomePage() {
               <Button variant="secondary" fullWidth onClick={() => void repeatLast()}>
                 <RotateCcw size={18} aria-hidden="true" />
                 {tHome('start.repeatLast')}
-              </Button>
-            ) : null}
-            {lastTemplate ? (
-              <Button
-                variant="secondary"
-                fullWidth
-                onClick={() => void startTemplate(lastTemplate.id)}
-              >
-                <Play size={18} aria-hidden="true" />
-                {tHome('start.repeatNamed', { name: lastTemplate.name })}
               </Button>
             ) : null}
             {exerciseCount === 0 ? (

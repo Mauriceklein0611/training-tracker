@@ -21,7 +21,7 @@ export function PageHeader({
   const { t } = useTranslation();
 
   return (
-    <header className="header-safe sticky top-0 z-30 -mx-4 mb-4 border-b border-border bg-bg/95 px-4 pb-3 backdrop-blur">
+    <header className="app-sticky-header header-safe sticky top-0 z-30 -mx-4 mb-4 border-b border-border bg-bg/95 px-4 pb-3 backdrop-blur">
       <div className="flex items-center gap-2">
         {backTo ? (
           <IconButton

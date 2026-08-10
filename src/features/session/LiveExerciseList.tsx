@@ -57,7 +57,7 @@ export function LiveExerciseList({
   const blocks = groupItems(entries.map((entry) => entry.sessionExercise));
 
   return (
-    <div className="grid gap-3">
+    <div className="grid min-w-0 max-w-full gap-3">
       {blocks.map((block) => {
         const memberIds = block.members.map((member) => member.id);
         const completedByMember = new Map<string, number>();
@@ -86,7 +86,7 @@ export function LiveExerciseList({
           const globalIndex = indexById.get(member.id) ?? 0;
           const grouped = block.groupId != null;
           return (
-            <div key={member.id} className="grid gap-1.5">
+            <div key={member.id} className="grid min-w-0 max-w-full gap-1.5">
               <SessionExerciseCard
                 detail={entry}
                 sessionId={sessionId}
@@ -136,7 +136,7 @@ export function LiveExerciseList({
               type: groupType === 'superset' ? t('group.superset') : t('group.circuit'),
               letter: block.letter,
             })}
-            className="rounded-2xl border border-accent/40 bg-surface-2/40 p-2"
+            className="min-w-0 max-w-full overflow-hidden rounded-2xl border border-accent/40 bg-surface-2/40 p-2"
           >
             <div className="mb-2 flex flex-wrap items-center justify-between gap-2 px-1">
               <div className="flex items-center gap-2">

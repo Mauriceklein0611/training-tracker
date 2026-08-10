@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { CalendarClock, Play, SlidersHorizontal } from 'lucide-react';
+import { ArrowRight, CalendarClock, Check, Play, SlidersHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { formatPercent } from '@/utils/format';
 
@@ -10,7 +10,13 @@ export interface ActivePlanHeroData {
   planName: string;
   goalText?: string;
   /** Day names of the split, for the chips (e.g. Push · Pull · Beine). */
-  dayNames: string[];
+  days: {
+    templateId: string;
+    name: string;
+    status: 'completed' | 'next' | 'upcoming';
+  }[];
+  /** Unit completed on the current local day, if any. */
+  completedToday?: { templateId: string; name: string };
   /** The unit the schedule says to do next, if any. */
   nextUnit?: {
     templateId: string;
@@ -19,6 +25,8 @@ export interface ActivePlanHeroData {
     estimatedMinutes: number;
     /** Days since this unit was last completed, or null if never. */
     lastDoneDaysAgo: number | null;
+    /** Calendar distance for date-bound schedules; absent for free rotation. */
+    dayOffset?: number;
   };
   /** Name of the most recently completed unit, if any. */
   lastUnitName?: string;
@@ -61,12 +69,12 @@ export function ActivePlanHero({
         {t('hero.label')}
       </p>
       <div className="mt-1 flex items-start justify-between gap-2">
-        <Link to={`/plaene/${data.planId}`} className="min-w-0">
-          <h2 id="active-plan-heading" className="truncate text-lg font-semibold">
+        <Link to={`/plaene/${data.planId}`} className="min-w-0 flex-1">
+          <h2 id="active-plan-heading" className="break-words text-lg font-semibold">
             {data.planName}
           </h2>
           {data.goalText ? (
-            <p className="truncate text-sm text-muted">{data.goalText}</p>
+            <p className="break-words text-sm text-muted">{data.goalText}</p>
           ) : null}
         </Link>
         {data.cycleWeek ? (
@@ -79,20 +87,24 @@ export function ActivePlanHero({
         ) : null}
       </div>
 
-      {data.dayNames.length > 0 ? (
+      {data.days.length > 0 ? (
         <div className="mt-2 flex flex-wrap gap-1.5">
-          {data.dayNames.map((name, index) => {
-            const isNext = data.nextUnit != null && name === data.nextUnit.name;
+          {data.days.map((day) => {
             return (
               <span
-                key={`${name}-${index}`}
+                key={day.templateId}
                 className={
-                  isNext
+                  day.status === 'next'
                     ? 'rounded-lg bg-accent/15 px-2 py-0.5 text-xs font-semibold text-accent'
                     : 'rounded-lg bg-surface-2 px-2 py-0.5 text-xs text-muted'
                 }
               >
-                {name}
+                {day.status === 'completed' ? (
+                  <Check size={12} className="mr-1 inline" aria-hidden="true" />
+                ) : day.status === 'next' ? (
+                  <ArrowRight size={12} className="mr-1 inline" aria-hidden="true" />
+                ) : null}
+                {day.name}
               </span>
             );
           })}
@@ -122,12 +134,34 @@ export function ActivePlanHero({
       ) : null}
 
       <div className="mt-3">
+        {data.completedToday ? (
+          <div className="mb-3 rounded-xl border border-success/40 bg-surface-2 p-2.5">
+            <p className="text-xs font-medium uppercase tracking-wide text-success">
+              {t('hero.completedToday')}
+            </p>
+            <p className="mt-0.5 flex min-w-0 items-start gap-1.5 text-sm font-semibold">
+              <Check
+                size={16}
+                className="mt-0.5 shrink-0 text-success"
+                aria-hidden="true"
+              />
+              <span className="min-w-0 break-words">{data.completedToday.name}</span>
+            </p>
+          </div>
+        ) : null}
         {data.nextUnit ? (
           <>
             <p className="mb-0.5 text-sm">
               <span className="text-muted">{t('hero.nextLabel')}</span>
-              <span className="font-semibold">{data.nextUnit.name}</span>
+              <span className="break-words font-semibold">{data.nextUnit.name}</span>
             </p>
+            {data.nextUnit.dayOffset != null && data.nextUnit.dayOffset > 0 ? (
+              <p className="mb-1 text-xs font-medium text-accent">
+                {data.nextUnit.dayOffset === 1
+                  ? t('hero.tomorrow')
+                  : t('hero.inDays', { count: data.nextUnit.dayOffset })}
+              </p>
+            ) : null}
             {data.nextUnit.exerciseCount === 0 ? (
               // An empty unit can't be trained yet — configuring it is the real
               // next step, and it must not silently start an empty session.

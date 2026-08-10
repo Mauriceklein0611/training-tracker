@@ -20,7 +20,7 @@ export function AppLayout() {
   return (
     // The horizontal inset shifts the whole column, so the header's edge-to-edge
     // bleed (-mx-4 / px-4) keeps lining up with the content.
-    <div className="inset-x-safe min-h-dvh bg-bg">
+    <div className="app-viewport inset-x-safe min-h-dvh min-w-0 max-w-full bg-bg">
       <UpdatePrompt />
       {isLiveSession ? null : <OnboardingDialog />}
       <main
@@ -29,7 +29,7 @@ export function AppLayout() {
           // overflow-x: clip stops a single too-wide child from spawning a
           // horizontal scrollbar (the "jitter") without turning the column into
           // a scroll container, so the sticky header keeps working.
-          'mx-auto w-full max-w-2xl overflow-x-clip px-4',
+          'mx-auto w-full min-w-0 max-w-2xl overflow-x-clip px-4',
           isLiveSession ? 'pb-8' : 'pb-[calc(72px+env(safe-area-inset-bottom,0px))]',
         )}
       >

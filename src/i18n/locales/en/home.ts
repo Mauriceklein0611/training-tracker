@@ -23,6 +23,7 @@ export const home: Home = {
   },
   start: {
     heading: 'Start a workout',
+    additionalHeading: 'More actions',
     free: 'Start a free workout',
     cardio: 'Start cardio',
     repeatLast: 'Repeat the last workout',
@@ -72,6 +73,9 @@ export const home: Home = {
       strong: 'Strong (−50%)',
     },
     nextLabel: 'Up next: ',
+    completedToday: 'Completed today',
+    tomorrow: 'Tomorrow',
+    inDays: 'In {{count}} days',
     emptyUnit: 'This unit has no exercises yet.',
     configureUnit: 'Configure unit',
     startTraining: 'Start workout',
