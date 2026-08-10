@@ -10,10 +10,10 @@ import {
   SkipForward,
   Undo2,
 } from 'lucide-react';
-import { db } from '@/db/db';
 import { Button, IconButton } from '@/components/ui/Button';
 import { Dialog } from '@/components/ui/Dialog';
 import { getPlanScheduleView } from '@/db/repositories/schedules';
+import { listCompletedSessionsForPlan } from '@/db/repositories/schedules';
 import {
   clearPlanException,
   listPlanExceptions,
@@ -49,8 +49,7 @@ const STATUS_LEGEND = [
 ] as const satisfies readonly PlanCalendarStatus[];
 
 async function completedSessionsOfPlan(planId: string): Promise<WorkoutSession[]> {
-  const sessions = await db.workoutSessions.where('status').equals('completed').toArray();
-  return sessions.filter((session) => session.planId === planId);
+  return listCompletedSessionsForPlan(planId);
 }
 
 /** A month calendar of planned vs. actual plan days with per-day exceptions (Phase 4). */

@@ -81,6 +81,19 @@ export function groupItems<T extends Groupable>(items: T[]): Block<T>[] {
     }
   }
 
+  // Legacy/imported rows can contain an orphaned group id. Rendering that one
+  // exercise inside a special group shell makes it look unlike every other
+  // standalone exercise. Treat the orphan as standalone in the projection;
+  // persistence is left untouched until a real structural edit.
+  for (const block of blocks) {
+    if (block.groupId && block.members.length < 2) {
+      block.key = block.members[0].id;
+      block.groupId = null;
+      block.groupType = null;
+      block.groupRestMode = null;
+    }
+  }
+
   blocks.forEach((block, index) => {
     block.letter = blockLetter(index);
   });

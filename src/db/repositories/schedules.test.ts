@@ -15,12 +15,14 @@ import {
   ensureSchedule,
   getEntries,
   getPlanScheduleState,
+  getPlanProgressState,
   getPlanScheduleView,
   moveCycleEntry,
   resetCycle,
   setScheduleMode,
   setWeekdayAssignment,
 } from '@/db/repositories/schedules';
+import { db } from '@/db/db';
 
 beforeEach(async () => {
   await resetDatabase();
@@ -142,6 +144,33 @@ describe('weekly assignment', () => {
     await setWeekdayAssignment(plan.id, 0, null);
     view = await getPlanScheduleView(plan.id);
     expect(view.entries).toHaveLength(0);
+  });
+
+  it('uses a legacy session without planId to mark Monday done and select Tuesday', async () => {
+    const plan = await createPlan({ name: 'Woche', splitType: '2-day' });
+    const { days } = (await getPlanWithDays(plan.id))!;
+    await setScheduleMode(plan.id, 'weekly');
+    await setWeekdayAssignment(plan.id, 0, { type: 'workout', templateId: days[0].id });
+    await setWeekdayAssignment(plan.id, 1, { type: 'workout', templateId: days[1].id });
+
+    await db.workoutSessions.add({
+      id: 'legacy-monday',
+      templateId: days[0].id,
+      name: days[0].name,
+      status: 'completed',
+      startedAt: '2026-08-10T08:00:00.000Z',
+      finishedAt: '2026-08-10T09:00:00.000Z',
+      notes: '',
+      createdAt: '2026-08-10T08:00:00.000Z',
+      updatedAt: '2026-08-10T09:00:00.000Z',
+    });
+
+    const progress = await getPlanProgressState(plan.id, new Date('2026-08-10T12:00:00'));
+    expect(progress.schedule.completedToday?.template?.id).toBe(days[0].id);
+    expect(progress.schedule.nextWorkout?.template?.id).toBe(days[1].id);
+    expect(progress.unitStatusById.get(days[0].id)).toBe('completed');
+    expect(progress.unitStatusById.get(days[1].id)).toBe('next');
+    expect(progress.nextWorkoutDate).toBe('2026-08-11');
   });
 });
 

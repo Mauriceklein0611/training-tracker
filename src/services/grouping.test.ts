@@ -45,6 +45,8 @@ describe('groupItems', () => {
     const blocks = groupItems([item('a', 0, 'g1'), item('b', 1), item('c', 2, 'g1')]);
     // Same id but not consecutive: two separate blocks, each with one member.
     expect(blocks).toHaveLength(3);
+    expect(blocks[0].groupId).toBeNull();
+    expect(blocks[2].groupId).toBeNull();
   });
 
   it('labels members A1/A2 inside a group and plain letters when standalone', () => {

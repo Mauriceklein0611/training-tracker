@@ -262,4 +262,27 @@ describe('weekly', () => {
     });
     expect(state.current?.type).toBe('rest');
   });
+
+  it('moves past a workout already completed today', () => {
+    const monday = new Date('2026-07-20T09:00:00');
+    const state = resolveScheduleState({
+      schedule: schedule({ mode: 'weekly' }),
+      entries,
+      units,
+      today: monday,
+      completedSessions: [
+        {
+          templateId: 'a',
+          scheduleEntryId: 'e0',
+          plannedDate: '2026-07-20',
+          status: 'completed',
+          startedAt: '2026-07-20T08:00:00.000Z',
+          finishedAt: '2026-07-20T09:00:00.000Z',
+        },
+      ],
+    });
+    expect(state.completedToday?.template?.id).toBe('a');
+    expect(state.nextWorkout?.template?.id).toBe('b');
+    expect(state.nextWorkoutDayOffset).toBe(1);
+  });
 });

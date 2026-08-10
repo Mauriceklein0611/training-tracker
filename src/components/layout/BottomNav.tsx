@@ -23,23 +23,23 @@ export function BottomNav() {
     >
       <ul className="mx-auto flex max-w-2xl">
         {ITEMS.map(({ to, key, Icon, end }) => (
-          <li key={to} className="flex-1">
+          <li key={to} className="min-w-0 flex-1">
             <NavLink
               to={to}
               end={end}
               aria-label={key === 'nav.more' ? t('nav.moreLabel') : undefined}
-              className="flex min-h-[56px] flex-col items-center justify-center px-1 py-1.5"
+              className="flex min-h-[56px] min-w-0 flex-col items-center justify-center px-0.5 py-1.5"
             >
               {({ isActive }) => (
                 <span
                   className={cn(
-                    'flex flex-col items-center gap-1 rounded-2xl px-3 py-1.5 text-[11px] font-medium transition-colors',
+                    'flex min-w-0 max-w-full flex-col items-center gap-1 rounded-2xl px-1.5 py-1.5 text-[11px] font-medium transition-colors sm:px-3',
                     // A calm, soft pill marks the active tab — not colour alone.
                     isActive ? 'bg-accent/12 text-accent' : 'text-muted',
                   )}
                 >
                   <Icon size={22} strokeWidth={isActive ? 2.4 : 1.8} aria-hidden="true" />
-                  <span>{t(key)}</span>
+                  <span className="max-w-full truncate">{t(key)}</span>
                 </span>
               )}
             </NavLink>

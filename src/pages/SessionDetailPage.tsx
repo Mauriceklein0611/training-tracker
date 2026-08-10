@@ -142,13 +142,15 @@ export default function SessionDetailPage() {
           {detail.exercises.map((entry) => (
             <section
               key={entry.sessionExercise.id}
-              className="rounded-2xl border border-border bg-surface p-3"
+              className="min-w-0 max-w-full overflow-hidden rounded-2xl border border-border bg-surface p-3"
             >
-              <h3 className="font-medium">
+              <h3 className="break-words font-medium">
                 {entry.sessionExercise.exerciseNameSnapshot}
               </h3>
               {entry.sessionExercise.notes ? (
-                <p className="mt-1 text-sm text-muted">{entry.sessionExercise.notes}</p>
+                <p className="mt-1 break-words text-sm text-muted">
+                  {entry.sessionExercise.notes}
+                </p>
               ) : null}
               <ul className="mt-2 grid gap-1">
                 {entry.sets.map((set) => (

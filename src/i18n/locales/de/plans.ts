@@ -119,6 +119,10 @@ export const plans = {
   days: {
     aria: 'Trainingstage',
     add: 'Trainingstag hinzufügen',
+    addShort: 'Neu',
+    position: 'Einheit {{current}} von {{total}}',
+    previous: 'Vorherige',
+    next: 'Nächste',
   },
   goalsDialog: {
     title: 'Ziele & Fokus',

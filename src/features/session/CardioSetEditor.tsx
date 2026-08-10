@@ -169,6 +169,7 @@ export function CardioSetEditor({
     if (completingRef.current || completedRef.current) return;
     completingRef.current = true;
     setIsCompleting(true);
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
     autosave.cancel();
     try {
       await onComplete(next);

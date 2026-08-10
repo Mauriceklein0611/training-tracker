@@ -4,7 +4,10 @@ import { cn } from '@/utils/cn';
 export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn('rounded-2xl border border-border bg-surface p-4', className)}
+      className={cn(
+        'min-w-0 max-w-full rounded-2xl border border-border bg-surface p-4',
+        className,
+      )}
       {...props}
     />
   );
@@ -126,7 +129,7 @@ export function Badge({
   return (
     <span
       className={cn(
-        'inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium',
+        'inline-flex min-w-0 max-w-full items-center whitespace-normal break-words rounded-full border px-2 py-0.5 text-left text-xs font-medium',
         tones[tone],
       )}
     >

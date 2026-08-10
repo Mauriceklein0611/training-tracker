@@ -405,6 +405,17 @@ unknown stored values are preserved as custom entries.
 
 ## Recorded no-impact decisions
 
+- **Mobile workout/plan progress correction (2026-08-10).** No store, field,
+  enum, validation rule or released format changed; Dexie stays at schema 30.
+  The existing optional session fields keep their documented meaning:
+  `scheduleEntryId` identifies the exact weekly/cycle occurrence when available,
+  while old sessions without it continue to fall back to their stable
+  `templateId` (never a display name). The start path now chooses the currently
+  resolved matching entry instead of the first same-template entry, correcting
+  persisted attribution without rewriting any historical row. Confirmed
+  unaffected: full backup/restore, AI export/response, plan and workout-unit
+  packages, builder kit, comparison export, CSV headers/values and share cards.
+
 Changes that were checked against this register and deliberately found **not**
 format-relevant. Listed so the #26 gate stays auditable.
 

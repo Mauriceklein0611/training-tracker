@@ -5,8 +5,10 @@ import type {
   ScheduleEntryType,
   ScheduleMode,
   WorkoutTemplate,
+  WorkoutSession,
 } from '@/types';
 import { nowIso, uuid } from '@/utils/id';
+import { dayKey, weekKey } from '@/utils/date';
 import {
   advanceCursor,
   cursorAfterCompletedWorkout,
@@ -86,11 +88,29 @@ export async function getPlanScheduleView(planId: string): Promise<PlanScheduleV
  * The last *completed* session's day for a plan, matched by plan snapshot or by
  * the day itself for older sessions. Drives the free-rotation suggestion.
  */
-async function lastCompletedDay(
+function lastCompletedDay(completed: WorkoutSession[]): {
+  templateId?: string;
+  position?: number;
+} {
+  const sorted = [...completed].sort((a, b) =>
+    (b.finishedAt ?? b.startedAt).localeCompare(a.finishedAt ?? a.startedAt),
+  );
+  const last = sorted[0];
+  if (!last) return {};
+  return { templateId: last.templateId, position: last.dayPositionSnapshot };
+}
+
+/**
+ * Completed sessions of a plan. `planId` is authoritative for current rows;
+ * the stable template id keeps pre-plan-split and older imported history usable.
+ * Names are deliberately never used for attribution.
+ */
+export async function listCompletedSessionsForPlan(
   planId: string,
-  units: WorkoutTemplate[],
-): Promise<{ templateId?: string; position?: number }> {
-  const dayIds = new Set(units.map((day) => day.id));
+  units?: WorkoutTemplate[],
+): Promise<WorkoutSession[]> {
+  const planUnits = units ?? (await daysOfPlan(planId));
+  const dayIds = new Set(planUnits.map((day) => day.id));
   const completed = (
     await db.workoutSessions.where('status').equals('completed').toArray()
   )
@@ -102,9 +122,7 @@ async function lastCompletedDay(
     .sort((a, b) =>
       (b.finishedAt ?? b.startedAt).localeCompare(a.finishedAt ?? a.startedAt),
     );
-  const last = completed[0];
-  if (!last) return {};
-  return { templateId: last.templateId, position: last.dayPositionSnapshot };
+  return completed;
 }
 
 /**
@@ -129,15 +147,82 @@ export async function getPlanScheduleState(
   today: Date = new Date(),
 ): Promise<ScheduleState> {
   const view = await getPlanScheduleView(planId);
-  const last = await lastCompletedDay(planId, view.units);
+  const completed = await listCompletedSessionsForPlan(planId, view.units);
+  const last = lastCompletedDay(completed);
   return resolveScheduleState({
     schedule: view.schedule,
     entries: entriesForResolve(view),
     units: view.units,
     lastCompletedTemplateId: last.templateId,
     lastCompletedPosition: last.position,
+    completedSessions: completed,
     today,
   });
+}
+
+export type PlanUnitProgressStatus = 'completed' | 'next' | 'upcoming';
+
+export interface PlanProgressState {
+  schedule: ScheduleState;
+  /** One status per stable plan-day id, shared by Home and the plan editor. */
+  unitStatusById: Map<string, PlanUnitProgressStatus>;
+  /** Local date of the next workout when the schedule is date-bound. */
+  nextWorkoutDate?: string;
+}
+
+/**
+ * Central plan progress projection used by every screen that labels a unit as
+ * completed or next. It never matches by display name: current sessions use
+ * `planId`, legacy sessions use the still-stable template id.
+ */
+export async function getPlanProgressState(
+  planId: string,
+  today: Date = new Date(),
+): Promise<PlanProgressState> {
+  const view = await getPlanScheduleView(planId);
+  const completed = await listCompletedSessionsForPlan(planId, view.units);
+  const last = lastCompletedDay(completed);
+  const schedule = resolveScheduleState({
+    schedule: view.schedule,
+    entries: entriesForResolve(view),
+    units: view.units,
+    lastCompletedTemplateId: last.templateId,
+    lastCompletedPosition: last.position,
+    completedSessions: completed,
+    today,
+  });
+
+  const currentWeek = weekKey(today);
+  const completedThisWeek = new Set(
+    completed
+      .filter(
+        (session) =>
+          session.templateId &&
+          weekKey(session.plannedDate ?? session.finishedAt ?? session.startedAt) ===
+            currentWeek,
+      )
+      .map((session) => session.templateId as string),
+  );
+  const nextTemplateId = schedule.nextWorkout?.template?.id;
+  const unitStatusById = new Map<string, PlanUnitProgressStatus>(
+    view.units.map((unit) => [
+      unit.id,
+      unit.id === nextTemplateId
+        ? 'next'
+        : completedThisWeek.has(unit.id)
+          ? 'completed'
+          : 'upcoming',
+    ]),
+  );
+
+  let nextWorkoutDate: string | undefined;
+  if (schedule.nextWorkoutDayOffset != null) {
+    const date = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    date.setDate(date.getDate() + schedule.nextWorkoutDayOffset);
+    nextWorkoutDate = dayKey(date);
+  }
+
+  return { schedule, unitStatusById, nextWorkoutDate };
 }
 
 // ---- mode ------------------------------------------------------------

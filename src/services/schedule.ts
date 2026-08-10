@@ -3,8 +3,10 @@ import type {
   ScheduleEntry,
   ScheduleEntryType,
   ScheduleMode,
+  WorkoutSession,
   WorkoutTemplate,
 } from '@/types';
+import { dayKey } from '@/utils/date';
 
 /**
  * Pure scheduling logic.
@@ -72,7 +74,16 @@ export interface ScheduleState {
   nextWorkout?: ResolvedScheduleEntry;
   /** A short preview of the coming days for visualisation. */
   upcoming: ResolvedScheduleEntry[];
+  /** A completed unit on the current local day, if one belongs to this plan. */
+  completedToday?: ResolvedScheduleEntry;
+  /** Calendar-day distance to `nextWorkout` for date-bound schedules. */
+  nextWorkoutDayOffset?: number;
 }
+
+export type CompletedScheduleSession = Pick<
+  WorkoutSession,
+  'templateId' | 'scheduleEntryId' | 'plannedDate' | 'startedAt' | 'finishedAt' | 'status'
+>;
 
 const DEFAULT_REST_LABEL = 'Pause';
 
@@ -94,6 +105,58 @@ function resolve(
 
 function sortByPosition(entries: ScheduleEntry[]): ScheduleEntry[] {
   return [...entries].sort((a, b) => a.position - b.position);
+}
+
+/** Local day a completed session belongs to, with a legacy-safe fallback. */
+function completedSessionDay(session: CompletedScheduleSession): string {
+  return session.plannedDate ?? dayKey(session.finishedAt ?? session.startedAt);
+}
+
+/**
+ * Stable occurrence matching for a scheduled day. New sessions use the exact
+ * schedule-entry id; older sessions fall back to their stable template id.
+ */
+function sessionCompletesEntryOnDay(
+  session: CompletedScheduleSession,
+  entry: ScheduleEntry,
+  date: Date,
+): boolean {
+  if (session.status !== 'completed' || completedSessionDay(session) !== dayKey(date)) {
+    return false;
+  }
+  if (session.scheduleEntryId) return session.scheduleEntryId === entry.id;
+  return Boolean(session.templateId && session.templateId === entry.templateId);
+}
+
+function completedUnitToday(
+  sessions: CompletedScheduleSession[],
+  unitsById: Map<string, WorkoutTemplate>,
+  today: Date,
+): ResolvedScheduleEntry | undefined {
+  const latest = sessions
+    .filter(
+      (session) =>
+        session.status === 'completed' && completedSessionDay(session) === dayKey(today),
+    )
+    .sort((a, b) =>
+      (b.finishedAt ?? b.startedAt).localeCompare(a.finishedAt ?? a.startedAt),
+    )
+    .find((session) => session.templateId && unitsById.has(session.templateId));
+  if (!latest?.templateId) return undefined;
+  const template = unitsById.get(latest.templateId);
+  if (!template) return undefined;
+  return {
+    entry: {
+      id: latest.scheduleEntryId ?? `completed-${template.id}`,
+      scheduleId: '',
+      position: template.position,
+      type: 'workout',
+      templateId: template.id,
+    },
+    type: 'workout',
+    template,
+    name: template.name,
+  };
 }
 
 /** Normalises a possibly out-of-range cursor into a valid index. */
@@ -174,14 +237,22 @@ function cycleState(
   const current = resolve(ordered[cursor], unitsById);
   // The next actual workout: scan the whole cycle from the cursor.
   let nextWorkout: ResolvedScheduleEntry | undefined;
+  let nextWorkoutDayOffset: number | undefined;
   for (let i = 0; i < ordered.length; i += 1) {
     const candidate = resolve(ordered[(cursor + i) % ordered.length], unitsById);
     if (candidate.type === 'workout' && candidate.template) {
       nextWorkout = candidate;
+      nextWorkoutDayOffset = i;
       break;
     }
   }
-  return { mode: 'repeating-cycle', current, nextWorkout, upcoming };
+  return {
+    mode: 'repeating-cycle',
+    current,
+    nextWorkout,
+    upcoming,
+    nextWorkoutDayOffset,
+  };
 }
 
 // ---- weekly -----------------------------------------------------------
@@ -191,6 +262,7 @@ function weeklyState(
   unitsById: Map<string, WorkoutTemplate>,
   today: Date,
   previewCount: number,
+  completedSessions: CompletedScheduleSession[],
 ): ScheduleState {
   const byWeekday = new Map<number, ScheduleEntry>();
   for (const entry of entries) {
@@ -222,19 +294,30 @@ function weeklyState(
   }
 
   const current = upcoming[0];
+  const currentCompleted =
+    current?.type === 'workout' &&
+    completedSessions.some((session) =>
+      sessionCompletesEntryOnDay(session, current.entry, today),
+    );
   let nextWorkout: ResolvedScheduleEntry | undefined;
-  for (let i = 0; i < 7; i += 1) {
+  let nextWorkoutDayOffset: number | undefined;
+  // A workout already completed today is no longer "up next". Scan from
+  // tomorrow in that case and include offset 7 so a once-weekly unit can point
+  // to its next real occurrence instead of back to the completed one.
+  const startOffset = currentCompleted ? 1 : 0;
+  for (let i = startOffset; i <= 7; i += 1) {
     const weekday = (todayIndex + i) % 7;
     const entry = byWeekday.get(weekday);
     if (entry && entry.type === 'workout') {
       const resolved = resolve(entry, unitsById);
       if (resolved.template) {
         nextWorkout = resolved;
+        nextWorkoutDayOffset = i;
         break;
       }
     }
   }
-  return { mode: 'weekly', current, nextWorkout, upcoming };
+  return { mode: 'weekly', current, nextWorkout, upcoming, nextWorkoutDayOffset };
 }
 
 // ---- public entry point -----------------------------------------------
@@ -250,6 +333,8 @@ export interface ScheduleStateInput {
   today?: Date;
   /** How many days of preview to build. */
   previewCount?: number;
+  /** Completed sessions already attributed to this plan by the repository. */
+  completedSessions?: CompletedScheduleSession[];
 }
 
 /**
@@ -266,24 +351,33 @@ export function resolveScheduleState(input: ScheduleStateInput): ScheduleState {
     lastCompletedPosition,
     today = new Date(),
     previewCount = 7,
+    completedSessions = [],
   } = input;
   const unitsById = new Map(units.map((unit) => [unit.id, unit]));
 
+  let state: ScheduleState;
   switch (schedule.mode) {
     case 'repeating-cycle':
-      return cycleState(schedule, entries, unitsById, previewCount);
+      state = cycleState(schedule, entries, unitsById, previewCount);
+      break;
     case 'weekly':
-      return weeklyState(entries, unitsById, today, previewCount);
+      state = weeklyState(entries, unitsById, today, previewCount, completedSessions);
+      break;
     case 'free-rotation':
     default:
-      return freeRotationState(
+      state = freeRotationState(
         entries,
         unitsById,
         lastCompletedTemplateId,
         lastCompletedPosition,
         previewCount,
       );
+      break;
   }
+  return {
+    ...state,
+    completedToday: completedUnitToday(completedSessions, unitsById, today),
+  };
 }
 
 /**

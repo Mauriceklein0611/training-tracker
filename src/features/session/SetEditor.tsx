@@ -243,6 +243,10 @@ export function SetEditor({
     if (completingRef.current || completedRef.current) return;
     completingRef.current = true;
     setIsCompleting(true);
+    // The submit button is removed/replaced after completion. Explicitly
+    // releasing focus prevents mobile browsers from scrolling to whichever
+    // control React renders in its place.
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
     // Synchronously drop any scheduled autosave *before* awaiting, so a slower
     // device can never flush an older draft (e.g. a stale duration from the
     // timer) between here and the completion write.
@@ -269,7 +273,7 @@ export function SetEditor({
   };
 
   return (
-    <div className="rounded-2xl border border-accent/40 bg-surface-2 p-3">
+    <div className="min-w-0 max-w-full overflow-hidden rounded-2xl border border-accent/60 bg-surface-2 p-3 ring-1 ring-accent/20">
       <div className="mb-2 flex items-center justify-between gap-2">
         <span className="text-sm font-semibold">
           {t('setEditor.setHeading', { position: set.position + 1 })}
@@ -369,25 +373,7 @@ export function SetEditor({
         </div>
       ) : null}
 
-      <div className="grid grid-cols-2 gap-2">
-        <SelectField
-          label={t('field.setType')}
-          containerClassName="col-span-2"
-          value={draft.setType}
-          onChange={(event) => {
-            // Autosave picks this up; calling onPersist here would write a
-            // draft captured before setDraft applied.
-            const setType = event.target.value as SetType;
-            setDraft((current) => ({ ...current, setType }));
-          }}
-        >
-          {SET_TYPES.map((type) => (
-            <option key={type} value={type}>
-              {tDomain(`setType.${type}`)}
-            </option>
-          ))}
-        </SelectField>
-
+      <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-2">
         {showWeight ? (
           <NumberField
             label={weightLabel}
@@ -418,6 +404,24 @@ export function SetEditor({
             onBlur={persist}
           />
         ) : null}
+
+        <SelectField
+          label={t('field.setType')}
+          containerClassName="sm:col-span-2"
+          value={draft.setType}
+          onChange={(event) => {
+            // Autosave picks this up; calling onPersist here would write a
+            // draft captured before setDraft applied.
+            const setType = event.target.value as SetType;
+            setDraft((current) => ({ ...current, setType }));
+          }}
+        >
+          {SET_TYPES.map((type) => (
+            <option key={type} value={type}>
+              {tDomain(`setType.${type}`)}
+            </option>
+          ))}
+        </SelectField>
 
         {effortInput !== 'none' ? (
           <EffortField
@@ -470,38 +474,44 @@ export function CompletedSetRow({
     : describeSet(set, execution.trackingType, execution.weightMode);
   const content = (
     <>
-      <span className="flex w-7 shrink-0 items-center justify-center rounded-lg bg-surface-3 text-xs font-semibold">
+      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-surface-3 text-xs font-semibold">
         {set.position + 1}
       </span>
-      <span className="numeric min-w-0 flex-1 truncate font-medium">{summary}</span>
-      {isCardio && execution.cardioModality ? (
-        <Badge>{tDomain(`cardioModality.${execution.cardioModality}`)}</Badge>
-      ) : execution.equipment !== 'unspecified' ? (
-        <Badge>{tDomain(`equipment.${execution.equipment}`)}</Badge>
-      ) : null}
-      {set.setType !== 'working' ? (
-        <Badge tone={set.setType === 'warmup' ? 'default' : 'accent'}>
-          {tDomain(`setType.${set.setType}`)}
-        </Badge>
-      ) : null}
-      {set.rir != null ? <span className="text-xs text-muted">RIR {set.rir}</span> : null}
-      {deviation != null ? (
-        <span
-          className={cn(
-            'numeric text-xs',
-            deviation >= 0 ? 'text-muted' : 'text-warning',
-          )}
-          title={t('setEditor.restDeviation')}
-        >
-          {formatSignedSeconds(deviation)}
+      <span className="min-w-0 flex-1">
+        <span className="numeric block break-words font-medium">{summary}</span>
+        <span className="mt-1 flex min-w-0 flex-wrap items-center gap-1.5">
+          {isCardio && execution.cardioModality ? (
+            <Badge>{tDomain(`cardioModality.${execution.cardioModality}`)}</Badge>
+          ) : execution.equipment !== 'unspecified' ? (
+            <Badge>{tDomain(`equipment.${execution.equipment}`)}</Badge>
+          ) : null}
+          {set.setType !== 'working' ? (
+            <Badge tone={set.setType === 'warmup' ? 'default' : 'accent'}>
+              {tDomain(`setType.${set.setType}`)}
+            </Badge>
+          ) : null}
+          {set.rir != null ? (
+            <span className="text-xs text-muted">RIR {set.rir}</span>
+          ) : null}
+          {deviation != null ? (
+            <span
+              className={cn(
+                'numeric text-xs',
+                deviation >= 0 ? 'text-muted' : 'text-warning',
+              )}
+              title={t('setEditor.restDeviation')}
+            >
+              {formatSignedSeconds(deviation)}
+            </span>
+          ) : null}
         </span>
-      ) : null}
+      </span>
     </>
   );
 
   if (!onEdit) {
     return (
-      <div className="flex min-h-[44px] items-center gap-2 rounded-xl bg-surface-2 px-2 py-1.5">
+      <div className="flex min-h-[44px] min-w-0 max-w-full items-start gap-2 overflow-hidden rounded-xl bg-surface-2 px-2 py-2">
         {content}
       </div>
     );
@@ -515,7 +525,7 @@ export function CompletedSetRow({
         kind: isCardio ? t('setEditor.section') : t('setEditor.set'),
         position: set.position + 1,
       })}
-      className="flex min-h-[44px] w-full items-center gap-2 rounded-xl bg-surface-2 px-2 py-1.5 text-left active:bg-surface-3"
+      className="flex min-h-[44px] w-full min-w-0 max-w-full items-start gap-2 overflow-hidden rounded-xl bg-surface-2 px-2 py-2 text-left active:bg-surface-3"
     >
       {content}
     </button>

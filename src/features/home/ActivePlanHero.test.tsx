@@ -29,7 +29,11 @@ function renderHero(
 const base: ActivePlanHeroData = {
   planId: 'p1',
   planName: 'Muskelaufbau 3er-Split',
-  dayNames: ['Push', 'Pull', 'Beine'],
+  days: [
+    { templateId: 'd1', name: 'Push', status: 'completed' },
+    { templateId: 'd2', name: 'Pull', status: 'upcoming' },
+    { templateId: 'd3', name: 'Beine', status: 'next' },
+  ],
   nextUnit: {
     templateId: 'd3',
     name: 'Beine',

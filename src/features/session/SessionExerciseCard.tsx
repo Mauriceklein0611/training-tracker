@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import {
   ArrowDown,
@@ -158,6 +158,59 @@ export function SessionExerciseCard({
   const { t: tDomain } = useTranslation('domain');
   const { sessionExercise, sets } = detail;
   const toast = useToast();
+  const cardRef = useRef<HTMLElement>(null);
+  const pendingScrollAnchor = useRef<number | null>(null);
+  const clearScrollAnchorFrame = useRef<number | null>(null);
+
+  /**
+   * Completing a set replaces the focused editor, inserts a completed row and
+   * can reveal the sticky rest timer. Mobile Safari otherwise scrolls to the
+   * replacement focus target. Keep this exercise card at the same viewport
+   * position through all Dexie-driven renders of that completion.
+   */
+  useLayoutEffect(() => {
+    const anchorTop = pendingScrollAnchor.current;
+    if (anchorTop == null) return;
+    const restoreAnchor = () => {
+      const currentTop = cardRef.current?.getBoundingClientRect().top;
+      if (currentTop != null) {
+        const delta = currentTop - anchorTop;
+        // jsdom and a card whose geometry did not move both report a zero
+        // delta; skipping the call also keeps unit tests independent of the
+        // browser-only scroll API.
+        if (Math.abs(delta) > 0.5) {
+          window.scrollTo({
+            top: Math.max(0, window.scrollY + delta),
+            left: 0,
+            behavior: 'auto',
+          });
+        }
+      }
+    };
+    restoreAnchor();
+    if (clearScrollAnchorFrame.current != null) {
+      window.cancelAnimationFrame(clearScrollAnchorFrame.current);
+    }
+    clearScrollAnchorFrame.current = window.requestAnimationFrame(() => {
+      // Focus restoration for the replaced editor happens after layout effects
+      // in Safari/Chromium. Correct once after that task and once after paint.
+      restoreAnchor();
+      clearScrollAnchorFrame.current = window.requestAnimationFrame(() => {
+        restoreAnchor();
+        pendingScrollAnchor.current = null;
+        clearScrollAnchorFrame.current = null;
+      });
+    });
+  }, [sets]);
+
+  useEffect(
+    () => () => {
+      if (clearScrollAnchorFrame.current != null) {
+        window.cancelAnimationFrame(clearScrollAnchorFrame.current);
+      }
+    },
+    [],
+  );
 
   /*
    * Targets come first from this session-exercise's own frozen snapshots (see
@@ -472,6 +525,7 @@ export function SessionExerciseCard({
   };
 
   const handleComplete = async (setId: string, values: SetValues) => {
+    pendingScrollAnchor.current = cardRef.current?.getBoundingClientRect().top ?? null;
     // Unlock audio from within the tap so the rest tone can play later on iOS.
     primeAudio();
     const { newlyCompleted } = await completeSet(setId, values);
@@ -508,6 +562,7 @@ export function SessionExerciseCard({
   };
 
   const handleCompleteCardio = async (setId: string, values: CardioSetValues) => {
+    pendingScrollAnchor.current = cardRef.current?.getBoundingClientRect().top ?? null;
     primeAudio();
     const workingAfter = completedWorkingSets + 1;
     const reachedGoal = targetSets != null && workingAfter >= targetSets;
@@ -555,8 +610,9 @@ export function SessionExerciseCard({
 
     return (
       <section
+        ref={cardRef}
         aria-labelledby={`exercise-${sessionExercise.id}`}
-        className={`rounded-2xl border bg-surface ${
+        className={`min-w-0 max-w-full overflow-hidden rounded-2xl border bg-surface ${
           highlightNext ? 'border-accent ring-1 ring-accent' : 'border-border'
         }`}
       >
@@ -574,12 +630,12 @@ export function SessionExerciseCard({
           <span className="min-w-0 flex-1">
             <span
               id={`exercise-${sessionExercise.id}`}
-              className="block truncate font-semibold leading-tight"
+              className="block break-words font-semibold leading-tight"
             >
               <span className="text-muted">{label ?? `${index + 1}.`} </span>
               {displayName}
             </span>
-            <span className="block truncate text-xs text-muted">
+            <span className="mt-0.5 block break-words text-xs text-muted">
               {highlightNext ? `${t('exercise.next')} · ` : ''}
               {summary}
             </span>
@@ -592,16 +648,17 @@ export function SessionExerciseCard({
 
   return (
     <section
+      ref={cardRef}
       aria-labelledby={`exercise-${sessionExercise.id}`}
-      className={`rounded-2xl border bg-surface p-3 ${
+      className={`min-w-0 max-w-full overflow-hidden rounded-2xl border bg-surface p-3 ${
         highlightNext ? 'border-accent ring-1 ring-accent' : 'border-border'
       }`}
     >
       <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <h2
             id={`exercise-${sessionExercise.id}`}
-            className="font-semibold leading-tight"
+            className="break-words font-semibold leading-tight"
           >
             <span className="text-muted">{label ?? `${index + 1}.`} </span>
             {displayName}
@@ -643,7 +700,7 @@ export function SessionExerciseCard({
             {previousSessionLabel ? <span>{previousSessionLabel}</span> : null}
           </p>
         </div>
-        <div className="flex shrink-0 gap-1">
+        <div className="shrink-0">
           {/* Every card can be closed again, not just a finished one (#46). */}
           <IconButton
             label={t('exercise.collapse', {
@@ -653,33 +710,30 @@ export function SessionExerciseCard({
           >
             <ChevronUp size={18} aria-hidden="true" />
           </IconButton>
-          <IconButton
-            label={t('exercise.moveUp', {
-              name: displayName,
-            })}
-            disabled={index === 0}
-            onClick={() => void moveSessionExercise(sessionExercise.id, -1)}
-          >
-            <ArrowUp size={18} aria-hidden="true" />
-          </IconButton>
-          <IconButton
-            label={t('exercise.moveDown', {
-              name: displayName,
-            })}
-            disabled={index === total - 1}
-            onClick={() => void moveSessionExercise(sessionExercise.id, 1)}
-          >
-            <ArrowDown size={18} aria-hidden="true" />
-          </IconButton>
-          <IconButton
-            label={t('exercise.remove', {
-              name: displayName,
-            })}
-            onClick={() => void removeSessionExercise(sessionExercise.id)}
-          >
-            <Trash2 size={18} aria-hidden="true" />
-          </IconButton>
         </div>
+      </div>
+
+      <div className="mt-1 flex justify-end gap-1 border-t border-border/60 pt-1">
+        <IconButton
+          label={t('exercise.moveUp', { name: displayName })}
+          disabled={index === 0}
+          onClick={() => void moveSessionExercise(sessionExercise.id, -1)}
+        >
+          <ArrowUp size={18} aria-hidden="true" />
+        </IconButton>
+        <IconButton
+          label={t('exercise.moveDown', { name: displayName })}
+          disabled={index === total - 1}
+          onClick={() => void moveSessionExercise(sessionExercise.id, 1)}
+        >
+          <ArrowDown size={18} aria-hidden="true" />
+        </IconButton>
+        <IconButton
+          label={t('exercise.remove', { name: displayName })}
+          onClick={() => void removeSessionExercise(sessionExercise.id)}
+        >
+          <Trash2 size={18} aria-hidden="true" />
+        </IconButton>
       </div>
 
       {exercise?.techniqueCues && exercise.techniqueCues.length > 0 ? (
