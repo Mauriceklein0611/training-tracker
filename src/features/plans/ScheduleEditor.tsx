@@ -5,16 +5,18 @@ import {
   ArrowDown,
   ArrowUp,
   CalendarDays,
+  Check,
   Copy,
   Dumbbell,
+  ListOrdered,
   Moon,
   Plus,
+  Repeat2,
   RotateCcw,
   Trash2,
 } from 'lucide-react';
 import { Button, IconButton } from '@/components/ui/Button';
 import { ConfirmDialog } from '@/components/ui/Dialog';
-import { Segmented } from '@/components/ui/Field';
 import { moveDay } from '@/db/repositories/plans';
 import {
   addCycleEntry,
@@ -34,32 +36,6 @@ import { useToast } from '@/hooks/useToast';
 import { cn } from '@/utils/cn';
 
 const REST_ICON = <Moon size={15} aria-hidden="true" />;
-
-/** A small pill showing one scheduled day (workout unit or rest). */
-function DayChip({
-  name,
-  rest,
-  muted,
-}: {
-  name: string;
-  rest?: boolean;
-  muted?: boolean;
-}) {
-  return (
-    <span
-      className={cn(
-        'inline-flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium',
-        rest
-          ? 'border-border bg-surface-2 text-muted'
-          : 'border-accent/40 bg-accent/10 text-accent',
-        muted && 'opacity-60',
-      )}
-    >
-      {rest ? REST_ICON : <Dumbbell size={13} aria-hidden="true" />}
-      <span className="max-w-[9rem] truncate">{name}</span>
-    </span>
-  );
-}
 
 /**
  * Editor for a plan's time layout: pick a mode and lay the plan's reusable
@@ -101,67 +77,129 @@ export function ScheduleEditor({ planId }: { planId: string }) {
   };
 
   return (
-    <div className="grid gap-4">
-      <Segmented<ScheduleMode>
-        label={t('schedule.modeLabel')}
-        value={mode}
-        onChange={requestModeChange}
-        options={[
-          { value: 'free-rotation', label: t('schedule.modes.free-rotation') },
-          { value: 'repeating-cycle', label: t('schedule.modes.repeating-cycle') },
-          { value: 'weekly', label: t('schedule.modes.weekly') },
-        ]}
-      />
-      <p className="text-xs leading-relaxed text-muted">
-        {t(`schedule.modeDescriptions.${mode}`)}
-      </p>
+    <div className="grid min-w-0 gap-5">
+      <section className="grid gap-2.5">
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted">
+          {t('schedule.modeLabel')}
+        </p>
+        <div
+          role="radiogroup"
+          aria-label={t('schedule.modeLabel')}
+          className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-3"
+        >
+          {(
+            [
+              { value: 'free-rotation', icon: ListOrdered },
+              { value: 'repeating-cycle', icon: Repeat2 },
+              { value: 'weekly', icon: CalendarDays },
+            ] as const
+          ).map((option) => {
+            const selected = option.value === mode;
+            const Icon = option.icon;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                role="radio"
+                aria-checked={selected}
+                onClick={() => requestModeChange(option.value)}
+                className={cn(
+                  'flex min-h-[56px] min-w-0 items-center gap-3 rounded-xl border p-3 text-left transition-colors',
+                  selected
+                    ? 'border-accent bg-accent/10 text-text'
+                    : 'border-border bg-surface-2 text-muted active:bg-surface-3',
+                )}
+              >
+                <span
+                  className={cn(
+                    'grid h-9 w-9 shrink-0 place-items-center rounded-lg',
+                    selected ? 'bg-accent text-accent-contrast' : 'bg-surface text-muted',
+                  )}
+                >
+                  <Icon size={18} aria-hidden="true" />
+                </span>
+                <span className="min-w-0 flex-1 break-words text-sm font-semibold">
+                  {t(`schedule.modes.${option.value}`)}
+                </span>
+                {selected ? (
+                  <Check className="shrink-0 text-accent" size={18} aria-hidden="true" />
+                ) : null}
+              </button>
+            );
+          })}
+        </div>
+        <p className="rounded-xl bg-surface-2 p-3 text-sm leading-relaxed text-muted">
+          {t(`schedule.modeDescriptions.${mode}`)}
+        </p>
+      </section>
 
       {/* Coming-up preview, shared by all modes. */}
       {state && state.upcoming.length > 0 ? (
-        <div>
-          <p className="mb-1.5 text-xs font-medium text-muted">
+        <section className="grid gap-2.5 border-t border-border pt-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted">
             {t('schedule.upcoming')}
           </p>
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
-            {state.upcoming.map((item, index) => (
-              <div
+          <ol className="grid min-w-0 grid-cols-2 gap-2">
+            {state.upcoming.slice(0, 4).map((item, index) => (
+              <li
                 key={`${item.entry.id}-${index}`}
-                className="flex items-center gap-1.5"
+                className={cn(
+                  'flex min-w-0 items-center gap-2.5 rounded-xl border p-2.5',
+                  index === 0
+                    ? 'col-span-2 border-accent bg-accent/10'
+                    : 'border-border bg-surface-2',
+                )}
               >
-                {index > 0 ? <span className="text-muted">→</span> : null}
-                <DayChip
-                  name={
-                    item.type === 'rest'
-                      ? item.entry.id.startsWith('weekday-')
-                        ? t('schedule.free')
-                        : item.name === 'Pause'
-                          ? t('schedule.rest')
-                          : item.name
-                      : item.template
-                        ? item.name
-                        : t('schedule.removedUnit')
-                  }
-                  rest={item.type === 'rest'}
-                />
-              </div>
+                <span
+                  className={cn(
+                    'grid h-7 w-7 shrink-0 place-items-center rounded-full text-xs font-semibold',
+                    index === 0
+                      ? 'bg-accent text-accent-contrast'
+                      : 'bg-surface text-muted',
+                  )}
+                >
+                  {index + 1}
+                </span>
+                <span className={item.type === 'rest' ? 'text-muted' : 'text-accent'}>
+                  {item.type === 'rest' ? REST_ICON : <Dumbbell size={15} aria-hidden />}
+                </span>
+                <span className="min-w-0 flex-1 break-words text-sm font-medium">
+                  {item.type === 'rest'
+                    ? item.entry.id.startsWith('weekday-')
+                      ? t('schedule.free')
+                      : item.name === 'Pause'
+                        ? t('schedule.rest')
+                        : item.name
+                    : item.template
+                      ? item.name
+                      : t('schedule.removedUnit')}
+                </span>
+                {index === 0 ? (
+                  <span className="shrink-0 rounded-full bg-accent px-2 py-1 text-[10px] font-semibold text-accent-contrast">
+                    {t('schedule.nextBadge')}
+                  </span>
+                ) : null}
+              </li>
             ))}
-          </div>
-        </div>
+          </ol>
+        </section>
       ) : null}
 
-      {mode === 'free-rotation' ? <FreeRotationBody units={units} /> : null}
-      {mode === 'repeating-cycle' ? (
-        <CycleBody
-          planId={planId}
-          units={units}
-          entries={entries}
-          cursor={schedule.cyclePosition ?? 0}
-          hasUnitOptions={hasUnitOptions}
-        />
-      ) : null}
-      {mode === 'weekly' ? (
-        <WeeklyBody planId={planId} units={units} entries={entries} />
-      ) : null}
+      <section className="min-w-0 border-t border-border pt-4">
+        {mode === 'free-rotation' ? <FreeRotationBody units={units} /> : null}
+        {mode === 'repeating-cycle' ? (
+          <CycleBody
+            planId={planId}
+            units={units}
+            entries={entries}
+            cursor={schedule.cyclePosition ?? 0}
+            hasUnitOptions={hasUnitOptions}
+          />
+        ) : null}
+        {mode === 'weekly' ? (
+          <WeeklyBody planId={planId} units={units} entries={entries} />
+        ) : null}
+      </section>
 
       <ConfirmDialog
         open={pendingMode !== null}
@@ -185,34 +223,40 @@ export function ScheduleEditor({ planId }: { planId: string }) {
 function FreeRotationBody({ units }: { units: { id: string; name: string }[] }) {
   const { t } = useTranslation('plans');
   return (
-    <div className="grid gap-2">
-      <p className="text-xs text-muted">{t('schedule.freeRotationHint')}</p>
+    <div className="grid min-w-0 gap-2.5">
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted">
+        {t('schedule.rotationOrder')}
+      </p>
       <ol className="grid gap-2">
         {units.map((unit, index) => (
           <li
             key={unit.id}
-            className="flex items-center gap-2 rounded-xl border border-border bg-surface p-2"
+            className="grid min-w-0 gap-2 rounded-xl border border-border bg-surface p-3"
           >
-            <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-surface-2 text-xs font-semibold text-muted">
-              {index + 1}
-            </span>
-            <span className="min-w-0 flex-1 truncate text-sm font-medium">
-              {unit.name}
-            </span>
-            <IconButton
-              label={t('schedule.moveUnitUp', { name: unit.name })}
-              onClick={() => void moveDay(unit.id, -1)}
-              {...(index === 0 ? { disabled: true } : {})}
-            >
-              <ArrowUp size={16} aria-hidden="true" />
-            </IconButton>
-            <IconButton
-              label={t('schedule.moveUnitDown', { name: unit.name })}
-              onClick={() => void moveDay(unit.id, 1)}
-              {...(index === units.length - 1 ? { disabled: true } : {})}
-            >
-              <ArrowDown size={16} aria-hidden="true" />
-            </IconButton>
+            <div className="flex min-w-0 items-start gap-2.5">
+              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-surface-2 text-xs font-semibold text-muted">
+                {index + 1}
+              </span>
+              <span className="min-w-0 flex-1 break-words pt-1 text-sm font-medium">
+                {unit.name}
+              </span>
+            </div>
+            <div className="flex items-center justify-end gap-1 border-t border-border pt-2">
+              <IconButton
+                label={t('schedule.moveUnitUp', { name: unit.name })}
+                onClick={() => void moveDay(unit.id, -1)}
+                {...(index === 0 ? { disabled: true } : {})}
+              >
+                <ArrowUp size={16} aria-hidden="true" />
+              </IconButton>
+              <IconButton
+                label={t('schedule.moveUnitDown', { name: unit.name })}
+                onClick={() => void moveDay(unit.id, 1)}
+                {...(index === units.length - 1 ? { disabled: true } : {})}
+              >
+                <ArrowDown size={16} aria-hidden="true" />
+              </IconButton>
+            </div>
           </li>
         ))}
       </ol>
@@ -246,7 +290,10 @@ function CycleBody({
   const [resetOpen, setResetOpen] = useState(false);
 
   return (
-    <div className="grid gap-2">
+    <div className="grid min-w-0 gap-2.5">
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted">
+        {t('schedule.cycleDays')}
+      </p>
       {entries.length === 0 ? (
         <p className="text-xs text-muted">{t('schedule.cycleEmpty')}</p>
       ) : (
@@ -257,11 +304,11 @@ function CycleBody({
               <li
                 key={entry.id}
                 className={cn(
-                  'rounded-xl border p-2',
+                  'grid min-w-0 gap-2 rounded-xl border p-3',
                   isToday ? 'border-accent bg-accent/5' : 'border-border bg-surface',
                 )}
               >
-                <div className="flex items-center gap-2">
+                <div className="flex min-w-0 items-center gap-2.5">
                   <span
                     className={cn(
                       'grid h-7 w-7 shrink-0 place-items-center rounded-full text-xs font-semibold',
@@ -272,6 +319,16 @@ function CycleBody({
                   >
                     {index + 1}
                   </span>
+                  <span className="min-w-0 flex-1 text-sm font-semibold">
+                    {t('schedule.cycleDay', { day: index + 1 })}
+                  </span>
+                  {isToday ? (
+                    <span className="shrink-0 rounded-full bg-accent px-2 py-1 text-[10px] font-semibold text-accent-contrast">
+                      {t('schedule.today')}
+                    </span>
+                  ) : null}
+                </div>
+                <div className="min-w-0">
                   {entry.type === 'workout' ? (
                     <select
                       aria-label={t('schedule.unitForDay', { day: index + 1 })}
@@ -282,7 +339,7 @@ function CycleBody({
                           templateId: event.target.value,
                         })
                       }
-                      className="min-h-[40px] min-w-0 flex-1 rounded-lg border border-border bg-surface-2 px-2 text-sm"
+                      className="min-h-[44px] w-full min-w-0 rounded-lg border border-border bg-surface-2 px-3 text-sm"
                     >
                       {entry.templateId &&
                       !units.some((u) => u.id === entry.templateId) ? (
@@ -297,18 +354,13 @@ function CycleBody({
                       ))}
                     </select>
                   ) : (
-                    <span className="flex min-w-0 flex-1 items-center gap-1.5 text-sm text-muted">
+                    <span className="flex min-h-[44px] min-w-0 items-center gap-2 rounded-lg bg-surface-2 px-3 text-sm text-muted">
                       {REST_ICON}
                       {t('schedule.restDay')}
                     </span>
                   )}
-                  {isToday ? (
-                    <span className="shrink-0 rounded-full bg-accent px-2 py-0.5 text-[10px] font-semibold text-accent-contrast">
-                      {t('schedule.today')}
-                    </span>
-                  ) : null}
                 </div>
-                <div className="mt-2 flex items-center justify-end gap-1">
+                <div className="flex flex-wrap items-center justify-end gap-1 border-t border-border pt-2">
                   {!isToday ? (
                     <Button
                       variant="ghost"
@@ -418,6 +470,7 @@ function WeeklyBody({
   const byWeekday = new Map<number, WeeklyEntryRow>();
   for (const entry of entries) byWeekday.set(entry.weekday ?? entry.position, entry);
   const weekdays = t('schedule.weekdays', { returnObjects: true }) as string[];
+  const todayWeekday = (new Date().getDay() + 6) % 7;
 
   const valueFor = (entry: WeeklyEntryRow | undefined): string => {
     if (!entry) return 'free';
@@ -436,21 +489,37 @@ function WeeklyBody({
   };
 
   return (
-    <div className="grid gap-2">
+    <div className="grid min-w-0 gap-2.5">
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted">
+        {t('schedule.weeklyAssignments')}
+      </p>
       {weekdays.map((label, weekday) => {
         const entry = byWeekday.get(weekday);
+        const isToday = weekday === todayWeekday;
         return (
           <div
             key={weekday}
-            className="flex items-center gap-2 rounded-xl border border-border bg-surface p-2"
+            className={cn(
+              'grid min-w-0 gap-2 rounded-xl border p-3',
+              isToday ? 'border-accent bg-accent/5' : 'border-border bg-surface',
+            )}
           >
-            <CalendarDays size={16} className="shrink-0 text-muted" aria-hidden="true" />
-            <span className="w-24 shrink-0 text-sm font-medium">{label}</span>
+            <div className="flex min-w-0 items-center gap-2.5">
+              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-surface-2 text-muted">
+                <CalendarDays size={16} aria-hidden="true" />
+              </span>
+              <span className="min-w-0 flex-1 text-sm font-semibold">{label}</span>
+              {isToday ? (
+                <span className="shrink-0 rounded-full bg-accent px-2 py-1 text-[10px] font-semibold text-accent-contrast">
+                  {t('schedule.today')}
+                </span>
+              ) : null}
+            </div>
             <select
               aria-label={t('schedule.assignmentFor', { day: label })}
               value={valueFor(entry)}
               onChange={(event) => handleChange(weekday, event.target.value)}
-              className="min-h-[40px] min-w-0 flex-1 rounded-lg border border-border bg-surface-2 px-2 text-sm"
+              className="min-h-[44px] w-full min-w-0 rounded-lg border border-border bg-surface-2 px-3 text-sm"
             >
               <option value="free">{t('schedule.free')}</option>
               <option value="rest">{t('schedule.rest')}</option>

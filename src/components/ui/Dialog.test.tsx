@@ -49,4 +49,16 @@ describe('Dialog accessible labelling', () => {
     expect(describedBy).toBeTruthy();
     expect(document.getElementById(describedBy!)?.textContent).toBe('Erklärung');
   });
+
+  it('can become a full-height editor on phone viewports', () => {
+    render(
+      <Dialog open mobileFullscreen onClose={() => {}} title="Zeitplan">
+        <p>Inhalt</p>
+      </Dialog>,
+    );
+
+    const dialog = screen.getByRole('dialog', { name: 'Zeitplan' });
+    expect(dialog).toHaveClass('max-sm:fixed', 'max-sm:h-[100dvh]', 'max-sm:w-full');
+    expect(dialog.firstElementChild).toHaveClass('max-sm:flex-1', 'max-sm:max-h-none');
+  });
 });
