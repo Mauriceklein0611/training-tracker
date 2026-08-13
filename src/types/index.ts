@@ -737,6 +737,14 @@ export interface SessionExercise extends ExerciseGrouping {
   targetDistanceMetersSnapshot?: number;
   /** Cardio target RPE 1–10, frozen at start (cardio only). */
   targetRpeSnapshot?: number;
+  /**
+   * Set by the user to end this exercise for today even though the set goal was
+   * not reached (schema 31) — three of four sets are a finished exercise, not a
+   * forever-open one. Purely a marker of that decision: it never completes,
+   * invents or changes a set, and the recorded sets stay exactly what was
+   * performed. Absent means the exercise follows the set goal as before.
+   */
+  finishedAt?: ISODateTime;
   notes: string;
   createdAt: ISODateTime;
   updatedAt: ISODateTime;

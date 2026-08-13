@@ -13,8 +13,9 @@ previous supported version, the current version, an invalid and an
 unsupported-future fixture. Raise a schema version only on a real persistence
 change; prefer optional/additive fields.
 
-Last full matrix audit (2026-08-06): every version in the table below was
-cross-checked against its code constant (`SCHEMA_VERSION` 30, `AI_EXPORT_VERSION`
+Last full matrix audit (2026-08-06, `SCHEMA_VERSION` re-checked 2026-08-13 at
+31): every version in the table below was
+cross-checked against its code constant (`SCHEMA_VERSION` 31, `AI_EXPORT_VERSION`
 3, `SUPPORTED_RESPONSE_SCHEMA_VERSION` 2, `PLAN_BUILDER_KIT_VERSION` 3,
 `PLAN_PACKAGE_SCHEMA_VERSION` 4 with `SUPPORTED_PLAN_PACKAGE_VERSIONS` [1, 2, 3,
 4], `WORKOUT_UNIT_PACKAGE_SCHEMA_VERSION` 2 with
@@ -49,7 +50,7 @@ General rules:
 
 | Format                             | Direction               | Name (in content)                       | Version field                           | Version              | Supported imports |
 | ---------------------------------- | ----------------------- | --------------------------------------- | --------------------------------------- | -------------------- | ----------------- |
-| Full backup                        | export + import         | `app: training-tracker`                 | `exportFormatVersion` / `schemaVersion` | format 1 / schema 30 | schema ≤ 30       |
+| Full backup                        | export + import         | `app: training-tracker`                 | `exportFormatVersion` / `schemaVersion` | format 1 / schema 31 | schema ≤ 31       |
 | AI analysis export                 | export                  | (AI export doc)                         | `exportVersion`                         | 3                    | —                 |
 | AI response import                 | import                  | `format: training-ai-response`          | `schemaVersion`                         | 2                    | 1, 2              |
 | Plan builder kit                   | export                  | `format: training-plan-builder-kit`     | `version`                               | 3                    | —                 |
@@ -57,6 +58,39 @@ General rules:
 | Workout unit package               | export + import + share | `format: training-workout-unit-package` | `schemaVersion`                         | 2                    | 1, 2              |
 | Block comparison export            | export                  | (comparison doc)                        | —                                       | —                    | —                 |
 | CSV (sets/sessions/exercises/body) | export                  | header row                              | header (by test)                        | —                    | —                 |
+
+## Finishing a single exercise early + duration entry (schema 31, #48)
+
+- **Schema 31 (additive, no backfill, no index/store change):** `sessionExercises`
+  gains the optional `finishedAt` (ISO). It records that the user ended _that_
+  exercise inside a running workout although its set goal was still open (three
+  of four sets). Older rows and older backups validate unchanged (the field is
+  optional and never defaulted) and simply mean "not finished early"; no existing
+  exercise is retroactively declared finished. Backup format stays **1**, its
+  `schemaVersion` is **31**, and a pre-31 backup restores with the field absent.
+- **Nothing is invented by the marker.** The missing sets stay missing: no set is
+  completed, created or deleted, `targetSetsSnapshot` keeps what the plan asked
+  for, and a still open (never completed) set stays the draft it is —
+  `finishSession` drops those unperformed sets exactly as before. Only a rest
+  still running for that exercise is closed, because no further set follows it.
+  The marker is reversible (`reopenSessionExercise`), which writes the row back
+  without the field.
+- **Derived views read it, history does not change:** the live workout progress
+  (`services/sessionProgress.ts`) and the superset round counter treat a
+  hand-finished exercise as done. Volume, records, analytics, CSV and the AI
+  export keep computing from the recorded sets alone, so a finished-early
+  exercise is statistically identical to one that was simply stopped.
+- **Duration entry is presentation only.** Cardio durations (and the plan/unit
+  duration target) are now entered as hours/minutes/seconds
+  (`components/ui/Field.tsx` `DurationField`, parsing in `services/duration.ts`)
+  instead of as a raw number of seconds. The stored value is unchanged whole
+  seconds in the unchanged fields (`WorkoutSet.durationSeconds`,
+  `targetDurationSeconds`), and no bound, unit or validation rule was touched —
+  `validateCardioSetInput` still checks the same seconds.
+- **Not affected:** AI export/response contracts, plan/builder/unit packages,
+  block comparison, all CSV exports and share cards. `finishedAt` is a live-view
+  marker and is not part of any export; it travels only inside the full backup,
+  like every other session-exercise field.
 
 ## Profile fields (schema 30, #46)
 
@@ -199,6 +233,10 @@ never reinterpreted as cardio.
   `movedToDate` (the target day the workout is relocated to). A schema-25 build
   rejects a schema-26 backup as "newer" rather than choking on the unknown enum
   value, which is exactly why the version was bumped.
+- Exercise finished early (schema 31): session exercises gain the optional
+  `finishedAt`. Optional/defaulted, so older backups restore with it absent; the
+  value is never derived from the recorded sets, and a restored workout keeps
+  behaving exactly as it was left.
 - Structured equipment + per-set execution (schema 27): exercises gain optional
   `defaultEquipment` (an `Equipment` enum, never guessed from a name); session
   exercises gain optional `equipmentSnapshot`; sets gain optional
@@ -404,6 +442,13 @@ data. Adding/renaming a catalog entry keeps existing stored strings valid
 unknown stored values are preserved as custom entries.
 
 ## Recorded no-impact decisions
+
+- **Responsive schedule editor redesign (2026-08-10).** Presentation-only
+  change to the plan schedule dialog, mode selector, upcoming preview and
+  weekday/cycle cards. The existing repository mutations and schedule values
+  (`free-rotation`, `repeating-cycle`, `weekly`, workout/rest assignments and
+  cycle cursor) are unchanged. No store, field, migration, import/export path or
+  released format changed; Dexie stays at schema 30.
 
 - **Mobile workout/plan progress correction (2026-08-10).** No store, field,
   enum, validation rule or released format changed; Dexie stays at schema 30.

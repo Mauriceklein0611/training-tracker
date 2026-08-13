@@ -8,6 +8,7 @@ import {
   ChevronUp,
   Plus,
   Repeat,
+  RotateCcw,
   Trash2,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/Card';
@@ -30,7 +31,9 @@ import {
   adjustRestTarget,
   completeSet,
   endRest,
+  finishSessionExercise,
   reopenSet,
+  reopenSessionExercise,
   deleteSet,
   getExerciseHistorySets,
   getLastPerformance,
@@ -289,6 +292,14 @@ export function SessionExerciseCard({
   );
   const setGoalReached = targetSets != null && completedWorkingSets >= targetSets;
 
+  /*
+   * The user ended this exercise by hand although the goal was still open — the
+   * fourth set was simply not going to happen. Stored on the record, so it
+   * survives a reload, and reversible at any time. Nothing is completed or
+   * invented by it: the recorded sets stay exactly what was performed.
+   */
+  const finishedEarly = Boolean(sessionExercise.finishedAt);
+
   /**
    * The execution the *next* set will be performed with — the current
    * session-exercise snapshot (a still-open/new set inherits it).
@@ -496,8 +507,26 @@ export function SessionExerciseCard({
   const showExecutionBadge =
     currentExecution.equipment !== 'unspecified' || isTemporaryExecution;
 
-  // "Done" = the set goal is met and nothing is mid-entry.
-  const isDone = setGoalReached && !openSet && completedSets.length > 0;
+  // "Done" = the set goal is met and nothing is mid-entry, or the user ended the
+  // exercise themselves.
+  const isDone =
+    finishedEarly || (setGoalReached && !openSet && completedSets.length > 0);
+
+  /*
+   * Finishing by hand is offered exactly where it is needed: something was
+   * recorded, but the goal is still open. With no set at all "remove exercise"
+   * is the honest action, and once the goal is met the card is done anyway.
+   */
+  const canFinishEarly = !finishedEarly && !setGoalReached && completedSets.length > 0;
+
+  /** "3 von 4 Sätzen" — what a hand-finished exercise actually got done. */
+  const goalShortfall =
+    finishedEarly && targetSets != null && !setGoalReached
+      ? t(isCardio ? 'exercise.doneOfGoalSections' : 'exercise.doneOfGoalSets', {
+          current: isCardio ? completedSets.length : completedWorkingSets,
+          total: targetSets,
+        })
+      : null;
 
   /*
    * Exercise cards are collapsed by default (#46), like the check-in card: a
@@ -582,15 +611,17 @@ export function SessionExerciseCard({
   };
 
   if (!expanded) {
-    const doneSummary = isCardio
-      ? `${formatNumber(completedSets.length)} ${
-          completedSets.length === 1
-            ? tCommon('units.sectionOne')
-            : tCommon('units.sectionOther')
-        }`
-      : `${formatNumber(completedWorkingSets)} ${
-          completedWorkingSets === 1 ? tCommon('units.setOne') : tCommon('units.setOther')
-        }`;
+    const performed = isCardio ? completedSets.length : completedWorkingSets;
+    const unit = isCardio
+      ? performed === 1
+        ? tCommon('units.sectionOne')
+        : tCommon('units.sectionOther')
+      : performed === 1
+        ? tCommon('units.setOne')
+        : tCommon('units.setOther');
+    // An exercise finished by hand says how much of the goal was done, so the
+    // collapsed row never reads like the plan was completed.
+    const doneSummary = goalShortfall ?? `${formatNumber(performed)} ${unit}`;
     // Collapsed, an exercise says what it asks for (not started) or what was
     // achieved (done) — never both, and never a guessed value.
     const targetSummary = describeTarget(effectiveTarget, isCardio, {
@@ -825,7 +856,29 @@ export function SessionExerciseCard({
       ) : null}
 
       <div className="mt-3">
-        {openSet && isCardio ? (
+        {finishedEarly ? (
+          /*
+           * Ended by hand: the card states what was actually done and offers the
+           * way back. No entry row, so nothing can be recorded by accident on an
+           * exercise the user is finished with.
+           */
+          <div className="grid gap-2">
+            <p className="flex items-center justify-center gap-2 rounded-xl bg-surface-2 py-2 text-sm font-medium text-success">
+              <Check size={16} aria-hidden="true" />
+              {goalShortfall
+                ? t('exercise.finishedEarly', { value: goalShortfall })
+                : t('exercise.finished')}
+            </p>
+            <Button
+              variant="secondary"
+              fullWidth
+              onClick={() => void reopenSessionExercise(sessionExercise.id)}
+            >
+              <RotateCcw size={18} aria-hidden="true" />
+              {t('exercise.reopenExercise')}
+            </Button>
+          </div>
+        ) : openSet && isCardio ? (
           <CardioSetEditor
             key={openSet.id}
             set={openSet}
@@ -905,8 +958,26 @@ export function SessionExerciseCard({
         )}
       </div>
 
-      {/* Strength takeaway only — cardio is not progressed by this rule. */}
-      {progression && setGoalReached && !openSet && !isCardio ? (
+      {/* Small opt-out for the day the goal is not going to happen: stop
+          here at three of four sets without the exercise staying open forever. */}
+      {canFinishEarly ? (
+        <div className="mt-2 flex justify-center">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-muted"
+            onClick={() => void finishSessionExercise(sessionExercise.id)}
+          >
+            <Check size={16} aria-hidden="true" />
+            {t('exercise.finishExercise')}
+          </Button>
+        </div>
+      ) : null}
+
+      {/* Strength takeaway only — cardio is not progressed by this rule. It is
+          shown for a hand-finished exercise too: the sets performed are what the
+          suggestion is derived from, met goal or not. */}
+      {progression && (finishedEarly || (setGoalReached && !openSet)) && !isCardio ? (
         <ProgressionHint suggestion={progression} />
       ) : null}
 

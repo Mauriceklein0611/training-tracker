@@ -465,6 +465,62 @@ export async function updateSessionExercise(
 }
 
 /**
+ * Ends one exercise of the running workout by hand (schema 31).
+ *
+ * For when the set goal is not going to be reached — three of four sets, and
+ * that is the workout. Only the marker is written: no set is completed, deleted
+ * or invented, the target snapshot stays what the plan asked for, and a still
+ * open (never completed) set is kept as the draft it is. A rest still running
+ * for this exercise is closed, because no further set follows it.
+ *
+ * Reversible through {@link reopenSessionExercise}.
+ */
+export async function finishSessionExercise(sessionExerciseId: string): Promise<void> {
+  await db.transaction(
+    'rw',
+    db.sessionExercises,
+    db.workoutSets,
+    db.workoutSessions,
+    async () => {
+      const entry = await db.sessionExercises.get(sessionExerciseId);
+      if (!entry || entry.finishedAt) return;
+
+      const endedAt = new Date();
+      const sets = await db.workoutSets
+        .where('sessionExerciseId')
+        .equals(sessionExerciseId)
+        .toArray();
+      for (const set of sets) {
+        if (!set.restStartedAt || set.restEndedAt) continue;
+        await db.workoutSets.update(set.id, {
+          restEndedAt: endedAt.toISOString(),
+          restActualSeconds: elapsedRestSeconds(set.restStartedAt, endedAt),
+          updatedAt: nowIso(),
+        });
+      }
+
+      await db.sessionExercises.update(sessionExerciseId, {
+        finishedAt: endedAt.toISOString(),
+        updatedAt: nowIso(),
+      });
+      await touchSession(entry.sessionId);
+    },
+  );
+}
+
+/** Undoes {@link finishSessionExercise}; the exercise continues as before. */
+export async function reopenSessionExercise(sessionExerciseId: string): Promise<void> {
+  const entry = await db.sessionExercises.get(sessionExerciseId);
+  if (!entry?.finishedAt) return;
+  // update() cannot clear a field (undefined is ignored), so the row is written
+  // back without the marker instead.
+  const reopened = { ...entry, updatedAt: nowIso() };
+  delete reopened.finishedAt;
+  await db.sessionExercises.put(reopened);
+  await touchSession(entry.sessionId);
+}
+
+/**
  * Temporarily changes the execution (equipment + weight convention) of one
  * exercise inside the current workout (Feature 3). The stored exercise is never
  * touched — only this session slot and its future sets. Already-completed sets

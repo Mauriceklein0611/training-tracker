@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Dialog } from '@/components/ui/Dialog';
 import { Button } from '@/components/ui/Button';
-import { NumberField, SelectField } from '@/components/ui/Field';
+import { DurationField, NumberField, SelectField } from '@/components/ui/Field';
 import { editCompletedCardioSet } from '@/db/repositories/sessions';
 import { effectiveSetExecution } from '@/services/equipment';
 import { CARDIO_MODALITY_VALUES, prefersMeters } from '@/services/cardio';
@@ -158,15 +158,19 @@ export function EditCardioSetDialog({
             </option>
           ))}
         </SelectField>
-        <NumberField
-          label={t('field.durationSeconds')}
-          value={draft.duration}
+        <DurationField
+          label={t('field.duration')}
+          containerClassName="col-span-2"
+          value={values.durationSeconds}
           error={err('durationSeconds')}
-          onChange={(event) => update('duration', event.target.value)}
+          onValueChange={(seconds) =>
+            update('duration', seconds == null ? '' : String(seconds))
+          }
         />
         <NumberField
           label={t('field.distance', { unit: distanceInMeters ? 'm' : 'km' })}
           decimal
+          containerClassName="col-span-2"
           value={draft.distance}
           error={err('distanceMeters')}
           onChange={(event) => update('distance', event.target.value)}

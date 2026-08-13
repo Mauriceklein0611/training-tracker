@@ -147,6 +147,8 @@ export const session = {
   field: {
     activity: 'Aktivität',
     durationSeconds: 'Dauer (s)',
+    /** Cardio duration, entered as hours/minutes/seconds instead of raw seconds. */
+    duration: 'Dauer',
     distance: 'Distanz ({{unit}})',
     rpeOptional: 'RPE (optional)',
     rirOptional: 'RIR (optional)',
@@ -251,6 +253,13 @@ export const session = {
     chooseAlternative: 'Alternative wählen ({{value}})',
     lastSetTotal: 'Gesamtlast letzter Satz: {{value}}',
     caloriesEstimate: '≈ {{value}} kcal geschätzt',
+    /** Manually finishing a single exercise before its set goal. */
+    finishExercise: 'Übung abschließen',
+    finished: 'Übung abgeschlossen',
+    finishedEarly: 'Übung abgeschlossen · {{value}}',
+    reopenExercise: 'Übung wieder öffnen',
+    doneOfGoalSets: '{{current}} von {{total}} Sätzen',
+    doneOfGoalSections: '{{current}} von {{total}} Abschnitten',
     intervalGoal: 'Intervallziel',
     setGoal: 'Satzziel',
     goalReached: '{{goal}} erreicht ({{current}} von {{total}})',

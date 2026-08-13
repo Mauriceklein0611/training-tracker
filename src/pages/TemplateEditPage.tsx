@@ -418,6 +418,7 @@ export default function TemplateEditPage() {
         onClose={() => setScheduleOpen(false)}
         title={t('editor.schedule')}
         size="lg"
+        mobileFullscreen
       >
         <ScheduleEditor planId={plan.plan.id} />
       </Dialog>

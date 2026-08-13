@@ -254,6 +254,7 @@ export const plans: Plans = {
       weekly: 'Assign workout units to fixed weekdays. Unassigned days remain free.',
     },
     upcoming: 'Up next',
+    nextBadge: 'Next',
     changeModeTitle: 'Change mode?',
     changeModeDescription:
       'This resets the current schedule. The workout units and their exercises remain unchanged.',
@@ -262,10 +263,13 @@ export const plans: Plans = {
       'This plan does not have a workout unit yet. Add a unit before using it in the schedule.',
     freeRotationHint:
       'Workout units are suggested in this order. Rest days simply occur when you do not work out on a day.',
+    rotationOrder: 'Order',
     moveUnitUp: 'Move {{name}} up',
     moveUnitDown: 'Move {{name}} down',
     cycleEmpty:
       'There are no cycle days yet. Add workout and rest days in the desired order; the cycle starts over after the final day.',
+    cycleDays: 'Cycle days',
+    cycleDay: 'Day {{day}}',
     unitForDay: 'Workout unit for day {{day}}',
     removedUnit: 'Removed workout unit',
     restDay: 'Rest day',
@@ -290,6 +294,7 @@ export const plans: Plans = {
       'Saturday',
       'Sunday',
     ],
+    weeklyAssignments: 'Weekdays',
     assignmentFor: 'Assignment for {{day}}',
     free: 'Free',
     rest: 'Rest',

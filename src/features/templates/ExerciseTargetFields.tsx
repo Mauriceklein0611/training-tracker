@@ -1,6 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { NumberField, TextField } from '@/components/ui/Field';
-import { parseNumberInput } from '@/services/validation';
+import { DurationField, NumberValueField, TextField } from '@/components/ui/Field';
 import type { TrackingType } from '@/types';
 
 /**
@@ -22,25 +21,6 @@ export interface ExerciseTargetValues {
 
 export type ExerciseTargetPatch = Partial<ExerciseTargetValues>;
 
-/** Rounded non-negative integer, or undefined for an empty field. */
-function optInt(raw: string): number | undefined {
-  const parsed = parseNumberInput(raw);
-  return parsed == null ? undefined : Math.max(0, Math.round(parsed));
-}
-
-/** Rounded non-negative number (metres), or undefined for an empty field. */
-function optDistance(raw: string): number | undefined {
-  const parsed = parseNumberInput(raw);
-  return parsed == null ? undefined : Math.max(0, Math.round(parsed));
-}
-
-/** RPE clamped to 1–10, or undefined for an empty field. */
-function optRpe(raw: string): number | undefined {
-  const parsed = parseNumberInput(raw);
-  if (parsed == null) return undefined;
-  return Math.min(10, Math.max(1, parsed));
-}
-
 export function ExerciseTargetFields({
   trackingType,
   values,
@@ -56,75 +36,70 @@ export function ExerciseTargetFields({
 
   return (
     <div className="mt-3 grid grid-cols-2 gap-2">
-      <NumberField
+      <NumberValueField
         label={isCardio ? t('targets.intervals') : t('targets.sets')}
-        value={String(values.targetSets)}
-        onChange={(event) =>
-          onChange({
-            targetSets: Math.max(
-              1,
-              Math.round(parseNumberInput(event.target.value) ?? 1),
-            ),
-          })
-        }
+        required
+        min={1}
+        max={50}
+        value={values.targetSets}
+        onValueChange={(value) => onChange({ targetSets: value ?? values.targetSets })}
       />
-      <NumberField
+      <NumberValueField
         label={isCardio ? t('targets.intervalRestSeconds') : t('targets.restSeconds')}
-        value={String(values.restSeconds)}
-        onChange={(event) =>
-          onChange({
-            restSeconds: Math.max(
-              0,
-              Math.round(parseNumberInput(event.target.value) ?? 0),
-            ),
-          })
-        }
+        required
+        min={0}
+        max={3600}
+        value={values.restSeconds}
+        onValueChange={(value) => onChange({ restSeconds: value ?? values.restSeconds })}
       />
 
       {isCardio ? (
         <>
-          <NumberField
-            label={t('targets.durationSeconds')}
-            value={String(values.targetDurationSeconds ?? '')}
-            onChange={(event) =>
-              onChange({ targetDurationSeconds: optInt(event.target.value) })
-            }
+          <DurationField
+            label={t('targets.duration')}
+            containerClassName="col-span-2"
+            value={values.targetDurationSeconds}
+            onValueChange={(value) => onChange({ targetDurationSeconds: value })}
           />
-          <NumberField
+          <NumberValueField
             label={t('targets.distanceMeters')}
-            value={String(values.targetDistanceMeters ?? '')}
-            onChange={(event) =>
-              onChange({ targetDistanceMeters: optDistance(event.target.value) })
-            }
+            min={0}
+            max={1_000_000}
+            value={values.targetDistanceMeters}
+            onValueChange={(value) => onChange({ targetDistanceMeters: value })}
           />
-          <NumberField
+          <NumberValueField
             label={t('targets.rpe')}
             decimal
-            containerClassName="col-span-2"
-            value={String(values.targetRpe ?? '')}
-            onChange={(event) => onChange({ targetRpe: optRpe(event.target.value) })}
+            min={1}
+            max={10}
+            value={values.targetRpe}
+            onValueChange={(value) => onChange({ targetRpe: value })}
           />
         </>
       ) : isDuration ? (
-        <NumberField
-          label={t('targets.durationSeconds')}
+        <DurationField
+          label={t('targets.duration')}
+          withHours={false}
           containerClassName="col-span-2"
-          value={String(values.targetDurationSeconds ?? '')}
-          onChange={(event) =>
-            onChange({ targetDurationSeconds: optInt(event.target.value) })
-          }
+          value={values.targetDurationSeconds}
+          onValueChange={(value) => onChange({ targetDurationSeconds: value })}
         />
       ) : (
         <>
-          <NumberField
+          <NumberValueField
             label={t('targets.repsFrom')}
-            value={String(values.targetRepMin ?? '')}
-            onChange={(event) => onChange({ targetRepMin: optInt(event.target.value) })}
+            min={0}
+            max={1000}
+            value={values.targetRepMin}
+            onValueChange={(value) => onChange({ targetRepMin: value })}
           />
-          <NumberField
+          <NumberValueField
             label={t('targets.repsTo')}
-            value={String(values.targetRepMax ?? '')}
-            onChange={(event) => onChange({ targetRepMax: optInt(event.target.value) })}
+            min={0}
+            max={1000}
+            value={values.targetRepMax}
+            onValueChange={(value) => onChange({ targetRepMax: value })}
           />
         </>
       )}

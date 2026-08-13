@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 import { Check, Trash2 } from 'lucide-react';
 import { Button, IconButton } from '@/components/ui/Button';
-import { NumberField } from '@/components/ui/Field';
+import { DurationField, NumberField } from '@/components/ui/Field';
 import type { SessionExercise, WorkoutSet } from '@/types';
 import {
   cardioSectionComplete,
@@ -220,13 +220,15 @@ export function CardioSetEditor({
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-2">
-        <NumberField
-          label={t('field.durationSeconds')}
-          value={draft.duration}
+      <div className="grid gap-2">
+        <DurationField
+          label={t('field.duration')}
+          value={values.durationSeconds}
           error={fieldError(errors, touched, 'durationSeconds')}
-          onChange={(event) => update('duration', event.target.value)}
-          onBlur={persist}
+          onValueChange={(seconds) =>
+            update('duration', seconds == null ? '' : String(seconds))
+          }
+          onCommit={persist}
         />
         <NumberField
           label={t('field.distance', { unit: distanceUnit })}

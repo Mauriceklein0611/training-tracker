@@ -255,6 +255,7 @@ export const plans = {
         'Feste Zuordnung von Übungseinheiten zu Wochentagen. Nicht belegte Tage bleiben frei.',
     },
     upcoming: 'Als Nächstes',
+    nextBadge: 'Nächste',
     changeModeTitle: 'Modus wechseln?',
     changeModeDescription:
       'Der aktuelle Zeitplan wird dabei zurückgesetzt. Die Übungseinheiten und ihre Übungen bleiben unverändert erhalten.',
@@ -263,10 +264,13 @@ export const plans = {
       'Dieser Plan hat noch keine Übungseinheit. Füge zuerst eine Einheit hinzu, um sie im Zeitplan zu verwenden.',
     freeRotationHint:
       'Die Übungseinheiten werden in dieser Reihenfolge vorgeschlagen. Pausentage entstehen einfach dadurch, dass du an einem Tag nicht trainierst.',
+    rotationOrder: 'Reihenfolge',
     moveUnitUp: '{{name}} nach oben',
     moveUnitDown: '{{name}} nach unten',
     cycleEmpty:
       'Noch keine Zyklustage. Füge Trainings- und Pausentage in der gewünschten Reihenfolge hinzu; nach dem letzten Tag beginnt der Zyklus von vorn.',
+    cycleDays: 'Zyklustage',
+    cycleDay: 'Tag {{day}}',
     unitForDay: 'Einheit für Tag {{day}}',
     removedUnit: 'Entfernte Einheit',
     restDay: 'Pausentag',
@@ -291,6 +295,7 @@ export const plans = {
       'Samstag',
       'Sonntag',
     ],
+    weeklyAssignments: 'Wochentage',
     assignmentFor: 'Zuordnung für {{day}}',
     free: 'Frei',
     rest: 'Pause',

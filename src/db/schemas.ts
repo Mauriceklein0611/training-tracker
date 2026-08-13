@@ -399,6 +399,9 @@ export const sessionExerciseSchema = z.object({
   // Added with the cardio tracking type; optional so older rows still validate.
   targetDistanceMetersSnapshot: z.number().min(0).max(1_000_000).optional(),
   targetRpeSnapshot: z.number().min(1).max(10).optional(),
+  // Added in schema version 31; optional, so older rows and backups still
+  // validate and simply mean "not finished early".
+  finishedAt: isoDateTime.optional(),
   notes: z.string().default(''),
   ...groupingFields,
   createdAt: isoDateTime,

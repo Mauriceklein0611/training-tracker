@@ -15,6 +15,7 @@ export function Dialog({
   children,
   footer,
   size = 'md',
+  mobileFullscreen = false,
 }: {
   open: boolean;
   onClose: () => void;
@@ -23,6 +24,8 @@ export function Dialog({
   children?: ReactNode;
   footer?: ReactNode;
   size?: 'md' | 'lg';
+  /** Use the full phone viewport for dense, multi-step editors. */
+  mobileFullscreen?: boolean;
 }) {
   const { t } = useTranslation('more');
   const ref = useRef<HTMLDialogElement>(null);
@@ -66,9 +69,16 @@ export function Dialog({
         'w-[min(100vw-1.5rem,32rem)] rounded-2xl border border-border bg-surface p-0 text-text',
         'backdrop:bg-black/70 open:flex open:flex-col',
         size === 'lg' && 'w-[min(100vw-1.5rem,44rem)]',
+        mobileFullscreen &&
+          'max-sm:fixed max-sm:inset-0 max-sm:m-0 max-sm:h-[100dvh] max-sm:max-h-none max-sm:w-full max-sm:max-w-none max-sm:rounded-none max-sm:border-0',
       )}
     >
-      <div className="max-h-[85vh] overflow-y-auto p-4">
+      <div
+        className={cn(
+          'max-h-[85vh] overflow-y-auto p-4',
+          mobileFullscreen && 'max-sm:min-h-0 max-sm:flex-1 max-sm:max-h-none',
+        )}
+      >
         <h2 id={titleId} className="text-lg font-semibold">
           {title}
         </h2>

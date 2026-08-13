@@ -194,6 +194,7 @@ export default function LiveSessionPage() {
       workoutProgress(
         (detail?.exercises ?? []).map((entry) => ({
           targetSets: entry.sessionExercise.targetSetsSnapshot,
+          finishedAt: entry.sessionExercise.finishedAt,
           sets: entry.sets,
         })),
       ),
