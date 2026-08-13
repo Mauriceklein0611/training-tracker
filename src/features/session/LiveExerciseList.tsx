@@ -66,13 +66,18 @@ export function LiveExerciseList({
           const entry = detailById.get(member.id);
           // Only working sets make up a round — warm-ups never advance it.
           const workingSets = (entry?.sets ?? []).filter((set) => isWorkingSet(set));
-          completedByMember.set(
-            member.id,
-            workingSets.filter((set) => set.completedAt).length,
-          );
+          const completed = workingSets.filter((set) => set.completedAt).length;
+          completedByMember.set(member.id, completed);
+          // An exercise the user finished by hand plans exactly what it did, so
+          // the round counter and "next" pointer stop waiting for it.
           plannedByMember.set(
             member.id,
-            Math.max(workingSets.length, entry?.sessionExercise.targetSetsSnapshot ?? 0),
+            entry?.sessionExercise.finishedAt
+              ? completed
+              : Math.max(
+                  workingSets.length,
+                  entry?.sessionExercise.targetSetsSnapshot ?? 0,
+                ),
           );
         }
         const progress =

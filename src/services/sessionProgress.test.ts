@@ -22,6 +22,18 @@ describe('workoutProgress', () => {
     expect(workoutProgress(entries).doneExercises).toBe(1);
   });
 
+  it('counts an exercise the user finished by hand as done', () => {
+    const entries: WorkoutProgressEntry[] = [
+      {
+        targetSets: 4,
+        finishedAt: '2026-08-13T10:00:00.000Z',
+        sets: [set(true), set(true), set(true)], // 3 of 4, ended by the user
+      },
+      { targetSets: 4, sets: [set(true), set(true), set(true)] },
+    ];
+    expect(workoutProgress(entries)).toEqual({ doneExercises: 1, totalExercises: 2 });
+  });
+
   it('treats a single completed set as done when there is no goal', () => {
     const entries: WorkoutProgressEntry[] = [
       { sets: [set(true)] },

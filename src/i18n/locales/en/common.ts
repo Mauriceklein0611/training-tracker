@@ -57,6 +57,15 @@ export const common: Common = {
     sectionOther: 'sections',
     reps: 'reps',
   },
+  duration: {
+    hours: 'hours',
+    minutes: 'minutes',
+    seconds: 'seconds',
+    hoursShort: 'hr',
+    minutesShort: 'min',
+    secondsShort: 'sec',
+    total: '= {{value}}',
+  },
   setSuffix: {
     perHand: '/hand',
     assistance: ' assist.',

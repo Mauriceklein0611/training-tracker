@@ -95,7 +95,7 @@ export const library = {
     sets: 'Sätze',
     intervalRestSeconds: 'Pause zw. Intervallen (s)',
     restSeconds: 'Pause (s)',
-    durationSeconds: 'Zieldauer (s)',
+    duration: 'Zieldauer',
     distanceMeters: 'Zieldistanz (m)',
     rpe: 'Ziel-RPE (1–10)',
     repsFrom: 'Wdh. von',
@@ -110,6 +110,9 @@ export const library = {
     repsFrom: 'ab {{min}} Wdh.',
     repsTo: 'bis {{max}} Wdh.',
     duration: '{{value}} s',
+    /** From a minute upwards the summary reads like the entry field: 20:30 min. */
+    durationMs: '{{value}} min',
+    durationHms: '{{value}} h',
     distance: '{{value}} m',
     rpe: 'RPE {{value}}',
     rest: 'Pause {{value}} s',

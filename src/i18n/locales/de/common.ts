@@ -68,6 +68,19 @@ export const common = {
     sectionOther: 'Abschnitte',
     reps: 'Wdh.',
   },
+  /**
+   * Segmented duration entry (DurationField). A duration is entered the way it
+   * is read — 1 Std 20 Min 30 Sek — and stored as seconds as before.
+   */
+  duration: {
+    hours: 'Stunden',
+    minutes: 'Minuten',
+    seconds: 'Sekunden',
+    hoursShort: 'Std',
+    minutesShort: 'Min',
+    secondsShort: 'Sek',
+    total: '= {{value}}',
+  },
   /** Suffixes that qualify a recorded weight in a set summary. */
   setSuffix: {
     perHand: '/Hand',

@@ -3,11 +3,10 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card, CardHeader } from '@/components/ui/Card';
-import { CheckboxField, NumberField, SelectField } from '@/components/ui/Field';
+import { CheckboxField, NumberValueField, SelectField } from '@/components/ui/Field';
 import { Button } from '@/components/ui/Button';
 import { WeeklyGoalsEditor } from '@/features/settings/WeeklyGoalsEditor';
 import { useSettings } from '@/hooks/useSettings';
-import { parseNumberInput } from '@/services/validation';
 import { isIos, isStandalone } from '@/services/pwa';
 import { isWakeLockSupported } from '@/hooks/useWakeLock';
 import { playRestFinishedSound, primeAudio, vibrate } from '@/services/sound';
@@ -37,16 +36,16 @@ export default function SettingsPage() {
         <Card>
           <CardHeader title={tSettings('training.sectionTitle')} as="h2" />
           <div className="grid gap-4">
-            <NumberField
+            <NumberValueField
               label={tSettings('training.restLabel')}
-              value={String(settings.defaultRestSeconds)}
               hint={tSettings('training.restHint')}
-              onChange={(event) => {
-                const value = parseNumberInput(event.target.value);
-                if (value == null || Number.isNaN(value)) return;
-                void update({
-                  defaultRestSeconds: Math.min(3600, Math.max(0, Math.round(value))),
-                });
+              required
+              min={0}
+              max={3600}
+              value={settings.defaultRestSeconds}
+              onValueChange={(value) => {
+                if (value == null) return;
+                void update({ defaultRestSeconds: value });
               }}
             />
             <SelectField
@@ -220,16 +219,16 @@ export default function SettingsPage() {
         <Card>
           <CardHeader title={tSettings('backupReminder.sectionTitle')} as="h2" />
           <div className="grid gap-4">
-            <NumberField
+            <NumberValueField
               label={tSettings('backupReminder.intervalLabel')}
-              value={String(settings.backupReminderDays)}
               hint={tSettings('backupReminder.intervalHint')}
-              onChange={(event) => {
-                const value = parseNumberInput(event.target.value);
-                if (value == null || Number.isNaN(value)) return;
-                void update({
-                  backupReminderDays: Math.min(365, Math.max(0, Math.round(value))),
-                });
+              required
+              min={0}
+              max={365}
+              value={settings.backupReminderDays}
+              onValueChange={(value) => {
+                if (value == null) return;
+                void update({ backupReminderDays: value });
               }}
             />
             <p className="text-sm text-muted">
